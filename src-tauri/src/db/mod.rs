@@ -33,6 +33,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "seed_instruments",
         sql: include_str!("../../migrations/0002_seed_instruments.sql"),
     },
+    Migration {
+        version: 3,
+        name: "round_trip_imports",
+        sql: include_str!("../../migrations/0003_round_trip_imports.sql"),
+    },
 ];
 
 /// Latest schema version this build understands.

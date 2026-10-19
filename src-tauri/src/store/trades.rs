@@ -71,8 +71,31 @@ pub struct Trade {
     pub realized_pnl: Option<String>,
     pub pnl_status: String,
     pub notes: Option<String>,
+    /// Source values when imported from a paired-fill (performance) export.
+    pub round_trip: Option<RoundTripSource>,
     pub created_at: String,
     pub updated_at: String,
+}
+
+/// The buy/sell fill pair a trade was normalized from, exactly as supplied.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RoundTripSource {
+    pub buy_fill_id: Option<String>,
+    pub sell_fill_id: Option<String>,
+    pub buy_price: String,
+    pub sell_price: String,
+    pub bought_at: String,
+    pub sold_at: String,
+    pub bought_at_source: String,
+    pub sold_at_source: String,
+    pub duration_source: Option<String>,
+    pub duration_seconds: Option<i64>,
+    pub price_format: Option<String>,
+    pub price_format_type: Option<String>,
+    pub tick_size: Option<String>,
+    /// "buy_first" (long), "sell_first" (short; sell filled before buy) or "same_time".
+    pub entry_basis: String,
 }
 
 /// Values computed from a trade and its account; never taken from input.
@@ -145,10 +168,36 @@ pub(crate) fn insert(
     Ok(id)
 }
 
-const SELECT: &str = "SELECT id, account_id, source, import_batch_id, broker_trade_id, symbol, side, quantity,
-        entry_at, entry_price, exit_at, exit_price, fees_micros, trading_day, reported_pnl_micros,
-        gross_pnl_micros, net_pnl_micros, pnl_status, notes_md, created_at, updated_at
-    FROM trades";
+const SELECT: &str = "SELECT t.id, t.account_id, t.source, t.import_batch_id, t.broker_trade_id, t.symbol, t.side,
+        t.quantity, t.entry_at, t.entry_price, t.exit_at, t.exit_price, t.fees_micros, t.trading_day,
+        t.reported_pnl_micros, t.gross_pnl_micros, t.net_pnl_micros, t.pnl_status, t.notes_md, t.created_at,
+        t.updated_at,
+        r.trade_id, r.buy_fill_id, r.sell_fill_id, r.buy_price, r.sell_price, r.bought_at, r.sold_at,
+        r.bought_at_source, r.sold_at_source, r.duration_source, r.duration_seconds, r.price_format,
+        r.price_format_type, r.tick_size, r.entry_basis
+    FROM trades t LEFT JOIN trade_round_trips r ON r.trade_id = t.id";
+
+fn round_trip_from_row(r: &Row) -> rusqlite::Result<Option<RoundTripSource>> {
+    if r.get::<_, Option<String>>(21)?.is_none() {
+        return Ok(None);
+    }
+    Ok(Some(RoundTripSource {
+        buy_fill_id: r.get(22)?,
+        sell_fill_id: r.get(23)?,
+        buy_price: r.get(24)?,
+        sell_price: r.get(25)?,
+        bought_at: r.get(26)?,
+        sold_at: r.get(27)?,
+        bought_at_source: r.get(28)?,
+        sold_at_source: r.get(29)?,
+        duration_source: r.get(30)?,
+        duration_seconds: r.get(31)?,
+        price_format: r.get(32)?,
+        price_format_type: r.get(33)?,
+        tick_size: r.get(34)?,
+        entry_basis: r.get(35)?,
+    }))
+}
 
 fn from_row(r: &Row) -> rusqlite::Result<Trade> {
     let money = |i: usize| r.get::<_, Option<i64>>(i).map(|m| m.map(micros_to_string));
@@ -172,6 +221,7 @@ fn from_row(r: &Row) -> rusqlite::Result<Trade> {
         realized_pnl: money(16)?,
         pnl_status: r.get(17)?,
         notes: r.get(18)?,
+        round_trip: round_trip_from_row(r)?,
         created_at: r.get(19)?,
         updated_at: r.get(20)?,
     })
@@ -181,14 +231,14 @@ fn from_row(r: &Row) -> rusqlite::Result<Trade> {
 pub fn list(conn: &Connection, account_id: &str) -> AppResult<Vec<Trade>> {
     account_ctx(conn, account_id)?;
     let mut stmt = conn.prepare(&format!(
-        "{SELECT} WHERE account_id = ?1 AND deleted_at IS NULL ORDER BY entry_at DESC, id"
+        "{SELECT} WHERE t.account_id = ?1 AND t.deleted_at IS NULL ORDER BY t.entry_at DESC, t.id"
     ))?;
     let rows = stmt.query_map([account_id], from_row)?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
 pub fn get(conn: &Connection, id: &str) -> AppResult<Trade> {
-    conn.query_row(&format!("{SELECT} WHERE id = ?1 AND deleted_at IS NULL"), [id], from_row)
+    conn.query_row(&format!("{SELECT} WHERE t.id = ?1 AND t.deleted_at IS NULL"), [id], from_row)
         .optional()?
         .ok_or_else(|| AppError::not_found("trade", id))
 }

@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 2 (`src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`).
+Status: V1, schema version 3 (`src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`).
 Code: `src-tauri/src/db` (migrations, opening), `src-tauri/src/store` (accounts, trades, journal),
 `src-tauri/src/csv_import`, `src-tauri/src/domain.rs` (validation, trading day, P&L),
 `src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `src/lib/data/`.
@@ -19,6 +19,7 @@ erDiagram
     IMPORT_BATCHES ||--o{ IMPORT_ROWS : "every original row"
     IMPORT_BATCHES ||--o{ TRADES : produced
     IMPORT_ROWS |o--o| TRADES : "became"
+    TRADES ||--o| TRADE_ROUND_TRIPS : "source fill pair"
     TRADES }o--o| INSTRUMENTS : "point value"
     TRADES |o--o{ JOURNAL_ENTRIES : "optional link"
     JOURNAL_ENTRIES ||--o{ JOURNAL_ENTRY_TAGS : ""
@@ -30,7 +31,8 @@ erDiagram
 | Account | `accounts` | `id`, `name`, `broker`, prop firm (`firm_id` → `firms.name`), `external_ref`, `account_type` (`evaluation`, `sim_funded`, `live_funded`, `personal`, `demo`, `other`), `status` (`active`, `paused`, `passed`, `failed`, `closed`), `currency`, `starting_balance_micros`, `timezone`, `trading_day_reset_time`, `created_at`, `updated_at` |
 | Trade | `trades` | `account_id`, `source` (`manual`/`csv_import`), `symbol`, `side` (`long`/`short`), `quantity`, `entry_at`, `entry_price`, `exit_at`, `exit_price`, `fees_micros`, `trading_day`, `reported_pnl_micros`, `gross_pnl_micros`, `net_pnl_micros`, `pnl_status`, `notes_md`, timestamps, `deleted_at` |
 | Journal entry | `journal_entries` + `journal_entry_tags` → `tags` | `account_id`, optional `trade_id`, `entry_at`, `title`, `body_md`, tags, timestamps |
-| CSV import | `import_batches` + `import_rows` | file name, SHA-256 and size, target `account_id`, mapping snapshot, `status` (`committed`/`failed`), `row_count`, `imported_count`, `skipped_count`, `duplicate_count`, `failed_count`, `error_summary`, `created_at`, `completed_at`; per row: original cells, status and issues |
+| CSV import | `import_batches` + `import_rows` | file name, SHA-256 and size, target `account_id`, `source_format` (`performance`/`generic`), mapping snapshot, `status` (`committed`/`failed`), `row_count`, `imported_count`, `skipped_count`, `duplicate_count`, `failed_count`, `warning_count`, `error_summary`, `created_at`, `completed_at`; per row: original cells, status, errors and warnings |
+| Round-trip source | `trade_round_trips` | For trades from a performance export: buy/sell fill IDs, prices, parsed and original timestamps, duration, contract metadata and which fill opened the trade. Immutable. |
 
 A trade is one **round trip** (entry and optional exit). An open trade has no exit time or price. Fill-level
 (execution) import and trade grouping are out of scope for V1; they can be added later with a new migration
@@ -96,58 +98,104 @@ Computed in Rust (`domain::realized_pnl`) when a trade is saved, and stored:
 
 ## CSV import
 
-Flow: the UI reads the file as text and calls `preview_csv_import` (writes nothing) and then
-`commit_csv_import` with the same request: account, file name, content, column mapping, source timezone.
+Code: `src-tauri/src/csv_import/` — `parse` (CSV reading, limits), `detect` (format and header mapping),
+`values` (strict value parsers), `normalize` (row → trade, errors and warnings), `dedup` (identity keys),
+`mod.rs` (preview, atomic commit, history). UI: `src/components/CsvImportSection.tsx`.
 
-**Mapping.** Each trade field names a CSV header (case-insensitive, surrounding spaces ignored):
-`symbol`, `side`, `quantity`, `entryTime`, `entryPrice` are required; `exitTime` + `exitPrice` (together),
-`fees`, `realizedPnl`, `brokerTradeId`, `notes` are optional. A missing or repeated header is a file-level
-issue and nothing can be imported.
+Flow: the UI reads the chosen file as text on this computer and calls `preview_csv_import` (writes nothing).
+The preview shows the detected format and mapping, every row's original line number, parsed values, warnings,
+errors and duplicate status. Only after the user confirms does `commit_csv_import` save, re-running the same
+analysis. Nothing is sent over the network: the file goes from the webview to the Rust process over Tauri IPC.
 
-**Values.**
-- Side: `long`/`short`, or `buy`/`sell`/`B`/`S`/`Bot`/`Sld` for the opening side.
-- Numbers may contain `$`, thousands separators and accounting negatives `(12.50)`. Negative fees are taken as
-  a positive cost.
-- Times with an offset are used as-is. Times without one are read in the request's timezone, as
-  `YYYY-MM-DD HH:MM[:SS[.fff]]` (or with `T`) or US `MM/DD/YYYY HH:MM[:SS]` with optional AM/PM. Ambiguous or
-  non-existent local times around a daylight-saving change are rejected for that row.
-- Limits: 10 MB and 50,000 rows per file.
+### Parsing
 
-**Results.** Every data row is classified and, on commit, stored in `import_rows` with its original cells:
+RFC 4180 CSV via the `csv` crate: quoted fields with embedded commas, newlines and doubled quotes; CRLF or LF;
+a leading UTF-8 BOM is ignored. Line numbers are computed from byte offsets (header = line 1). Empty files,
+a missing header row, header-only files, records with the wrong number of fields and unreadable records are
+reported with clear messages. Limits: **10 MB and 50,000 data rows per file**; the preview lists every row up to
+2,000 and, beyond that, every row with a finding.
+
+### Formats and mapping
+
+Headers are matched ignoring case, spaces and punctuation (`Buy Price` = `buy_price` = `buyPrice`; `P&L` = `pl`).
+
+**Performance export (paired fills)** — detected when `symbol`, `qty`, `buyPrice`, `sellPrice`, `boughtTimestamp`
+and `soldTimestamp` are present (e.g. Tradovate's Performance report). Each row is one completed round trip:
+
+| Field | Column | Notes |
+|---|---|---|
+| Symbol | `symbol` | Required. |
+| Quantity | `qty` | Required, > 0. |
+| Buy / sell price | `buyPrice`, `sellPrice` | Required, plain decimals. |
+| Buy / sell time | `boughtTimestamp`, `soldTimestamp` | Required; stored as parsed UTC **and** as the original text. |
+| Fill IDs | `buyFillId`, `sellFillId` | Optional; the pair is the duplicate key. |
+| Realized P&L | `pnl` | Optional; `$26.00`, `$0.00`, `$(36.00)`, `-$36.00`. |
+| Duration | `duration` | Optional; `32sec`, `1min 17sec`, `1hr 2min`, `1:02:03`. |
+| Contract metadata | `_priceFormat`, `_priceFormatType`, `_tickSize` | Optional; stored as supplied. |
+
+*Entry side (assumption, shown in the preview):* the fill that happened first opened the trade. Buy first ⇒
+**long** (entry = buy, exit = sell). Sell first ⇒ **short** (entry = sell, exit = buy) — this is the
+"`soldTimestamp` earlier than `boughtTimestamp`" case. Such rows are imported but carry a warning, and both
+source timestamps, prices and fill IDs are kept unchanged in `trade_round_trips` for review. Equal timestamps
+are taken as long. The export has no fee column, so fees are 0.
+
+**Generic trade CSV** — one trade per row. Required: symbol, side (`long`/`short`/`buy`/`sell`/`B`/`S`), quantity,
+entry time, entry price. Optional: exit time + exit price (together), fees, P&L, broker trade ID, notes. Common
+broker header names are matched automatically (e.g. `Ticker`, `Action`, `Open Time`, `Close Price`, `Commission`,
+`P&L`, `Trade ID`); the user can map any field to any column. The source row is kept in `import_rows.raw_json`.
+
+### Validation
+
+Errors exclude the row; warnings do not.
+
+- Symbol: letters, digits and ` ._/:-+=^#&`, up to 32 characters.
+- Quantity > 0; prices are finite plain decimals (`29774.25`, `1,234.5`); no `NaN`, `inf` or exponents.
+- Money (`pnl`, fees): optional `$`, sign or accounting parentheses, well-formed thousands separators.
+  Negative fees are taken as a positive cost, with a warning.
+- Durations: units in descending order (`d`, `hr`/`h`, `min`/`m`, `sec`/`s`), or `H:MM:SS` / `M:SS`.
+- **Dates are parsed in exactly one format per file**: `YYYY-MM-DD HH:MM[:SS[.fff]]` (or RFC 3339 with offset),
+  `M/D/YYYY HH:MM[:SS]` or `D/M/YYYY HH:MM[:SS]`, optional AM/PM, four-digit years only. "Auto" picks the format
+  every timestamp fits; if both M/D and D/M fit (all days ≤ 12) the import stops until the user chooses.
+  Performance exports default to M/D/YYYY in that case. Values without an offset are read in the chosen
+  time zone; times that are ambiguous or skipped at a daylight-saving change are row errors.
+- Warnings: sell fill before buy fill; `duration` differing from the time between fills by more than 1 s;
+  exported P&L differing from the calculated P&L; only one fill ID present; non-numeric tick size.
+
+### Results
 
 | Row status | Meaning | Batch counter |
 |---|---|---|
-| `imported` | New trade created | `imported_count` |
-| `duplicate` | Already imported into this account (links `duplicate_of_trade_id`) | `skipped_count`, `duplicate_count` |
-| `skipped` | Blank row | `skipped_count` |
-| `invalid` | Failed validation; `issues_json` lists each field and reason (with the CSV column name) | `failed_count` |
+| `imported` (`new` in preview) | Saved as a trade | `imported_count` |
+| `duplicate` | Same identity as an earlier line or a saved trade; reason shown, `duplicate_of_trade_id` linked | `duplicate_count` (also in `skipped_count`) |
+| `skipped` (`blank` in preview) | Blank row | `skipped_count` |
+| `invalid` | Errors listed per field with the CSV column name | `failed_count` |
 
-`row_count = imported + skipped + failed` is enforced for committed batches. `list_csv_import_problem_rows`
-returns the non-imported rows with their reasons.
+`warning_count` counts rows with warnings, of any status. Every row is stored in `import_rows` with original
+cells, errors and warnings; `list_csv_import_problem_rows` returns the rows not imported or with warnings.
 
-**Transactions.** The whole commit (batch, every row, every trade, final counts) is one transaction. If any
-write fails, nothing from the file is kept, and a separate `failed` batch records the attempt with
-`error_summary`. File-level problems (bad mapping, empty file, too large) are also recorded as `failed`.
+**Atomicity.** The batch record, every row record, every trade and every round-trip source record are written
+in one transaction. If anything fails, nothing from the file is kept and a separate `failed` batch records the
+attempt. File-level problems (bad mapping, ambiguous dates, empty or oversized file) are also recorded as `failed`.
 
 ### Duplicate detection
 
-`trades.dedup_key` is unique per account. A row is a duplicate if its key already exists for the target
-account (including soft-deleted trades).
+Each valid row gets an identity key; `trades.dedup_key` is unique per account. A row is a duplicate if an
+earlier line of the same file, or any trade of the account (including soft-deleted ones), has the same key. The
+preview explains which line or saved trade it matches.
 
-- With a mapped broker trade ID: `id:<broker trade id>`. A repeated ID within one file is a duplicate of the
-  first.
-- Without one: `h:` + SHA-256 of symbol, side, quantity, entry time (UTC), entry price, exit time and exit
-  price, plus the row's **occurrence number** among identical rows in the same file. Two identical round trips in
-  one export are both kept; re-importing that export, or a longer export containing it, matches them again.
-- The preview also flags a file whose SHA-256 was already committed to the account.
+| Row | Key |
+|---|---|
+| Performance row with both fill IDs | `fills:<buyFillId>:<sellFillId>` — the **pair**. Rows sharing only a buy fill (one buy closed by several sells) or only a sell fill are distinct. |
+| Generic row with a broker trade ID | `id:<trade id>` |
+| Otherwise | `rt:` + SHA-256 of the normalized fields: format, symbol, quantity, both prices, both timestamps (UTC), reported P&L (and side for generic rows). |
 
 Limitations:
-- Fees, P&L and notes are not part of the key, so a re-export that only corrects fees is treated as a duplicate
-  (edit the trade instead).
-- Two exports that format the same trade differently (e.g. second vs. millisecond times, rounded prices) produce
-  different keys and import twice.
-- Manual trades have no key, so a manual trade and the same trade imported later are not matched.
-- Duplicates are scoped per account; importing the same file into two accounts creates trades in both.
+- Without IDs, two genuinely identical round trips in one file are indistinguishable; the second is flagged as
+  a duplicate (the preview says so) and not imported.
+- Fees and notes are not part of the key, so a re-export that only corrects fees is a duplicate (edit the trade).
+- The same trade exported in two different formats or with different timestamp precision produces different
+  keys. Manual trades have no key. Duplicates are scoped per account.
+- Deleted imported trades keep their key, so re-importing the file does not bring them back.
 
 ## Commands
 
