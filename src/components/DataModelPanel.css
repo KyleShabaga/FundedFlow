@@ -1,0 +1,64 @@
+.ff-panel {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.ff-panel fieldset {
+  margin: 1rem 0;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  border-radius: 8px;
+}
+
+.ff-panel input,
+.ff-panel select,
+.ff-panel button {
+  padding: 0.35em 0.6em;
+  font-size: 0.9rem;
+}
+
+.ff-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.4rem 0;
+  align-items: center;
+}
+
+.ff-mapping {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.4rem;
+}
+
+.ff-mapping label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+}
+
+.ff-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.ff-panel th,
+.ff-panel td {
+  padding: 0.2rem 0.4rem;
+  border-bottom: 1px solid rgba(127, 127, 127, 0.25);
+  text-align: left;
+}
+
+.ff-error {
+  color: #b42318;
+  margin: 0.4rem 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ff-error {
+    color: #ff8a80;
+  }
+}

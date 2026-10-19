@@ -2,6 +2,7 @@ import { useState } from "react";
 import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
+import { DataModelPanel } from "./components/DataModelPanel";
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
@@ -44,6 +45,8 @@ function App() {
         <button type="submit">Greet</button>
       </form>
       <p>{greetMsg}</p>
+
+      <DataModelPanel />
     </main>
   );
 }
