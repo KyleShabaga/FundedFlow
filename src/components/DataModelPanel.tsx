@@ -4,24 +4,11 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 
 import { DataError, accountsApi, csvImportApi, journalApi, tradesApi } from "../lib/data/api";
-import type { Account, ColumnMapping, CsvPreview, ImportBatch, JournalEntry, Trade } from "../lib/data/schemas";
+import { CsvImportSection } from "./CsvImportSection";
+import type { Account, ImportBatch, JournalEntry, Trade } from "../lib/data/schemas";
 import "./DataModelPanel.css";
 
 const DEFAULT_TZ = "America/New_York";
-
-const defaultMapping: ColumnMapping = {
-  symbol: "Symbol",
-  side: "Side",
-  quantity: "Qty",
-  entryTime: "Entry Time",
-  entryPrice: "Entry Price",
-  exitTime: "Exit Time",
-  exitPrice: "Exit Price",
-  fees: "Commission",
-  realizedPnl: "P&L",
-  brokerTradeId: "Trade ID",
-  notes: "",
-};
 
 /** `<input type="datetime-local">` value → ISO instant in the computer's zone. */
 const toInstant = (local: string) => (local ? new Date(local).toISOString() : null);
@@ -167,37 +154,6 @@ export function DataModelPanel() {
     });
   };
 
-  // --- CSV import -----------------------------------------------------------
-  const [file, setFile] = useState<{ name: string; content: string } | null>(null);
-  const [mapping, setMapping] = useState<ColumnMapping>(defaultMapping);
-  const [csvTz, setCsvTz] = useState(DEFAULT_TZ);
-  const [preview, setPreview] = useState<CsvPreview | null>(null);
-  const [lastImport, setLastImport] = useState<ImportBatch | null>(null);
-  const request = () => ({
-    accountId,
-    fileName: file?.name ?? "",
-    content: file?.content ?? "",
-    columns: Object.fromEntries(
-      Object.entries(mapping).map(([k, v]) => [k, v?.trim() ? v : null]),
-    ) as ColumnMapping,
-    timezone: csvTz,
-  });
-  const pickFile = (f: File | undefined) => {
-    setPreview(null);
-    setLastImport(null);
-    if (f) void run(async () => setFile({ name: f.name, content: await f.text() }));
-  };
-  const runPreview = () => void run(async () => setPreview(await csvImportApi.preview(request())));
-  const runCommit = () =>
-    void run(async () => {
-      try {
-        setLastImport(await csvImportApi.commit(request()));
-        setPreview(null);
-      } finally {
-        await loadAccountData();
-      }
-    });
-
   return (
     <section className="ff-panel">
       <h2>Local data (developer panel)</h2>
@@ -300,69 +256,7 @@ export function DataModelPanel() {
             </ul>
           </fieldset>
 
-          <fieldset>
-            <legend>CSV import</legend>
-            <div className="ff-row">
-              <input type="file" accept=".csv,text/csv" onChange={(e) => pickFile(e.target.files?.[0])} />
-              <input aria-label="Timezone of the file's times" value={csvTz} onChange={(e) => setCsvTz(e.target.value)} />
-            </div>
-            <div className="ff-mapping">
-              {(Object.keys(defaultMapping) as (keyof ColumnMapping)[]).map((k) => (
-                <label key={k}>
-                  {k}
-                  <input value={mapping[k] ?? ""} onChange={(e) => setMapping({ ...mapping, [k]: e.target.value })} />
-                </label>
-              ))}
-            </div>
-            <div className="ff-row">
-              <button type="button" onClick={runPreview} disabled={!file}>Preview</button>
-              <button type="button" onClick={runCommit} disabled={!preview || preview.fileIssues.length > 0 || preview.newCount === 0}>
-                Import {preview?.newCount ?? 0} trades
-              </button>
-            </div>
-            {preview && (
-              <div>
-                <p>
-                  {preview.rowCount} rows: {preview.newCount} new, {preview.duplicateCount} duplicate,{" "}
-                  {preview.skippedCount - preview.duplicateCount} blank, {preview.invalidCount} invalid
-                  {preview.filePreviouslyImported && " · this file was imported before"}
-                </p>
-                {preview.fileIssues.map((i) => (
-                  <div className="ff-error" key={i.field + i.message}><code>{i.field}</code>: {i.message}</div>
-                ))}
-                <table>
-                  <thead><tr><th>Row</th><th>Status</th><th>Detail</th></tr></thead>
-                  <tbody>
-                    {preview.rows.map((r) => (
-                      <tr key={r.rowNumber}>
-                        <td>{r.rowNumber}</td>
-                        <td>{r.status}</td>
-                        <td>
-                          {r.issues.length > 0
-                            ? r.issues.map((i) => `${i.field}: ${i.message}`).join("; ")
-                            : `${r.trade?.symbol} ${r.trade?.side} ${r.trade?.quantity} → ${r.trade?.realizedPnl ?? r.trade?.pnlStatus}`}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {lastImport && (
-              <p>
-                Imported {lastImport.importedCount}, skipped {lastImport.skippedCount}, failed {lastImport.failedCount} of{" "}
-                {lastImport.rowCount} rows.
-              </p>
-            )}
-            <ul>
-              {imports.map((b) => (
-                <li key={b.id}>
-                  {shortTime(b.createdAt)} · {b.fileName} · {b.status} · {b.importedCount} imported / {b.skippedCount} skipped /{" "}
-                  {b.failedCount} failed{b.errorSummary && ` · ${b.errorSummary}`}
-                </li>
-              ))}
-            </ul>
-          </fieldset>
+          <CsvImportSection accountId={accountId} imports={imports} onImported={loadAccountData} />
         </>
       )}
     </section>
