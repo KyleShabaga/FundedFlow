@@ -1,0 +1,141 @@
+//! Local SQLite schema for the FundedFlow journal.
+//!
+//! The schema itself lives in `src-tauri/migrations/*.sql` and is documented in
+//! `docs/data-model.md`. This module embeds those files, applies them in
+//! order (tracking progress with `PRAGMA user_version`) and opens the
+//! per-user database file.
+
+use std::path::Path;
+
+use rusqlite::{Connection, Transaction};
+
+/// File name of the journal database inside the app data directory
+/// (`%APPDATA%\com.fundedflow.desktop\` on Windows).
+pub const DB_FILE_NAME: &str = "fundedflow.db";
+
+/// One forward-only schema migration. `version` is the `user_version` value
+/// the database has after it is applied.
+pub struct Migration {
+    pub version: u32,
+    pub name: &'static str,
+    pub sql: &'static str,
+}
+
+/// All migrations, oldest first. Never edit a shipped migration; add a new one.
+pub const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        name: "core_schema",
+        sql: include_str!("../../migrations/0001_core_schema.sql"),
+    },
+    Migration {
+        version: 2,
+        name: "seed_instruments",
+        sql: include_str!("../../migrations/0002_seed_instruments.sql"),
+    },
+];
+
+/// Latest schema version this build understands.
+pub fn latest_version() -> u32 {
+    MIGRATIONS.last().map(|m| m.version).unwrap_or(0)
+}
+
+/// Per-connection settings required by the schema.
+pub fn configure(conn: &Connection) -> rusqlite::Result<()> {
+    conn.pragma_update(None, "foreign_keys", true)?;
+    conn.pragma_update(None, "recursive_triggers", false)?;
+    conn.busy_timeout(std::time::Duration::from_secs(5))?;
+    Ok(())
+}
+
+#[derive(Debug)]
+pub enum MigrateError {
+    /// The journal was written by a newer FundedFlow build.
+    NewerSchema { found: u32, supported: u32 },
+    /// A migration failed; the database stays at the previous version.
+    Migration { name: &'static str, source: rusqlite::Error },
+    Sqlite(rusqlite::Error),
+    Io(std::io::Error),
+}
+
+impl From<rusqlite::Error> for MigrateError {
+    fn from(e: rusqlite::Error) -> Self {
+        MigrateError::Sqlite(e)
+    }
+}
+
+impl std::fmt::Display for MigrateError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MigrateError::NewerSchema { found, supported } => write!(
+                f,
+                "journal schema version {found} is newer than this app supports ({supported})"
+            ),
+            MigrateError::Migration { name, source } => {
+                write!(f, "migration '{name}' failed: {source}")
+            }
+            MigrateError::Sqlite(e) => write!(f, "database error: {e}"),
+            MigrateError::Io(e) => write!(f, "could not prepare the data directory: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for MigrateError {}
+
+fn current_version(conn: &Connection) -> rusqlite::Result<u32> {
+    conn.pragma_query_value(None, "user_version", |r| r.get(0))
+}
+
+/// Apply every pending migration. Each migration runs in its own transaction
+/// together with its `user_version` bump, so a failure leaves the database at
+/// the last fully-applied version. Returns the resulting version.
+pub fn migrate(conn: &mut Connection) -> Result<u32, MigrateError> {
+    migrate_with(conn, MIGRATIONS)
+}
+
+fn migrate_with(conn: &mut Connection, migrations: &[Migration]) -> Result<u32, MigrateError> {
+    configure(conn)?;
+    let current = current_version(conn)?;
+    let supported = migrations.last().map(|m| m.version).unwrap_or(0);
+    if current > supported {
+        return Err(MigrateError::NewerSchema { found: current, supported });
+    }
+    for m in migrations.iter().filter(|m| m.version > current) {
+        let mut apply = || -> rusqlite::Result<()> {
+            let tx: Transaction = conn.transaction()?;
+            tx.execute_batch(m.sql)?;
+            tx.pragma_update(None, "user_version", m.version)?;
+            tx.commit()
+        };
+        apply().map_err(|source| MigrateError::Migration { name: m.name, source })?;
+    }
+    Ok(supported)
+}
+
+/// Open (creating if needed) the journal database at `path`, take a backup
+/// copy before upgrading an existing journal, and migrate it.
+pub fn open_file(path: &Path) -> Result<Connection, MigrateError> {
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).map_err(MigrateError::Io)?;
+    }
+    let mut conn = Connection::open(path)?;
+    configure(&conn)?;
+    conn.pragma_update_and_check(None, "journal_mode", "WAL", |r| r.get::<_, String>(0))?;
+    conn.pragma_update(None, "synchronous", "NORMAL")?;
+
+    let current = current_version(&conn)?;
+    if current > 0 && current < latest_version() {
+        // A consistent copy (includes WAL content) the user can restore if an
+        // upgrade goes wrong. Overwrites the backup of the previous upgrade.
+        let backup = path.with_extension(format!("db.before-v{}.bak", latest_version()));
+        if backup.exists() {
+            std::fs::remove_file(&backup).map_err(MigrateError::Io)?;
+        }
+        conn.execute("VACUUM INTO ?1", [backup.to_string_lossy()])?;
+    }
+    migrate(&mut conn)?;
+    Ok(conn)
+}
+
+#[cfg(test)]
+mod tests;

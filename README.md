@@ -24,4 +24,23 @@ npm run build
 npm run tauri build
 ```
 
-Vite serves the development frontend on loopback only. The packaged desktop app does not run a local HTTP server. SQLite is bundled through `rusqlite` and will be accessed through Rust commands as the data layer is implemented.
+Vite serves the development frontend on loopback only. The packaged desktop app does not run a local HTTP server. SQLite is bundled through `rusqlite` and accessed only through Rust commands.
+
+## Local data
+
+FundedFlow stores accounts, trades, journal entries and CSV import history in a single SQLite file in the per-user app data directory: `%APPDATA%\com.fundedflow.desktop\fundedflow.db` on Windows. Nothing is stored in the install directory or the repository, and nothing leaves the machine.
+
+- Schema, relationships, delete rules, migrations, CSV column mapping, duplicate detection and P&L assumptions: [`docs/data-model.md`](docs/data-model.md)
+- Migrations: `src-tauri/migrations/*.sql`, embedded and applied at startup by `src-tauri/src/db` (a backup copy is written before an upgrade)
+- Rust: `src-tauri/src/store` (accounts, trades, journal), `src-tauri/src/csv_import`, `src-tauri/src/commands.rs`
+- TypeScript: `src/lib/data/schemas.ts` (types and Zod schemas) and `src/lib/data/api.ts` (typed command wrappers)
+- `src/components/DataModelPanel.tsx` is a small developer panel on the start screen for trying these out
+
+Run the Rust tests (schema, repositories, CSV import) and the frontend type-check:
+
+```powershell
+cd src-tauri
+cargo test
+cd ..
+npm run build
+```
