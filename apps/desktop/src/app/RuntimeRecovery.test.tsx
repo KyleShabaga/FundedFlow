@@ -70,6 +70,29 @@ it("preserves an open draft and route, disables its actions and recovers without
   expect(invoke.mock.calls).toEqual([["runtime_status"], ["runtime_status"], ["retry_runtime"]]);
 });
 
+it("revalidates on window focus without disabling content or announcing an outage", async () => {
+  const user = userEvent.setup();
+  window.location.hash = "/journal";
+  render(<AppProviders><Routes><Route element={<AppShell />}>
+    <Route path="journal" element={<RuntimeGate showStatus={false}><label>Draft note<input /></label></RuntimeGate>} />
+  </Route></Routes></AppProviders>);
+  const input = await screen.findByRole("textbox", { name: "Draft note" }) as HTMLInputElement;
+  await user.type(input, "Still typing");
+  const recheck = deferred<unknown>();
+  invoke.mockReturnValueOnce(recheck.promise);
+  await act(async () => { window.dispatchEvent(new Event("focus")); });
+  expect(invoke.mock.calls).toEqual([["runtime_status"], ["runtime_status"]]);
+  expect(input.matches(":disabled")).toBe(false);
+  expect(input.closest("[inert]")).toBeNull();
+  expect(document.activeElement).toBe(input);
+  expect(screen.queryByText(/Checking local data/)).toBeNull();
+  expect(screen.queryByText(/Previously shown data may be out of date/)).toBeNull();
+  await act(async () => { recheck.resolve(ready); });
+  expect(input.matches(":disabled")).toBe(false);
+  expect(document.activeElement).toBe(input);
+  expect(input.value).toBe("Still typing");
+});
+
 it("announces availability and permits keyboard-only Retry without stealing initial focus", async () => {
   const user = userEvent.setup();
   invoke.mockResolvedValue(failed("open_failed"));

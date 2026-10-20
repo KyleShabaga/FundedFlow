@@ -46,7 +46,9 @@ export function RuntimeProvider({ children }: { children: ReactNode }) {
     const update = (next: RuntimeState) => { currentState.current = next; setState(next); };
     const since = Date.now();
     setNow(since);
-    update({ kind, status: null, since });
+    // Revalidating a ready runtime stays ready until a reply says otherwise, so focus changes
+    // never disable open content or announce an outage that has not happened.
+    if (!(mode === "check" && currentState.current.kind === "ready")) update({ kind, status: null, since });
     const operation = (async () => {
       try {
         for (let index = 0; index < MAX_CHECKS; index++) {
