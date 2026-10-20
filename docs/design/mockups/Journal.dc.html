@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Journal</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}</style>
+</helmet>
+<div class="app" data-theme="{{theme}}">
+  <dc-import name="Sidebar" active="journal" hint-size="248px,100%"></dc-import>
+  <div class="app-main">
+    <dc-import name="Topbar" hint-size="100%,64px"></dc-import>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="h1">Journal</h1>
+          <p class="sub">Each trading day with its numbers, your notes and every trade in it.</p>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+          <div class="seg" role="group" aria-label="View">
+            <button type="button" class="{{daysCls}}" aria-pressed="{{isDays}}" onClick="{{showDays}}">By day</button>
+            <button type="button" class="{{logCls}}" aria-pressed="{{isLog}}" onClick="{{showLog}}">Trade log</button>
+          </div>
+          <button type="button" class="btn btn-sm">
+            <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h4v14H4zM10 5h4v14h-4zM16 5h4v14h-4z"></path></svg>
+            Columns
+          </button>
+          <sc-if value="{{isDays}}" hint-placeholder-val="{{ true }}"><button type="button" class="btn btn-sm" onClick="{{collapseAll}}">Collapse all</button></sc-if>
+        </div>
+      </div>
+
+      <sc-if value="{{isDays}}" hint-placeholder-val="{{ true }}">
+        <section class="card" aria-label="Monday, October 19, 2026">
+          <header style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px 20px; border-bottom: 1px solid var(--line-100);">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <h2 class="h2">Monday, Oct 19, 2026</h2>
+              <span class="badge b-flow">Apex $100K</span>
+              <span class="badge b-profit">Followed plan</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-sm">
+                <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5zM9 12h6M12 9v6"></path></svg>
+                Add note
+              </button>
+              <button type="button" class="btn btn-sm" aria-expanded="{{open1}}" onClick="{{toggle1}}">{{open1Label}}
+                <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="{{open1Chev}}"></path></svg>
+              </button>
+            </div>
+          </header>
+          <div style="padding: 16px 20px; display: grid; gap: 16px;">
+            <div class="strip">
+              <div><span class="label">Net P&amp;L</span><b class="pos" style="font-size: 26px; line-height: 32px;">+$1,197.60</b></div>
+              <div><span class="label">Trades</span><b>67</b></div>
+              <div><span class="label">Win rate</span><b>61.2%</b></div>
+              <div><span class="label">Gross P&amp;L</span><b class="pos">+$1,446.50</b></div>
+              <div><span class="label">Contracts</span><b>131</b></div>
+              <div><span class="label">Fees</span><b>$248.90</b></div>
+              <div><span class="label">Winners</span><b class="pos">41</b></div>
+              <div><span class="label">Losers</span><b class="neg">26</b></div>
+              <div><span class="label">Profit factor</span><b>5.70</b></div>
+            </div>
+            <sc-if value="{{open1}}" hint-placeholder-val="{{ true }}">
+              <div style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start;">
+                <div class="card" style="padding: 16px; background: var(--bg-200); border-color: transparent; display: grid; gap: 8px;">
+                  <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="h2" style="font-size: 14px;">Cumulative P&amp;L through the day</span><span class="faint">07:47 – 11:58 CT</span></div>
+                  <x-import component-from-global-scope="FundedFlow.EquityCurve" points="{{curve}}" step="{{false}}" height="{{180}}"></x-import>
+                </div>
+                <div class="card" style="padding: 16px; background: var(--bg-200); border-color: transparent; display: grid; gap: 10px; align-content: start;">
+                  <span class="overline">Session notes</span>
+                  <p style="margin: 0; color: var(--ink-muted);"><b style="color: var(--ink);">Plan:</b> NQ above the overnight high; longs on pullbacks to VWAP only. Stop at −$500.</p>
+                  <p style="margin: 0; color: var(--ink-muted);"><b style="color: var(--ink);">Review:</b> Scaled the first ORB well. Gave back $120 chasing after 10:30; stopped on time.</p>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;"><span class="badge b-flow">ORB</span><span class="badge b-flow">VWAP pullback</span><span class="badge b-warn">Chased entry ×2</span></div>
+                </div>
+              </div>
+              <div class="dt-card" style="background: var(--bg-100);">
+                <div class="dt-scroll">
+                  <table class="dt" aria-label="Trades on October 19">
+                    <thead><tr>
+                      <th><span>Result</span></th><th><span>Side</span></th><th><span>Symbol</span></th>
+                      <th class="is-sorted" aria-sort="ascending"><button type="button">Open <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 14l4-4 4 4"></path></svg></button></th>
+                      <th><span>Close</span></th><th class="num"><span>Qty</span></th><th class="num"><span>Entry</span></th><th class="num"><span>Exit</span></th>
+                      <th class="num"><span>Hold</span></th><th class="num"><span>Net P&amp;L</span></th><th><span>Tags</span></th>
+                    </tr></thead>
+                    <tbody>
+                      <sc-for list="{{trades}}" as="t" hint-placeholder-count="8">
+                        <tr>
+                          <td><span class="{{t.resCls}}">{{t.res}}</span></td>
+                          <td><span class="{{t.sideCls}}">{{t.side}}</span></td>
+                          <td class="sym">MNQZ6</td>
+                          <td class="mono" style="font-size: 12.5px;">{{t.open}}</td>
+                          <td class="mono" style="font-size: 12.5px; color: var(--ink-muted);">{{t.close}}</td>
+                          <td class="num">{{t.qty}}</td><td class="num">{{t.entry}}</td><td class="num">{{t.exit}}</td>
+                          <td class="num" style="color: var(--ink-muted);">{{t.hold}}</td>
+                          <td class="num"><span class="{{t.pnlCls}}">{{t.pnl}}</span></td>
+                          <td><button type="button" class="icon-btn" style="width: 26px; height: 26px;" aria-label="Add tag"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button></td>
+                        </tr>
+                      </sc-for>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="dt-foot"><span>8 of 67 trades</span><button type="button" class="btn btn-ghost btn-sm">Show all 67</button></div>
+              </div>
+            </sc-if>
+          </div>
+        </section>
+
+        <sc-for list="{{days}}" as="d" hint-placeholder-count="3">
+          <section class="card" aria-label="{{d.long}}">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 20px;">
+              <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                <h2 class="h2" style="min-width: 190px;">{{d.label}}</h2>
+                <span class="mono" style="font-weight: 600;"><span class="{{d.cls}}">{{d.pnl}}</span></span>
+                <span class="faint">{{d.meta}}</span>
+              </div>
+              <button type="button" class="btn btn-sm" aria-expanded="false">Expand <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+            </div>
+          </section>
+        </sc-for>
+      </sc-if>
+
+      <sc-if value="{{isLog}}" hint-placeholder-val="{{ false }}">
+        <div class="kpis">
+          <div class="card tile"><span class="label">Net P&amp;L</span><span class="tile-v pos">+$204.32</span><span class="faint">579 trades · 15 days</span></div>
+          <div class="card tile"><span class="label">Win rate</span><span class="tile-v">61.1%</span><span class="faint">354 W · 225 L</span></div>
+          <div class="card tile"><span class="label">Profit factor</span><span class="tile-v">1.02</span><span class="faint">Barely above break-even</span></div>
+          <div class="card tile"><span class="label">Avg win / avg loss</span><span class="tile-v">0.65</span><span class="faint mono"><span class="pos">+$24.80</span> / <span class="neg">−$38.12</span></span></div>
+        </div>
+        <section class="dt-card">
+          <div class="dt-toolbar">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+              <input class="input" type="search" aria-label="Search trades" placeholder="Search symbol, tag or note" style="width: 260px;">
+              <button type="button" class="chip">Result: All</button><button type="button" class="chip">Side: All</button><button type="button" class="chip">Tags: Any</button>
+            </div>
+            <span class="faint">Times in America/Chicago (account zone)</span>
+          </div>
+          <div class="dt-scroll">
+            <table class="dt" aria-label="Trade log">
+              <thead><tr>
+                <th class="w-check"><span><input type="checkbox" class="check" aria-label="Select all trades on this page"></span></th>
+                <th><span>Result</span></th><th><span>Symbol</span></th><th><span>Side</span></th>
+                <th class="is-sorted" aria-sort="descending"><button type="button">Entry time <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10l4 4 4-4"></path></svg></button></th>
+                <th><span>Exit time</span></th><th class="num"><span>Entry</span></th><th class="num"><span>Exit</span></th><th class="num"><span>Qty</span></th><th class="num"><span>Net P&amp;L</span></th><th><span>Tags</span></th><th><span>Account</span></th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{log}}" as="t" hint-placeholder-count="10">
+                  <tr>
+                    <td class="w-check"><input type="checkbox" class="check" aria-label="Select trade"></td>
+                    <td><span class="{{t.resCls}}">{{t.res}}</span></td>
+                    <td class="sym">MNQZ6</td>
+                    <td><span class="{{t.sideCls}}">{{t.side}}</span></td>
+                    <td class="mono" style="font-size: 12.5px;">Oct 19, {{t.open}}</td>
+                    <td class="mono" style="font-size: 12.5px; color: var(--ink-muted);">Oct 19, {{t.close}}</td>
+                    <td class="num">{{t.entry}}</td><td class="num">{{t.exit}}</td><td class="num">{{t.qty}}</td>
+                    <td class="num"><span class="{{t.pnlCls}}">{{t.pnl}}</span></td>
+                    <td><span class="{{t.tagCls}}">{{t.tag}}</span></td>
+                    <td class="faint" style="font-size: 13px;">Apex $100K</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+          <div class="dt-foot">
+            <span>Showing 1–10 of 579</span>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <label style="display: flex; gap: 8px; align-items: center;">Rows <select class="input select" style="height: 30px; width: 68px;"><option>10</option><option>25</option><option>50</option><option>100</option></select></label>
+              <div class="pager"><button type="button" aria-label="Previous page" disabled>‹</button><button type="button" class="is-on" aria-current="page">1</button><button type="button">2</button><button type="button">3</button><button type="button" disabled>…</button><button type="button">58</button><button type="button" aria-label="Next page">›</button></div>
+            </div>
+          </div>
+        </section>
+      </sc-if>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"startView":{"editor":"enum","options":["days","log"],"default":"days"},"$preview":{"width":1440,"height":1480}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: props.startView ?? 'days', open1: true }; }
+  renderVals() {
+    var self = this, st = this.state;
+    var raw = [
+      ['07:47:48', '07:48:21', 'Long', 1, '29,774.25', '29,787.25', '33s', 24.10],
+      ['07:47:48', '07:48:41', 'Long', 1, '29,774.25', '29,774.25', '53s', -1.90],
+      ['07:47:48', '07:48:41', 'Long', 1, '29,774.25', '29,774.25', '53s', -1.90],
+      ['07:50:01', '07:50:20', 'Long', 1, '29,761.25', '29,769.50', '19s', 14.60],
+      ['07:50:01', '07:50:39', 'Long', 1, '29,761.25', '29,779.00', '38s', 33.60],
+      ['07:50:01', '07:51:00', 'Long', 1, '29,761.25', '29,762.75', '59s', 1.10],
+      ['07:52:38', '07:53:55', 'Short', 3, '29,733.25', '29,728.25', '1m 17s', 24.30],
+      ['07:53:05', '07:54:25', 'Short', 3, '29,739.75', '29,738.00', '1m 20s', 4.80],
+      ['07:54:32', '07:55:05', 'Short', 3, '29,729.25', '29,720.00', '33s', 49.80],
+      ['08:40:03', '08:40:10', 'Long', 3, '29,789.25', '29,790.00', '7s', -1.20]
+    ];
+    var tags = ['ORB', '', '', 'VWAP pullback', 'VWAP pullback', '', 'Reversal', 'Chased entry', 'Reversal', 'Chased entry'];
+    var fmt = function (v) { return (v < 0 ? '−' : v > 0 ? '+' : '') + '$' + Math.abs(v).toFixed(2); };
+    var row = function (r, i) {
+      var w = r[7] > 0;
+      return { open: r[0], close: r[1], side: r[2], qty: r[3], entry: r[4], exit: r[5], hold: r[6], pnl: fmt(r[7]),
+        pnlCls: w ? 'pos' : 'neg', res: w ? 'Win' : 'Loss', resCls: 'badge ' + (w ? 'b-profit' : 'b-loss'),
+        sideCls: 'badge ' + (r[2] === 'Short' ? 'b-out-loss' : 'b-out-profit'),
+        tag: tags[i] || 'Add tag', tagCls: tags[i] ? 'badge ' + (tags[i] === 'Chased entry' ? 'b-warn' : 'b-flow') : 'faint' };
+    };
+    var curve = [0, 24.1, 22.2, 20.3, 34.9, 68.5, 69.6, 93.9, 98.7, 148.5, 147.3, 210, 260, 310, 355, 420, 480, 520, 505, 610, 640, 700, 730, 760, 820, 880, 905, 940, 960, 1010, 1050, 1080, 1060, 1110, 1150, 1180, 1197.6];
+    var open1 = st.open1;
+    return {
+      theme: this.props.theme ?? 'dark',
+      isDays: st.view === 'days', isLog: st.view === 'log',
+      daysCls: st.view === 'days' ? 'is-on' : '', logCls: st.view === 'log' ? 'is-on' : '',
+      showDays: function () { self.setState({ view: 'days' }); },
+      showLog: function () { self.setState({ view: 'log' }); },
+      open1: open1, open1Label: open1 ? 'Collapse' : 'Expand', open1Chev: open1 ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6',
+      toggle1: function () { self.setState({ open1: !self.state.open1 }); },
+      collapseAll: function () { self.setState({ open1: false }); },
+      trades: raw.slice(0, 8).map(row),
+      log: raw.map(row),
+      curve: curve,
+      days: [
+        { label: 'Friday, Oct 16', long: 'Friday, October 16, 2026', pnl: '−$1,281.80', cls: 'neg', meta: '41 trades · 39% win · Topstep $50K · limit breached' },
+        { label: 'Thursday, Oct 15', long: 'Thursday, October 15, 2026', pnl: '+$562.10', cls: 'pos', meta: '3 trades · 100% win · Apex $100K' },
+        { label: 'Wednesday, Oct 14', long: 'Wednesday, October 14, 2026', pnl: '−$177.00', cls: 'neg', meta: '1 trade · 0% win · Apex $100K' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

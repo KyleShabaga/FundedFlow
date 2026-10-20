@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sidebar</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}</style>
+</helmet>
+<nav class="{{sbClass}}" aria-label="Main" style="height: 100%; min-height: 900px; font-family: var(--font-sans); color: var(--ink);">
+  <div class="sb-brand">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span class="sb-mark" aria-hidden="true">F</span>
+      <sc-if value="{{expanded}}" hint-placeholder-val="{{ true }}"><span class="sb-word">FundedFlow</span></sc-if>
+    </div>
+    <button type="button" class="icon-btn" aria-label="{{toggleLabel}}" title="{{toggleLabel}} (Ctrl+B)" aria-expanded="{{expanded}}" onClick="{{toggle}}">
+      <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3zM9 4v16"></path><path d="{{chev}}"></path></svg>
+    </button>
+  </div>
+
+  <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+    <sc-if value="{{expanded}}" hint-placeholder-val="{{ true }}"><div class="sb-section overline">{{g.title}}</div></sc-if>
+    <sc-if value="{{collapsed}}" hint-placeholder-val="{{ false }}"><div style="height: 1px; background: var(--line-100); margin: 10px 8px;"></div></sc-if>
+    <sc-for list="{{g.items}}" as="it" hint-placeholder-count="3">
+      <a href="{{it.href}}" class="{{it.cls}}" aria-label="{{it.label}}" title="{{it.title}}" aria-current="{{it.current}}">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="{{it.d}}"></path></svg>
+        <sc-if value="{{expanded}}" hint-placeholder-val="{{ true }}"><span>{{it.label}}</span><span class="sb-count">{{it.count}}</span></sc-if>
+      </a>
+    </sc-for>
+  </sc-for>
+
+  <div class="sb-foot">
+    <a href="#settings" class="sb-item" aria-label="Settings" title="Settings">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M14 4v4M8 10v4M16 16v4"></path></svg>
+      <sc-if value="{{expanded}}" hint-placeholder-val="{{ true }}"><span>Settings</span></sc-if>
+    </a>
+    <sc-if value="{{expanded}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px 0; font-size: 12px; color: var(--ink-faint);">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--profit); flex: none;" aria-hidden="true"></span>
+        <span>Saved on this computer</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{collapsed}}" hint-placeholder-val="{{ false }}">
+      <span title="Saved on this computer" aria-label="Saved on this computer" style="width: 8px; height: 8px; border-radius: 50%; background: var(--profit); margin: 10px auto 0;"></span>
+    </sc-if>
+  </div>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["home","dashboard","journal","library","log","calendar","reports","accounts","import","econ"],"default":"dashboard"},"startCollapsed":{"editor":"boolean","default":false},"$preview":{"width":248,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { collapsed: !!props.startCollapsed }; }
+  renderVals() {
+    var active = this.props.active ?? 'dashboard';
+    var collapsed = this.state.collapsed;
+    var mk = function (id, label, d, count) {
+      var on = id === active;
+      return { id: id, label: label, d: d, count: count || '', href: '#' + id, title: collapsed ? label : '', current: on ? 'page' : null, cls: 'sb-item' + (on ? ' is-on' : '') };
+    };
+    var groups = [
+      { title: 'Journal', items: [
+        mk('home', 'Home', 'M3 11l9-8 9 8M5 9v12h14V9M10 21v-6h4v6'),
+        mk('dashboard', 'Dashboard', 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z'),
+        mk('journal', 'Journal', 'M5 3h11l3 3v15H5zM9 8h6M9 12h6M9 16h4'),
+        mk('library', 'Library', 'M4 4h6v16H4zM10 4h4v16h-4zM15 5l4-1 3 15-4 1z'),
+        mk('log', 'Trade log', 'M4 6h16M4 12h16M4 18h10', '579'),
+        mk('calendar', 'Calendar', 'M4 5h16v16H4zM4 9h16M8 3v4M16 3v4'),
+        mk('reports', 'Reports', 'M4 20V10M10 20V4M16 20v-7M2 20h20')
+      ]},
+      { title: 'Accounts', items: [
+        mk('accounts', 'Accounts', 'M3 7h18v12H3zM3 11h18M7 15h3', '3'),
+        mk('import', 'Import trades', 'M12 15V4M7 9l5-5 5 5M4 15v5h16v-5')
+      ]},
+      { title: 'Tools', items: [
+        mk('econ', 'Economic calendar', 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18')
+      ]}
+    ];
+    var self = this;
+    return {
+      groups: groups,
+      collapsed: collapsed,
+      expanded: !collapsed,
+      sbClass: 'sb' + (collapsed ? ' is-collapsed' : ''),
+      toggleLabel: collapsed ? 'Expand sidebar' : 'Collapse sidebar',
+      chev: collapsed ? 'M13 9l3 3-3 3' : 'M16 9l-3 3 3 3',
+      toggle: function () { self.setState({ collapsed: !self.state.collapsed }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

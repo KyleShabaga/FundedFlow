@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trade detail</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;background:#070b14}
+.chipt{border:1px solid var(--line-200);background:transparent;color:var(--ink-muted);border-radius:999px;padding:5px 12px;font:500 12.5px/16px var(--font-sans);cursor:pointer}
+.chipt.on{background:var(--flow-soft);border-color:var(--flow);color:var(--flow)}
+.chipt.onw{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.star{width:34px;height:34px;border-radius:8px;border:1px solid var(--line-200);background:transparent;color:var(--ink-faint);display:grid;place-items:center;cursor:pointer;padding:0}
+.star.on{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0;font-size:13px}
+.kv dt{color:var(--ink-muted)} .kv dd{margin:0;text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div class="app" data-theme="{{theme}}">
+  <dc-import name="Sidebar" active="journal" hint-size="248px,100%"></dc-import>
+  <div class="app-main">
+    <dc-import name="Topbar" hint-size="100%,64px"></dc-import>
+    <main class="page">
+      <nav aria-label="Breadcrumb" style="font-size: 13px; color: var(--ink-muted);"><a href="Journal.dc.html" style="color: var(--flow); text-decoration: none; font-weight: 600;">Journal</a> / Monday, Oct 19 / Trade 9</nav>
+      <div class="page-head">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <h1 class="h1 mono" style="font-family: var(--font-mono);">MNQZ6</h1>
+          <x-import component-from-global-scope="FundedFlow.Badge" tone="loss" variant="outline">Short</x-import>
+          <x-import component-from-global-scope="FundedFlow.Badge" tone="profit">Win</x-import>
+          <x-import component-from-global-scope="FundedFlow.Pnl" value="{{49.8}}" size="xl"></x-import>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span class="faint">9 of 67</span>
+          <button type="button" class="icon-btn" aria-label="Previous trade"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+          <button type="button" class="icon-btn" aria-label="Next trade"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr); gap: 16px; align-items: start;">
+        <div style="display: grid; gap: 16px;">
+          <section class="card" style="padding: 16px; display: grid; gap: 10px;" aria-label="Price during the trade">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap;"><h2 class="h2">Price during the trade</h2><span class="faint">07:50 – 07:57 CT · 1-minute</span></div>
+            <svg viewBox="0 0 800 300" width="100%" height="300" role="img" aria-label="MNQ price falling from 29,733 to 29,716 after a short entry at 29,729.25, exit at 29,720.00">
+              <g stroke="var(--line-100)" stroke-width="1">
+                <line x1="0" y1="60" x2="720" y2="60"></line><line x1="0" y1="120" x2="720" y2="120"></line><line x1="0" y1="180" x2="720" y2="180"></line><line x1="0" y1="240" x2="720" y2="240"></line>
+              </g>
+              <g font-family="JetBrains Mono, monospace" font-size="11" fill="var(--ink-faint)">
+                <text x="728" y="64">29,735</text><text x="728" y="124">29,730</text><text x="728" y="184">29,725</text><text x="728" y="244">29,720</text>
+              </g>
+              <polyline fill="none" stroke="var(--chart-1)" stroke-width="2" points="0,90 40,70 80,84 120,60 160,72 200,96 240,88 280,110 320,104 360,132 400,150 440,142 480,176 520,198 560,222 600,236 640,244 680,262 720,258"></polyline>
+              <line x1="0" y1="129" x2="720" y2="129" stroke="var(--loss)" stroke-width="1.5" stroke-dasharray="5 4"></line>
+              <line x1="0" y1="240" x2="720" y2="240" stroke="var(--profit)" stroke-width="1.5" stroke-dasharray="5 4"></line>
+              <circle cx="372" cy="129" r="6" fill="var(--loss)" stroke="var(--bg-100)" stroke-width="2"></circle>
+              <circle cx="630" cy="240" r="6" fill="var(--profit)" stroke="var(--bg-100)" stroke-width="2"></circle>
+              <g font-family="Inter, sans-serif" font-size="11" font-weight="600">
+                <rect x="386" y="104" width="150" height="20" rx="4" fill="var(--loss-soft)"></rect><text x="394" y="118" fill="var(--loss)">Sell 3 @ 29,729.25</text>
+                <rect x="470" y="252" width="150" height="20" rx="4" fill="var(--profit-soft)"></rect><text x="478" y="266" fill="var(--profit)">Buy 3 @ 29,720.00</text>
+              </g>
+            </svg>
+            <p class="faint" style="margin: 0;">Candles need a market-data source, which V1 does not have. Until then the chart draws entry and exit from the fills.</p>
+          </section>
+
+          <section class="card" style="padding: 16px; display: grid; gap: 16px;" aria-label="Review">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <h2 class="h2">Review</h2>
+              <label style="display: flex; gap: 8px; align-items: center; font-size: 13px;"><input type="checkbox" class="check" checked="{{reviewed}}" onChange="{{toggleReviewed}}"> Mark as reviewed</label>
+            </div>
+            <div style="display: grid; gap: 8px;">
+              <span class="label" id="rate">Execution rating</span>
+              <div style="display: flex; gap: 6px;" role="radiogroup" aria-labelledby="rate">
+                <sc-for list="{{stars}}" as="s" hint-placeholder-count="5">
+                  <button type="button" class="{{s.cls}}" role="radio" aria-checked="{{s.checked}}" aria-label="{{s.label}}" onClick="{{s.pick}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"></path></svg></button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display: grid; gap: 8px;"><span class="label">Mindset</span><div style="display: flex; flex-wrap: wrap; gap: 6px;" role="group" aria-label="Mindset"><sc-for list="{{moods}}" as="m" hint-placeholder-count="5"><button type="button" class="{{m.cls}}" aria-pressed="{{m.on}}" onClick="{{m.pick}}">{{m.label}}</button></sc-for></div></div>
+            <div style="display: grid; gap: 8px;"><span class="label">Setup</span><div style="display: flex; flex-wrap: wrap; gap: 6px;" role="group" aria-label="Setup"><sc-for list="{{setups}}" as="m" hint-placeholder-count="5"><button type="button" class="{{m.cls}}" aria-pressed="{{m.on}}" onClick="{{m.pick}}">{{m.label}}</button></sc-for></div></div>
+            <div style="display: grid; gap: 8px;"><span class="label">Mistakes</span><div style="display: flex; flex-wrap: wrap; gap: 6px;" role="group" aria-label="Mistakes"><sc-for list="{{mistakes}}" as="m" hint-placeholder-count="6"><button type="button" class="{{m.cls}}" aria-pressed="{{m.on}}" onClick="{{m.pick}}">{{m.label}}</button></sc-for></div></div>
+            <label class="field" for="td-notes"><span class="label">Notes</span><textarea id="td-notes" class="input" style="height: 96px; padding: 10px 12px; resize: vertical;">Third short into the opening drive fade. Waited for the lower high, sized to plan, took the first target at the prior low.</textarea></label>
+          </section>
+        </div>
+
+        <aside style="display: grid; gap: 16px;">
+          <section class="card" style="padding: 16px; display: grid; gap: 12px;" aria-label="Trade summary">
+            <h2 class="h2">Summary</h2>
+            <dl class="kv">
+              <dt>Account</dt><dd style="font-family: var(--font-sans);">Apex $100K</dd>
+              <dt>Trading day</dt><dd>2026-10-19</dd>
+              <dt>Quantity</dt><dd>3</dd>
+              <dt>Entry · exit</dt><dd>29,729.25 → 29,720.00</dd>
+              <dt>Hold</dt><dd>33s</dd>
+              <dt>Gross P&amp;L</dt><dd class="pos">+$55.50</dd>
+              <dt>Fees</dt><dd>$5.70</dd>
+              <dt>Net P&amp;L</dt><dd class="pos" style="font-weight: 600;">+$49.80</dd>
+              <dt>P&amp;L source</dt><dd style="font-family: var(--font-sans);">Calculated · $2 per point</dd>
+            </dl>
+          </section>
+          <section class="card" style="padding: 16px; display: grid; gap: 12px;" aria-label="Source fills">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;"><h2 class="h2">Source fills</h2><span class="faint">From Performance.csv, line 10</span></div>
+            <dl class="kv">
+              <dt>Sell fill</dt><dd>707776450188</dd>
+              <dt>Sold at</dt><dd>10/19/2026 07:54:32</dd>
+              <dt>Buy fill</dt><dd>707776450219</dd>
+              <dt>Bought at</dt><dd>10/19/2026 07:55:05</dd>
+              <dt>Opened by</dt><dd style="font-family: var(--font-sans);">Sell first, so short</dd>
+              <dt>Tick size</dt><dd>0.25</dd>
+            </dl>
+            <p class="faint" style="margin: 0;">Original values are kept exactly as exported and can't be edited.</p>
+          </section>
+          <section class="card" style="padding: 16px; display: grid; gap: 10px;" aria-label="Screenshot">
+            <h2 class="h2">Screenshot</h2>
+            <label for="td-shot" style="display: grid; place-items: center; gap: 6px; height: 120px; border: 1.5px dashed var(--line-200); border-radius: 10px; color: var(--ink-muted); cursor: pointer; text-align: center; font-size: 13px;">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v12H4zM12 10a3 3 0 1 0 0 6a3 3 0 1 0 0-6z"></path></svg>
+              Drop a chart screenshot or paste one
+              <input id="td-shot" type="file" accept="image/*" style="position: absolute; width: 1px; height: 1px; opacity: 0;">
+            </label>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { rating: 4, reviewed: true, moods: { Calm: true }, setups: { Reversal: true }, mistakes: {} }; }
+  renderVals() {
+    var self = this, st = this.state;
+    var chips = function (key, list, warn) {
+      return list.map(function (l) {
+        var on = !!st[key][l];
+        return { label: l, on: on, cls: 'chipt' + (on ? (warn ? ' onw' : ' on') : ''), pick: function () { var o = Object.assign({}, st[key]); o[l] = !on; var s = {}; s[key] = o; self.setState(s); } };
+      });
+    };
+    var stars = [1, 2, 3, 4, 5].map(function (n) {
+      return { cls: 'star' + (n <= st.rating ? ' on' : ''), checked: n === st.rating, label: n + (n === 1 ? ' star' : ' stars'), pick: function () { self.setState({ rating: n }); } };
+    });
+    return {
+      theme: this.props.theme ?? 'dark', stars: stars,
+      reviewed: st.reviewed, toggleReviewed: function () { self.setState({ reviewed: !st.reviewed }); },
+      moods: chips('moods', ['Calm', 'Confident', 'Hesitant', 'FOMO', 'Tired']),
+      setups: chips('setups', ['ORB', 'VWAP pullback', 'Reversal', 'Breakout', 'News']),
+      mistakes: chips('mistakes', ['Chased entry', 'Moved stop', 'Oversized', 'Early exit', 'No setup', 'Revenge trade'], true)
+    };
+  }
+}
+</script>
+</body>
+</html>

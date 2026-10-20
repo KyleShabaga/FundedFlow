@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Calendar</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}</style>
+</helmet>
+<div class="app" data-theme="{{theme}}">
+  <dc-import name="Sidebar" active="calendar" hint-size="248px,100%"></dc-import>
+  <div class="app-main">
+    <dc-import name="Topbar" hint-size="100%,64px"></dc-import>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="h1">Calendar</h1>
+          <p class="sub">Net P&amp;L per trading day. Weekend activity counts toward Monday, so weeks run Monday to Friday.</p>
+        </div>
+        <div class="seg" role="group" aria-label="Show">
+          <button type="button" class="is-on" aria-pressed="true">Net P&amp;L</button>
+          <button type="button" aria-pressed="false">Trades</button>
+          <button type="button" aria-pressed="false">Win rate</button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start;">
+        <section class="card" style="padding: 16px 20px 20px; display: grid; gap: 12px; position: relative;" aria-label="Month calendar">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <button type="button" class="icon-btn" aria-label="Previous month" onClick="{{prev}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+              <button type="button" class="pick" aria-haspopup="dialog" aria-expanded="{{pickerOpen}}" onClick="{{togglePicker}}" style="display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line-200); background: var(--bg-200); color: var(--ink); font: 600 16px/22px var(--font-display); cursor: pointer;">
+                {{monthTitle}}
+                <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+              </button>
+              <button type="button" class="icon-btn" aria-label="Next month" onClick="{{next}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+              <button type="button" class="btn btn-sm" onClick="{{today}}" style="margin-left: 6px;">Today</button>
+            </div>
+            <div style="display: flex; gap: 20px; align-items: baseline; flex-wrap: wrap;">
+              <span><span class="label">Month </span><span class="mono" style="font-weight: 600;"><span class="{{monthCls}}">{{monthPnl}}</span></span></span>
+              <span class="faint">{{monthMeta}}</span>
+            </div>
+          </div>
+
+          <sc-if value="{{pickerOpen}}" hint-placeholder-val="{{ true }}">
+            <div class="pop" role="dialog" aria-label="Choose month and year" style="position: absolute; top: 60px; left: 56px; width: 380px; z-index: 5; padding: 16px; display: grid; gap: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <button type="button" class="icon-btn" aria-label="Previous year" onClick="{{prevYear}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+                <div style="display: grid; justify-items: center;">
+                  <span style="font: 600 18px/24px var(--font-display);">{{pickYear}}</span>
+                  <span class="mono" style="font-size: 12px;"><span class="{{yearCls}}">{{yearPnl}}</span> <span class="faint">YTD</span></span>
+                </div>
+                <button type="button" class="icon-btn" aria-label="Next year" onClick="{{nextYear}}" disabled="{{nextYearOff}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+                <sc-for list="{{months}}" as="m" hint-placeholder-count="12">
+                  <button type="button" style="{{m.style}}" aria-pressed="{{m.on}}" disabled="{{m.off}}" aria-label="{{m.aria}}" onClick="{{m.pick}}">
+                    <span style="font: 600 13px/18px var(--font-sans);">{{m.name}}</span>
+                    <span class="mono" style="font-size: 12px;"><span class="{{m.cls}}">{{m.pnl}}</span></span>
+                  </button>
+                </sc-for>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line-100); padding-top: 12px;">
+                <span class="faint">Months without trades are dimmed; future months can't be picked.</span>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.15fr); gap: 8px;">
+            <sc-for list="{{dow}}" as="d" hint-placeholder-count="6"><span class="overline" style="text-align: center;">{{d}}</span></sc-for>
+          </div>
+          <sc-for list="{{weeks}}" as="w" hint-placeholder-count="5">
+            <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.15fr); gap: 8px;">
+              <sc-for list="{{w.days}}" as="c" hint-placeholder-count="5">
+                <button type="button" style="{{c.style}}" aria-label="{{c.aria}}" aria-pressed="{{c.on}}" disabled="{{c.off}}" onClick="{{c.pick}}">
+                  <span style="font-size: 11px; color: var(--ink-faint); font-weight: 500;">{{c.n}}</span>
+                  <span class="mono" style="font-weight: 600; font-size: 13px; margin-top: auto;"><span class="{{c.cls}}">{{c.pnl}}</span></span>
+                  <span style="font-size: 11px; color: var(--ink-muted);">{{c.trades}}</span>
+                </button>
+              </sc-for>
+              <div style="{{w.style}}">
+                <span style="font-size: 11px; color: var(--ink-faint); font-weight: 500;">Week {{w.n}}</span>
+                <span class="mono" style="font-weight: 600; font-size: 13px; margin-top: auto;"><span class="{{w.cls}}">{{w.pnl}}</span></span>
+                <span style="font-size: 11px; color: var(--ink-muted);">{{w.trades}}</span>
+              </div>
+            </div>
+          </sc-for>
+        </section>
+
+        <aside class="card" style="padding: 16px; display: grid; gap: 14px;" aria-label="Selected day">
+          <div><span class="overline">Selected day</span><h2 class="h2" style="margin-top: 4px;">{{selTitle}}</h2></div>
+          <div class="mono" style="font: 600 26px/32px var(--font-mono);"><span class="{{selCls}}">{{selPnl}}</span></div>
+          <dl class="stats" style="margin: 0; border: 1px solid var(--line-100); border-radius: 8px;">
+            <div><dt>Trades</dt><dd>{{selTrades}}</dd></div>
+            <div><dt>Account</dt><dd style="font-family: var(--font-sans);">Apex $100K</dd></div>
+            <div><dt>Notes</dt><dd style="font-family: var(--font-sans);">Plan + review</dd></div>
+          </dl>
+          <a href="Journal.dc.html" class="btn btn-primary" style="justify-content: center;">Open in journal</a>
+        </aside>
+      </div>
+
+      <section class="card" style="padding: 16px 20px; display: grid; gap: 12px;" aria-label="Yearly performance">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;"><h2 class="h2">Yearly performance</h2><span class="faint">Click a month to jump to it</span></div>
+        <div class="dt-scroll">
+          <div style="display: grid; grid-template-columns: 56px repeat(12, minmax(72px, 1fr)) minmax(88px, 1fr); gap: 6px; min-width: 1060px;">
+            <span></span>
+            <sc-for list="{{monthHeads}}" as="h" hint-placeholder-count="13"><span class="overline" style="text-align: center;">{{h}}</span></sc-for>
+            <sc-for list="{{yearRows}}" as="y" hint-placeholder-count="2">
+              <span class="mono" style="align-self: center; color: var(--ink-muted); font-size: 13px;">{{y.year}}</span>
+              <sc-for list="{{y.cells}}" as="c" hint-placeholder-count="13">
+                <button type="button" style="{{c.style}}" disabled="{{c.off}}" aria-label="{{c.aria}}" onClick="{{c.pick}}">
+                  <span class="mono" style="font-weight: 600; font-size: 12.5px;"><span class="{{c.cls}}">{{c.pnl}}</span></span>
+                  <span style="font-size: 11px; color: var(--ink-muted);">{{c.trades}}</span>
+                </button>
+              </sc-for>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"pickerOpen":{"editor":"boolean","default":true},"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { y: 2026, m: 10, pick: null, pickYear: 2026, sel: 19, open: null }; }
+  renderVals() {
+    var self = this, st = this.state;
+    var open = st.open == null ? (this.props.pickerOpen ?? true) : st.open;
+    var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    var monthly = {
+      2026: [[-134, 38], [1589, 30], [2041, 37], [-6, 33], [1853, 34], [2590, 38], [904, 35], [1220, 35], [-240, 35], [2257.73, 85], null, null],
+      2025: [null, null, null, null, null, null, null, [-188, 27], [816, 31], [1159, 38], [1156, 32], [919, 36]]
+    };
+    var daily = {
+      '2026-10': { 1: [-122.85, 3], 2: [156.62, 2], 5: [-46.81, 1], 6: [66.49, 1], 8: [-16.84, 1], 9: [40.48, 1], 12: [147.26, 1], 13: [171.38, 1], 15: [562.10, 3], 16: [214.80, 3], 19: [1197.60, 67], 20: [-112.50, 1] }
+    };
+    var money = function (v, dp) { dp = dp == null ? 2 : dp; return (v < 0 ? '−' : v > 0 ? '+' : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp }); };
+    var cls = function (v) { return v > 0 ? 'pos' : v < 0 ? 'neg' : 'faint'; };
+    var tint = function (v) { return v > 0 ? 'background: var(--profit-soft); border: 1px solid var(--profit);' : v < 0 ? 'background: var(--loss-soft); border: 1px solid var(--loss);' : 'background: var(--bg-200); border: 1px solid transparent;'; };
+    var y = st.y, m = st.m, key = y + '-' + (m < 10 ? '0' : '') + m, dmap = daily[key] || {};
+    var first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(), off = (first + 6) % 7, count = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    var cells = []; for (var i = 0; i < off; i++) cells.push(null); for (var d = 1; d <= count; d++) cells.push(d); while (cells.length % 7) cells.push(null);
+    var isToday = function (d) { return y === 2026 && m === 10 && d === 20; };
+    var weeks = [], n = 0, mTot = 0, mTr = 0, mDays = 0;
+    for (var r = 0; r < cells.length; r += 7) {
+      var wk = cells.slice(r, r + 5);
+      if (!wk.some(function (x) { return x; })) continue;
+      n++;
+      var wt = 0, wtr = 0, any = false;
+      var days = wk.map(function (d) {
+        var info = d ? dmap[d] : null;
+        if (info) { wt += info[0]; wtr += info[1]; any = true; mTot += info[0]; mTr += info[1]; mDays++; }
+        var on = d === st.sel;
+        var base = 'min-height: 72px; border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 1px; text-align: left; font: inherit; color: var(--ink); cursor: pointer;';
+        var style = !d ? base + 'background: transparent; border: 1px solid var(--line-100); cursor: default;' : base + (info ? tint(info[0]) : 'background: var(--bg-200); border: 1px solid transparent;');
+        if (on && d) style += ' box-shadow: 0 0 0 2px var(--flow);';
+        if (isToday(d) && !on) style += ' box-shadow: inset 0 0 0 1px var(--flow);';
+        return { n: d ? (isToday(d) ? d + ' · Today' : d) : '', pnl: info ? money(info[0], 0) : '', cls: info ? cls(info[0]) : '', trades: info ? info[1] + (info[1] === 1 ? ' trade' : ' trades') : '',
+          off: !d, on: on, aria: d ? FULL[m - 1] + ' ' + d + (info ? ', ' + money(info[0]) + ', ' + info[1] + ' trades' : ', no trades') : 'Outside month', style: style,
+          pick: function () { if (d) self.setState({ sel: d }); } };
+      });
+      weeks.push({ n: n, days: days, pnl: any ? money(wt, 0) : '—', cls: any ? cls(wt) : 'faint', trades: any ? wtr + ' trades' : '',
+        style: 'min-height: 72px; border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 1px; background: var(--bg-100); border: 1px solid var(--line-200);' });
+    }
+    var py = st.pickYear;
+    var row = monthly[py] || [];
+    var ytd = row.reduce(function (s, x) { return s + (x ? x[0] : 0); }, 0);
+    var months = MON.map(function (name, i) {
+      var v = row[i], future = py > 2026 || (py === 2026 && i > 9), on = py === y && i + 1 === m;
+      var style = 'display: grid; gap: 2px; justify-items: start; padding: 10px; border-radius: 8px; font: inherit; color: var(--ink); cursor: pointer; text-align: left;' + (v ? tint(v[0]) : 'background: var(--bg-200); border: 1px solid transparent;') + (on ? ' box-shadow: 0 0 0 2px var(--flow);' : '') + (future ? ' opacity: .45; cursor: not-allowed;' : (!v ? ' opacity: .7;' : ''));
+      return { name: name, pnl: v ? money(v[0], 0) : '—', cls: v ? cls(v[0]) : 'faint', on: on, off: future, style: style,
+        aria: FULL[i] + ' ' + py + (v ? ', ' + money(v[0], 0) : ', no trades'),
+        pick: function () { if (!future) self.setState({ y: py, m: i + 1, open: false, sel: null }); } };
+    });
+    var yearRows = [2026, 2025].map(function (yr) {
+      var rw = monthly[yr], tot = 0, tr = 0;
+      var cs = rw.map(function (v, i) {
+        if (v) { tot += v[0]; tr += v[1]; }
+        var on = yr === y && i + 1 === m;
+        return { pnl: v ? money(v[0], 0) : '—', cls: v ? cls(v[0]) : 'faint', trades: v ? v[1] + ' trades' : '', off: !v, aria: FULL[i] + ' ' + yr,
+          style: 'display: grid; gap: 2px; justify-items: center; padding: 8px 4px; border-radius: 8px; font: inherit; color: var(--ink); cursor: pointer;' + (v ? tint(v[0]) : 'background: var(--bg-200); border: 1px solid transparent; cursor: default;') + (on ? ' box-shadow: 0 0 0 2px var(--flow);' : ''),
+          pick: function () { if (v) self.setState({ y: yr, m: i + 1, pickYear: yr, sel: null }); } };
+      });
+      cs.push({ pnl: money(tot, 0), cls: cls(tot), trades: tr + ' trades', off: true, aria: yr + ' total', pick: function () {},
+        style: 'display: grid; gap: 2px; justify-items: center; padding: 8px 4px; border-radius: 8px; background: var(--bg-100); border: 1px solid var(--line-200); color: var(--ink); font: inherit;' });
+      return { year: yr, cells: cs };
+    });
+    var selInfo = st.sel ? dmap[st.sel] : null;
+    var mv = (monthly[y] || [])[m - 1];
+    var mPnl = mDays ? mTot : (mv ? mv[0] : 0), mTrades = mDays ? mTr : (mv ? mv[1] : 0);
+    var shift = function (k) { var mm = m + k, yy = y; if (mm < 1) { mm = 12; yy--; } if (mm > 12) { mm = 1; yy++; } if (yy > 2026 || (yy === 2026 && mm > 10)) return; self.setState({ y: yy, m: mm, pickYear: yy, sel: null }); };
+    return {
+      theme: this.props.theme ?? 'dark',
+      monthTitle: FULL[m - 1] + ' ' + y,
+      monthPnl: money(mPnl), monthCls: cls(mPnl), monthMeta: mTrades + ' trades' + (mDays ? ' · ' + mDays + ' trading days' : ''),
+      pickerOpen: open, togglePicker: function () { self.setState({ open: !open, pickYear: y }); },
+      prev: function () { shift(-1); }, next: function () { shift(1); },
+      today: function () { self.setState({ y: 2026, m: 10, sel: 20, pickYear: 2026, open: false }); },
+      pickYear: py, yearPnl: money(ytd, 0), yearCls: cls(ytd), nextYearOff: py >= 2026,
+      prevYear: function () { if (monthly[py - 1]) self.setState({ pickYear: py - 1 }); },
+      nextYear: function () { if (py < 2026) self.setState({ pickYear: py + 1 }); },
+      months: months, dow: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Week'], weeks: weeks,
+      monthHeads: MON.concat(['Year']), yearRows: yearRows,
+      selTitle: st.sel ? FULL[m - 1] + ' ' + st.sel + ', ' + y : 'No day selected',
+      selPnl: selInfo ? money(selInfo[0]) : '—', selCls: selInfo ? cls(selInfo[0]) : 'faint', selTrades: selInfo ? selInfo[1] : 0
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Top bar</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;background:#070b14}
+.tb-search{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 6px 0 10px;min-width:200px;border-radius:8px;border:1px solid var(--line-100);background:var(--bg-100);color:var(--ink-muted);font:500 13px/18px var(--font-sans);cursor:pointer}
+.tb-search:hover{border-color:var(--line-200);color:var(--ink)}
+.kbd{margin-left:auto;font:600 10.5px/1 var(--font-mono);padding:4px 6px;border-radius:5px;background:var(--bg-300);color:var(--ink-muted)}
+.tb-ico{position:relative;width:34px;height:34px;display:inline-grid;place-items:center;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--ink-muted);cursor:pointer;padding:0}
+.tb-ico:hover,.tb-ico[aria-expanded="true"]{background:var(--bg-200);color:var(--ink)}
+.dot{position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--flow-fill);color:var(--on-flow);font:600 10px/16px var(--font-mono);text-align:center;border:2px solid var(--bg-000)}
+.sess{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 10px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--flow);font:600 13px/18px var(--font-sans);cursor:pointer;white-space:nowrap}
+.sess:hover,.sess[aria-expanded="true"]{background:var(--flow-soft);border-color:var(--flow)}
+.cc{display:inline-grid;place-items:center;min-width:26px;height:18px;padding:0 4px;border-radius:4px;background:var(--bg-300);color:var(--ink);font:600 10px/1 var(--font-mono)}
+.sp-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center}
+.sp-track{position:relative;height:18px;border-radius:999px;background:var(--bg-200);overflow:hidden}
+.sp-bar{position:absolute;top:0;bottom:0;border-radius:999px}
+.tb-ico:focus-visible,.sess:focus-visible,.tb-search:focus-visible{outline:2px solid var(--flow);outline-offset:2px}
+</style>
+</helmet>
+<header class="tb" style="position: relative; z-index: 20; padding-inline: 24px; font-family: var(--font-sans); color: var(--ink);">
+  <div class="tb-left">
+    <button type="button" class="tb-search" aria-label="Search trades, days and notes (Ctrl+K)">
+      <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14zM20 20l-4-4"></path></svg>
+      Search
+      <span class="kbd">Ctrl K</span>
+    </button>
+    <button type="button" class="chip" aria-haspopup="listbox">
+      <span style="display: flex;">
+        <span style="width: 20px; height: 20px; border-radius: 6px; background: var(--flow-soft); color: var(--flow); display: grid; place-items: center; font: 600 11px/1 var(--font-display); border: 2px solid var(--bg-100);">A</span>
+        <span style="width: 20px; height: 20px; border-radius: 6px; background: var(--warn-soft); color: var(--warn); display: grid; place-items: center; font: 600 11px/1 var(--font-display); border: 2px solid var(--bg-100); margin-left: -6px;">T</span>
+      </span>
+      2 accounts
+      <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+    </button>
+    <button type="button" class="chip">
+      <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v16H4zM4 9h16M8 3v4M16 3v4"></path></svg>
+      Sep 20 – Oct 20
+      <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+    </button>
+  </div>
+  <div class="tb-right" style="gap: 4px;">
+    <dc-import name="DayTimer" seconds-left="{{15447}}" hint-size="210px,34px"></dc-import>
+    <button type="button" class="sess" aria-haspopup="dialog" aria-expanded="{{open}}" aria-label="{{sessLabel}}" onClick="{{toggle}}">
+      <span class="cc">{{curCc}}</span>
+      {{curName}} · <span class="mono">{{clock}}</span>
+      <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="{{chev}}"></path></svg>
+    </button>
+    <button type="button" class="tb-ico" aria-label="Send feedback" title="Send feedback">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H8l-4 4zM12 7v4M12 13.5v.01"></path></svg>
+    </button>
+    <button type="button" class="tb-ico" aria-label="Notifications, 1 unread" title="Notifications">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"></path></svg>
+      <span class="dot" aria-hidden="true">1</span>
+    </button>
+    <button type="button" class="tb-ico" aria-label="{{themeLabel}}" title="{{themeLabel}}" onClick="{{cycleTheme}}">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="{{themeIcon}}"></path></svg>
+    </button>
+    <span style="width: 1px; height: 24px; background: var(--line-100); margin: 0 6px;" aria-hidden="true"></span>
+    <x-import component-from-global-scope="FundedFlow.Button" variant="primary">+ Add trade</x-import>
+  </div>
+
+  <sc-if value="{{open}}" hint-placeholder-val="{{ false }}">
+    <div class="pop" role="dialog" aria-label="Trading sessions" style="position: absolute; top: 58px; right: 150px; width: 560px; padding: 20px; display: grid; gap: 16px; color: var(--ink);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+        <div style="display: grid; gap: 10px;">
+          <span class="overline">Trading sessions</span>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="width: 40px; height: 40px; border-radius: 50%; background: var(--flow-soft); color: var(--flow); display: grid; place-items: center; font: 600 13px/1 var(--font-mono);">{{curCc}}</span>
+            <div style="display: grid;"><b style="font: 600 16px/22px var(--font-display);">{{curName}}</b><span class="faint">{{tzShort}} · <span class="mono">{{clock}}</span></span></div>
+          </div>
+        </div>
+        <span style="padding: 6px 12px; border-radius: 999px; border: 1px solid var(--flow); background: var(--flow-soft); color: var(--flow); font: 600 13px/18px var(--font-mono);">{{clock}} {{tzShort}}</span>
+      </div>
+
+      <label for="tz" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line-100); border-radius: 10px;">
+        <span style="font-weight: 600; font-size: 13px;">Display time zone</span>
+        <select id="tz" class="input select" style="width: 260px;" value="{{tz}}" onChange="{{pickTz}}">
+          <option value="utc">UTC (UTC+00:00)</option>
+          <option value="chi">America/Chicago (UTC−05:00) · account</option>
+          <option value="ny">America/New_York (UTC−04:00)</option>
+        </select>
+      </label>
+
+      <div style="display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line-100); border-radius: 10px;">
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+          <div class="sp-row">
+            <span style="display: flex; gap: 8px; align-items: center; font: 600 13px/18px var(--font-sans);"><span class="cc">{{r.cc}}</span><span class="{{r.nameCls}}">{{r.name}}</span></span>
+            <div class="sp-track" role="img" aria-label="{{r.aria}}">
+              <sc-for list="{{r.bars}}" as="b" hint-placeholder-count="1"><div class="sp-bar" style="{{b.style}}"></div></sc-for>
+              <div style="{{nowStyle}}"></div>
+            </div>
+          </div>
+        </sc-for>
+        <div class="sp-row">
+          <span></span>
+          <div style="position: relative; height: 16px; font: 600 11px/16px var(--font-mono); color: var(--ink-muted);">
+            <span style="position: absolute; left: 0;">00</span>
+            <span style="position: absolute; left: 25%; transform: translateX(-50%);">06</span>
+            <span style="position: absolute; left: 50%; transform: translateX(-50%);">12</span>
+            <span style="position: absolute; left: 75%; transform: translateX(-50%);">18</span>
+            <span style="position: absolute; right: 0;">24</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="margin: 0; padding-top: 12px; border-top: 1px solid var(--line-100); font-size: 13px;">{{summary}}</p>
+    </div>
+  </sc-if>
+</header>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"sessionsOpen":{"editor":"boolean","default":false},"utcMinutes":{"editor":"int","min":0,"max":1439,"default":1117},"$preview":{"width":1200,"height":64}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { open: null, tz: 'utc', theme: 'system', tick: 0 }; }
+  componentDidMount() { var self = this; this.t = setInterval(function () { self.setState({ tick: self.state.tick + 1 }); }, 60000); }
+  componentWillUnmount() { clearInterval(this.t); }
+  renderVals() {
+    var self = this, st = this.state;
+    var open = st.open == null ? !!this.props.sessionsOpen : st.open;
+    var nowUtc = ((this.props.utcMinutes ?? 1117) + st.tick) % 1440;
+    var tzs = { utc: [0, 'UTC'], chi: [-300, 'CT'], ny: [-240, 'ET'] };
+    var off = tzs[st.tz][0], tzShort = tzs[st.tz][1];
+    var local = (nowUtc + off + 1440) % 1440;
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    var clock = p(Math.floor(local / 60)) + ':' + p(local % 60);
+    // Session hours in UTC (late October: London on BST, New York on EDT, Sydney on AEDT).
+    var sessions = [
+      { name: 'Sydney', cc: 'AU', s: 21 * 60, e: 6 * 60, color: 'var(--chart-2)' },
+      { name: 'Tokyo', cc: 'JP', s: 0, e: 9 * 60, color: 'var(--chart-4)' },
+      { name: 'London', cc: 'UK', s: 7 * 60, e: 16 * 60, color: 'var(--chart-3)' },
+      { name: 'New York', cc: 'US', s: 12 * 60, e: 21 * 60, color: 'var(--flow)' }
+    ];
+    var isOpen = function (x) { return x.s < x.e ? nowUtc >= x.s && nowUtc < x.e : nowUtc >= x.s || nowUtc < x.e; };
+    var until = function (target) { return (target - nowUtc + 1440) % 1440; };
+    var dur = function (m) { return Math.floor(m / 60) + 'h ' + (m % 60) + 'm'; };
+    var hm = function (m) { m = (m + off + 1440) % 1440; return p(Math.floor(m / 60)) + ':' + p(m % 60); };
+    var rows = sessions.map(function (x) {
+      var s = (x.s + off + 1440) % 1440, e = (x.e + off + 1440) % 1440, live = isOpen(x);
+      var segs = s < e ? [[s, e]] : [[s, 1440], [0, e]];
+      return {
+        name: x.name, cc: x.cc, nameCls: live ? 'pos' : '',
+        aria: x.name + ' ' + hm(x.s) + ' to ' + hm(x.e) + ' ' + tzShort + (live ? ', open now' : ', closed'),
+        bars: segs.map(function (g) { return { style: 'left:' + (g[0] / 14.4).toFixed(2) + '%;width:' + ((g[1] - g[0]) / 14.4).toFixed(2) + '%;background:' + x.color + ';opacity:' + (live ? 1 : .32) + ';' }; })
+      };
+    });
+    var cur = sessions.filter(isOpen).sort(function (a, b) { return until(a.e) - until(b.e); })[0] || sessions[3];
+    var next = sessions.filter(function (x) { return !isOpen(x); }).sort(function (a, b) { return until(a.s) - until(b.s); })[0];
+    var summary = (isOpen(cur) ? cur.name + ' closes in ' + dur(until(cur.e)) + '.' : 'All sessions closed.') + (next ? ' ' + next.name + ' opens in ' + dur(until(next.s)) + '.' : '');
+    var themes = { system: ['Theme: system', 'M12 3a9 9 0 1 0 0 18zM12 3a9 9 0 0 1 0 18'], dark: ['Theme: dark', 'M20 14A8 8 0 1 1 10 4a7 7 0 0 0 10 10z'], light: ['Theme: light', 'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8zM12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4'] };
+    var order = ['system', 'dark', 'light'];
+    return {
+      open: open, toggle: function () { self.setState({ open: !open }); },
+      chev: open ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6',
+      clock: clock, tzShort: tzShort, tz: st.tz,
+      pickTz: function (e) { self.setState({ tz: e.target.value }); },
+      curName: cur.name, curCc: cur.cc,
+      sessLabel: cur.name + ' session, ' + clock + ' ' + tzShort + '. Show trading sessions',
+      rows: rows,
+      nowStyle: 'position:absolute;top:-2px;bottom:-2px;width:2px;border-radius:1px;background:var(--ink);left:calc(' + (local / 14.4).toFixed(2) + '% - 1px);',
+      summary: summary,
+      themeLabel: themes[st.theme][0] + ' (click to change)', themeIcon: themes[st.theme][1],
+      cycleTheme: function () { self.setState({ theme: order[(order.indexOf(st.theme) + 1) % 3] }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

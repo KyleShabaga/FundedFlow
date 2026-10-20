@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reports</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}</style>
+</helmet>
+<div class="app" data-theme="{{theme}}">
+  <dc-import name="Sidebar" active="reports" hint-size="248px,100%"></dc-import>
+  <div class="app-main">
+    <dc-import name="Topbar" hint-size="100%,64px"></dc-import>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="h1">Reports</h1>
+          <p class="sub">Where your P&amp;L comes from: by date, time, instrument, setup and mistake.</p>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <div class="seg" role="group" aria-label="P&amp;L basis">
+            <button type="button" class="{{netCls}}" aria-pressed="{{isNet}}" onClick="{{setNet}}">Net P&amp;L</button>
+            <button type="button" class="{{grossCls}}" aria-pressed="{{isGross}}" onClick="{{setGross}}">Gross P&amp;L</button>
+          </div>
+          <button type="button" class="btn btn-sm">Export CSV</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <nav aria-label="Report sections" style="flex: 1 1 200px; max-width: 220px; display: grid; gap: 2px;">
+          <sc-for list="{{nav}}" as="n" hint-placeholder-count="12">
+            <sc-if value="{{n.isHead}}" hint-placeholder-val="{{ false }}"><span class="overline" style="padding: 14px 12px 6px;">{{n.label}}</span></sc-if>
+            <sc-if value="{{n.isLink}}" hint-placeholder-val="{{ true }}"><a href="{{n.href}}" class="{{n.cls}}" aria-current="{{n.cur}}" style="height: 36px;">{{n.label}}</a></sc-if>
+          </sc-for>
+        </nav>
+
+        <div style="flex: 999 1 640px; min-width: 0; display: grid; gap: 16px;">
+          <div class="kpis" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+            <div class="card tile"><span class="label">Best month</span><span class="tile-v pos">{{best}}</span><span class="faint">September 2026</span></div>
+            <div class="card tile"><span class="label">Worst month</span><span class="tile-v neg">{{worst}}</span><span class="faint">October 2026</span></div>
+            <div class="card tile"><span class="label">Average per month</span><span class="tile-v pos">{{avgMonth}}</span><span class="faint">2 months</span></div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start;">
+            <section class="card" aria-label="Trade statistics">
+              <div style="padding: 14px 16px; border-bottom: 1px solid var(--line-100);"><h2 class="h2">Trades</h2></div>
+              <dl class="stats" style="margin: 0;">
+                <sc-for list="{{left}}" as="s" hint-placeholder-count="13"><div><dt>{{s.k}}</dt><dd><span class="{{s.c}}">{{s.v}}</span></dd></div></sc-for>
+              </dl>
+            </section>
+            <section class="card" aria-label="Day and month statistics">
+              <div style="padding: 14px 16px; border-bottom: 1px solid var(--line-100);"><h2 class="h2">Days and months</h2></div>
+              <dl class="stats" style="margin: 0;">
+                <sc-for list="{{right}}" as="s" hint-placeholder-count="13"><div><dt>{{s.k}}</dt><dd><span class="{{s.c}}">{{s.v}}</span></dd></div></sc-for>
+              </dl>
+            </section>
+          </div>
+
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 16px; align-items: start;">
+            <section class="card" style="padding: 16px; display: grid; gap: 12px;" aria-label="P&amp;L by weekday">
+              <div style="display: flex; justify-content: space-between;"><h2 class="h2">By weekday</h2><span class="faint">Net P&amp;L</span></div>
+              <div style="display: grid; gap: 10px;">
+                <sc-for list="{{weekdays}}" as="w" hint-placeholder-count="5">
+                  <div style="display: grid; grid-template-columns: 40px minmax(0, 1fr) 84px; gap: 10px; align-items: center;">
+                    <span class="label">{{w.d}}</span>
+                    <div style="position: relative; height: 10px; background: var(--bg-200); border-radius: 4px;"><div style="{{w.bar}}"></div><div style="position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--line-200);"></div></div>
+                    <span class="mono" style="text-align: right; font-size: 12.5px;"><span class="{{w.c}}">{{w.v}}</span></span>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+            <section class="card" style="padding: 16px; display: grid; gap: 12px;" aria-label="P&amp;L by hour of entry">
+              <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;"><h2 class="h2">By hour of entry</h2><span class="faint">America/Chicago · net P&amp;L per hour</span></div>
+              <div style="display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; align-items: end; height: 160px; border-bottom: 1px solid var(--line-200); position: relative;">
+                <sc-for list="{{hours}}" as="h" hint-placeholder-count="9">
+                  <div style="height: 160px; display: flex; flex-direction: column; justify-content: center; position: relative;" title="{{h.tip}}">
+                    <div style="{{h.bar}}"></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px;">
+                <sc-for list="{{hours}}" as="h" hint-placeholder-count="9"><span class="faint" style="text-align: center;">{{h.h}}</span></sc-for>
+              </div>
+              <p class="faint" style="margin: 0;">Best hour 07:00 (+$612). Every hour after 10:00 lost money.</p>
+            </section>
+          </div>
+
+          <section class="dt-card" aria-label="Setups and mistakes">
+            <div class="dt-toolbar"><h2 class="h2">Setups and mistakes</h2><span class="faint">Sorted by net P&amp;L</span></div>
+            <div class="dt-scroll">
+              <table class="dt">
+                <thead><tr><th><span>Tag</span></th><th><span>Kind</span></th><th class="num"><span>Trades</span></th><th class="num"><span>Win rate</span></th><th class="num"><span>Avg trade</span></th><th class="num is-sorted" aria-sort="descending"><span>Net P&amp;L</span></th><th><span>Share of P&amp;L</span></th></tr></thead>
+                <tbody>
+                  <sc-for list="{{tags}}" as="t" hint-placeholder-count="6">
+                    <tr>
+                      <td style="font-weight: 600;">{{t.name}}</td>
+                      <td><span class="{{t.kindCls}}">{{t.kind}}</span></td>
+                      <td class="num">{{t.n}}</td><td class="num">{{t.wr}}</td>
+                      <td class="num"><span class="{{t.c}}">{{t.avg}}</span></td>
+                      <td class="num"><span class="{{t.c}}">{{t.v}}</span></td>
+                      <td style="min-width: 180px;"><div class="mini-track"><div class="{{t.fill}}" style="{{t.w}}"></div></div></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":1460}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { basis: 'net' }; }
+  renderVals() {
+    var self = this, net = this.state.basis === 'net';
+    var m = function (v) { return (v < 0 ? '−' : v > 0 ? '+' : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+    var c = function (v) { return v > 0 ? 'pos' : v < 0 ? 'neg' : ''; };
+    var fees = 1672.18;
+    var total = net ? 204.32 : 204.32 + fees;
+    var nav = [
+      { label: 'Overview', href: '#overview', on: true }, { head: 'Date' }, { label: 'Day', href: '#day' }, { label: 'Week', href: '#week' }, { label: 'Month', href: '#month' },
+      { head: 'Time' }, { label: 'Hour of entry', href: '#hour' }, { label: 'Hold time', href: '#hold' },
+      { head: 'Market' }, { label: 'Instrument', href: '#instrument' },
+      { head: 'Tags' }, { label: 'Setups', href: '#setups' }, { label: 'Mistakes', href: '#mistakes' },
+      { head: 'Prop rules' }, { label: 'Rule usage', href: '#rules' }
+    ].map(function (n) {
+      return { label: n.label || n.head, isHead: !!n.head, isLink: !n.head, href: n.href, cls: 'sb-item' + (n.on ? ' is-on' : ''), cur: n.on ? 'page' : null };
+    });
+    var left = [
+      ['Total P&L', m(total), c(total)], ['Total trades', '579', ''], ['Winning trades', '354', ''], ['Losing trades', '225', ''], ['Break-even trades', '0', ''],
+      ['Average winning trade', m(24.80), 'pos'], ['Average losing trade', m(-38.12), 'neg'], ['Average trade', m(total / 579), c(total)],
+      ['Largest win', m(320.20), 'pos'], ['Largest loss', m(-455.70), 'neg'], ['Commissions', '$687.12', ''], ['Fees', '$985.06', ''], ['Profit factor', net ? '1.02' : '1.21', '']
+    ].map(function (r) { return { k: r[0], v: r[1], c: r[2] }; });
+    var right = [
+      ['Trading days', '15', ''], ['Winning days', '11', ''], ['Losing days', '4', ''], ['Average day', m(13.62), 'pos'],
+      ['Best day', m(1197.60) + ' · Oct 19', 'pos'], ['Worst day', m(-1281.80) + ' · Oct 16', 'neg'],
+      ['Best month', 'September 2026', ''], ['Worst month', 'October 2026', ''], ['Average month', m(102.16), 'pos'],
+      ['Average hold, all trades', '1m 46s', ''], ['Average hold, winners', '1m 47s', ''], ['Average hold, losers', '1m 44s', ''], ['Days at a daily-loss limit', '1', 'wrn']
+    ].map(function (r) { return { k: r[0], v: r[1], c: r[2] }; });
+    var wd = [['Mon', 921.87], ['Tue', 214.50], ['Wed', -388.20], ['Thu', 738.15], ['Fri', -1282.00]];
+    var maxW = 1300;
+    var weekdays = wd.map(function (w) {
+      var pct = Math.min(50, Math.abs(w[1]) / maxW * 50);
+      var bar = 'position: absolute; top: 0; bottom: 0; border-radius: 4px; background: ' + (w[1] >= 0 ? 'var(--profit); left: 50%;' : 'var(--loss); right: 50%;') + ' width: ' + pct.toFixed(1) + '%;';
+      return { d: w[0], v: m(w[1]), c: c(w[1]), bar: bar };
+    });
+    var hr = [['06', 84], ['07', 612], ['08', 488], ['09', 236], ['10', -142], ['11', -305], ['12', -96], ['13', -410], ['14', -63]];
+    var maxH = 640;
+    var hours = hr.map(function (h) {
+      var px = Math.max(2, Math.abs(h[1]) / maxH * 78);
+      var bar = 'position: absolute; left: 0; right: 0; border-radius: 3px; height: ' + px.toFixed(0) + 'px; background: ' + (h[1] >= 0 ? 'var(--profit); bottom: 50%;' : 'var(--loss); top: 50%;');
+      return { h: h[0] + ':00', bar: bar, tip: h[0] + ':00 · ' + m(h[1]) };
+    });
+    var tg = [
+      ['VWAP pullback', 'Setup', 142, '68%', 1384.20], ['ORB', 'Setup', 96, '64%', 812.45], ['Reversal', 'Setup', 74, '55%', 96.30],
+      ['Early exit', 'Mistake', 38, '71%', -214.60], ['Moved stop', 'Mistake', 12, '25%', -688.40], ['Chased entry', 'Mistake', 51, '37%', -1186.15]
+    ];
+    var maxT = 1400;
+    var tags = tg.map(function (t) {
+      return { name: t[0], kind: t[1], kindCls: 'badge ' + (t[1] === 'Setup' ? 'b-flow' : 'b-warn'), n: t[2], wr: t[3], avg: m(t[4] / t[2]), v: m(t[4]), c: c(t[4]),
+        fill: 'mini-fill ' + (t[4] >= 0 ? 'pos' : 'neg'), w: 'width:' + Math.min(100, Math.abs(t[4]) / maxT * 100).toFixed(0) + '%' };
+    });
+    return {
+      theme: this.props.theme ?? 'dark', nav: nav, left: left, right: right, weekdays: weekdays, hours: hours, tags: tags,
+      isNet: net, isGross: !net, netCls: net ? 'is-on' : '', grossCls: net ? '' : 'is-on',
+      setNet: function () { self.setState({ basis: 'net' }); }, setGross: function () { self.setState({ basis: 'gross' }); },
+      best: m(net ? 1056.42 : 1056.42 + 912.40), worst: m(net ? -852.10 : -852.10 + 759.78), avgMonth: m(net ? 102.16 : 102.16 + 836.09)
+    };
+  }
+}
+</script>
+</body>
+</html>

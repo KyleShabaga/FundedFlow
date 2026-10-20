@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Journal library</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;background:#070b14}
+.li{display:grid;gap:4px;width:100%;text-align:left;padding:12px 14px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--ink);font:inherit;cursor:pointer}
+.li:hover{background:var(--bg-200)}
+.li.on{background:var(--flow-soft);border-color:var(--flow)}
+.li-row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+</style>
+</helmet>
+<div class="app" data-theme="{{theme}}">
+  <dc-import name="Sidebar" active="library" hint-size="248px,100%"></dc-import>
+  <div class="app-main">
+    <dc-import name="Topbar" hint-size="100%,64px"></dc-import>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="h1">Library</h1>
+          <p class="sub">Everything you've written: trade notes, daily journals, playbooks and templates, searchable in one place.</p>
+        </div>
+        <x-import component-from-global-scope="FundedFlow.Button" variant="primary">+ New entry</x-import>
+      </div>
+
+      <div class="seg" role="tablist" aria-label="Library sections" style="align-self: flex-start;">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+          <button type="button" role="tab" class="{{t.cls}}" aria-selected="{{t.on}}" onClick="{{t.pick}}">{{t.label}} <span class="mono" style="font-size: 11px; color: var(--ink-faint);">{{t.n}}</span></button>
+        </sc-for>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 16px; align-items: start;">
+        <section class="card" style="padding: 12px; display: grid; gap: 10px;" aria-label="Entries">
+          <input class="input" type="search" aria-label="Search entries" placeholder="Search symbol, tag or text">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;"><button type="button" class="chip">Result: All</button><button type="button" class="chip">Setup: Any</button><button type="button" class="chip">Account: All</button></div>
+          <sc-if value="{{hasItems}}" hint-placeholder-val="{{ true }}">
+            <div style="display: grid; gap: 4px;">
+              <sc-for list="{{items}}" as="it" hint-placeholder-count="6">
+                <button type="button" class="{{it.cls}}" aria-pressed="{{it.on}}" onClick="{{it.pick}}">
+                  <span class="li-row"><b style="font-size: 13.5px;">{{it.title}}</b><span class="mono" style="font-size: 12.5px;"><span class="{{it.pnlCls}}">{{it.pnl}}</span></span></span>
+                  <span class="faint">{{it.meta}}</span>
+                  <span style="font-size: 12.5px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{it.excerpt}}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+            <div style="display: grid; justify-items: center; gap: 8px; padding: 40px 12px; text-align: center; color: var(--ink-muted);">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width: 28px; height: 28px; color: var(--flow);"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg>
+              <span>{{emptyText}}</span>
+            </div>
+          </sc-if>
+        </section>
+
+        <section class="card" style="padding: 20px 24px; display: grid; gap: 16px; min-height: 560px; align-content: start;" aria-label="Selected entry">
+          <sc-if value="{{hasSel}}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+              <div><span class="overline">{{sel.kind}}</span><h2 class="h2" style="font-size: 20px; line-height: 28px; margin-top: 4px;">{{sel.title}}</h2><p class="faint" style="margin: 4px 0 0;">{{sel.meta}}</p></div>
+              <div style="display: flex; gap: 8px;"><a href="TradeDetail.dc.html" class="btn btn-sm">Open trade</a><button type="button" class="btn btn-sm">Edit</button></div>
+            </div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <sc-for list="{{sel.tags}}" as="t" hint-placeholder-count="3"><span class="{{t.cls}}">{{t.label}}</span></sc-for>
+            </div>
+            <div style="display: grid; gap: 12px; max-width: 68ch; color: var(--ink); line-height: 22px;">
+              <sc-for list="{{sel.body}}" as="p" hint-placeholder-count="3"><div><span class="overline">{{p.h}}</span><p style="margin: 4px 0 0; color: var(--ink-muted);">{{p.t}}</p></div></sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{noSel}}" hint-placeholder-val="{{ false }}">
+            <div style="display: grid; place-items: center; min-height: 500px; color: var(--ink-muted);">Select an entry to read it here</div>
+          </sc-if>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { tab: 'trade', sel: 0 }; }
+  renderVals() {
+    var self = this, st = this.state;
+    var data = {
+      trade: [
+        { title: 'MNQZ6 short · opening-drive fade', pnl: '+$49.80', pnlCls: 'pos', meta: 'Mon Oct 19 · 07:54 CT · Apex $100K', excerpt: 'Third short into the opening drive fade. Waited for the lower high…', kind: 'Trade note',
+          tags: [['Reversal', 'b-flow'], ['Calm', 'b-neutral'], ['4 of 5', 'b-warn']],
+          body: [['What I saw', 'Third push failed at the overnight high with a lower high on the 1-minute.'], ['What I did', 'Sold 3 at 29,729.25, stop above the high, first target at the prior low.'], ['Lesson', 'Waiting for the lower high cut my risk in half compared with selling the first push.']] },
+        { title: 'MNQZ6 long · chased after news', pnl: '−$1.20', pnlCls: 'neg', meta: 'Mon Oct 19 · 08:40 CT · Apex $100K', excerpt: 'Bought the breakout candle late, no pullback…', kind: 'Trade note',
+          tags: [['Chased entry', 'b-warn'], ['FOMO', 'b-neutral']], body: [['What happened', 'Bought the breakout candle late with no pullback.'], ['Lesson', 'Wait for the first pullback to VWAP.']] },
+        { title: 'MNQZ6 long · ORB scale', pnl: '+$24.10', pnlCls: 'pos', meta: 'Mon Oct 19 · 07:47 CT · Apex $100K', excerpt: 'Scaled out in thirds; runner stopped at entry…', kind: 'Trade note',
+          tags: [['ORB', 'b-flow']], body: [['Plan', 'Opening-range breakout, three contracts, scale in thirds.'], ['Result', 'First third paid, the rest stopped at entry.']] },
+        { title: 'MNQZ6 short · revenge after stop', pnl: '−$455.70', pnlCls: 'neg', meta: 'Fri Oct 16 · 10:12 CT · Topstep $50K', excerpt: 'Doubled size straight after the stop. Hit the daily limit…', kind: 'Trade note',
+          tags: [['Revenge trade', 'b-warn'], ['Oversized', 'b-warn']], body: [['What happened', 'Doubled size straight after a stop and hit the daily loss limit.'], ['Rule for next time', 'After two losses in a row, step away for 15 minutes.']] }
+      ],
+      daily: [
+        { title: 'Monday, Oct 19', pnl: '+$1,197.60', pnlCls: 'pos', meta: 'Plan and review · 67 trades', excerpt: 'NQ above the overnight high; longs on pullbacks…', kind: 'Daily journal',
+          tags: [['Followed plan', 'b-profit']], body: [['Pre-market plan', 'NQ above the overnight high; longs on pullbacks to VWAP only. Stop at −$500.'], ['Review', 'Scaled the first ORB well. Gave back $120 chasing after 10:30; stopped on time.']] },
+        { title: 'Friday, Oct 16', pnl: '−$1,281.80', pnlCls: 'neg', meta: 'Review only · 41 trades', excerpt: 'Broke the daily loss limit on the Topstep combine…', kind: 'Daily journal',
+          tags: [['Limit breached', 'b-loss']], body: [['Review', 'Broke the daily loss limit on the Topstep combine after two revenge trades.']] }
+      ],
+      play: [], tmpl: []
+    };
+    var tabs = [['trade', 'Trade notes'], ['daily', 'Daily journals'], ['play', 'Playbooks'], ['tmpl', 'Templates']].map(function (t) {
+      var on = st.tab === t[0];
+      return { label: t[1], n: data[t[0]].length, on: on, cls: on ? 'is-on' : '', pick: function () { self.setState({ tab: t[0], sel: 0 }); } };
+    });
+    var list = data[st.tab];
+    var items = list.map(function (it, i) { return Object.assign({}, it, { on: i === st.sel, cls: 'li' + (i === st.sel ? ' on' : ''), pick: function () { self.setState({ sel: i }); } }); });
+    var s = list[st.sel];
+    var sel = s ? { kind: s.kind, title: s.title, meta: s.meta, tags: s.tags.map(function (t) { return { label: t[0], cls: 'badge ' + t[1] }; }), body: s.body.map(function (b) { return { h: b[0], t: b[1] }; }) } : { tags: [], body: [] };
+    return {
+      theme: this.props.theme ?? 'dark', tabs: tabs, items: items, hasItems: list.length > 0, empty: list.length === 0,
+      emptyText: st.tab === 'play' ? 'No playbooks yet. A playbook describes a setup and its rules, so trades can be checked against it.' : 'No templates yet. Templates give daily journals the same questions every day.',
+      sel: sel, hasSel: !!s, noSel: !s
+    };
+  }
+}
+</script>
+</body>
+</html>

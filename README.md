@@ -17,7 +17,7 @@ FundedFlow is a Windows-first, local-first trading journal built with Tauri 2, R
 | `apps/desktop` | `@fundedflow/desktop` | React UI, Tauri host (`src-tauri`), typed command gateway |
 | `packages/domain` | `@fundedflow/domain` | Framework-free Zod contracts and money primitives shared by every host |
 
-The UI design system (tokens, bundled fonts, components, money formatting) is in `apps/desktop/src/design-system`; see [`docs/design-system.md`](docs/design-system.md). The **Design system** button on the start screen shows every component.
+The UI design system (tokens, bundled fonts, components, money formatting) is in `apps/desktop/src/design-system`; see [`docs/design-system.md`](docs/design-system.md). Screen designs, build order and per-screen specs are in [`docs/design/`](docs/design/README.md). The **Design system** button on the start screen shows every component.
 
 npm workspaces with one root `package-lock.json`. Package boundaries, the money/time wire contract and the Rust ↔ TypeScript parity fixtures: [`docs/architecture/packages.md`](docs/architecture/packages.md).
 
