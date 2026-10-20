@@ -12,6 +12,14 @@
 // - Failures reject with a RepositoryError carrying an AppError.
 
 import type { Account, AccountInput } from "../contracts/accounts.js";
+import type {
+  AccountHistory,
+  AttemptSummary,
+  DeletionPreview,
+  ResetInput,
+  ResetResult,
+  StatusChangeInput,
+} from "../contracts/account-lifecycle.js";
 import type { CsvImportRequest, CsvPreview, ImportBatch, ImportRowRecord } from "../contracts/csv-import.js";
 import type { AppError } from "../contracts/errors.js";
 import type { JournalEntry, JournalEntryInput } from "../contracts/journal.js";
@@ -30,13 +38,39 @@ import type {
 } from "../rulebook/versions.js";
 
 export interface AccountRepository {
-  /** Active (not archived) accounts. */
-  list(): Promise<Account[]>;
+  /**
+   * Accounts that are not archived, whatever their status (failed, passed and
+   * closed accounts stay listed for history). `includeArchived` adds archived ones.
+   */
+  list(options?: { includeArchived?: boolean }): Promise<Account[]>;
+  /** One account, archived or not (read-only browsing). */
+  get(id: string): Promise<Account>;
+  /** Accounts that can trade now: active and not archived. The only accounts risk views may read. */
+  listActive(): Promise<Account[]>;
   create(input: AccountInput): Promise<Account>;
   /** Replaces every editable field. A currency, timezone or reset change re-derives the account's trades. */
   update(id: string, input: AccountInput): Promise<Account>;
-  /** Hidden and read-only; its trades, journal entries and imports are kept. */
+  /** Hidden and read-only; its trades, journal entries, imports and history are kept. Status is unchanged. */
   archive(id: string): Promise<void>;
+  /**
+   * Back to the lists with its status exactly as it was (a failed account stays
+   * failed). Refused if it could trade and another live account holds its broker number.
+   */
+  restore(id: string): Promise<Account>;
+  /** Mark failed, passed, closed, etc. with the user's effective time, cause and notes. Archives nothing. */
+  changeStatus(id: string, input: StatusChangeInput): Promise<Account>;
+  /** Status and archive history, oldest first. Readable for archived accounts. */
+  history(id: string): Promise<AccountHistory>;
+  /**
+   * Start the next evaluation attempt as a NEW linked account (new id), in one
+   * atomic step: the previous attempt's confirmed outcome, the new account and
+   * the link are written together or not at all.
+   */
+  resetAttempt(input: ResetInput): Promise<ResetResult>;
+  /** Every attempt in the account's chain, first attempt first, with per-attempt figures. */
+  lineage(id: string): Promise<AttemptSummary[]>;
+  /** What permanently deleting the account would remove and what blocks it. Read-only: no delete exists yet. */
+  previewDeletion(id: string): Promise<DeletionPreview>;
 }
 
 export interface TradeRepository {

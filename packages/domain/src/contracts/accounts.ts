@@ -40,5 +40,11 @@ export const accountSchema = z.object({
   notes: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  /** Set while archived: hidden from live views and read-only. Independent of `status`. */
+  archivedAt: z.string().nullable().default(null),
+  /** The attempt this account is an evaluation reset of. See lifecycle.ts. */
+  predecessorAccountId: z.string().nullable().default(null),
+  /** The reset attempt that follows this account. */
+  successorAccountId: z.string().nullable().default(null),
 });
 export type Account = z.infer<typeof accountSchema>;
