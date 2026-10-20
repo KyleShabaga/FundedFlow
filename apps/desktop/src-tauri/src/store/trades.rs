@@ -229,7 +229,7 @@ fn from_row(r: &Row) -> rusqlite::Result<Trade> {
 
 /// Active (not deleted) trades of an account, newest entry first.
 pub fn list(conn: &Connection, account_id: &str) -> AppResult<Vec<Trade>> {
-    account_ctx(conn, account_id)?;
+    super::require_account(conn, account_id)?;
     let mut stmt = conn.prepare(&format!(
         "{SELECT} WHERE t.account_id = ?1 AND t.deleted_at IS NULL ORDER BY t.entry_at DESC, t.id"
     ))?;

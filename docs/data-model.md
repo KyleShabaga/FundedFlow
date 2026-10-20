@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 10 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` and the Rust data step 10 `convert_legacy_rulebooks`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 11 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` and `0011_account_attempts.sql`; see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -313,12 +313,76 @@ until a correction supersedes it.
 
 | Action | Effect |
 |---|---|
-| Archive account | Soft delete (`archived_at`, migration 0004). Hidden from lists and read-only: reading or writing its trades, journal entries and imports returns not-found. Nothing is removed, and an archived account's broker account number can be reused. The app never hard-deletes accounts; the schema's `ON DELETE CASCADE` remains for a future permanent-delete flow (Build 24). "Close" an account with `status = 'closed'` to keep it visible. |
+| Archive account | Soft delete (`archived_at`, migration 0004). Hidden from live lists. Archived accounts are **read-only browsable**: their trades, journal entries and imports can be read (`get_account`, `list_trades`, `list_journal_entries`, `list_csv_imports`) but not written (writes return not-found). Nothing is removed and the status is unchanged. Each archive and restore is a row in `account_archive_events`. |
+| Restore account | `restore_account` clears `archived_at` and nothing else: a restored failed account stays failed. If the account is active or paused and another active or paused account holds its broker account number, restoring is refused (conflict) and nothing changes. |
+| Mark failed / change status | `change_account_status` records the new status with the user's effective time, optional `cause` (the user's words; none means unknown) and notes in `account_status_events`. It never archives, deletes or resets, and infers no rule breach. An archived account must be restored first. |
+| Evaluation reset | `reset_account_attempt` creates a **new account** (new id) linked to the previous attempt. See [Account lifecycle](#account-lifecycle-attempts-archive-and-history). |
+| Permanent delete | **Not implemented** (Builds 24–25). `preview_account_deletion` is read-only and lists what one account holds and what blocks deleting it. The schema's `ON DELETE CASCADE` remains for that future flow, but attempt links and phase events use `ON DELETE RESTRICT`, so an account in a reset chain cannot be hard-deleted. |
 | Delete trade | Soft delete (`deleted_at`). Hidden from lists; any journal entry linking to it has `trade_id` cleared in the same transaction. The row keeps its `dedup_key`; re-importing its CSV row restores this same trade (see [Duplicate detection](#duplicate-detection)). |
 | Delete journal entry | Hard delete; tag links cascade. |
 | Journal ↔ trade | A journal entry may link only to a non-deleted trade **of the same account** (validated in Rust, enforced by triggers). |
 | Trade ↔ account | A trade never moves between accounts; account and import provenance are immutable (trigger). |
 | Account settings change | Changing currency, timezone or reset time re-derives every trade's trading day and P&L in the same transaction. |
+
+## Account lifecycle: attempts, archive and history
+
+Implemented by migration 11 (`0011_account_attempts.sql`), `store/accounts.rs`, `store/attempts.rs` and the contracts in
+`packages/domain/src/contracts/account-lifecycle.ts`. Product rules: Build 15, "Approved account lifecycle and reset experience".
+
+**Three separate ideas.** *Status* (`active`, `paused`, `passed`, `failed`, `closed`) is the account's result.
+*Archived* is a visibility and retention flag, never a result. A *prop-firm evaluation reset* is a new linked account;
+it is not `trading_day_reset_time`, which only sets the session-day boundary.
+
+**Failed accounts are kept.** Failing changes the status and nothing else: trades, imports, journal entries,
+snapshots, rulebook assignments and history stay, and the account is never archived or deleted automatically.
+`list_accounts` still lists it, `list_active_accounts` (active and not archived) does not, and risk views must read
+only `list_active_accounts` / `isRiskEligible`. A reset's previous attempt is `failed`, `passed` or `closed`, so it is
+excluded from risk too.
+
+**Reset = new linked account.** `reset_account_attempt` runs in one transaction and either writes everything or nothing:
+
+1. the previous attempt's outcome, as the user confirmed it (`passed`, `failed` or `closed`; never assumed), is recorded
+   as a status event effective at the reset time, with the reason as its cause;
+2. a new account is inserted with a new id. It inherits identity only (firm, provider, broker, type, currency, time zone,
+   session boundary). It takes its own name, provider account number (may equal the old one), **required** starting
+   balance, optional programme/version/path selection (not copied) and notes. It starts `active` with no trades, imports,
+   journal, snapshots, ledger entries or assignments, so no risk figure carries over;
+3. the rulebook decision is explicit: `assign` runs `rulebooks::assign_in` inside the same transaction, `decideLater` is
+   recorded as `deferred`;
+4. an `account_attempt_links` row records predecessor, successor, kind (`evaluation_reset`), confirmed outcome, effective
+   time, reason, source (`user_entered`, `provider_email`, `provider_dashboard`, `other`) and the rulebook decision.
+
+An attempt has at most one predecessor and one successor (unique keys), so chains are paths. Links are append-only and
+reference accounts with `ON DELETE RESTRICT`. `parent_account_id` keeps its original meaning (evaluation → funded
+successor) and is not used for resets. `get_account_lineage` returns the chain from any member, first attempt first,
+with trade count, trading-day range, committed imports and the sum of known net results; trades without a result are
+counted separately (`tradesWithUnknownPnl`) and an attempt with none shows no sum, never `0`.
+
+**Broker account numbers.** The unique index on `(broker, external_ref)` now covers only active or paused, unarchived
+accounts. Failed, passed, closed and archived attempts keep their number, so a provider can reuse it for the next
+attempt, while two accounts that can trade still cannot share one (conflict). Changing a failed account back to active
+and restoring an archived one are both checked against it. CSV duplicate keys are per account, so the same file imports
+into each attempt independently and is a duplicate only within the attempt that holds it.
+
+**Backup and restore.** Lineage, status history and archive history are ordinary tables, so the pre-upgrade backup
+(`VACUUM INTO`) and a restored copy carry them (tested).
+
+**Import protection (UI).** `assessImportTarget` blocks archived accounts, asks for confirmation on non-active accounts
+and on files whose trading days fall after the attempt was reset or before it started.
+
+### Permanent deletion: decisions still needed (Builds 24–25)
+
+No delete command exists, deliberately. Before one is built, product must decide:
+
+1. Whether an account in a reset chain can be deleted alone. Today the links and phase events block it. Options: refuse
+   until the whole chain is selected, or delete one attempt and keep its neighbours with the link marked
+   "predecessor deleted" (needs a forward migration to relax the append-only links).
+2. Whether deleting an attempt may remove its imports' source files and attachments, and what happens to trades whose
+   `dedup_key` would no longer exist (re-importing would then recreate them).
+3. The confirmation (typed account name, exact counts from `preview_account_deletion`) and a pre-delete export or backup.
+4. "Erase the entire local journal" is a separate Settings action over the database file, not an account operation.
+
+Shared catalogue, provider and rulebook-catalogue records are not account-owned and would stay in every option.
 
 ## Database location and migrations
 
@@ -346,6 +410,7 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 8 | `freeze_ever_verified` | SQL | Replaces the catalogue freeze triggers: a version with `verified_at` set stays frozen, and `stale` → `needs_review` is removed. Changes no rows |
 | 9 | `rulebooks` | SQL | Renames the 0001 rulebook tables to `legacy_account_*` and creates the [rulebook](#rulebooks) tables and triggers; phase and path rulebook IDs must now name a catalogue rulebook version |
 | 10 | `convert_legacy_rulebooks` | Rust | Converts legacy account-owned rulebooks into account-private rulebooks, keeping their IDs ([matrix](rulebook-migration.md)); the legacy rows stay |
+| 11 | `account_attempts` | SQL | `account_status_events.cause`; `account_attempt_links` (append-only) and `account_archive_events`; broker account numbers are unique only among active or paused, unarchived accounts. Existing archived accounts get an `archived` event from their `archived_at`. Changes no other rows |
 
 How an upgrade runs:
 
@@ -398,7 +463,7 @@ or SQLite types, so a Stage 2 adapter can implement the same interface.
 
 | Member | Methods |
 |---|---|
-| `accounts` | `list`, `create`, `update`, `archive` |
+| `accounts` | `list({ includeArchived? })`, `get`, `listActive`, `create`, `update`, `archive`, `restore`, `changeStatus`, `history`, `resetAttempt`, `lineage`, `previewDeletion` |
 | `trades` | `list`, `create`, `update`, `remove` |
 | `journal` | `list`, `create`, `update`, `remove` |
 | `imports` | `preview`, `commit`, `list`, `problemRows` |
@@ -623,7 +688,7 @@ Limitations:
 | Area | Commands |
 |---|---|
 | Runtime | `runtime_status()`, `retry_runtime()` (see [Startup and recovery](#startup-and-recovery)) |
-| Accounts | `list_accounts`, `create_account(input)`, `update_account(id, input)`, `archive_account(id)` |
+| Accounts | `list_accounts(includeArchived?)`, `list_active_accounts`, `get_account(id)`, `create_account(input)`, `update_account(id, input)`, `archive_account(id)`, `restore_account(id)`, `change_account_status(id, input)`, `get_account_history(id)`, `reset_account_attempt(input)`, `get_account_lineage(id)`, `preview_account_deletion(id)` |
 | Trades | `list_trades(accountId)`, `create_trade(input)`, `update_trade(id, input)`, `delete_trade(id)` |
 | Journal | `list_journal_entries(accountId)`, `create_journal_entry(input)`, `update_journal_entry(id, input)`, `delete_journal_entry(id)` |
 | CSV | `preview_csv_import(request)`, `commit_csv_import(request)`, `list_csv_imports(accountId)`, `list_csv_import_problem_rows(batchId)` |

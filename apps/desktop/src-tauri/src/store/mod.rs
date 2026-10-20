@@ -3,6 +3,7 @@
 //! transaction.
 
 pub mod accounts;
+pub mod attempts;
 pub mod journal;
 pub mod rulebooks;
 pub mod trades;
@@ -47,6 +48,13 @@ pub(crate) fn account_ctx(conn: &Connection, id: &str) -> AppResult<AccountCtx> 
     })
 }
 
+/// The account exists, archived or not. For reads: an archived account is
+/// browsable read-only, while writes use `account_ctx` and refuse it.
+pub(crate) fn require_account(conn: &Connection, id: &str) -> AppResult<()> {
+    let found: bool = conn.query_row("SELECT EXISTS (SELECT 1 FROM accounts WHERE id = ?1)", [id], |r| r.get(0))?;
+    if found { Ok(()) } else { Err(AppError::not_found("account", id)) }
+}
+
 pub(crate) fn load_instruments(conn: &Connection) -> AppResult<Vec<Instrument>> {
     let mut stmt = conn.prepare(
         "SELECT id, symbol_root, currency, point_value FROM instruments WHERE deleted_at IS NULL",
@@ -66,5 +74,7 @@ pub(crate) fn load_instruments(conn: &Connection) -> AppResult<Vec<Instrument>> 
     Ok(out)
 }
 
+#[cfg(test)]
+mod attempt_tests;
 #[cfg(test)]
 pub(crate) mod tests;

@@ -86,6 +86,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "convert_legacy_rulebooks",
         step: Step::Rust(|tx| convert_legacy_rulebooks(tx)),
     },
+    Migration {
+        version: 11,
+        name: "account_attempts",
+        step: Step::Sql(include_str!("../../migrations/0011_account_attempts.sql")),
+    },
 ];
 
 /// Latest schema version this build understands.

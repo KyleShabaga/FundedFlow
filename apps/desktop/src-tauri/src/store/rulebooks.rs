@@ -482,6 +482,15 @@ fn is_trading_day(s: &str) -> bool {
 /// open assignment, if any, ends that day; an assignment is never moved,
 /// rewritten or switched to a newer version automatically.
 pub fn assign(conn: &mut Connection, input: AssignmentInput) -> AppResult<AccountRulebookAssignment> {
+    let tx = conn.transaction()?;
+    let assignment = assign_in(&tx, input)?;
+    tx.commit()?;
+    Ok(assignment)
+}
+
+/// `assign` inside the caller's transaction, so a larger operation (an
+/// evaluation reset) can make the assignment part of its own atomic unit.
+pub(crate) fn assign_in(conn: &Connection, input: AssignmentInput) -> AppResult<AccountRulebookAssignment> {
     if !is_trading_day(&input.effective_from) {
         return Err(AppError::invalid("effectiveFrom", "Use a trading day as YYYY-MM-DD"));
     }
@@ -523,7 +532,7 @@ pub fn assign(conn: &mut Connection, input: AssignmentInput) -> AppResult<Accoun
         }
     }
 
-    let tx = conn.transaction()?;
+    let tx = conn;
     let later: bool = tx.query_row(
         "SELECT EXISTS (SELECT 1 FROM account_rulebook_assignments WHERE account_id = ?1 AND effective_from >= ?2)",
         params![input.account_id, input.effective_from],
@@ -555,6 +564,5 @@ pub fn assign(conn: &mut Connection, input: AssignmentInput) -> AppResult<Accoun
             if input.programme_phase_id.is_some() { "catalogue_selection" } else { "user" }
         ],
     )?;
-    tx.commit()?;
     Ok(conn.query_row(&format!("{ASSIGNMENT} WHERE id = ?1"), [&id], assignment_row)?)
 }

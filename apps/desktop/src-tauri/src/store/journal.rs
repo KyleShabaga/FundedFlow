@@ -122,7 +122,7 @@ fn from_row(r: &Row) -> rusqlite::Result<JournalEntry> {
 
 /// Entries of an account, newest first.
 pub fn list(conn: &Connection, account_id: &str) -> AppResult<Vec<JournalEntry>> {
-    account_ctx(conn, account_id)?;
+    super::require_account(conn, account_id)?;
     let mut stmt = conn.prepare(&format!("{SELECT} WHERE j.account_id = ?1 ORDER BY j.entry_at DESC, j.id"))?;
     let rows = stmt.query_map([account_id], from_row)?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)

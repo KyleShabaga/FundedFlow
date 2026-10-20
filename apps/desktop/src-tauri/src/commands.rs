@@ -8,7 +8,8 @@ use tauri::{AppHandle, Manager, State};
 
 use crate::csv_import::{self, CsvImportRequest, CsvPreview, ImportBatch, ImportRowRecord};
 use crate::error::AppResult;
-use crate::store::accounts::{self, Account, AccountInput};
+use crate::store::accounts::{self, Account, AccountHistory, AccountInput, StatusChangeInput};
+use crate::store::attempts::{self, AttemptSummary, DeletionPreview, ResetInput, ResetResult};
 use crate::error::FieldIssue;
 use crate::rulebook::{
     AccountRulebookAssignment, ApplicableRulebook, ApplicableRulebookQuery, AssignmentInput, RuleClaim, Rulebook,
@@ -20,8 +21,19 @@ use crate::store::trades::{self, Trade, TradeInput};
 use crate::runtime::{Runtime, RuntimeStatus};
 
 #[tauri::command]
-pub async fn list_accounts(db: State<'_, Runtime>) -> AppResult<Vec<Account>> {
-    db.with(|c| accounts::list(c))
+pub async fn list_accounts(db: State<'_, Runtime>, include_archived: Option<bool>) -> AppResult<Vec<Account>> {
+    db.with(|c| accounts::list_with(c, include_archived.unwrap_or(false)))
+}
+
+/// Accounts that can trade now (active, not archived): the only accounts risk views may read.
+#[tauri::command]
+pub async fn list_active_accounts(db: State<'_, Runtime>) -> AppResult<Vec<Account>> {
+    db.with(|c| accounts::list_active(c))
+}
+
+#[tauri::command]
+pub async fn get_account(db: State<'_, Runtime>, id: String) -> AppResult<Account> {
+    db.with(|c| accounts::get_any(c, &id))
 }
 
 #[tauri::command]
@@ -37,6 +49,36 @@ pub async fn update_account(db: State<'_, Runtime>, id: String, input: AccountIn
 #[tauri::command]
 pub async fn archive_account(db: State<'_, Runtime>, id: String) -> AppResult<()> {
     db.with(|c| accounts::archive(c, &id))
+}
+
+#[tauri::command]
+pub async fn restore_account(db: State<'_, Runtime>, id: String) -> AppResult<Account> {
+    db.with(|c| accounts::restore(c, &id))
+}
+
+#[tauri::command]
+pub async fn change_account_status(db: State<'_, Runtime>, id: String, input: StatusChangeInput) -> AppResult<Account> {
+    db.with(|c| accounts::change_status(c, &id, input))
+}
+
+#[tauri::command]
+pub async fn get_account_history(db: State<'_, Runtime>, id: String) -> AppResult<AccountHistory> {
+    db.with(|c| accounts::history(c, &id))
+}
+
+#[tauri::command]
+pub async fn reset_account_attempt(db: State<'_, Runtime>, input: ResetInput) -> AppResult<ResetResult> {
+    db.with(|c| attempts::reset(c, input))
+}
+
+#[tauri::command]
+pub async fn get_account_lineage(db: State<'_, Runtime>, id: String) -> AppResult<Vec<AttemptSummary>> {
+    db.with(|c| attempts::lineage(c, &id))
+}
+
+#[tauri::command]
+pub async fn preview_account_deletion(db: State<'_, Runtime>, id: String) -> AppResult<DeletionPreview> {
+    db.with(|c| attempts::deletion_preview(c, &id))
 }
 
 #[tauri::command]

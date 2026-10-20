@@ -14,7 +14,7 @@
         "timezone": "America/New_York",
         "tradingDayResetTime": "17:00"
       },
-      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\",\"archivedAt\":null,\"predecessorAccountId\":null,\"successorAccountId\":null}",
       "name": "long ES, calculated P&L, fees deducted",
       "trade": {
         "accountId": "<account-id>",
@@ -45,7 +45,7 @@
         "timezone": "America/New_York",
         "tradingDayResetTime": "17:00"
       },
-      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\",\"archivedAt\":null,\"predecessorAccountId\":null,\"successorAccountId\":null}",
       "name": "short MES (longest root wins over ES), two contracts",
       "trade": {
         "accountId": "<account-id>",
@@ -76,7 +76,7 @@
         "timezone": "America/New_York",
         "tradingDayResetTime": "17:00"
       },
-      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\",\"archivedAt\":null,\"predecessorAccountId\":null,\"successorAccountId\":null}",
       "name": "MNQ fractional price, sub-micro fees round half away from zero",
       "trade": {
         "accountId": "<account-id>",
@@ -107,7 +107,7 @@
         "timezone": "America/New_York",
         "tradingDayResetTime": "17:00"
       },
-      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\",\"archivedAt\":null,\"predecessorAccountId\":null,\"successorAccountId\":null}",
       "name": "open trade",
       "trade": {
         "accountId": "<account-id>",
@@ -138,7 +138,7 @@
         "timezone": "America/New_York",
         "tradingDayResetTime": "17:00"
       },
-      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\",\"archivedAt\":null,\"predecessorAccountId\":null,\"successorAccountId\":null}",
       "name": "unknown instrument falls back to reported P&L",
       "trade": {
         "accountId": "<account-id>",
@@ -169,7 +169,7 @@
         "timezone": "America/New_York",
         "tradingDayResetTime": "17:00"
       },
-      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\",\"archivedAt\":null,\"predecessorAccountId\":null,\"successorAccountId\":null}",
       "name": "unknown instrument without reported P&L",
       "trade": {
         "accountId": "<account-id>",
@@ -200,7 +200,7 @@
         "timezone": "America/New_York",
         "tradingDayResetTime": "17:00"
       },
-      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"EUR\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"EUR\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\",\"archivedAt\":null,\"predecessorAccountId\":null,\"successorAccountId\":null}",
       "name": "currency mismatch leaves P&L unknown",
       "trade": {
         "accountId": "<account-id>",
@@ -231,7 +231,7 @@
         "timezone": "America/New_York",
         "tradingDayResetTime": "17:00"
       },
-      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\",\"archivedAt\":null,\"predecessorAccountId\":null,\"successorAccountId\":null}",
       "name": "Friday after the 17:00 reset belongs to Monday",
       "trade": {
         "accountId": "<account-id>",
@@ -262,7 +262,7 @@
         "timezone": "Europe/London",
         "tradingDayResetTime": "00:00"
       },
-      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"Europe/London\",\"tradingDayResetTime\":\"00:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"Europe/London\",\"tradingDayResetTime\":\"00:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\",\"archivedAt\":null,\"predecessorAccountId\":null,\"successorAccountId\":null}",
       "name": "midnight reset uses the calendar day in the account zone",
       "trade": {
         "accountId": "<account-id>",
