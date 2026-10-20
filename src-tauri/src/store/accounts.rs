@@ -157,13 +157,15 @@ fn from_row(r: &Row) -> rusqlite::Result<Account> {
 }
 
 pub fn list(conn: &Connection) -> AppResult<Vec<Account>> {
-    let mut stmt = conn.prepare(&format!("{SELECT} ORDER BY a.name COLLATE NOCASE, a.created_at"))?;
+    let mut stmt = conn.prepare(&format!(
+        "{SELECT} WHERE a.archived_at IS NULL ORDER BY a.name COLLATE NOCASE, a.created_at"
+    ))?;
     let rows = stmt.query_map([], from_row)?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
 pub fn get(conn: &Connection, id: &str) -> AppResult<Account> {
-    conn.query_row(&format!("{SELECT} WHERE a.id = ?1"), [id], from_row)
+    conn.query_row(&format!("{SELECT} WHERE a.id = ?1 AND a.archived_at IS NULL"), [id], from_row)
         .optional()?
         .ok_or_else(|| AppError::not_found("account", id))
 }
@@ -265,10 +267,13 @@ pub fn update(conn: &mut Connection, id: &str, input: AccountInput) -> AppResult
     get(conn, id)
 }
 
-/// Permanently delete an account and everything that belongs to it (trades,
-/// journal entries, imports, rulebooks) via ON DELETE CASCADE.
-pub fn delete(conn: &Connection, id: &str) -> AppResult<()> {
-    match conn.execute("DELETE FROM accounts WHERE id = ?1", [id])? {
+/// Archive an account: it disappears from lists and can no longer be read or
+/// written, but its trades, journal entries and imports are kept.
+pub fn archive(conn: &Connection, id: &str) -> AppResult<()> {
+    match conn.execute(
+        "UPDATE accounts SET archived_at = ?2, updated_at = ?2 WHERE id = ?1 AND archived_at IS NULL",
+        params![id, now()],
+    )? {
         0 => Err(AppError::not_found("account", id)),
         _ => Ok(()),
     }

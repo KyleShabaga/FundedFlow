@@ -97,9 +97,11 @@ fn account_crud_round_trip() {
 
     let names: Vec<String> = accounts::list(&conn).unwrap().into_iter().map(|a| a.name).collect();
     assert_eq!(names, ["Eval 2", "Eval 50K"]);
-    accounts::delete(&conn, &a.id).unwrap();
+    accounts::archive(&conn, &a.id).unwrap();
     assert!(matches!(accounts::get(&conn, &a.id), Err(AppError::NotFound { .. })));
-    assert!(matches!(accounts::delete(&conn, &a.id), Err(AppError::NotFound { .. })));
+    assert!(matches!(accounts::archive(&conn, &a.id), Err(AppError::NotFound { .. })));
+    let names: Vec<String> = accounts::list(&conn).unwrap().into_iter().map(|a| a.name).collect();
+    assert_eq!(names, ["Eval 2"]);
 }
 
 #[test]
@@ -127,9 +129,12 @@ fn account_validation_reports_each_field() {
 fn broker_account_numbers_are_unique() {
     let mut conn = db();
     let with_ref = |name: &str| AccountInput { external_ref: Some("TV-123".into()), ..account_input(name) };
-    accounts::create(&mut conn, with_ref("One")).unwrap();
+    let one = accounts::create(&mut conn, with_ref("One")).unwrap();
     let err = accounts::create(&mut conn, with_ref("Two")).unwrap_err();
     assert!(matches!(err, AppError::Conflict { .. }), "{err:?}");
+    // An archived account frees its number.
+    accounts::archive(&conn, &one.id).unwrap();
+    accounts::create(&mut conn, with_ref("Two")).unwrap();
 }
 
 #[test]
@@ -262,7 +267,7 @@ fn deleting_a_trade_unlinks_its_journal_entries() {
 }
 
 #[test]
-fn deleting_an_account_deletes_its_trades_and_journal() {
+fn archiving_an_account_keeps_its_trades_and_journal_but_blocks_writes() {
     let mut conn = db();
     let a = accounts::create(&mut conn, account_input("A")).unwrap();
     let keep = accounts::create(&mut conn, account_input("Keep")).unwrap();
@@ -270,9 +275,13 @@ fn deleting_an_account_deletes_its_trades_and_journal() {
     journal::create(&mut conn, journal_input(&a.id, Some(&t.id))).unwrap();
     trades::create(&mut conn, trade_input(&keep.id)).unwrap();
 
-    accounts::delete(&conn, &a.id).unwrap();
+    accounts::archive(&conn, &a.id).unwrap();
     let left: i64 = conn.query_row("SELECT count(*) FROM trades", [], |r| r.get(0)).unwrap();
-    assert_eq!(left, 1);
+    assert_eq!(left, 2);
     let journal: i64 = conn.query_row("SELECT count(*) FROM journal_entries", [], |r| r.get(0)).unwrap();
-    assert_eq!(journal, 0);
+    assert_eq!(journal, 1);
+
+    assert!(matches!(trades::create(&mut conn, trade_input(&a.id)), Err(AppError::NotFound { .. })));
+    assert!(matches!(trades::list(&conn, &a.id), Err(AppError::NotFound { .. })));
+    assert_eq!(trades::list(&conn, &keep.id).unwrap().len(), 1);
 }

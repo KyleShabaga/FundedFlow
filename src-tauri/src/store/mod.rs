@@ -26,10 +26,10 @@ impl Db {
     }
 
     pub fn with<T>(&self, f: impl FnOnce(&mut Connection) -> AppResult<T>) -> AppResult<T> {
-        let mut conn = self
-            .0
-            .lock()
-            .map_err(|_| AppError::Database { message: "database lock poisoned".into() })?;
+        // A panic while the lock was held poisons it. Every write runs in a
+        // transaction that rolls back on drop, so the connection is still
+        // consistent: recover it instead of failing every later command.
+        let mut conn = self.0.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         f(&mut conn)
     }
 }
@@ -49,7 +49,8 @@ pub(crate) struct AccountCtx {
 pub(crate) fn account_ctx(conn: &Connection, id: &str) -> AppResult<AccountCtx> {
     let row = conn
         .query_row(
-            "SELECT currency, timezone, trading_day_reset_time FROM accounts WHERE id = ?1",
+            "SELECT currency, timezone, trading_day_reset_time FROM accounts
+             WHERE id = ?1 AND archived_at IS NULL",
             [id],
             |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?)),
         )
