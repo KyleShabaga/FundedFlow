@@ -1,3 +1,4 @@
+mod catalogue;
 mod commands;
 mod csv_import;
 mod db;

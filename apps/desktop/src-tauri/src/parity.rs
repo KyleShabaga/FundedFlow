@@ -120,3 +120,53 @@ fn trade_contract_fixture_matches_rust() {
         case["tradeWire"] = json!(serde_json::to_string(&trade).unwrap());
     });
 }
+
+/// `catalogue.json` as a whole: the graph plus the records outside it.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct CatalogueFixture {
+    pub description: String,
+    pub graph: crate::catalogue::CatalogueGraph,
+    pub sources: Vec<crate::catalogue::SourceReference>,
+    pub account_links: Vec<crate::catalogue::AccountCatalogueLink>,
+    pub phase_events: Vec<crate::catalogue::AccountPhaseEvent>,
+}
+
+pub(crate) fn catalogue_fixture() -> (Value, CatalogueFixture) {
+    let path = fixture_path("catalogue.json");
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    let original: Value = serde_json::from_str(&text).unwrap();
+    let parsed = serde_json::from_value(original.clone()).unwrap();
+    (original, parsed)
+}
+
+/// Every catalogue DTO deserialises into the Rust structs and serialises back
+/// to the same JSON (deep equality: the fixture's formatting is hand-written).
+#[test]
+fn catalogue_fixture_round_trips_through_the_rust_structs() {
+    let (original, fixture) = catalogue_fixture();
+    assert_eq!(serde_json::to_value(&fixture).unwrap(), original);
+}
+
+/// The structs are as strict as `z.strictObject` and the enums.
+#[test]
+fn catalogue_structs_reject_unknown_fields_and_values() {
+    use crate::catalogue::{CommercialOffer, Promotion};
+    let (original, _) = catalogue_fixture();
+    let offer = &original["graph"]["commercialOffers"][0];
+    let promotion = &original["graph"]["promotions"][0];
+
+    let mut extra = offer.clone();
+    extra["discountPercent"] = json!("10");
+    assert!(serde_json::from_value::<CommercialOffer>(extra).is_err());
+    let mut bad_enum = offer.clone();
+    bad_enum["billingModel"] = json!("monthly");
+    assert!(serde_json::from_value::<CommercialOffer>(bad_enum).is_err());
+
+    let mut mixed = promotion.clone();
+    mixed["discount"] = json!({ "kind": "percent", "percent": "10", "currency": "USD" });
+    assert!(serde_json::from_value::<Promotion>(mixed).is_err());
+    let mut percent = promotion.clone();
+    percent["discount"] = json!({ "kind": "percent", "percent": "12.5" });
+    assert!(serde_json::from_value::<Promotion>(percent).is_ok());
+}

@@ -1,5 +1,5 @@
 {
-  "description": "Build 9 catalogue contract fixture. Synthetic, human-written shapes: no real provider and no asserted current terms. The 50K lineage mirrors the card's Evaluation/Funded + Daily/Flex example (values captured as unverified candidates). There is no Rust catalogue code yet, so this file has no Rust-generated outputs; Build 10 adds a serde round-trip over it in parity.rs.",
+  "description": "Build 9 catalogue contract fixture. Synthetic, human-written shapes: no real provider and no asserted current terms. The 50K lineage mirrors the card's Evaluation/Funded + Daily/Flex example (values captured as unverified candidates). It has no Rust-generated outputs: parity.rs round-trips it through the Rust serde structs, and db/catalogue_tests.rs through the SQLite tables.",
   "graph": {
     "providers": [
       {

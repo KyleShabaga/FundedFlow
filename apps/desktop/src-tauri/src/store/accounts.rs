@@ -191,6 +191,15 @@ fn firm_id(tx: &Transaction, name: Option<&str>, now: &str) -> AppResult<Option<
     Ok(Some(id))
 }
 
+/// The catalogue provider mapped from the account's firm (`db::provider_for_firm`),
+/// so firms created after migration 7 are mapped too.
+fn provider_id(tx: &Transaction, firm_id: Option<&str>) -> AppResult<Option<String>> {
+    match firm_id {
+        Some(firm) => Ok(crate::db::provider_for_firm(tx, firm)?),
+        None => Ok(None),
+    }
+}
+
 fn record_status(tx: &Transaction, account_id: &str, status: &str, now: &str) -> AppResult<()> {
     tx.execute(
         "INSERT INTO account_status_events (id, account_id, status, effective_at, created_at)
@@ -215,14 +224,15 @@ pub fn create(conn: &mut Connection, input: AccountInput) -> AppResult<Account> 
     let id = new_id();
     let tx = conn.transaction()?;
     let firm = firm_id(&tx, v.prop_firm.as_deref(), &now)?;
+    let provider = provider_id(&tx, firm.as_deref())?;
     tx.execute(
         "INSERT INTO accounts (id, firm_id, name, broker, external_ref, account_type, status, currency,
                                starting_balance_micros, timezone, trading_day_reset_time, notes_md,
-                               created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13)",
+                               created_at, updated_at, provider_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13, ?14)",
         params![
             id, firm, v.name, v.broker, v.external_ref, v.account_type, v.status, v.currency,
-            v.starting_balance_micros, v.timezone, v.reset, v.notes, now
+            v.starting_balance_micros, v.timezone, v.reset, v.notes, now, provider
         ],
     )
     .map_err(friendly)?;
@@ -246,14 +256,15 @@ pub fn update(conn: &mut Connection, id: &str, input: AccountInput) -> AppResult
         .optional()?
         .ok_or_else(|| AppError::not_found("account", id))?;
     let firm = firm_id(&tx, v.prop_firm.as_deref(), &now)?;
+    let provider = provider_id(&tx, firm.as_deref())?;
     tx.execute(
         "UPDATE accounts SET firm_id = ?2, name = ?3, broker = ?4, external_ref = ?5, account_type = ?6,
                 status = ?7, currency = ?8, starting_balance_micros = ?9, timezone = ?10,
-                trading_day_reset_time = ?11, notes_md = ?12, updated_at = ?13
+                trading_day_reset_time = ?11, notes_md = ?12, updated_at = ?13, provider_id = ?14
          WHERE id = ?1",
         params![
             id, firm, v.name, v.broker, v.external_ref, v.account_type, v.status, v.currency,
-            v.starting_balance_micros, v.timezone, v.reset, v.notes, now
+            v.starting_balance_micros, v.timezone, v.reset, v.notes, now, provider
         ],
     )
     .map_err(friendly)?;

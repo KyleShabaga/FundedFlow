@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 5 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, and the Rust data step 5 `rederive_trading_days`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 7 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` and the Rust data step 7 `map_legacy_catalogue`; see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -65,19 +65,20 @@ that feeds the same `trades` table.
 |---|---|
 | **Implemented** (commands, store code and tests) | `accounts`, `firms` (find-or-create by name), `account_status_events` (written on create and status change), `instruments` (seeded by 0002, read-only), `trades`, `trade_round_trips`, `import_batches`, `import_rows`, `journal_entries`, `tags`, `journal_entry_tags` |
 | **Reserved** (created and constraint-tested in 0001, no commands) | `app_meta` (journal_id etc. not yet written), `settings`, `programmes`, `account_ledger_entries`, `rulebook_versions`, `rules`, `csv_mapping_profiles`, `strategies`, `checklists`, `checklist_items`, `checklist_results`, `trade_reviews`, `trade_review_tags`, `attachments`, `attachment_links`, `account_snapshots`, `audit_events`, `sync_outbox` (inert) |
-| **Contract only** (Zod DTOs in `packages/domain/src/catalogue`; tables come in Build 10) | provider catalogue: `providers`, `programme_families`, `programme_variants`, `catalogue_versions`, `programme_phases`, `phase_paths`, `commercial_offers`, `promotions`, `promotion_offers`, `catalogue_sources`, `account_phase_events`; see [Provider catalogue](#provider-catalogue) |
+| **Schema only** (Zod DTOs in `packages/domain/src/catalogue`, tables in migration 6, Rust DTOs in `src/catalogue.rs`; no commands yet) | provider catalogue: `providers`, `programme_families`, `programme_variants`, `catalogue_versions`, `catalogue_version_sources`, `catalogue_field_claims`, `catalogue_sources`, `programme_phases`, `phase_paths`, `commercial_offers`, `commercial_offer_sources`, `promotions`, `promotion_sources`, `promotion_offers`, `account_phase_events`, and the `accounts` link columns; see [Provider catalogue](#provider-catalogue). The account store keeps `providers` in step with `firms` (`provider_for_firm`). |
 | **Not in the schema** (future extensions) | `executions`, `execution_fees`, `trade_executions` (execution-first), reusable rulebooks and `account_rulebook_assignments` (Build 9.5) |
 
 Reserved tables are a starting point, not a finished design. In particular `rulebook_versions` is
 account-owned (`account_id NOT NULL`, cascades on account delete), whereas Build 9.5 plans reusable, versioned
-rulebooks assigned to accounts. `firms`/`programmes` predate the Build 9 provider catalogue. Those tables arrive
-as new forward-only migrations (version 6 onwards) that map these tables; shipped migrations 1–5 are never edited.
+rulebooks assigned to accounts. `firms`/`programmes` predate the Build 9 provider catalogue; migration 7 maps
+them into `providers`/`programme_families` and keeps them. Shipped migrations are never edited.
 
 ## Provider catalogue
 
-Status: **contract only** (Build 9). The Zod DTOs, integrity checks and phase-history derivation are in
-`packages/domain/src/catalogue`, and the synthetic fixture is `packages/domain/test/fixtures/catalogue.json`.
-No table, migration or command exists yet. Build 10 adds them (see [Storage plan](#catalogue-storage-plan-build-10)).
+Status: **schema only**. The Zod DTOs, integrity checks and phase-history derivation are in
+`packages/domain/src/catalogue` (Build 9), and the synthetic fixture is `packages/domain/test/fixtures/catalogue.json`.
+The tables are migration 6 and the legacy mapping is migration 7 (Build 10; see [Storage](#catalogue-storage)).
+No command reads or writes the catalogue yet.
 
 The model keeps six layers apart:
 
@@ -163,25 +164,47 @@ erDiagram
     its path to its phase. A promotion may link only to offers of its own provider, with overlapping windows.
   - A version may supersede only a version of the same variant.
 
-### Catalogue storage plan (Build 10)
+### Catalogue storage
 
-Build 10 owns the migration (the next unused version, 6; versions 1–5 have shipped), the Rust repository and the commands. The
-planned tables mirror the DTOs one to one:
+`migrations/0006_provider_catalogue.sql` mirrors the DTOs. Field names map to `snake_case` columns.
 
-- `STRICT` tables with UUIDv7 `TEXT` IDs, and UTC ms instants enforced by CHECK.
-- `*_micros INTEGER` for money, `CHECK` for each enum, and the UNIQUE keys listed above.
-- Composite foreign keys for the ownership rules, for example `(programme_family_id, provider_id)` and
-  `(programme_phase_id, catalogue_version_id)`.
-- `ON DELETE RESTRICT` from user history to the catalogue.
-- Triggers that freeze reviewed versions and make `account_phase_events` append-only.
+- `STRICT` tables with UUIDv7 `TEXT` IDs and UTC ms instants enforced by CHECK. DTO money becomes
+  `*_micros INTEGER >= 0` (`NULL` unknown, `0` known zero). A percent discount is `discount_percent_micros`
+  (12.5% = 12 500 000, 0 < p ≤ 100). JSON columns (`aliases`, `platforms`, `metadata`) are checked for type.
+- The DTO arrays become child tables: `sourceIds` → `catalogue_version_sources`, `commercial_offer_sources`,
+  `promotion_sources`; `claims` → `catalogue_field_claims` (ordered by `position`). A promotion's `discount`
+  union is `discount_kind` plus per-kind columns with a CHECK. `AccountCatalogueLink` is the
+  `accounts` columns `provider_id`, `programme_variant_id`, `catalogue_version_id`, `selected_phase_path_id`,
+  `size_source` (default `unknown`) and the existing `parent_account_id`.
+- Every UNIQUE key under [Catalogue rules](#catalogue-rules) is a constraint, and the default path is a partial
+  unique index.
+- Ownership is enforced by composite foreign keys: variant → `(family, provider)`; offer and phase-event
+  snapshot → `(phase, version)` and `(path, phase)`; `supersedes_version_id` → `(version, variant)`; a phase
+  event's correction → `(event, account)`. Promotion links are checked by trigger: same provider, and
+  overlapping link, promotion and offer windows. ALTER TABLE cannot add composite keys to `accounts`, so
+  triggers check its link (variant in provider, version in variant, path in version).
+- **Frozen versions.** One trigger enforces `canTransitionVerification` on every status change. Another rejects
+  any other change to a reviewed version (`verified`, `stale`, `superseded`, `rejected`) and its deletion.
+  The version's phases, paths, offers, offer sources, version sources and claims are frozen with it.
+  This is stricter than `checkCatalogueVersionUpdate`, which sees only the version DTO. Write the contents
+  first, then move the version to `verified`. Deleting a draft version cascades through its contents.
+- `account_phase_events` rejects every UPDATE and DELETE. It references `accounts` with `ON DELETE RESTRICT`,
+  so an account with phase history cannot be hard-deleted until Build 24 defines permanent delete. Other
+  history-to-catalogue references are RESTRICT too. Rulebook IDs on phases and paths have no foreign key until
+  the Build 9.5 tables exist.
 
-Mapping from the current schema:
+**Migration 7, `map_legacy_catalogue`** (`db/steps.rs`), maps the legacy tables:
 
-- `firms` becomes `providers`, and `programmes` becomes `programme_families`, both with deterministic backfills.
-- `accounts` gains nullable `programme_variant_id`, `catalogue_version_id` and `selected_phase_path_id`.
-- No existing account is matched to a verified catalogue version.
-
-The handover note for Build 10 lists the column-level needs.
+- Each firm becomes a provider and each programme a family. They are linked by `legacy_firm_id` and
+  `legacy_programme_id`, and the legacy rows are left unchanged.
+- The slug comes from the name: ASCII letters and digits in lower case, other runs replaced by a single `-`,
+  and a fallback of `provider` or `programme` when nothing is left. A collision is suffixed `-2`, `-3`, … in
+  creation order.
+- Record status is `unknown`, or `archived` for a soft-deleted firm or programme. A family's category is
+  the programme's `programme_type`. Only an `http(s)://` website is copied.
+- `accounts.provider_id` is filled from `firm_id`. No variant, version, path or phase event is inferred.
+- The step skips rows it has already mapped. The account store calls the same `provider_for_firm` whenever
+  it finds or creates a firm, so later firms are mapped as well.
 
 ## Conventions
 
@@ -216,7 +239,8 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 
 - **`Step::Sql`**: a schema change or seed in `migrations/000N_name.sql`, embedded in the binary with `include_str!`.
 - **`Step::Rust`**: a data step in `db/steps.rs` for work that needs the Rust domain logic, such as
-  re-deriving a stored value. It must be idempotent and change only derived columns.
+  re-deriving a stored value or filling new tables from existing rows. It must be idempotent and must not change
+  user-entered data.
 
 | Version | Name | Kind | What it does |
 |---|---|---|---|
@@ -225,6 +249,8 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 3 | `round_trip_imports` | SQL | `trade_round_trips`, import warnings and source format |
 | 4 | `archive_accounts` | SQL | `accounts.archived_at`; broker account numbers unique among active accounts |
 | 5 | `rederive_trading_days` | Rust | Re-derives every stored `trades.trading_day` under the current [rules](#trading-day) |
+| 6 | `provider_catalogue` | SQL | [Provider catalogue](#catalogue-storage) tables and triggers, plus nullable catalogue link columns and `size_source` on `accounts` |
+| 7 | `map_legacy_catalogue` | Rust | Maps `firms` → `providers` and `programmes` → `programme_families`, and fills `accounts.provider_id` |
 
 How an upgrade runs:
 
@@ -255,6 +281,7 @@ The tests check:
 
 - every row of every table survives;
 - only the expected trading days change;
+- each firm gets one provider (`Apex` → `apex`), accounts point at it, and nothing else is inferred;
 - the backup holds the old version;
 - the store still lists, creates and dedups re-imports;
 - reopening is a no-op;
