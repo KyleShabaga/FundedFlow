@@ -1,0 +1,285 @@
+{
+  "cases": [
+    {
+      "account": {
+        "accountType": "evaluation",
+        "broker": "Tradovate",
+        "currency": "usd",
+        "externalRef": null,
+        "name": "Eval 50K",
+        "notes": null,
+        "propFirm": "Topstep",
+        "startingBalance": "50000.00",
+        "status": "active",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "name": "long ES, calculated P&L, fees deducted",
+      "trade": {
+        "accountId": "<account-id>",
+        "entryAt": "2026-10-19T13:30:00Z",
+        "entryPrice": "5000.25",
+        "exitAt": "2026-10-19T14:00:00-04:00",
+        "exitPrice": "5004.50",
+        "fees": "4.12",
+        "notes": "  breakout retest  ",
+        "quantity": "1",
+        "realizedPnl": null,
+        "side": "long",
+        "symbol": "ESZ6"
+      },
+      "tradeWire": "{\"id\":\"<trade-id>\",\"accountId\":\"<account-id>\",\"source\":\"manual\",\"importBatchId\":null,\"brokerTradeId\":null,\"symbol\":\"ESZ6\",\"side\":\"long\",\"quantity\":\"1\",\"entryAt\":\"2026-10-19T13:30:00.000Z\",\"entryPrice\":\"5000.25\",\"exitAt\":\"2026-10-19T18:00:00.000Z\",\"exitPrice\":\"5004.5\",\"fees\":\"4.12\",\"tradingDay\":\"2026-10-19\",\"reportedPnl\":null,\"grossPnl\":\"212.5\",\"realizedPnl\":\"208.38\",\"pnlStatus\":\"calculated\",\"notes\":\"breakout retest\",\"roundTrip\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}"
+    },
+    {
+      "account": {
+        "accountType": "evaluation",
+        "broker": "Tradovate",
+        "currency": "usd",
+        "externalRef": null,
+        "name": "Eval 50K",
+        "notes": null,
+        "propFirm": "Topstep",
+        "startingBalance": "50000.00",
+        "status": "active",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "name": "short MES (longest root wins over ES), two contracts",
+      "trade": {
+        "accountId": "<account-id>",
+        "entryAt": "2026-10-19T13:30:00Z",
+        "entryPrice": "5004.75",
+        "exitAt": "2026-10-19T14:00:00-04:00",
+        "exitPrice": "5001",
+        "fees": "1.24",
+        "notes": null,
+        "quantity": "2",
+        "realizedPnl": null,
+        "side": "short",
+        "symbol": "mesz26"
+      },
+      "tradeWire": "{\"id\":\"<trade-id>\",\"accountId\":\"<account-id>\",\"source\":\"manual\",\"importBatchId\":null,\"brokerTradeId\":null,\"symbol\":\"MESZ26\",\"side\":\"short\",\"quantity\":\"2\",\"entryAt\":\"2026-10-19T13:30:00.000Z\",\"entryPrice\":\"5004.75\",\"exitAt\":\"2026-10-19T18:00:00.000Z\",\"exitPrice\":\"5001\",\"fees\":\"1.24\",\"tradingDay\":\"2026-10-19\",\"reportedPnl\":null,\"grossPnl\":\"37.5\",\"realizedPnl\":\"36.26\",\"pnlStatus\":\"calculated\",\"notes\":null,\"roundTrip\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}"
+    },
+    {
+      "account": {
+        "accountType": "evaluation",
+        "broker": "Tradovate",
+        "currency": "usd",
+        "externalRef": null,
+        "name": "Eval 50K",
+        "notes": null,
+        "propFirm": "Topstep",
+        "startingBalance": "50000.00",
+        "status": "active",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "name": "MNQ fractional price, sub-micro fees round half away from zero",
+      "trade": {
+        "accountId": "<account-id>",
+        "entryAt": "2026-10-19T13:30:00Z",
+        "entryPrice": "18250.25",
+        "exitAt": "2026-10-19T14:00:00-04:00",
+        "exitPrice": "18249.5",
+        "fees": "0.0000005",
+        "notes": null,
+        "quantity": "3",
+        "realizedPnl": null,
+        "side": "long",
+        "symbol": "MNQH7"
+      },
+      "tradeWire": "{\"id\":\"<trade-id>\",\"accountId\":\"<account-id>\",\"source\":\"manual\",\"importBatchId\":null,\"brokerTradeId\":null,\"symbol\":\"MNQH7\",\"side\":\"long\",\"quantity\":\"3\",\"entryAt\":\"2026-10-19T13:30:00.000Z\",\"entryPrice\":\"18250.25\",\"exitAt\":\"2026-10-19T18:00:00.000Z\",\"exitPrice\":\"18249.5\",\"fees\":\"0.000001\",\"tradingDay\":\"2026-10-19\",\"reportedPnl\":null,\"grossPnl\":\"-4.5\",\"realizedPnl\":\"-4.500001\",\"pnlStatus\":\"calculated\",\"notes\":null,\"roundTrip\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}"
+    },
+    {
+      "account": {
+        "accountType": "evaluation",
+        "broker": "Tradovate",
+        "currency": "usd",
+        "externalRef": null,
+        "name": "Eval 50K",
+        "notes": null,
+        "propFirm": "Topstep",
+        "startingBalance": "50000.00",
+        "status": "active",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "name": "open trade",
+      "trade": {
+        "accountId": "<account-id>",
+        "entryAt": "2026-10-19T13:30:00Z",
+        "entryPrice": "5000.25",
+        "exitAt": null,
+        "exitPrice": null,
+        "fees": null,
+        "notes": null,
+        "quantity": "1",
+        "realizedPnl": null,
+        "side": "long",
+        "symbol": "ESZ6"
+      },
+      "tradeWire": "{\"id\":\"<trade-id>\",\"accountId\":\"<account-id>\",\"source\":\"manual\",\"importBatchId\":null,\"brokerTradeId\":null,\"symbol\":\"ESZ6\",\"side\":\"long\",\"quantity\":\"1\",\"entryAt\":\"2026-10-19T13:30:00.000Z\",\"entryPrice\":\"5000.25\",\"exitAt\":null,\"exitPrice\":null,\"fees\":\"0\",\"tradingDay\":\"2026-10-19\",\"reportedPnl\":null,\"grossPnl\":null,\"realizedPnl\":null,\"pnlStatus\":\"open\",\"notes\":null,\"roundTrip\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}"
+    },
+    {
+      "account": {
+        "accountType": "evaluation",
+        "broker": "Tradovate",
+        "currency": "usd",
+        "externalRef": null,
+        "name": "Eval 50K",
+        "notes": null,
+        "propFirm": "Topstep",
+        "startingBalance": "50000.00",
+        "status": "active",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "name": "unknown instrument falls back to reported P&L",
+      "trade": {
+        "accountId": "<account-id>",
+        "entryAt": "2026-10-19T13:30:00Z",
+        "entryPrice": "5000.25",
+        "exitAt": "2026-10-19T14:00:00-04:00",
+        "exitPrice": "5004.50",
+        "fees": "4.12",
+        "notes": null,
+        "quantity": "1",
+        "realizedPnl": "-12.50",
+        "side": "long",
+        "symbol": "XYZ"
+      },
+      "tradeWire": "{\"id\":\"<trade-id>\",\"accountId\":\"<account-id>\",\"source\":\"manual\",\"importBatchId\":null,\"brokerTradeId\":null,\"symbol\":\"XYZ\",\"side\":\"long\",\"quantity\":\"1\",\"entryAt\":\"2026-10-19T13:30:00.000Z\",\"entryPrice\":\"5000.25\",\"exitAt\":\"2026-10-19T18:00:00.000Z\",\"exitPrice\":\"5004.5\",\"fees\":\"4.12\",\"tradingDay\":\"2026-10-19\",\"reportedPnl\":\"-12.5\",\"grossPnl\":\"-12.5\",\"realizedPnl\":\"-16.62\",\"pnlStatus\":\"reported\",\"notes\":null,\"roundTrip\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}"
+    },
+    {
+      "account": {
+        "accountType": "evaluation",
+        "broker": "Tradovate",
+        "currency": "usd",
+        "externalRef": null,
+        "name": "Eval 50K",
+        "notes": null,
+        "propFirm": "Topstep",
+        "startingBalance": "50000.00",
+        "status": "active",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "name": "unknown instrument without reported P&L",
+      "trade": {
+        "accountId": "<account-id>",
+        "entryAt": "2026-10-19T13:30:00Z",
+        "entryPrice": "5000.25",
+        "exitAt": "2026-10-19T14:00:00-04:00",
+        "exitPrice": "5004.50",
+        "fees": "4.12",
+        "notes": null,
+        "quantity": "1",
+        "realizedPnl": null,
+        "side": "long",
+        "symbol": "XYZ"
+      },
+      "tradeWire": "{\"id\":\"<trade-id>\",\"accountId\":\"<account-id>\",\"source\":\"manual\",\"importBatchId\":null,\"brokerTradeId\":null,\"symbol\":\"XYZ\",\"side\":\"long\",\"quantity\":\"1\",\"entryAt\":\"2026-10-19T13:30:00.000Z\",\"entryPrice\":\"5000.25\",\"exitAt\":\"2026-10-19T18:00:00.000Z\",\"exitPrice\":\"5004.5\",\"fees\":\"4.12\",\"tradingDay\":\"2026-10-19\",\"reportedPnl\":null,\"grossPnl\":null,\"realizedPnl\":null,\"pnlStatus\":\"missing_instrument\",\"notes\":null,\"roundTrip\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}"
+    },
+    {
+      "account": {
+        "accountType": "evaluation",
+        "broker": "Tradovate",
+        "currency": "EUR",
+        "externalRef": null,
+        "name": "Eval 50K",
+        "notes": null,
+        "propFirm": "Topstep",
+        "startingBalance": "50000.00",
+        "status": "active",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"EUR\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "name": "currency mismatch leaves P&L unknown",
+      "trade": {
+        "accountId": "<account-id>",
+        "entryAt": "2026-10-19T13:30:00Z",
+        "entryPrice": "5000.25",
+        "exitAt": "2026-10-19T14:00:00-04:00",
+        "exitPrice": "5004.50",
+        "fees": "4.12",
+        "notes": null,
+        "quantity": "1",
+        "realizedPnl": null,
+        "side": "long",
+        "symbol": "ESZ6"
+      },
+      "tradeWire": "{\"id\":\"<trade-id>\",\"accountId\":\"<account-id>\",\"source\":\"manual\",\"importBatchId\":null,\"brokerTradeId\":null,\"symbol\":\"ESZ6\",\"side\":\"long\",\"quantity\":\"1\",\"entryAt\":\"2026-10-19T13:30:00.000Z\",\"entryPrice\":\"5000.25\",\"exitAt\":\"2026-10-19T18:00:00.000Z\",\"exitPrice\":\"5004.5\",\"fees\":\"4.12\",\"tradingDay\":\"2026-10-19\",\"reportedPnl\":null,\"grossPnl\":null,\"realizedPnl\":null,\"pnlStatus\":\"currency_mismatch\",\"notes\":null,\"roundTrip\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}"
+    },
+    {
+      "account": {
+        "accountType": "evaluation",
+        "broker": "Tradovate",
+        "currency": "usd",
+        "externalRef": null,
+        "name": "Eval 50K",
+        "notes": null,
+        "propFirm": "Topstep",
+        "startingBalance": "50000.00",
+        "status": "active",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"America/New_York\",\"tradingDayResetTime\":\"17:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "name": "Friday after the 17:00 reset belongs to Monday",
+      "trade": {
+        "accountId": "<account-id>",
+        "entryAt": "2026-10-23T21:30:00Z",
+        "entryPrice": "5000.25",
+        "exitAt": "2026-10-23T21:45:00Z",
+        "exitPrice": "5004.50",
+        "fees": "4.12",
+        "notes": null,
+        "quantity": "1",
+        "realizedPnl": null,
+        "side": "long",
+        "symbol": "ESZ6"
+      },
+      "tradeWire": "{\"id\":\"<trade-id>\",\"accountId\":\"<account-id>\",\"source\":\"manual\",\"importBatchId\":null,\"brokerTradeId\":null,\"symbol\":\"ESZ6\",\"side\":\"long\",\"quantity\":\"1\",\"entryAt\":\"2026-10-23T21:30:00.000Z\",\"entryPrice\":\"5000.25\",\"exitAt\":\"2026-10-23T21:45:00.000Z\",\"exitPrice\":\"5004.5\",\"fees\":\"4.12\",\"tradingDay\":\"2026-10-26\",\"reportedPnl\":null,\"grossPnl\":\"212.5\",\"realizedPnl\":\"208.38\",\"pnlStatus\":\"calculated\",\"notes\":null,\"roundTrip\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}"
+    },
+    {
+      "account": {
+        "accountType": "evaluation",
+        "broker": "Tradovate",
+        "currency": "usd",
+        "externalRef": null,
+        "name": "Eval 50K",
+        "notes": null,
+        "propFirm": "Topstep",
+        "startingBalance": "50000.00",
+        "status": "active",
+        "timezone": "Europe/London",
+        "tradingDayResetTime": "00:00"
+      },
+      "accountWire": "{\"id\":\"<account-id>\",\"name\":\"Eval 50K\",\"broker\":\"Tradovate\",\"propFirm\":\"Topstep\",\"externalRef\":null,\"accountType\":\"evaluation\",\"status\":\"active\",\"currency\":\"USD\",\"startingBalance\":\"50000\",\"timezone\":\"Europe/London\",\"tradingDayResetTime\":\"00:00\",\"notes\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}",
+      "name": "midnight reset uses the calendar day in the account zone",
+      "trade": {
+        "accountId": "<account-id>",
+        "entryAt": "2026-10-24T23:30:00Z",
+        "entryPrice": "5000.25",
+        "exitAt": "2026-10-25T00:30:00Z",
+        "exitPrice": "5004.50",
+        "fees": "4.12",
+        "notes": null,
+        "quantity": "1",
+        "realizedPnl": null,
+        "side": "long",
+        "symbol": "ESZ6"
+      },
+      "tradeWire": "{\"id\":\"<trade-id>\",\"accountId\":\"<account-id>\",\"source\":\"manual\",\"importBatchId\":null,\"brokerTradeId\":null,\"symbol\":\"ESZ6\",\"side\":\"long\",\"quantity\":\"1\",\"entryAt\":\"2026-10-24T23:30:00.000Z\",\"entryPrice\":\"5000.25\",\"exitAt\":\"2026-10-25T00:30:00.000Z\",\"exitPrice\":\"5004.5\",\"fees\":\"4.12\",\"tradingDay\":\"2026-10-26\",\"reportedPnl\":null,\"grossPnl\":\"212.5\",\"realizedPnl\":\"208.38\",\"pnlStatus\":\"calculated\",\"notes\":null,\"roundTrip\":null,\"createdAt\":\"2026-01-01T00:00:00.000Z\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}"
+    }
+  ],
+  "description": "Account and Trade DTOs exactly as the Rust store returns them over Tauri IPC (serde_json, compact) for the given inputs. Inputs are hand-written; accountWire/tradeWire are generated by the Rust parity test with ids and timestamps replaced by fixed placeholders. The TypeScript contract schemas must accept the inputs and re-serialise each wire string byte for byte.",
+  "version": 1
+}

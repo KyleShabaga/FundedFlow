@@ -11,7 +11,11 @@
   },
   "scripts": {
     "dev": "npm run dev -w @fundedflow/desktop",
-    "build": "npm run build -w @fundedflow/desktop",
+    "build": "npm run build -w @fundedflow/domain && npm run build:app -w @fundedflow/desktop",
+    "typecheck": "npm run build -w @fundedflow/domain && npm run typecheck -w @fundedflow/domain && npm run typecheck -w @fundedflow/desktop",
+    "test": "npm run test -w @fundedflow/domain",
+    "check": "npm run check:boundaries -w @fundedflow/domain && npm run check:dist -w @fundedflow/domain",
+    "dev:domain": "npm run dev -w @fundedflow/domain",
     "tauri": "npm run tauri -w @fundedflow/desktop --"
   }
 }

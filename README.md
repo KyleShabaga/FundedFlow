@@ -5,17 +5,30 @@ FundedFlow is a Windows-first, local-first trading journal built with Tauri 2, R
 ## Prerequisites
 
 - Windows 10 (1803+) or Windows 11 with Microsoft Edge WebView2 Runtime
-- Node.js LTS and npm
+- Node.js LTS (22 or newer) and npm
 - Rust stable with the `x86_64-pc-windows-msvc` target
 - Visual Studio Build Tools with the **Desktop development with C++** workload
 - Git
 
+## Repository layout
+
+| Path | Package | Contents |
+|---|---|---|
+| `apps/desktop` | `@fundedflow/desktop` | React UI, Tauri host (`src-tauri`), typed command gateway |
+| `packages/domain` | `@fundedflow/domain` | Framework-free Zod contracts and money primitives shared by every host |
+
+npm workspaces with one root `package-lock.json`. Package boundaries, the money/time wire contract and the Rust ↔ TypeScript parity fixtures: [`docs/architecture/packages.md`](docs/architecture/packages.md).
+
 ## Start developing
 
+Run everything from the repository root:
+
 ```powershell
-npm install
+npm ci
 npm run tauri dev
 ```
+
+`npm run tauri dev` builds `packages/domain` first and keeps it compiling in watch mode, so edits there reach the running app.
 
 ## Build
 
@@ -23,6 +36,16 @@ npm run tauri dev
 npm run build
 npm run tauri build
 ```
+
+`npm run build` builds `@fundedflow/domain` and then the desktop frontend (`tsc` + Vite). `tauri build` does the same before compiling the Rust app.
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Vite dev server only (browser preview at http://localhost:1420, no Tauri commands) |
+| `npm run typecheck` | Builds domain, type-checks domain sources/tests and the desktop app |
+| `npm test` | Domain unit and parity tests (Vitest) |
+| `npm run check` | Domain boundary check and a plain-Node import of the built package |
+| `npm run dev:domain` | `tsc --watch` for `packages/domain` on its own |
 
 FundedFlow is a desktop app: its React UI runs inside the app's own window, not in a web browser. SQLite is bundled through `rusqlite` and accessed only through Rust commands.
 
@@ -33,7 +56,7 @@ FundedFlow stores accounts, trades, journal entries and CSV import history in a 
 - Schema, relationships, delete rules, migrations, CSV column mapping, duplicate detection and P&L assumptions: [`docs/data-model.md`](docs/data-model.md)
 - Migrations: `apps/desktop/src-tauri/migrations/*.sql`, embedded and applied at startup by `apps/desktop/src-tauri/src/db` (a backup copy is written before an upgrade)
 - Rust: `apps/desktop/src-tauri/src/store` (accounts, trades, journal), `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/commands.rs`
-- TypeScript: `apps/desktop/src/lib/data/schemas.ts` (types and Zod schemas) and `apps/desktop/src/lib/data/api.ts` (typed command wrappers)
+- TypeScript: `packages/domain/src/contracts` (types and Zod schemas, re-exported by `apps/desktop/src/lib/data/schemas.ts`) and `apps/desktop/src/lib/data/api.ts` (typed command wrappers)
 - `apps/desktop/src/components/DataModelPanel.tsx` is a small developer panel on the start screen for trying these out
 
 ## CSV trade import
@@ -57,11 +80,18 @@ Full rules, field mappings and known limitations: [`docs/data-model.md#csv-impor
 
 ## Tests
 
-Run the Rust tests (schema, repositories, CSV import including the `Performance.csv` fixture) and the frontend type-check:
+CI (Windows) runs the same steps:
 
 ```powershell
+npm ci
+npm run check:boundaries -w @fundedflow/domain
+npm run typecheck
+npm test
+npm run build
+npm run check:dist -w @fundedflow/domain
 cd apps/desktop/src-tauri
 cargo test
-cd ../../..
-npm run build
+cargo clippy --all-targets -- -D warnings
 ```
+
+`cargo test` covers schema, repositories, CSV import (including the `Performance.csv` fixture) and the golden parity fixtures in `packages/domain/test/fixtures`, which Vitest runs too. After an intentional Rust change, regenerate the expected outputs with `$env:FUNDEDFLOW_UPDATE_FIXTURES=1; cargo test --lib parity` and review the diff.

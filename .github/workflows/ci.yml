@@ -20,12 +20,26 @@ jobs:
           node-version: lts/*
           cache: npm
 
-      - name: Install frontend dependencies
+      # Clean install from the single root lockfile (no node_modules or dist cached).
+      - name: Install dependencies
         run: npm ci
 
+      - name: Domain boundaries (no React, Tauri, Node I/O or apps/desktop in packages/domain)
+        run: npm run check:boundaries -w @fundedflow/domain
+
+      # Builds packages/domain first, then type-checks domain sources/tests and the desktop app.
+      - name: Typecheck (domain + desktop)
+        run: npm run typecheck
+
+      - name: Domain tests (Vitest, incl. Rust golden fixtures)
+        run: npm test
+
       # Must run before cargo: the tauri build script expects apps/desktop/dist to exist.
-      - name: Build frontend (tsc + vite)
+      - name: Build (domain, then desktop tsc + vite)
         run: npm run build
+
+      - name: Domain dist loads by package name in plain Node
+        run: npm run check:dist -w @fundedflow/domain
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -36,6 +50,7 @@ jobs:
         with:
           workspaces: apps/desktop/src-tauri
 
+      # Includes src/parity.rs, which checks packages/domain/test/fixtures against the Rust code.
       - name: cargo test
         working-directory: apps/desktop/src-tauri
         run: cargo test

@@ -14,10 +14,10 @@ Everything is local. There is no network access, account system, sync or secret 
   immutable source fill pair (`trade_round_trips`). There is no executions ledger; trades cannot be recomputed
   from raw executions.
 - **Rust is authoritative for calculations.** Validation, trading day, instrument lookup and realized P&L are
-  computed in `src-tauri/src/domain.rs` and stored. The Zod schemas in `src/lib/data/schemas.ts` mirror the
+  computed in `src-tauri/src/domain.rs` and stored. The Zod schemas in `packages/domain/src/contracts` mirror the
   input rules for early feedback but never compute stored values. A calculation moves to TypeScript (e.g. a
   shared `packages/domain`) only together with parity tests that run the same cases against both
-  implementations and prove identical results.
+  implementations and prove identical results; see [`architecture/packages.md`](architecture/packages.md).
 - **SQLite is authoritative for persistence.** Every write goes through a Tauri command and one SQLite transaction.
 
 Not supported by the round-trip pipeline (V1 limitations): partial fills and partial exits, scale-in/scale-out

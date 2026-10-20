@@ -3,6 +3,8 @@ mod csv_import;
 mod db;
 mod domain;
 mod error;
+#[cfg(test)]
+mod parity;
 mod runtime;
 mod store;
 

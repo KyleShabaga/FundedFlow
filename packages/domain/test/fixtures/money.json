@@ -1,0 +1,431 @@
+{
+  "decimal": [
+    {
+      "canonical": "0.625",
+      "input": "0.625",
+      "micros": "625000",
+      "money": "0.625"
+    },
+    {
+      "canonical": "50000",
+      "input": "50000",
+      "micros": "50000000000",
+      "money": "50000"
+    },
+    {
+      "canonical": "5004.5",
+      "input": "5004.50",
+      "micros": "5004500000",
+      "money": "5004.5",
+      "note": "trailing zero dropped"
+    },
+    {
+      "canonical": "0.0000005",
+      "input": "0.0000005",
+      "micros": "1",
+      "money": "0.000001",
+      "note": "midpoint rounds away from zero"
+    },
+    {
+      "canonical": "-0.0000005",
+      "input": "-0.0000005",
+      "micros": "-1",
+      "money": "-0.000001",
+      "note": "midpoint rounds away from zero"
+    },
+    {
+      "canonical": "0.00000049",
+      "input": "0.00000049",
+      "micros": "0",
+      "money": "0"
+    },
+    {
+      "canonical": "0.0000015",
+      "input": "0.0000015",
+      "micros": "2",
+      "money": "0.000002"
+    },
+    {
+      "canonical": "-0.0000015",
+      "input": "-0.0000015",
+      "micros": "-2",
+      "money": "-0.000002"
+    },
+    {
+      "canonical": "0.0000025",
+      "input": "0.0000025",
+      "micros": "3",
+      "money": "0.000003",
+      "note": "midpoint is not banker's rounding"
+    },
+    {
+      "canonical": "-0.0000025",
+      "input": "-0.0000025",
+      "micros": "-3",
+      "money": "-0.000003"
+    },
+    {
+      "canonical": "0.00000050000000001",
+      "input": "0.00000050000000001",
+      "micros": "1",
+      "money": "0.000001"
+    },
+    {
+      "canonical": "-0.00000049999999999",
+      "input": "-0.00000049999999999",
+      "micros": "0",
+      "money": "0"
+    },
+    {
+      "canonical": "0",
+      "input": "-0",
+      "micros": "0",
+      "money": "0",
+      "note": "negative zero normalises"
+    },
+    {
+      "canonical": "0",
+      "input": "+0",
+      "micros": "0",
+      "money": "0"
+    },
+    {
+      "canonical": "0",
+      "input": "-0.000",
+      "micros": "0",
+      "money": "0"
+    },
+    {
+      "canonical": "123.45",
+      "input": "000123.4500",
+      "micros": "123450000",
+      "money": "123.45"
+    },
+    {
+      "canonical": "5",
+      "input": "+5",
+      "micros": "5000000",
+      "money": "5"
+    },
+    {
+      "canonical": "0.5",
+      "input": ".5",
+      "micros": "500000",
+      "money": "0.5"
+    },
+    {
+      "canonical": "5",
+      "input": "5.",
+      "micros": "5000000",
+      "money": "5"
+    },
+    {
+      "canonical": "-0.5",
+      "input": "-.5",
+      "micros": "-500000",
+      "money": "-0.5"
+    },
+    {
+      "canonical": "0.5",
+      "input": "+.5",
+      "micros": "500000",
+      "money": "0.5"
+    },
+    {
+      "canonical": "12.5",
+      "input": "  12.5  ",
+      "micros": "12500000",
+      "money": "12.5",
+      "note": "surrounding whitespace is trimmed"
+    },
+    {
+      "canonical": "12.5",
+      "input": " 12.5\t",
+      "micros": "12500000",
+      "money": "12.5"
+    },
+    {
+      "canonical": null,
+      "input": "﻿5",
+      "micros": null,
+      "money": null,
+      "note": "a byte-order mark is not whitespace"
+    },
+    {
+      "canonical": null,
+      "input": "-",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "+",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": ".",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "1e5",
+      "micros": null,
+      "money": null,
+      "note": "no exponents"
+    },
+    {
+      "canonical": null,
+      "input": "1,000",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "$5",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "1-2",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "--1",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "+-1",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "1.2.3",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "1..2",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "0x10",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "1_000",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "Infinity",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "NaN",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": "9223372036854.775807",
+      "input": "9223372036854.775807",
+      "micros": "9223372036854775807",
+      "money": "9223372036854.775807",
+      "note": "i64::MAX micros"
+    },
+    {
+      "canonical": "9223372036854.7758074",
+      "input": "9223372036854.7758074",
+      "micros": "9223372036854775807",
+      "money": "9223372036854.775807"
+    },
+    {
+      "canonical": "9223372036854.7758075",
+      "input": "9223372036854.7758075",
+      "micros": null,
+      "money": null,
+      "note": "rounds past i64::MAX"
+    },
+    {
+      "canonical": "9223372036854.775808",
+      "input": "9223372036854.775808",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": "-9223372036854.775808",
+      "input": "-9223372036854.775808",
+      "micros": "-9223372036854775808",
+      "money": "-9223372036854.775808",
+      "note": "i64::MIN micros"
+    },
+    {
+      "canonical": "-9223372036854.7758084",
+      "input": "-9223372036854.7758084",
+      "micros": "-9223372036854775808",
+      "money": "-9223372036854.775808"
+    },
+    {
+      "canonical": "-9223372036854.7758085",
+      "input": "-9223372036854.7758085",
+      "micros": null,
+      "money": null,
+      "note": "rounds past i64::MIN"
+    },
+    {
+      "canonical": "-9223372036854.775809",
+      "input": "-9223372036854.775809",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": "79228162514264337593543950335",
+      "input": "79228162514264337593543950335",
+      "micros": null,
+      "money": null,
+      "note": "largest rust_decimal mantissa"
+    },
+    {
+      "canonical": "-79228162514264337593543950335",
+      "input": "-79228162514264337593543950335",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": "79228162514264337593543950335",
+      "input": "79228162514264337593543950335.0",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": null,
+      "input": "79228162514264337593543950336",
+      "micros": null,
+      "money": null,
+      "note": "mantissa overflow"
+    },
+    {
+      "canonical": "0.1234567890123456789012345678",
+      "input": "0.1234567890123456789012345678",
+      "micros": "123457",
+      "money": "0.123457",
+      "note": "28 fractional digits"
+    },
+    {
+      "canonical": "1",
+      "input": "1.0000000000000000000000000000000000",
+      "micros": "1000000",
+      "money": "1",
+      "note": "excess trailing zeros"
+    },
+    {
+      "canonical": "12345678901234567890.123456789",
+      "input": "12345678901234567890.123456789",
+      "micros": null,
+      "money": null
+    },
+    {
+      "canonical": "1.5",
+      "input": "00000000000000000000000000000001.5",
+      "micros": "1500000",
+      "money": "1.5"
+    },
+    {
+      "canonical": "0.0000000000000000000000000001",
+      "input": "0.00000000000000000000000000010000000",
+      "micros": "0",
+      "money": "0",
+      "note": "over-long but exact after trailing zeros"
+    },
+    {
+      "canonical": "7922816251426433759354395033.5",
+      "input": "7922816251426433759354395033.50",
+      "micros": null,
+      "money": null,
+      "note": "exact only after dropping the trailing zero"
+    },
+    {
+      "canonical": "0.1234567890123456789012345679",
+      "input": "0.12345678901234567890123456789",
+      "micros": "123457",
+      "money": "0.123457",
+      "tsDivergence": "rust_decimal rounds input beyond 28 fractional digits while parsing; the domain package rejects inexact input instead"
+    },
+    {
+      "canonical": "1.0000000000000000000000000001",
+      "input": "1.00000000000000000000000000005",
+      "micros": "1000000",
+      "money": "1",
+      "tsDivergence": "rust_decimal rounds input beyond 28 fractional digits while parsing; the domain package rejects inexact input instead"
+    },
+    {
+      "canonical": "0",
+      "input": "0.0000000000000000000000000000001",
+      "micros": "0",
+      "money": "0",
+      "tsDivergence": "rust_decimal rounds input beyond 28 fractional digits while parsing; the domain package rejects inexact input instead"
+    }
+  ],
+  "description": "Decimal text to integer micro-units (1e-6) and back, as in apps/desktop/src-tauri/src/domain.rs (parse_decimal, canonical, to_micros, micros_to_string). Inputs are hand-written; canonical/micros/money are generated by the Rust parity test and must not be edited by hand. null = rejected (invalid text, or outside the i64 micro-unit range).",
+  "microsToString": [
+    {
+      "micros": "0",
+      "money": "0"
+    },
+    {
+      "micros": "1",
+      "money": "0.000001"
+    },
+    {
+      "micros": "-1",
+      "money": "-0.000001"
+    },
+    {
+      "micros": "999999",
+      "money": "0.999999"
+    },
+    {
+      "micros": "1000000",
+      "money": "1"
+    },
+    {
+      "micros": "-1250000",
+      "money": "-1.25"
+    },
+    {
+      "micros": "50000000000",
+      "money": "50000"
+    },
+    {
+      "micros": "9223372036854775807",
+      "money": "9223372036854.775807"
+    },
+    {
+      "micros": "-9223372036854775808",
+      "money": "-9223372036854.775808"
+    }
+  ],
+  "version": 1
+}
