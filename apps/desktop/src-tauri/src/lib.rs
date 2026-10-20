@@ -18,15 +18,17 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // Per-user data directory, e.g. %APPDATA%\com.fundedflow.desktop\ on
-            // Windows; never the install directory. A database failure must not
-            // stop the window from opening: it is recorded in the runtime
-            // status and shown by the frontend's recovery screen.
+            // Windows; never the install directory. Opening, backing up and
+            // migrating the journal run on a background thread, so neither a
+            // failure nor a slow upgrade keeps the window from opening: the
+            // frontend polls the runtime status and shows progress or recovery.
             let path = app
                 .path()
                 .app_data_dir()
                 .map(|dir| dir.join(db::DB_FILE_NAME))
                 .map_err(|e| e.to_string());
-            app.manage(runtime::Runtime::start(path));
+            app.manage(runtime::Runtime::new(path));
+            commands::initialize_in_background(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
