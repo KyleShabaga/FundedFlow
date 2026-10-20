@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Failed-account history, archive/restore and the reset-attempt flow.
 
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
@@ -68,11 +68,14 @@ it("marks an account failed with the user's cause without archiving it", async (
   render(<AccountLifecyclePanel />);
   await user.click(await screen.findByRole("button", { name: "Mark failed or closed…" }));
   await user.type(screen.getByLabelText(/Cause/), "Daily loss limit");
+  // The effective time is the account's wall clock (America/New_York), whatever the computer's zone.
+  const effective = screen.getByLabelText(/^Effective/) as HTMLInputElement;
+  fireEvent.change(effective, { target: { value: "2026-10-20T20:00" } });
   await user.click(screen.getByRole("button", { name: "Save status" }));
   await waitFor(() => expect(repo.accounts.changeStatus).toHaveBeenCalled());
   const [id, input] = repo.accounts.changeStatus.mock.calls[0] as [string, Record<string, unknown>];
   expect(id).toBe("Live eval");
-  expect(input).toMatchObject({ status: "failed", cause: "Daily loss limit" });
+  expect(input).toMatchObject({ status: "failed", cause: "Daily loss limit", effectiveAt: "2026-10-21T00:00:00.000Z" });
   expect(repo.accounts.archive).not.toHaveBeenCalled();
   expect((await screen.findByRole("status")).textContent).toMatch(/Nothing was archived or deleted/);
 });
@@ -162,7 +165,7 @@ it("shows linked attempts with unknown results as a dash, and a deletion preview
   };
   repo.accounts.lineage.mockResolvedValue([
     { ...base, accountId: "A1", attemptNumber: 1, name: "A1", status: "failed", tradeCount: 3, netPnl: "-1200.5", firstTradingDay: "2026-10-01", lastTradingDay: "2026-10-19",
-      resetToNext: { predecessorAccountId: "A1", successorAccountId: "A2", priorOutcome: "failed", effectiveAt: "2026-10-20T19:00:00.000Z", reason: "Drawdown", source: "user_entered", rulebookDecision: "deferred", createdAt: T } },
+      resetToNext: { predecessorAccountId: "A1", successorAccountId: "A2", priorOutcome: "failed", effectiveAt: "2026-10-21T01:00:00.000Z", reason: "Drawdown", source: "user_entered", rulebookDecision: "deferred", createdAt: T } },
     { ...base, accountId: "A2", attemptNumber: 2, name: "A2", status: "active", tradeCount: 0, netPnl: null, resetToNext: null },
   ]);
   repo.accounts.previewDeletion.mockResolvedValue({
@@ -174,7 +177,9 @@ it("shows linked attempts with unknown results as a dash, and a deletion preview
   await user.click(await screen.findByRole("button", { name: "Attempts" }));
   const table = await screen.findByRole("table", { name: "Attempts" });
   const rows = within(table).getAllByRole("row");
-  expect(within(rows[1] as HTMLElement).getByText("-1200.5")).toBeTruthy();
+  expect(within(rows[1] as HTMLElement).getByText("−1,200.50")).toBeTruthy();
+  // 01:00 UTC on the 21st is still the 20th in the account's zone.
+  expect(within(rows[1] as HTMLElement).getByText(/reset 2026-10-20/)).toBeTruthy();
   // Attempt 2 has no trades: net result and trading days are unknown, shown as a dash, not 0.
   expect(within(rows[2] as HTMLElement).getAllByText("—")).toHaveLength(2);
   expect(within(rows[2] as HTMLElement).getAllByRole("cell")[5]?.textContent).toBe("—");

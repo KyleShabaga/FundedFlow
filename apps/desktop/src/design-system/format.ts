@@ -119,3 +119,57 @@ export function formatTradingDay(day: string): string {
   const date = new Date(Date.UTC(y, m - 1, d));
   return `${WEEKDAYS[date.getUTCDay()]} ${MONTHS[m - 1]} ${d}`;
 }
+
+// Wall-clock times in an account's IANA time zone. `<input type="datetime-local">`
+// gives "YYYY-MM-DDTHH:MM" with no zone; these read and write it in the account's
+// zone, not the computer's, and convert to and from UTC instants.
+
+function wallParts(instant: number, timeZone: string): number[] {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(new Date(instant));
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return [get("year"), get("month"), get("day"), get("hour"), get("minute"), get("second")];
+}
+
+const pad = (n: number, width = 2) => String(n).padStart(width, "0");
+
+/** "2026-10-20T20:05": the wall-clock minute of `instant` (ISO text or ms) in `timeZone`. */
+export function zonedWallTime(instant: string | number, timeZone: string): string {
+  const [y, m, d, h, min] = wallParts(typeof instant === "number" ? instant : Date.parse(instant), timeZone);
+  return `${pad(y, 4)}-${pad(m)}-${pad(d)}T${pad(h)}:${pad(min)}`;
+}
+
+/** "2026-10-20": the calendar day of an ISO instant in `timeZone`, or "—" when it is not a valid instant. */
+export function zonedDay(instant: string, timeZone: string): string {
+  const ms = Date.parse(instant);
+  return Number.isNaN(ms) ? UNKNOWN : zonedWallTime(ms, timeZone).slice(0, 10);
+}
+
+/**
+ * The UTC instant ("…Z") of a "YYYY-MM-DDTHH:MM" wall time in `timeZone`, or "" when the input is empty or
+ * malformed. A time skipped by a daylight-saving jump resolves to the instant after the gap.
+ */
+export function zonedWallTimeToInstant(local: string, timeZone: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(local);
+  if (!match) return "";
+  const [y, mo, d, h, mi] = match.slice(1).map(Number);
+  const asUtc = Date.UTC(y, mo - 1, d, h, mi);
+  const offsetAt = (t: number) => {
+    const [py, pm, pd, ph, pmin, ps] = wallParts(t, timeZone);
+    return Date.UTC(py, pm - 1, pd, ph, pmin, ps) - t;
+  };
+  // The second pass corrects the offset across a daylight-saving change. If the result still does not
+  // show the requested wall time, that time was skipped, and the later reading is the one after the gap.
+  const first = asUtc - offsetAt(asUtc);
+  const second = asUtc - offsetAt(first);
+  const instant = zonedWallTime(second, timeZone) === local ? second : Math.max(first, second);
+  return new Date(instant).toISOString();
+}

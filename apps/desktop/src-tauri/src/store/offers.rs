@@ -101,6 +101,13 @@ pub fn select(conn: &mut Connection, input: OfferSelectionInput) -> AppResult<Of
     if offer.phase_path_id.is_some() && offer.phase_path_id != path {
         return Err(AppError::invalid("commercialOfferId", "the offer is for a different path than the account's selected one"));
     }
+    // Instants are stored in one fixed format, so text order is time order. Open bounds overlap everything.
+    let inside = |from: &Option<String>, to: &Option<String>| {
+        from.as_ref().is_none_or(|f| *f <= selected_at) && to.as_ref().is_none_or(|t| selected_at < *t)
+    };
+    if !inside(&offer.effective_from, &offer.effective_to) {
+        return Err(AppError::invalid("selectedAt", "the offer was not in effect on the selection date"));
+    }
 
     let promotion = match &input.promotion_id {
         None => None,
@@ -120,9 +127,6 @@ pub fn select(conn: &mut Connection, input: OfferSelectionInput) -> AppResult<Of
                 .iter()
                 .find(|l| &l.promotion_id == id && l.commercial_offer_id == offer.id)
                 .ok_or_else(|| AppError::invalid("promotionId", "the promotion does not apply to this offer"))?;
-            let inside = |from: &Option<String>, to: &Option<String>| {
-                from.as_ref().is_none_or(|f| *f <= selected_at) && to.as_ref().is_none_or(|t| selected_at < *t)
-            };
             if !inside(&p.valid_from, &p.valid_to) || !inside(&link.valid_from, &link.valid_to) {
                 return Err(AppError::invalid("promotionId", "the promotion was not valid on the selection date"));
             }

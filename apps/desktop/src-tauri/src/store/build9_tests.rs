@@ -381,3 +381,92 @@ fn an_offer_must_match_the_accounts_selection_and_a_promotion_must_apply_and_be_
     assert_eq!(offers::list(&conn, &account).unwrap().len(), 1);
     assert!(matches!(offers::select(&mut conn, selection(&account, 0x61, None, "2026-10-20T12:00:00Z")), Err(AppError::NotFound { .. })));
 }
+
+#[test]
+fn offer_dates_are_validated_not_dropped() {
+    let mut conn = catalogue_tests_seeded();
+    let src = authoring::create_source(&mut conn, source()).unwrap();
+    let mut bad = draft(&id(0x22), &src.id);
+    bad.offers[0].effective_from = Some("garbage".into());
+    bad.offers[0].effective_to = Some("2026-13-45".into());
+    assert_eq!(
+        validation_fields(authoring::create_draft(&mut conn, bad).unwrap_err()),
+        ["offers[0].effectiveFrom", "offers[0].effectiveTo"]
+    );
+    let mut backwards = draft(&id(0x22), &src.id);
+    backwards.offers[0].effective_from = Some("2026-02-01T00:00:00Z".into());
+    backwards.offers[0].effective_to = Some("2026-01-01T00:00:00Z".into());
+    assert_eq!(validation_fields(authoring::create_draft(&mut conn, backwards).unwrap_err()), ["offers[0].effectiveTo"]);
+
+    let mut ok = draft(&id(0x22), &src.id);
+    ok.offers[0].effective_from = Some("2026-01-01T09:00:00-05:00".into());
+    let v = authoring::create_draft(&mut conn, ok).unwrap();
+    let g = catalogue::load(&conn).unwrap().graph;
+    let offer = g.commercial_offers.iter().find(|o| o.catalogue_version_id == v.id).unwrap();
+    assert_eq!((offer.effective_from.as_deref(), offer.effective_to.as_deref()), (Some("2026-01-01T14:00:00.000Z"), None));
+}
+
+#[test]
+fn a_replaced_draft_keeps_its_promotion_links_and_cannot_supersede_itself() {
+    let mut conn = catalogue_tests_seeded();
+    let src = authoring::create_source(&mut conn, source()).unwrap();
+    let v = authoring::create_draft(&mut conn, draft(&id(0x22), &src.id)).unwrap();
+
+    let mut own = draft(&id(0x22), &src.id);
+    own.supersedes_version_id = Some(v.id.clone());
+    own.correction_reason = Some("typo".into());
+    assert_eq!(validation_fields(authoring::replace_draft(&mut conn, &v.id, own).unwrap_err()), ["supersedesVersionId"]);
+    let mut other_variant = draft(&id(0x22), &src.id);
+    other_variant.supersedes_version_id = Some(id(0x31));
+    other_variant.correction_reason = Some("typo".into());
+    assert_eq!(validation_fields(authoring::replace_draft(&mut conn, &v.id, other_variant).unwrap_err()), ["supersedesVersionId"]);
+
+    let offer: String =
+        conn.query_row("SELECT id FROM commercial_offers WHERE catalogue_version_id = ?1", [&v.id], |r| r.get(0)).unwrap();
+    conn.execute(
+        "INSERT INTO promotions (id, provider_id, provider_label, discount_kind, verification_status)
+         SELECT 'promo-draft', provider_id, 'Launch', 'unknown', 'draft' FROM programme_variants WHERE id = ?1",
+        [id(0x22)],
+    )
+    .unwrap();
+    conn.execute("INSERT INTO promotion_offers (promotion_id, commercial_offer_id) VALUES ('promo-draft', ?1)", [&offer]).unwrap();
+    assert_eq!(validation_fields(authoring::replace_draft(&mut conn, &v.id, draft(&id(0x22), &src.id)).unwrap_err()), ["offers"]);
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM promotion_offers WHERE promotion_id = 'promo-draft'"), 1, "the link is kept");
+}
+
+#[test]
+fn an_offer_is_selectable_only_while_it_is_in_effect() {
+    let mut conn = catalogue_tests_seeded();
+    let src = authoring::create_source(&mut conn, source()).unwrap();
+    let mut d = draft(&id(0x22), &src.id);
+    d.offers[0].phase = None;
+    d.offers[0].effective_from = Some("2025-01-01T00:00:00Z".into());
+    d.offers[0].effective_to = Some("2025-02-01T00:00:00Z".into());
+    let v = authoring::create_draft(&mut conn, d).unwrap();
+    let a = accounts::create(&mut conn, account_input("Eval")).unwrap();
+    catalogue::set_link(
+        &mut conn,
+        AccountLinkInput {
+            account_id: a.id.clone(),
+            programme_variant_id: Some(id(0x22)),
+            catalogue_version_id: Some(v.id.clone()),
+            selected_phase_path_id: None,
+            size_source: AccountFieldSource::UserEntered,
+        },
+    )
+    .unwrap();
+    let offer: String =
+        conn.query_row("SELECT id FROM commercial_offers WHERE catalogue_version_id = ?1", [&v.id], |r| r.get(0)).unwrap();
+    let at = |when: &str| OfferSelectionInput {
+        account_id: a.id.clone(),
+        commercial_offer_id: offer.clone(),
+        promotion_id: None,
+        selected_at: Some(when.into()),
+        note: None,
+    };
+    for outside in ["2024-12-31T23:59:59Z", "2025-02-01T00:00:00Z", "2026-10-20T12:00:00Z"] {
+        assert_eq!(validation_fields(offers::select(&mut conn, at(outside)).unwrap_err()), ["selectedAt"], "{outside}");
+    }
+    offers::select(&mut conn, at("2025-01-01T00:00:00Z")).unwrap();
+    assert_eq!(offers::list(&conn, &a.id).unwrap().len(), 1);
+}

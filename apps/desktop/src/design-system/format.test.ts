@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { formatMoney, formatMoneyCompact, formatPercent, formatTradingDay, moneySign, sumMoney } from "./format";
+import {
+  UNKNOWN,
+  formatMoney,
+  formatMoneyCompact,
+  formatPercent,
+  formatTradingDay,
+  moneySign,
+  sumMoney,
+  zonedDay,
+  zonedWallTime,
+  zonedWallTimeToInstant,
+} from "./format";
 
 describe("formatMoney", () => {
   it("signs, groups and pads decimal text", () => {
@@ -68,5 +79,32 @@ describe("moneySign, formatPercent, formatTradingDay", () => {
   it("names a trading day without time zones", () => {
     expect(formatTradingDay("2026-10-19")).toBe("Mon Oct 19");
     expect(formatTradingDay("2026-03-08")).toBe("Sun Mar 8");
+  });
+});
+
+describe("account time zone helpers", () => {
+  it("reads and writes wall-clock times in the account's zone, not the computer's", () => {
+    expect(zonedWallTimeToInstant("2026-10-20T20:00", "America/New_York")).toBe("2026-10-21T00:00:00.000Z");
+    expect(zonedWallTimeToInstant("2026-01-15T09:30", "America/New_York")).toBe("2026-01-15T14:30:00.000Z");
+    expect(zonedWallTimeToInstant("2026-10-20T08:00", "Europe/London")).toBe("2026-10-20T07:00:00.000Z");
+    expect(zonedWallTime("2026-10-21T00:00:00.000Z", "America/New_York")).toBe("2026-10-20T20:00");
+    expect(zonedWallTime("2026-10-21T00:00:00.000Z", "UTC")).toBe("2026-10-21T00:00");
+  });
+
+  it("gives the calendar day in the account's zone", () => {
+    expect(zonedDay("2026-10-21T00:00:00.000Z", "America/New_York")).toBe("2026-10-20");
+    expect(zonedDay("2026-10-21T00:00:00.000Z", "Asia/Tokyo")).toBe("2026-10-21");
+    expect(zonedDay("not a time", "UTC")).toBe(UNKNOWN);
+  });
+
+  it("handles daylight-saving changes and bad input", () => {
+    // 02:30 does not exist on 2026-03-08 in New York; it resolves after the gap.
+    expect(zonedWallTimeToInstant("2026-03-08T02:30", "America/New_York")).toBe("2026-03-08T07:30:00.000Z");
+    expect(zonedWallTimeToInstant("2026-03-08T03:30", "America/New_York")).toBe("2026-03-08T07:30:00.000Z");
+    // 01:30 happens twice on 2026-11-01; the earlier (daylight-saving) one is used.
+    expect(zonedWallTimeToInstant("2026-11-01T01:30", "America/New_York")).toBe("2026-11-01T05:30:00.000Z");
+    expect(zonedWallTimeToInstant("2026-11-01T12:00", "America/New_York")).toBe("2026-11-01T17:00:00.000Z");
+    expect(zonedWallTimeToInstant("", "UTC")).toBe("");
+    expect(zonedWallTimeToInstant("2026-10-20", "UTC")).toBe("");
   });
 });
