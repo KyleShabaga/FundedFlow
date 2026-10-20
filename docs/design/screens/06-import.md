@@ -1,5 +1,8 @@
 # 6 · Import trade preview
 
+**Card:** Build 18 (CSV import wizard UI; in development). Backend: Build 17. Entry point: the header's
+Import CSV action (Build 12) and Today/Journal actions.
+
 Mockup: `Import.dc.html`. Backend: `preview_csv_import`, `commit_csv_import`, `list_csv_imports`,
 `list_csv_import_problem_rows`. Rules: README "CSV trade import" and data-model.md.
 

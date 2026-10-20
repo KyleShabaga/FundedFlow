@@ -3,6 +3,13 @@
 Windows-first, local-first trading journal: Tauri 2, React, TypeScript, Vite; SQLite behind Rust commands.
 Start with `README.md`, then `docs/data-model.md` and `docs/architecture/packages.md`.
 
+## Plan of record
+
+The Notion roadmap board (https://app.notion.com/p/6bf1bd4b6bde831ea34e01b574543195) owns scope, build order and
+acceptance criteria. Work one card at a time: branch `feat/build-<n>-<slug>`, link the card in the pull request,
+stay inside the card's scope and "explicit ownership" section, and record gaps as new Triage cards instead of
+widening scope. P2 and Web V2 items are not V1 work.
+
 ## Building UI
 
 - Read `docs/design/README.md` before building or changing a screen. It has the build order, one spec per screen
@@ -16,7 +23,7 @@ Start with `README.md`, then `docs/data-model.md` and `docs/architecture/package
 - Rust is authoritative for stored calculations. A new calculation in TypeScript needs parity fixtures
   (packages.md). If a screen needs data no command provides, add the command or note the gap in the spec; do not
   fake it in the UI.
-- When a screen ships, update its row in `docs/design/README.md`.
+- When a spec and its card disagree, follow the card and fix the spec in the same pull request.
 
 ## Checks
 

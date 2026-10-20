@@ -1,5 +1,8 @@
 # 4 · Calendar with month/year selector
 
+**Card:** Build 23 (Insights: calendar view). The MonthYearPicker is a Build 13 primitive. If Build 23 does not
+cover a calendar view, raise a Triage card.
+
 Mockup: `Calendar.dc.html` (picker open by default). References: `tw-calendar.png`, `ts-calendar.png`.
 
 ## Purpose
@@ -19,7 +22,8 @@ Year stepper with YTD P&L; 3×4 months tinted by P&L; current month ringed; mont
 months without trades dimmed but selectable. Picking a month closes the popover.
 
 ## Data
-- `list_trades` for the selected accounts, summed per `tradingDay` with `sumMoney`. A day whose trades include an
+- Insights' included-trade set for the selected filters, summed per `tradingDay` with `sumMoney`; every cell
+  drills down to its trades (Build 23 rule). A day whose trades include an
   unknown P&L shows `—` and is not tinted.
 - Months and years are sums of days. A Rust aggregation command can replace this when history grows.
 

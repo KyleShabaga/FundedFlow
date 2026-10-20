@@ -20,7 +20,17 @@
 | `DayCard` | Journal recent days, Home |
 | `TradeTable` | Simple trade lists; the Journal uses `DataTable` with trade columns |
 
-## New patterns to add first
+## Build 6 component plan (owned by feature cards)
+
+`AccountContextBar`, `GlobalFreshnessIndicator` (12/21), `AccountHealthCard`, `RiskStatusBadge` (Safe / Caution /
+Stop / Unknown, text + icon + colour), `RiskMetricCard`, `DataFreshnessBadge`, `CalculationBreakdownDrawer` (21),
+`RuleVersionTimeline`, `CalculationPreview` (19), `ColumnMappingTable`, `ValidationIssueList`, `DuplicateReview`,
+`ImportSummary` (18), `TradeEditor`, `ChecklistReview`, `AttachmentManager`, `SessionReviewForm` (20, 22),
+`FilterBar`, `ChartPanel`, `ContributingTradesDrawer` (23), `BackupRestorePanel`, `DestructiveActionDialog` (25).
+Build 13 also owns the async-state set: `LoadingState`, `EmptyState`, `ErrorState`, `UnavailableState`,
+`StaleDataNotice`, `MutationFeedback`, `StateBoundary`.
+
+## New patterns from the canvas (Build 13 unless noted)
 
 Add each to the design system with a `README`-style comment, tests and a gallery section before a screen uses it.
 Names are suggestions.
@@ -34,18 +44,18 @@ Names are suggestions.
 - Active item: `flow-soft` ground, `flow` text, `aria-current="page"`. Counts in mono, `ink-faint`.
 - Below ~760 px wide the sidebar collapses automatically.
 
-### TopBar
-Left: Search (opens a command palette, Ctrl+K), account multi-select, date range. Right: DayTimer, SessionClock,
-Feedback, Notifications (unread count badge), Theme (System / Dark / Light), divider, primary "Add trade".
-Wraps to two rows when narrow. Spec: [screens/01-app-shell.md](screens/01-app-shell.md).
+### Header (Build 12)
+Page title, reserved AccountContextBar (account selector, filters), primary **Import CSV**. Wraps when narrow.
+Search, feedback, notifications, theme switching, DayTimer and SessionClock are **not** Build 12: see the table
+in [screens/01-app-shell.md](screens/01-app-shell.md#not-in-build-12-do-not-build-here).
 
-### SessionClock + TradingSessions popover
+### SessionClock + TradingSessions popover (P2, Build 41)
 Button "{CC} {Session} · HH:MM" in `flow`; opens a popover (`role="dialog"`, Escape and outside click close it):
 current session, display-time-zone select (defaults to the account's zone), one row per market session with bars
 on a 00–24 axis and a now line, footer "New York closes in 2h 23m. Sydney opens in 2h 23m."
 Session hours come from a table with time zones (they move with daylight saving), not fixed UTC hours.
 
-### DayTimer
+### DayTimer (Triage)
 Pill counting down to the account's trading-day reset: `flow` normally, `warn` from 60 minutes, `loss` from 15
 minutes, neutral grey when the market is closed. `role="timer"`, no live announcements every second; tooltip names
 the reset time. Spec: [screens/05-day-timer.md](screens/05-day-timer.md).

@@ -1,61 +1,47 @@
-# 1 · App shell: collapsible sidebar and top bar
+# 1 · App shell: collapsible sidebar and header
 
-Mockups: `Main.dc.html` (in use), `Sidebar.dc.html`, `Topbar.dc.html`, `TopbarSessions.dc.html` (sessions open).
-References: `tw-home.png`, `tw-top-bar.png`, `tw-trading-sessions.png`.
+**Card:** Build 12 (app shell and runtime gate). Primitives: Build 13. Visual spec: Build 7.
+Mockups: `Main.dc.html`, `Sidebar.dc.html`, `Topbar.dc.html` (predate board alignment; see notes).
+References: `tw-home.png`, `tw-top-bar.png`.
 
 ## Purpose
-The frame every screen sits in. Replaces the start-screen developer panel as the app's home; the Data model panel
-and the Design system gallery move under Settings › Developer.
+The frame every route sits in, plus the runtime gate. Replaces the starter/developer start screen; the Data model
+panel and Design system gallery stay reachable from Settings › Developer in development builds only.
 
-## Layout
-- Row of sidebar + main column; the main column holds the top bar and the page (`padding 24px 32px`, max width
-  1600 px).
-- Routing with `react-router-dom` (already a dependency). One route per sidebar item; unknown routes go to Home.
-
-## Sidebar
-See [components.md › AppShell, Sidebar](../components.md#appshell-sidebar). Items and routes:
-
-| Group | Item | Route |
+## Sidebar (Build 6 navigation)
+| Item | Route | Notes |
 |---|---|---|
-| Journal | Home | `/` |
-| | Dashboard | `/dashboard` |
-| | Journal | `/journal` |
-| | Library | `/library` |
-| | Trade log | `/journal?view=log` |
-| | Calendar | `/calendar` |
-| | Reports | `/reports` |
-| Accounts | Accounts | `/accounts` |
-| | Import trades | `/import` |
-| Tools | Economic calendar | `/economic-calendar` |
-| Footer | Settings | `/settings` |
+| Today | `/` (default) | Account health and freshness |
+| Journal | `/journal` | Trades, sessions, import history, daily reviews, library sub-view |
+| Insights | `/insights` | Metrics, calendar, equity views, drill-down |
+| Accounts | `/accounts` | Accounts, rulebooks |
+| Settings | `/settings` | Local data controls |
 
-Counts: trades in the selected accounts (Trade log), active accounts (Accounts).
+- `HashRouter` (Build 12). Unknown routes show a not-found state with a way back.
+- Collapsible: 248 px expanded, 72 px icon rail (`aria-label` and tooltip per item), toggle in the sidebar header,
+  Ctrl+B. Collapses automatically on narrow windows. Active item: `flow-soft` ground, `aria-current="page"`.
+- Footer: Settings and a "Saved on this computer" status (local-first promise). No Import item in the sidebar.
 
-## Top bar
-Left to right:
-1. **Search** button "Search Ctrl K": opens a command palette (screens, accounts, symbols, journal text). Phase 1 can
-   ship screens and accounts only.
-2. **Account selector**: multi-select of non-archived accounts; drives every screen. Persist the choice.
-3. **Date range**: presets (Today, This week, This month, Last 30 days, This year, All) and custom.
-4. **DayTimer** ([05](05-day-timer.md)).
-5. **SessionClock** → TradingSessions popover ([components.md](../components.md#sessionclock--tradingsessions-popover)).
-   The popover's time zone select defaults to the selected account's `timezone`.
-6. **Feedback** icon: opens a short form; no network in V1, so it saves to a local file or copies text. Decide.
-7. **Notifications** icon with unread count. V1 sources: limit warnings (rule at 70%+), breaches, import finished,
-   new trading day. Local only.
-8. **Theme**: System / Dark / Light; sets `data-theme` on the root and persists.
-9. Divider, primary **Add trade**.
+## Header
+- Left: page title; reserved space for the **AccountContextBar** (account selector and filters; behaviour owned
+  by feature cards and Build 14).
+- Right: **Import CSV** (primary). Until Build 18 ships, it is visible but clearly marked not yet available.
+- Reserved, not in Build 12: GlobalFreshnessIndicator (Build 21 data), day-ending timer (Triage).
 
-## States
-- Runtime not ready: keep `RuntimeGate` around the main column; the sidebar stays usable.
-- No accounts: the account selector reads "No accounts" and links to Add account; Add trade is disabled with a
-  tooltip.
+## Runtime gate (Build 12, consuming Build 11 commands)
+States: checking, ready, unavailable, recovering, unsupported schema. The shell and navigation stay visible;
+data-dependent actions are disabled while not ready. Never show "no accounts" for a failed query.
 
-## Decisions
-- Dark is the default theme; System follows the OS.
-- Session hours come from a table with time zones so they follow daylight saving; the mockup's fixed UTC hours are
-  late-October values only.
+## Not in Build 12 (do not build here)
+| Item from the canvas | Where it belongs |
+|---|---|
+| Search / command palette | Triage card |
+| Feedback button | Triage card |
+| Notifications | "Desktop Privacy, Security & User Notifications" card |
+| Theme switcher | "Build UI skins & theme customization" (P2) |
+| Session clock and Trading sessions popover | Build 41 (P2) |
+| "Add trade" header button | Manual entry is contextual to Today and Journal (Build 20) |
 
-## Open questions
-- Where feedback goes without network access.
-- Which markets appear in Trading sessions (CME Globex hours for futures traders instead of forex sessions?).
+## States and tests
+Route rendering, gate states, retry, no-account vs unavailable, root error boundary (see Build 12 acceptance
+criteria). Keyboard: Tab order, visible focus, Enter/Space, Escape.

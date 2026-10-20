@@ -1,5 +1,8 @@
 # 11 · Journal library
 
+**Card:** Build 20 (strategy, tag and checklist management, notes) and Build 22 (daily reviews). A sub-view of
+Journal, not a sidebar item. Playbooks and templates map to strategies and checklists.
+
 Mockup: `Library.dc.html`. Reference: `tw-library.png`.
 
 ## Layout

@@ -1,5 +1,8 @@
 # 3 · Journal: by day and trade log
 
+**Card:** Build 20 (trade journal, trade detail and review); plan, review and adherence: Build 22. Needs 14.
+Manual trade entry and correction live here and on Today (Build 6), not in the header.
+
 Mockup: `Journal.dc.html` (switch views with the segmented control). References: `journal-entries.png`,
 `tw-daily-journal.png`, `trade-log-logs.png`, `ts-trade-log.png`, `tz-trade-log.jpg`.
 
@@ -40,4 +43,4 @@ Review trading day by day, with notes, and browse every trade in one table.
 - Imported trades keep source values; edits go through `update_trade`.
 
 ## Open questions
-- Plan adherence ("Followed plan") needs a field or tag convention: a journal-entry tag is the simplest start.
+- Plan adherence ("Followed plan") is Build 22's daily review; keep it separate from P&L (Build 6).

@@ -1,5 +1,8 @@
 # 10 · Trade detail and review
 
+**Card:** Build 20. Candles and chart UI: Builds 42–43 (P2); V1 draws entry and exit from fills only.
+Screenshots/attachments: Build 20; storage errors keep the text journal intact (Build 6).
+
 Mockup: `TradeDetail.dc.html`. References: `ts-trade-detail.png`, `tw-trade-history.png`, `tz-trade-log.jpg`.
 
 ## Layout
