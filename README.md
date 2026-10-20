@@ -31,10 +31,10 @@ FundedFlow is a desktop app: its React UI runs inside the app's own window, not 
 FundedFlow stores accounts, trades, journal entries and CSV import history in a single SQLite file in the per-user app data directory: `%APPDATA%\com.fundedflow.desktop\fundedflow.db` on Windows. Nothing is stored in the install directory or the repository, and nothing leaves the machine.
 
 - Schema, relationships, delete rules, migrations, CSV column mapping, duplicate detection and P&L assumptions: [`docs/data-model.md`](docs/data-model.md)
-- Migrations: `src-tauri/migrations/*.sql`, embedded and applied at startup by `src-tauri/src/db` (a backup copy is written before an upgrade)
-- Rust: `src-tauri/src/store` (accounts, trades, journal), `src-tauri/src/csv_import`, `src-tauri/src/commands.rs`
-- TypeScript: `src/lib/data/schemas.ts` (types and Zod schemas) and `src/lib/data/api.ts` (typed command wrappers)
-- `src/components/DataModelPanel.tsx` is a small developer panel on the start screen for trying these out
+- Migrations: `apps/desktop/src-tauri/migrations/*.sql`, embedded and applied at startup by `apps/desktop/src-tauri/src/db` (a backup copy is written before an upgrade)
+- Rust: `apps/desktop/src-tauri/src/store` (accounts, trades, journal), `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/commands.rs`
+- TypeScript: `apps/desktop/src/lib/data/schemas.ts` (types and Zod schemas) and `apps/desktop/src/lib/data/api.ts` (typed command wrappers)
+- `apps/desktop/src/components/DataModelPanel.tsx` is a small developer panel on the start screen for trying these out
 
 ## CSV trade import
 
@@ -60,8 +60,8 @@ Full rules, field mappings and known limitations: [`docs/data-model.md#csv-impor
 Run the Rust tests (schema, repositories, CSV import including the `Performance.csv` fixture) and the frontend type-check:
 
 ```powershell
-cd src-tauri
+cd apps/desktop/src-tauri
 cargo test
-cd ..
+cd ../../..
 npm run build
 ```

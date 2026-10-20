@@ -1,9 +1,9 @@
 # FundedFlow local data model
 
-Status: V1, schema version 4 (`src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`).
-Code: `src-tauri/src/db` (migrations, opening), `src-tauri/src/store` (accounts, trades, journal),
-`src-tauri/src/csv_import`, `src-tauri/src/domain.rs` (validation, trading day, P&L),
-`src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `src/lib/data/`.
+Status: V1, schema version 4 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`).
+Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal),
+`apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
+`apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
 
 Everything is local. There is no network access, account system, sync or secret in the data layer.
 
@@ -98,9 +98,9 @@ Computed in Rust (`domain::realized_pnl`) when a trade is saved, and stored:
 
 ## CSV import
 
-Code: `src-tauri/src/csv_import/` — `parse` (CSV reading, limits), `detect` (format and header mapping),
+Code: `apps/desktop/src-tauri/src/csv_import/` — `parse` (CSV reading, limits), `detect` (format and header mapping),
 `values` (strict value parsers), `normalize` (row → trade, errors and warnings), `dedup` (identity keys),
-`mod.rs` (preview, atomic commit, history). UI: `src/components/CsvImportSection.tsx`.
+`mod.rs` (preview, atomic commit, history). UI: `apps/desktop/src/components/CsvImportSection.tsx`.
 
 Flow: the UI reads the chosen file as text on this computer and calls `preview_csv_import` (writes nothing).
 The preview shows the detected format and mapping, every row's original line number, parsed values, warnings,

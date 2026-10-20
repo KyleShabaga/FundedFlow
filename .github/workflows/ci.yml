@@ -23,7 +23,7 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      # Must run before cargo: the tauri build script expects ../dist to exist.
+      # Must run before cargo: the tauri build script expects apps/desktop/dist to exist.
       - name: Build frontend (tsc + vite)
         run: npm run build
 
@@ -34,12 +34,12 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri
+          workspaces: apps/desktop/src-tauri
 
       - name: cargo test
-        working-directory: src-tauri
+        working-directory: apps/desktop/src-tauri
         run: cargo test
 
       - name: cargo clippy
-        working-directory: src-tauri
+        working-directory: apps/desktop/src-tauri
         run: cargo clippy --all-targets -- -D warnings

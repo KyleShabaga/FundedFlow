@@ -1,6 +1,6 @@
 //! Local SQLite schema for the FundedFlow journal.
 //!
-//! The schema itself lives in `src-tauri/migrations/*.sql` and is documented in
+//! The schema itself lives in `apps/desktop/src-tauri/migrations/*.sql` and is documented in
 //! `docs/data-model.md`. This module embeds those files, applies them in
 //! order (tracking progress with `PRAGMA user_version`) and opens the
 //! per-user database file.

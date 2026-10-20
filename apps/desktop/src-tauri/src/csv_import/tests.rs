@@ -1,4 +1,4 @@
-//! Import pipeline tests. `Performance.csv` (repo `test_csvimport/`) is the
+//! Import pipeline tests. `Performance.csv` (repo-root `test_csvimport/`) is the
 //! required compatibility fixture and is only read, never modified.
 
 use rusqlite::Connection;
@@ -7,7 +7,7 @@ use super::*;
 use crate::store::tests::{account_input, db};
 use crate::store::{accounts, trades as trade_store};
 
-const PERFORMANCE: &str = include_str!("../../../test_csvimport/Performance.csv");
+const PERFORMANCE: &str = include_str!("../../../../../test_csvimport/Performance.csv");
 
 /// Lines of the fixture whose sell fill is timestamped before the buy fill.
 const SELL_FIRST_LINES: [u64; 21] = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 52, 53, 54, 55, 56, 57];
