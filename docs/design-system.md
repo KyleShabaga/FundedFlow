@@ -48,9 +48,10 @@ the developer panel's `ff-` classes, and `design-system.css` overrides the eleme
 - **Times show in the account's zone.** `TradeTable` takes `timeZone` (the account's IANA zone) for entry times.
 - **TradeTable takes `Trade` from `@fundedflow/domain` unchanged**, including `pnlStatus` (`open`,
   `reported`, `missing_instrument`, `currency_mismatch` show as a note badge).
-- **Rule meters have no backend yet.** `RuleMeter` and the rules on `AccountCard` take plain props; they turn
-  amber at 70% (`WARN_AT`) and red at 100% of a limit, compared in micro-units. Wire them to the rulebook when
-  Build 9.5 lands.
+- **Rule meters are not connected to persisted rules yet.** `RuleMeter` and the rules on `AccountCard`
+  take plain props; they turn amber at 70% (`WARN_AT`) and red at 100% of a limit, compared in micro-units.
+  Build 9.5 has landed with versioned rulebook storage and commands, but product screens still need to resolve
+  the applicable rulebook and pass supported/unknown states explicitly. The gallery uses example values.
 - **Offline.** Inter (variable), Space Grotesk 500/600 and JetBrains Mono 500/600 are bundled from
   `@fontsource` packages. Nothing loads from the network.
 
