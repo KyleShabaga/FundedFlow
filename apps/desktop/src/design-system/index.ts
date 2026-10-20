@@ -17,3 +17,4 @@ export * from "./components/primitives";
 export * from "./components/rules";
 export * from "./components/charts";
 export * from "./components/journal";
+export * from "./components/app-frame";

@@ -7,6 +7,7 @@ import { type ReactNode, useState } from "react";
 
 import {
   AccountCard,
+  AppFrame,
   Badge,
   Button,
   DayCard,
@@ -107,6 +108,13 @@ export function DesignSystemGallery() {
         />
       </header>
 
+      <Section title="Application frame" note="Host-independent 248 px sidebar and 72 px icon rail. The desktop host supplies routing and runtime state.">
+        <div className="dsg-frame-preview">
+          <AppFrame collapsed={false} sidebar={<p>Navigation slot</p>} header={<h3>Header slot</h3>}>
+            <p>Route content slot</p>
+          </AppFrame>
+        </div>
+      </Section>
       <Section title="Button and Badge" note="One primary action per view. Badges label outcome, side, phase, setup and mistakes.">
         <div className="dsg-row">
           <Button variant="primary" icon={<Plus size={16} aria-hidden="true" />}>

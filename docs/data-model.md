@@ -548,9 +548,14 @@ A database problem never stops the window from opening, and neither does a slow 
 (`apps/desktop/src-tauri/src/runtime.rs`).
 - **Startup:** Tauri's setup creates the runtime in the `initializing` state and runs the open → backup → migrate
   path on a background thread, so the window and command bridge come up at once.
-- **Gate:** the frontend's `RuntimeGate` polls `runtime_status` every 500 ms while initializing. It shows the
-  current step, and after 10 s says that an upgrade can take a while. It never gives up on a running upgrade, and
-  shows the recovery screen once the runtime has failed.
+- **Gate:** the frontend's root `RuntimeProvider` owns checking, ready, unavailable, recovering and
+  unsupported-schema states. `RuntimeGate` consumes that shared state rather than starting another loop.
+  Each check/recovery cycle makes at most eight commands: the first immediately, then read-only status
+  checks after 500 ms, 1 s, 2 s, 4 s, 8 s, 8 s and 8 s. Delays start after a response, so requests never overlap.
+  Known failures, malformed/rejected responses and bridge timeouts end the cycle immediately. Once the check
+  budget is exhausted, data stays unavailable and the UI says automatic checks paused and initialization
+  may still be running. This neither cancels the native upgrade nor declares it failed. Retry starts a new
+  finite cycle with `retry_runtime` exactly once; subsequent requests only read status.
 - **Data commands:** until the runtime is ready they return `{ kind: "unavailable" }` at once, without waiting
   for initialization. The UI never reads that as "no accounts".
 
@@ -567,9 +572,21 @@ A database problem never stops the window from opening, and neither does a slow 
 - `retry_runtime()` starts the real open → backup → migrate path again in the background and returns at once
   (`initializing`). It is a no-op when ready, and while an attempt is already running it only reports the status.
   Attempts never overlap: one holds the connection for its whole run.
-- Each SQLite lock wait is bounded by the 5 s busy timeout. The total time of an upgrade is not bounded, so the
-  UI shows progress rather than timing out. Its two commands each have a 10 s answer timeout, which only fires
-  if the bridge itself is unavailable.
+- Each SQLite lock wait is bounded by the 5 s busy timeout. The total time of a native upgrade is not bounded;
+  frontend automatic checks have a finite budget independent of that work. Its two commands each have a 10 s
+  answer timeout, which reports an unavailable bridge rather than asserting that initialization failed.
+  Tauri invokes cannot be cancelled: the adapter retains its single-flight lock after a timeout until the
+  underlying invoke settles, and rejects intervening calls as pending. A late response cannot change the
+  frontend's expired state; another explicit check/retry is needed. If the bridge never settles, restarting
+  the app is needed to get a new bridge rather than sending overlapping commands.
+- `src/lib/data/runtime.ts` validates both commands, including supported ready versions, failure/stage
+  consistency, newer-schema retry restrictions and migration version metadata. Invalid status cannot open
+  the data gate. Read-only `check()` is available on the runtime context for explicit later rechecks; there
+  is no perpetual polling after ready or unavailable. No feature component owns a separate runtime loop.
+- A ready app rechecks status when its window regains focus. Runtime loss keeps the shell, Settings and recovery
+  notice available. A previously opened data gate retains its mounted content/draft, labels it unavailable/stale,
+  and disables form controls and the inert subtree until ready returns. New data content does not mount until
+  ready. Feature hooks must separately gate queries/actions on readiness; Build 14 owns that integration.
 - Recovery never deletes, resets, downgrades or replaces the journal. A file that fails to open stays
   byte-for-byte unchanged. A newer journal is refused before anything is written to it, including the WAL
   journal mode.

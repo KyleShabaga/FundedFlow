@@ -1,36 +1,37 @@
-import { useState } from "react";
-
-import "./App.css";
-import { DataModelPanel } from "./components/DataModelPanel";
+import { lazy, Suspense } from "react";
+import { Link, Route, Routes } from "react-router-dom";
+import { AppProviders } from "./app/AppProviders";
+import { AppShell, NotFound, RoutePlaceholder } from "./app/AppShell";
 import { RuntimeGate } from "./components/RuntimeGate";
-import { DesignSystemGallery } from "./design-system/DesignSystemGallery";
+import "./App.css";
 
-type View = "data" | "design";
+const DeveloperTools = import.meta.env.DEV
+  ? lazy(() => import("./app/DeveloperTools"))
+  : null;
 
-function App() {
-  const [view, setView] = useState<View>("data");
+export default function App() {
   return (
-    <>
-      <nav className="app-views" aria-label="Developer views">
-        <button type="button" aria-pressed={view === "data"} onClick={() => setView("data")}>
-          Data model
-        </button>
-        <button type="button" aria-pressed={view === "design"} onClick={() => setView("design")}>
-          Design system
-        </button>
-      </nav>
-      {view === "design" ? (
-        <DesignSystemGallery />
-      ) : (
-        <main className="container">
-          <h1>FundedFlow</h1>
-          <RuntimeGate>
-            <DataModelPanel />
-          </RuntimeGate>
-        </main>
-      )}
-    </>
+    <AppProviders>
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route index element={<RuntimeGate showStatus={false}><RoutePlaceholder name="Today" /></RuntimeGate>} />
+          <Route path="journal" element={<RuntimeGate showStatus={false}><RoutePlaceholder name="Journal" /></RuntimeGate>} />
+          <Route path="insights" element={<RuntimeGate showStatus={false}><RoutePlaceholder name="Insights" /></RuntimeGate>} />
+          <Route path="accounts" element={<RuntimeGate showStatus={false}><RoutePlaceholder name="Accounts" /></RuntimeGate>} />
+          <Route path="settings" element={<>
+            <RoutePlaceholder name="Settings" />
+            {DeveloperTools && <p><Link to="/settings/developer">Developer tools</Link></p>}
+          </>} />
+          {DeveloperTools && (
+            <Route path="/settings/developer" element={
+              <Suspense fallback={<p role="status">Opening developer tools…</p>}>
+                <DeveloperTools />
+              </Suspense>
+            } />
+          )}
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+    </AppProviders>
   );
 }
-
-export default App;

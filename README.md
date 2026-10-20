@@ -17,7 +17,12 @@ FundedFlow is a Windows-first, local-first trading journal built with Tauri 2, R
 | `apps/desktop` | `@fundedflow/desktop` | React UI, Tauri host (`src-tauri`), typed command gateway |
 | `packages/domain` | `@fundedflow/domain` | Framework-free Zod contracts and money primitives shared by every host |
 
-The UI design system (tokens, bundled fonts, components, money formatting) is in `apps/desktop/src/design-system`; see [`docs/design-system.md`](docs/design-system.md). Screen designs, build order and per-screen specs are in [`docs/design/`](docs/design/README.md). The **Design system** button on the start screen shows every component.
+The UI design system (tokens, bundled fonts, components, money formatting) is in `apps/desktop/src/design-system`; see [`docs/design-system.md`](docs/design-system.md). Screen designs, build order and per-screen specs are in [`docs/design/`](docs/design/README.md). In development, open `#/settings/developer` for the component gallery and data-model tooling. These tools are excluded from production builds.
+
+The product root supplies Today, Journal, Insights, Accounts and Settings placeholders inside the desktop
+shell. Local runtime failure leaves navigation and recovery available; an already-open data screen retains
+its local draft while its controls are disabled. Build 12 evidence, browser smoke instructions and pending
+Windows checks are in [`docs/build-12-verification.md`](docs/build-12-verification.md).
 
 npm workspaces with one root `package-lock.json`. Package boundaries, the money/time wire contract and the Rust ↔ TypeScript parity fixtures: [`docs/architecture/packages.md`](docs/architecture/packages.md).
 
@@ -45,7 +50,7 @@ npm run tauri build
 |---|---|
 | `npm run dev` | Vite dev server only (browser preview at http://localhost:1420, no Tauri commands) |
 | `npm run typecheck` | Builds domain, type-checks domain sources/tests and the desktop app |
-| `npm test` | Domain unit and parity tests (Vitest) |
+| `npm test` | Domain unit/parity tests and desktop component tests (Vitest) |
 | `npm run check` | Domain boundary check and a plain-Node import of the built package |
 | `npm run dev:domain` | `tsc --watch` for `packages/domain` on its own |
 
@@ -59,7 +64,7 @@ FundedFlow stores accounts, trades, journal entries and CSV import history in a 
 - Migrations: `apps/desktop/src-tauri/migrations/*.sql`, embedded and applied at startup by `apps/desktop/src-tauri/src/db` (a backup copy is written before an upgrade)
 - Rust: `apps/desktop/src-tauri/src/store` (accounts, trades, journal), `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/commands.rs`
 - TypeScript: `packages/domain/src/contracts` (types and Zod schemas, re-exported by `apps/desktop/src/lib/data/schemas.ts`) and `apps/desktop/src/lib/data/api.ts` (typed command wrappers)
-- `apps/desktop/src/components/DataModelPanel.tsx` is a small developer panel on the start screen for trying these out
+- `apps/desktop/src/components/DataModelPanel.tsx` is available under **Data model** at `#/settings/developer` in development for trying these out
 
 ## CSV trade import
 
