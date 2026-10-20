@@ -1,2 +1,4 @@
 # Test fixtures are compared byte-for-byte; never convert their line endings.
 test_csvimport/*.csv -text
+# Sample journals for the migration upgrade tests.
+apps/desktop/src-tauri/src/db/fixtures/*.db binary

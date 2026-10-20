@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 4 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`).
+Status: V1, schema version 5 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, and the Rust data step 5 `rederive_trading_days`; see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -18,7 +18,8 @@ Everything is local. There is no network access, account system, sync or secret 
   input rules for early feedback but never compute stored values. A calculation moves to TypeScript (e.g. a
   shared `packages/domain`) only together with parity tests that run the same cases against both
   implementations and prove identical results; see [`architecture/packages.md`](architecture/packages.md).
-- **SQLite is authoritative for persistence.** Every write goes through a Tauri command and one SQLite transaction.
+- **SQLite is authoritative for persistence.** Every write goes through the [repository port](#repository-port),
+  a Tauri command and one SQLite transaction.
 
 Not supported by the round-trip pipeline (V1 limitations): partial fills and partial exits, scale-in/scale-out
 as one position, regrouping fills into trades, execution-based risk analysis (MAE/MFE, intraday drawdown from
@@ -68,8 +69,8 @@ that feeds the same `trades` table.
 
 Reserved tables are a starting point, not a finished design. In particular `rulebook_versions` is
 account-owned (`account_id NOT NULL`, cascades on account delete), whereas Build 9.5 plans reusable, versioned
-rulebooks assigned to accounts. `firms`/`programmes` predate the Build 9 provider catalogue. Those builds add
-forward-only migrations (0004+) that map these tables; they must not edit 0001–0003.
+rulebooks assigned to accounts. `firms`/`programmes` predate the Build 9 provider catalogue. Those tables arrive
+as new forward-only migrations (version 6 onwards) that map these tables; shipped migrations 1–5 are never edited.
 
 ## Conventions
 
@@ -97,14 +98,89 @@ forward-only migrations (0004+) that map these tables; they must not edit 0001�
 
 - File: `<app data dir>/fundedflow.db`, from Tauri's `app_data_dir()`. On Windows this is
   `%APPDATA%\com.fundedflow.desktop\fundedflow.db`. Nothing is written to the install directory or the repository.
-- Migrations are SQL files embedded in the binary (`include_str!`) and listed in `db::MIGRATIONS`. The current
-  version is `PRAGMA user_version`. Each pending migration runs in its own transaction with its version bump, so
-  a failure leaves the database at the last good version.
+### Migrations
+
+Migrations are forward-only. They are listed in `db::MIGRATIONS` (`apps/desktop/src-tauri/src/db/mod.rs`), and the
+database's current version is `PRAGMA user_version`. There are two kinds of step:
+
+- **`Step::Sql`**: a schema change or seed in `migrations/000N_name.sql`, embedded in the binary with `include_str!`.
+- **`Step::Rust`**: a data step in `db/steps.rs` for work that needs the Rust domain logic, such as
+  re-deriving a stored value. It must be idempotent and change only derived columns.
+
+| Version | Name | Kind | What it does |
+|---|---|---|---|
+| 1 | `core_schema` | SQL | Every V1 table, CHECK and trigger |
+| 2 | `seed_instruments` | SQL | Built-in CME futures instruments |
+| 3 | `round_trip_imports` | SQL | `trade_round_trips`, import warnings and source format |
+| 4 | `archive_accounts` | SQL | `accounts.archived_at`; broker account numbers unique among active accounts |
+| 5 | `rederive_trading_days` | Rust | Re-derives every stored `trades.trading_day` under the current [rules](#trading-day) |
+
+How an upgrade runs:
+
+- Each pending migration runs in its own transaction together with its version bump. A failure, including
+  one part-way through a Rust step, rolls that migration back and leaves the database at the last good version.
+  Startup then reports `migration_failed`.
 - Before upgrading an existing journal, `open_file` writes a consistent copy with `VACUUM INTO` to
-  `fundedflow.db.before-v<N>.bak` next to the database.
+  `fundedflow.db.before-v<N>.bak` next to the database. An up-to-date journal opens without a backup or any write.
 - A database from a newer app version is refused (`NewerSchema`) rather than modified.
-- Rule: never edit a migration that has shipped; add the next `000N_….sql` and a `Migration` entry. (0001 was revised
+- Rule: never edit a migration that has shipped. Add the next version with a `Migration` entry. (0001 was revised
   before V1 shipped.)
+
+**Migration 5: trading-day re-derive.** Trades saved before the weekend roll and the reset rule
+(Build 8.75) could store a Saturday or Sunday day. Migration 5 recomputes each trade's day with
+`domain::trading_day`, the same function used when a trade is saved, and updates only the rows whose
+stored day differs. It changes nothing else: P&L, fees, dedup keys, `updated_at` and import provenance stay
+as they were. Soft-deleted trades and archived accounts' trades are included. Rows whose account timezone,
+reset or instants do not parse are left unchanged rather than blocking the upgrade. Accounts still holding
+a legacy morning reset keep the "next day" rule, as described under [Trading day](#trading-day). Running the
+step again changes nothing.
+
+**Upgrade tests** (`db/upgrade_tests.rs`) use real journals in `db/fixtures/`:
+
+- `fundedflow-v3.db` was written by the schema-v3 release (4e3c01f), before the weekend roll.
+- `fundedflow-v4.db` was written by the current release (aeafe1e).
+
+The tests check:
+
+- every row of every table survives;
+- only the expected trading days change;
+- the backup holds the old version;
+- the store still lists, creates and dedups re-imports;
+- reopening is a no-op;
+- a failure in step 5 leaves the journal at version 4.
+
+To try a copy of your own journal (read-only on the source), run this under `apps/desktop/src-tauri`:
+
+```
+FUNDEDFLOW_UPGRADE_DB=%APPDATA%\com.fundedflow.desktop\fundedflow.db cargo test --lib upgrade_copy -- --ignored --nocapture
+```
+
+## Repository port
+
+The frontend reaches the journal only through `JournalRepository`, defined in `@fundedflow/domain`
+(`packages/domain/src/ports/journal-repository.ts`). Its signatures name only domain contracts, with no Tauri
+or SQLite types, so a Stage 2 adapter can implement the same interface.
+
+| Member | Methods |
+|---|---|
+| `accounts` | `list`, `create`, `update`, `archive` |
+| `trades` | `list`, `create`, `update`, `remove` |
+| `journal` | `list`, `create`, `update`, `remove` |
+| `imports` | `preview`, `commit`, `list`, `problemRows` |
+
+- The desktop adapter is `createTauriRepository(invoke)` in `apps/desktop/src/lib/data/tauri-repository.ts`.
+  `api.ts` binds it to Tauri's `invoke` as `repository`. Components import `repository` and never call `invoke`.
+- The adapter validates inputs with the Zod contracts, keeps the existing command names and argument shapes
+  (the IPC payloads are unchanged), and parses every response.
+- Failures reject with `RepositoryError`, which carries the `AppError`. The desktop also exports it under the
+  old name `DataError`.
+- **Commit bundles.** Each write is one Rust command and one SQLite transaction. That command validates,
+  derives trading day and P&L, and writes the change. For example, an import's batch, rows, trades and
+  round-trip sources are one bundle, and so is an account settings change together with its trade re-derive.
+  If any part fails, nothing is kept. Tests in `store/tests.rs`, `csv_import/tests.rs` and `db/upgrade_tests.rs`
+  inject failures part-way through.
+- Rulebooks (Build 9.5) and account snapshots (Build 15.5) join the port when their persistence exists. Provider
+  catalogue tables (Build 9 contracts) arrive as a later migration.
 
 ## Startup and recovery
 
@@ -173,8 +249,8 @@ rather than re-deriving days.
 
 Existing data: the database CHECK only enforces `HH:MM`, so an account saved with a morning reset before this
 rule keeps it (and the old "next day" result) until it is edited, when validation asks for an allowed time.
-Stored trading days of existing trades are re-derived only when the account's currency, timezone or reset
-changes, so weekend-dated trades saved before the Monday rollover keep their old day until then.
+Stored trading days are re-derived when the account's currency, timezone or reset changes. Trades saved
+before the Monday rollover were corrected once, by migration 5 (see [Migrations](#migrations)).
 
 ## CSV import
 

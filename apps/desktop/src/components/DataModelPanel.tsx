@@ -3,7 +3,7 @@
 
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 
-import { DataError, accountsApi, csvImportApi, journalApi, tradesApi } from "../lib/data/api";
+import { DataError, repository } from "../lib/data/api";
 import { CsvImportSection } from "./CsvImportSection";
 import type { Account, ImportBatch, JournalEntry, Trade } from "../lib/data/schemas";
 import "./DataModelPanel.css";
@@ -52,7 +52,7 @@ export function DataModelPanel() {
   }, []);
 
   const loadAccounts = useCallback(async () => {
-    const list = await accountsApi.list();
+    const list = await repository.accounts.list();
     setAccounts(list);
     setAccountId((current) => (list.some((a) => a.id === current) ? current : (list[0]?.id ?? "")));
   }, []);
@@ -65,9 +65,9 @@ export function DataModelPanel() {
       return;
     }
     const [t, j, i] = await Promise.all([
-      tradesApi.list(accountId),
-      journalApi.list(accountId),
-      csvImportApi.list(accountId),
+      repository.trades.list(accountId),
+      repository.journal.list(accountId),
+      repository.imports.list(accountId),
     ]);
     setTrades(t);
     setEntries(j);
@@ -84,7 +84,7 @@ export function DataModelPanel() {
   const createAccount = (e: FormEvent) => {
     e.preventDefault();
     void run(async () => {
-      const a = await accountsApi.create({
+      const a = await repository.accounts.create({
         name: accountForm.name,
         broker: null,
         propFirm: blankToNull(accountForm.propFirm),
@@ -105,7 +105,7 @@ export function DataModelPanel() {
   const archiveAccount = () => {
     if (!account || !window.confirm(`Archive "${account.name}"? It will be hidden; its trades and journal are kept.`)) return;
     void run(async () => {
-      await accountsApi.archive(account.id);
+      await repository.accounts.archive(account.id);
       await loadAccounts();
     });
   };
@@ -118,7 +118,7 @@ export function DataModelPanel() {
   const createTrade = (e: FormEvent) => {
     e.preventDefault();
     void run(async () => {
-      await tradesApi.create({
+      await repository.trades.create({
         accountId,
         symbol: tradeForm.symbol,
         side: tradeForm.side as "long" | "short",
@@ -141,7 +141,7 @@ export function DataModelPanel() {
   const createEntry = (e: FormEvent) => {
     e.preventDefault();
     void run(async () => {
-      await journalApi.create({
+      await repository.journal.create({
         accountId,
         tradeId: blankToNull(journalForm.tradeId),
         entryAt: new Date().toISOString(),
@@ -219,7 +219,7 @@ export function DataModelPanel() {
                     <td title={t.pnlStatus}>{t.realizedPnl ?? t.pnlStatus}</td>
                     <td>{t.source}</td>
                     <td>
-                      <button type="button" onClick={() => void run(async () => { await tradesApi.remove(t.id); await loadAccountData(); })}>×</button>
+                      <button type="button" onClick={() => void run(async () => { await repository.trades.remove(t.id); await loadAccountData(); })}>×</button>
                     </td>
                   </tr>
                 ))}
@@ -250,7 +250,7 @@ export function DataModelPanel() {
                   {j.tradeId && " · linked trade"}
                   {j.tags.length > 0 && ` · #${j.tags.join(" #")}`}
                   {j.body && <div>{j.body}</div>}
-                  <button type="button" onClick={() => void run(async () => { await journalApi.remove(j.id); await loadAccountData(); })}>×</button>
+                  <button type="button" onClick={() => void run(async () => { await repository.journal.remove(j.id); await loadAccountData(); })}>×</button>
                 </li>
               ))}
             </ul>

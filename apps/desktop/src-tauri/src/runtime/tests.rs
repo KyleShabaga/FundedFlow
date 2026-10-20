@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 
 use super::*;
-use crate::db::{DB_FILE_NAME, MIGRATIONS};
+use crate::db::{Step, DB_FILE_NAME, MIGRATIONS};
 
 struct TempDir(PathBuf);
 
@@ -125,7 +125,8 @@ fn a_failed_migration_rolls_back_and_keeps_a_backup() {
         // A version-1 journal whose data makes migration 2 fail: the built-in
         // ES instrument id is already taken.
         let conn = Connection::open(dir.db()).unwrap();
-        conn.execute_batch(MIGRATIONS[0].sql).unwrap();
+        let Step::Sql(core_schema) = MIGRATIONS[0].step else { unreachable!() };
+        conn.execute_batch(core_schema).unwrap();
         conn.pragma_update(None, "user_version", 1).unwrap();
         conn.execute(
             "INSERT INTO instruments (id, symbol_root, asset_class, point_value, created_at, updated_at)

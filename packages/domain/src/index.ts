@@ -10,3 +10,5 @@ export * from "./contracts/accounts.js";
 export * from "./contracts/trades.js";
 export * from "./contracts/journal.js";
 export * from "./contracts/csv-import.js";
+
+export * from "./ports/journal-repository.js";

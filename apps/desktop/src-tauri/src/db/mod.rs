@@ -1,24 +1,37 @@
 //! Local SQLite schema for the FundedFlow journal.
 //!
 //! The schema itself lives in `apps/desktop/src-tauri/migrations/*.sql` and is documented in
-//! `docs/data-model.md`. This module embeds those files, applies them in
-//! order (tracking progress with `PRAGMA user_version`) and opens the
-//! per-user database file.
+//! `docs/data-model.md`. This module embeds those files, applies them and the
+//! Rust data steps in `steps` in order (tracking progress with
+//! `PRAGMA user_version`) and opens the per-user database file.
+
+mod steps;
 
 use std::path::Path;
 
 use rusqlite::{Connection, Transaction};
 
+pub(crate) use steps::rederive_trading_days;
+
 /// File name of the journal database inside the app data directory
 /// (`%APPDATA%\com.fundedflow.desktop\` on Windows).
 pub const DB_FILE_NAME: &str = "fundedflow.db";
 
-/// One forward-only schema migration. `version` is the `user_version` value
-/// the database has after it is applied.
+/// One forward-only migration. `version` is the `user_version` value the
+/// database has after it is applied.
 pub struct Migration {
     pub version: u32,
     pub name: &'static str,
-    pub sql: &'static str,
+    pub step: Step,
+}
+
+/// What a migration does. Either kind runs inside the migration's transaction.
+pub enum Step {
+    /// A schema change or seed, embedded from `migrations/NNNN_name.sql`.
+    Sql(&'static str),
+    /// A data step that needs the Rust domain logic, such as re-deriving a
+    /// stored value. It must be idempotent and change only derived columns.
+    Rust(fn(&Transaction) -> rusqlite::Result<()>),
 }
 
 /// All migrations, oldest first. Never edit a shipped migration; add a new one.
@@ -26,22 +39,27 @@ pub const MIGRATIONS: &[Migration] = &[
     Migration {
         version: 1,
         name: "core_schema",
-        sql: include_str!("../../migrations/0001_core_schema.sql"),
+        step: Step::Sql(include_str!("../../migrations/0001_core_schema.sql")),
     },
     Migration {
         version: 2,
         name: "seed_instruments",
-        sql: include_str!("../../migrations/0002_seed_instruments.sql"),
+        step: Step::Sql(include_str!("../../migrations/0002_seed_instruments.sql")),
     },
     Migration {
         version: 3,
         name: "round_trip_imports",
-        sql: include_str!("../../migrations/0003_round_trip_imports.sql"),
+        step: Step::Sql(include_str!("../../migrations/0003_round_trip_imports.sql")),
     },
     Migration {
         version: 4,
         name: "archive_accounts",
-        sql: include_str!("../../migrations/0004_archive_accounts.sql"),
+        step: Step::Sql(include_str!("../../migrations/0004_archive_accounts.sql")),
+    },
+    Migration {
+        version: 5,
+        name: "rederive_trading_days",
+        step: Step::Rust(|tx| rederive_trading_days(tx).map(|_| ())),
     },
 ];
 
@@ -117,7 +135,10 @@ fn migrate_with(conn: &mut Connection, migrations: &[Migration]) -> Result<u32, 
     for m in migrations.iter().filter(|m| m.version > current) {
         let mut apply = || -> rusqlite::Result<()> {
             let tx: Transaction = conn.transaction()?;
-            tx.execute_batch(m.sql)?;
+            match m.step {
+                Step::Sql(sql) => tx.execute_batch(sql)?,
+                Step::Rust(run) => run(&tx)?,
+            }
             tx.pragma_update(None, "user_version", m.version)?;
             tx.commit()
         };
@@ -154,3 +175,5 @@ pub fn open_file(path: &Path) -> Result<Connection, MigrateError> {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod upgrade_tests;

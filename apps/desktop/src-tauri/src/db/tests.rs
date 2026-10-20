@@ -84,8 +84,8 @@ fn refuses_newer_schema() {
 #[test]
 fn failed_migration_leaves_the_previous_version_intact() {
     let migrations = [
-        Migration { version: 1, name: "one", sql: "CREATE TABLE a (x INTEGER);" },
-        Migration { version: 2, name: "two", sql: "CREATE TABLE b (x INTEGER); SELECT nope FROM missing;" },
+        Migration { version: 1, name: "one", step: Step::Sql("CREATE TABLE a (x INTEGER);") },
+        Migration { version: 2, name: "two", step: Step::Sql("CREATE TABLE b (x INTEGER); SELECT nope FROM missing;") },
     ];
     let mut conn = Connection::open_in_memory().unwrap();
     let err = migrate_with(&mut conn, &migrations).unwrap_err();
@@ -169,6 +169,21 @@ fn original_import_rows_are_immutable() {
     )
     .unwrap();
     assert!(conn.execute("UPDATE import_rows SET raw_json = '[\"b\"]' WHERE id = 'r1'", []).is_err());
+}
+
+#[test]
+fn round_trip_sources_are_immutable() {
+    let conn = setup_trading();
+    conn.execute(
+        "INSERT INTO trade_round_trips (trade_id, buy_fill_id, sell_fill_id, buy_price, sell_price, bought_at,
+                                        sold_at, bought_at_source, sold_at_source, entry_basis)
+         VALUES ('t1', 'b1', 's1', '21000.25', '21010.25', '2026-10-19T14:30:05.123Z', '2026-10-19T14:35:00.000Z',
+                 '10/19/2026 10:30:05', '10/19/2026 10:35:00', 'buy_first')",
+        [],
+    )
+    .unwrap();
+    let err = conn.execute("UPDATE trade_round_trips SET sell_price = '1' WHERE trade_id = 't1'", []).unwrap_err();
+    assert!(err.to_string().contains("immutable"), "{err}");
 }
 
 #[test]
