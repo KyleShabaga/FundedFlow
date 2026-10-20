@@ -1,0 +1,140 @@
+/*
+ * FundedFlow design tokens.
+ *
+ * Dark is the default theme. Light applies when the OS prefers light, or when
+ * an ancestor sets data-theme="light"; data-theme="dark" forces dark.
+ * Tokens only define custom properties: importing this file changes nothing
+ * until an element uses them. Contrast pairs are checked in tokens.test.ts.
+ *
+ * Colour roles:
+ *   --bg-000: Page ground behind every card. The app is dark-first: traders sit with it for hours.
+ *   --bg-100: Card and panel surface (stat tiles, charts, tables, account cards).
+ *   --bg-200: Inset surface inside a card: table header, input fill, meter track, empty calendar day.
+ *   --bg-300: Hover and selected rows, active segmented tab.
+ *   --line-100: Hairline: card edges, table row dividers, chart gridlines. Decorative only.
+ *   --line-200: Control borders (secondary button, inputs, outline badge). 3:1 on bg-100 in both themes.
+ *   --ink: Primary text and headline numbers on bg-000/100/200.
+ *   --ink-muted: Labels, secondary text, table headers. 4.5:1 on bg-100 and bg-200.
+ *   --ink-faint: Chart axis ticks, timestamps, empty-state copy. Still 4.5:1 on bg-100.
+ *   --flow: Brand blue. Links, active nav, focus ring, equity curve line, selected tab text.
+ *   --flow-fill: Primary button fill and week-total calendar cells; text on it is on-flow.
+ *   --on-flow: Text and icons on flow-fill.
+ *   --flow-soft: Selected chip, info banner, equity-curve area fill.
+ *   --profit: Positive P&L, WIN status, target progress. Always paired with a + sign; lighter than loss in dark theme so the two differ in lightness, not only hue.
+ *   --profit-soft: Green calendar day, WIN badge ground. Text on it is profit.
+ *   --loss: Negative P&L, LOSS status, breached rule. Always paired with a − sign.
+ *   --loss-soft: Red calendar day, LOSS badge ground, breached account card tint. Text on it is loss.
+ *   --warn: A prop rule at 70%+ of its limit (daily loss, max drawdown), consistency warnings, PENDING payout.
+ *   --warn-soft: Ground for warn badges and the 'close to limit' banner.
+ *   --chart-1: First series (balance / equity).
+ *   --chart-2: Second categorical series.
+ *   --chart-3: Third categorical series.
+ *   --chart-4: Fourth categorical series.
+ *   --chart-5: Fifth series / 'other' bucket in symbol donut.
+ */
+
+:root,
+[data-theme="dark"] {
+  --bg-000: #070b14;
+  --bg-100: #0c1322;
+  --bg-200: #121b2f;
+  --bg-300: #19243d;
+  --line-100: #1c2740;
+  --line-200: #5a6a8f;
+  --ink: #e9eef8;
+  --ink-muted: #97a4be;
+  --ink-faint: #7c8aa6;
+  --flow: #5b9dff;
+  --flow-fill: #2563eb;
+  --on-flow: #ffffff;
+  --flow-soft: #0f2346;
+  --profit: #3ad6a7;
+  --profit-soft: #0b2b26;
+  --loss: #ff7184;
+  --loss-soft: #2e121d;
+  --warn: #f6b744;
+  --warn-soft: #2b2110;
+  --chart-1: var(--flow);
+  --chart-2: #3ad6a7;
+  --chart-3: #f6b744;
+  --chart-4: #ff8f5e;
+  --chart-5: #b9c4da;
+  --shadow-pop: 0 12px 32px rgba(0,0,0,0.5);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg-000: #f4f6fa;
+    --bg-100: #ffffff;
+    --bg-200: #eef1f7;
+    --bg-300: #e2e7f0;
+    --line-100: #e1e6ef;
+    --line-200: #8792a8;
+    --ink: #0d1526;
+    --ink-muted: #4c586f;
+    --ink-faint: #5f6a80;
+    --flow: #1a5fd0;
+    --flow-fill: #1d5fd1;
+    --on-flow: #ffffff;
+    --flow-soft: #e3edfd;
+    --profit: #057556;
+    --profit-soft: #dff4ec;
+    --loss: #c4223b;
+    --loss-soft: #fde6ea;
+    --warn: #8f5500;
+    --warn-soft: #fcf0d9;
+    --chart-1: var(--flow);
+    --chart-2: #0a8a66;
+    --chart-3: #b07000;
+    --chart-4: #c4521a;
+    --chart-5: #55617a;
+    --shadow-pop: 0 12px 32px rgba(13,21,38,0.12);
+    color-scheme: light;
+  }
+}
+
+[data-theme="light"] {
+  --bg-000: #f4f6fa;
+  --bg-100: #ffffff;
+  --bg-200: #eef1f7;
+  --bg-300: #e2e7f0;
+  --line-100: #e1e6ef;
+  --line-200: #8792a8;
+  --ink: #0d1526;
+  --ink-muted: #4c586f;
+  --ink-faint: #5f6a80;
+  --flow: #1a5fd0;
+  --flow-fill: #1d5fd1;
+  --on-flow: #ffffff;
+  --flow-soft: #e3edfd;
+  --profit: #057556;
+  --profit-soft: #dff4ec;
+  --loss: #c4223b;
+  --loss-soft: #fde6ea;
+  --warn: #8f5500;
+  --warn-soft: #fcf0d9;
+  --chart-1: var(--flow);
+  --chart-2: #0a8a66;
+  --chart-3: #b07000;
+  --chart-4: #c4521a;
+  --chart-5: #55617a;
+  --shadow-pop: 0 12px 32px rgba(13,21,38,0.12);
+  color-scheme: light;
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+  --font-display: "Space Grotesk", "Inter Variable", system-ui, sans-serif;
+  --font-sans: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}

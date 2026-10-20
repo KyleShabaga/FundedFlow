@@ -87,3 +87,14 @@ button {
     background-color: #0f0f0f69;
   }
 }
+
+.app-views {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+}
+
+.app-views button[aria-pressed="true"] {
+  border-color: #396cd8;
+}
