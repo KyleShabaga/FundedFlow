@@ -174,6 +174,26 @@ describe("Tauri JournalRepository adapter", () => {
     expect(calls[12]?.[1]).toEqual({ id: "v1", to: "verified", reviewer: "Kyle" });
   });
 
+  it("sends Build 9 authoring and offer calls to the commands in commands.rs", async () => {
+    const { repo, calls } = fake((command) => (command === "list_account_offer_selections" ? [] : null));
+    // Replies are not valid records, so parsing rejects them; the command names and arguments are what matter here.
+    const ignore = (p: Promise<unknown>) => p.catch(() => undefined);
+    const draft = { programmeVariantId: "v", capturedAt: "2026-10-20T12:00:00Z", offers: [{ billingModel: "one_time" as const, currency: "USD", salePrice: "0" }] };
+    await ignore(repo.catalogue.createSource({ sourceType: "user_manual", descriptor: "Discord post" }));
+    await ignore(repo.catalogue.createDraft(draft));
+    await ignore(repo.catalogue.replaceDraft("ver1", draft));
+    await ignore(repo.catalogue.selectOffer({ accountId: "a1", commercialOfferId: "o1", promotionId: null }));
+    expect(await repo.catalogue.listOfferSelections("a1")).toEqual([]);
+    expect(calls.map(([c]) => c)).toEqual([
+      "create_catalogue_source", "create_catalogue_draft", "replace_catalogue_draft", "select_account_offer",
+      "list_account_offer_selections",
+    ]);
+    expect(calls[2]?.[1]).toMatchObject({ id: "ver1", input: { programmeVariantId: "v", sourceIds: [] } });
+    // A draft that corrects without a reason never reaches Rust.
+    expect(() => repo.catalogue.createDraft({ ...draft, supersedesVersionId: "old" })).toThrow(/correctionReason|reason/i);
+    expect(calls).toHaveLength(5);
+  });
+
   it("sends rulebook calls to the commands in commands.rs", async () => {
     const { repo, calls } = fake((command) =>
       command.startsWith("list_") || command === "validate_rulebook_draft"

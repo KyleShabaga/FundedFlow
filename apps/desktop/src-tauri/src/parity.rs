@@ -170,3 +170,40 @@ fn catalogue_structs_reject_unknown_fields_and_values() {
     percent["discount"] = json!({ "kind": "percent", "percent": "12.5" });
     assert!(serde_json::from_value::<Promotion>(percent).is_ok());
 }
+
+/// The production command registration, the commands module and the desktop adapter agree: every
+/// `#[tauri::command]` is registered in `lib.rs`, and every command the adapter invokes exists.
+#[test]
+fn every_command_is_registered_and_every_adapter_call_exists() {
+    let commands = include_str!("commands.rs");
+    let lib = include_str!("lib.rs");
+    let adapter = include_str!("../../src/lib/data/tauri-repository.ts");
+
+    let defined: Vec<&str> = commands
+        .split("#[tauri::command]")
+        .skip(1)
+        .filter_map(|chunk| {
+            let after = chunk.split("fn ").nth(1)?;
+            Some(after.split('(').next()?.trim())
+        })
+        .collect();
+    assert!(defined.len() > 50, "found {} commands", defined.len());
+    for name in &defined {
+        assert!(lib.contains(&format!("commands::{name},")), "{name} is not registered in lib.rs");
+    }
+    let registered: Vec<&str> = lib.lines().filter_map(|l| l.trim().strip_prefix("commands::")?.strip_suffix(',')).collect();
+    for name in &registered {
+        assert!(defined.contains(name), "lib.rs registers {name}, which commands.rs does not define");
+    }
+
+    let called: std::collections::BTreeSet<&str> = adapter
+        .split("call(\"")
+        .skip(1)
+        .chain(adapter.split("done(\"").skip(1))
+        .filter_map(|rest| rest.split('"').next())
+        .collect();
+    assert!(called.len() > 50, "found {} adapter calls", called.len());
+    for name in called {
+        assert!(defined.contains(&name), "the adapter calls {name}, which is not a command");
+    }
+}

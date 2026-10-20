@@ -17,6 +17,9 @@ use crate::rulebook::{
 };
 use crate::catalogue::{AccountCatalogueLink, AccountPhaseEvent, CatalogueVersion};
 use crate::store::catalogue::{self as catalogue_store, AccountLinkInput, CatalogueSnapshot, PhaseEventInput};
+use crate::catalogue::SourceReference;
+use crate::store::authoring::{self, DraftInput, SourceInput};
+use crate::store::offers::{self, OfferSelection, OfferSelectionInput};
 use crate::store::ledger::{self, LedgerEntry, LedgerEntryInput};
 use crate::store::settings::{self, Setting};
 use crate::store::snapshots::{self, Snapshot, SnapshotInput};
@@ -216,6 +219,31 @@ pub async fn transition_catalogue_version(
     reviewer: Option<String>,
 ) -> AppResult<CatalogueVersion> {
     db.with(|c| catalogue_store::transition_version(c, &id, &to, reviewer.as_deref()))
+}
+
+#[tauri::command]
+pub async fn create_catalogue_source(db: State<'_, Runtime>, input: SourceInput) -> AppResult<SourceReference> {
+    db.with(|c| authoring::create_source(c, input))
+}
+
+#[tauri::command]
+pub async fn create_catalogue_draft(db: State<'_, Runtime>, input: DraftInput) -> AppResult<CatalogueVersion> {
+    db.with(|c| authoring::create_draft(c, input))
+}
+
+#[tauri::command]
+pub async fn replace_catalogue_draft(db: State<'_, Runtime>, id: String, input: DraftInput) -> AppResult<CatalogueVersion> {
+    db.with(|c| authoring::replace_draft(c, &id, input))
+}
+
+#[tauri::command]
+pub async fn select_account_offer(db: State<'_, Runtime>, input: OfferSelectionInput) -> AppResult<OfferSelection> {
+    db.with(|c| offers::select(c, input))
+}
+
+#[tauri::command]
+pub async fn list_account_offer_selections(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<OfferSelection>> {
+    db.with(|c| offers::list(c, &account_id))
 }
 
 #[tauri::command]

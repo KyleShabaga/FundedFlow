@@ -4,9 +4,11 @@
 
 pub mod accounts;
 pub mod attempts;
+pub mod authoring;
 pub mod catalogue;
 pub mod journal;
 pub mod ledger;
+pub mod offers;
 pub mod rulebooks;
 pub mod settings;
 pub mod snapshots;
@@ -82,5 +84,7 @@ pub(crate) fn load_instruments(conn: &Connection) -> AppResult<Vec<Instrument>> 
 mod attempt_tests;
 #[cfg(test)]
 mod build10_tests;
+#[cfg(test)]
+mod build9_tests;
 #[cfg(test)]
 pub(crate) mod tests;

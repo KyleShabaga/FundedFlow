@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 12 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` and `0012_snapshot_rulebook_fk.sql`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 13 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` and `0013_account_offer_selections.sql`; see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -349,6 +349,30 @@ Repositories in `apps/desktop/src-tauri/src/store/` behind the `JournalRepositor
   *content* (providers, families, versions, offers) is not written from the desktop: it arrives from importer tooling as
   new draft versions.
 
+### Catalogue authoring and offer snapshots (Build 9.2 and 9.4)
+
+- **Drafts.** `createDraft` writes the next version of a variant (number = highest + 1) with its source links,
+  claims, phases, paths and offers in one transaction; any failure leaves the catalogue unchanged. An offer names its
+  phase by (`phaseKey`, `providerLabel`) and path by `pathKey`, which are unique inside one version. Prices are
+  decimal text: absent is unknown, `"0"` is known free, and prices need a currency.
+- **Only a draft is editable.** `replaceDraft` refuses a version in review or reviewed with a message pointing to a
+  superseding version (the freeze triggers still protect reviewed content underneath). It recreates phases and paths,
+  so a draft whose phase or path is already referenced (an applicability row, an account, a phase event) cannot be
+  replaced and nothing changes.
+- **Corrections.** A correction is a new draft naming `supersedesVersionId` (same variant) and a reason. It goes
+  through the normal review path, and the original moves to `superseded` only once a *verified* version that names it
+  exists (`transitionVersion`). The original's content, sign-off and terms never change.
+- **Sources** are created (`createSource`) and never edited, so a claim's provenance is fixed.
+- **Offer selections** (`account_offer_selections`, append-only): `selectOffer` needs the account's catalogue version;
+  the offer must belong to it (and to the account's selected path when it names one); a promotion must be the
+  account's provider's, linked to that offer, and valid on the selection date. The row stores a frozen copy of the
+  offer, promotion, sources with their verification state and the version's review state, so later edits to a draft
+  offer or promotion, or a new catalogue version, cannot change what the account recorded. Commercial terms are never
+  read by any rule calculation. Promotions and providers are created by importer tooling, not from the desktop.
+- **Evidence.** `parity::every_command_is_registered_and_every_adapter_call_exists` checks the production command
+  registration against the adapter, and `a_populated_v7_journal_reads_through_the_production_loader…` upgrades a
+  populated v7 journal to the latest schema and reads it back identically.
+
 ## Account lifecycle: attempts, archive and history
 
 Implemented by migration 11 (`0011_account_attempts.sql`), `store/accounts.rs`, `store/attempts.rs` and the contracts in
@@ -437,6 +461,7 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 10 | `convert_legacy_rulebooks` | Rust | Converts legacy account-owned rulebooks into account-private rulebooks, keeping their IDs ([matrix](rulebook-migration.md)); the legacy rows stay |
 | 11 | `account_attempts` | SQL | `account_status_events.cause`; `account_attempt_links` (append-only) and `account_archive_events`; broker account numbers are unique only among active or paused, unarchived accounts. Existing archived accounts get an `archived` event from their `archived_at`. Changes no other rows |
 | 12 | `snapshot_rulebook_fk` | SQL | Rebuilds `account_snapshots` so `rulebook_version_id` references the reusable `rulebook_versions` (migration 9's rename had left it pointing at `legacy_account_rulebook_versions`, so no snapshot of an account on a reusable rulebook could be stored). Rows are kept; a reference to an id that was never converted becomes null; the key is `RESTRICT` instead of `CASCADE` |
+| 13 | `account_offer_selections` | SQL | Append-only `account_offer_selections`: the offer and promotion an account was bought under, with a frozen JSON copy of the terms and provenance. Offer, promotion and version keys are `RESTRICT`. Changes no other rows |
 
 How an upgrade runs:
 
@@ -494,7 +519,7 @@ or SQLite types, so a Stage 2 adapter can implement the same interface.
 | `ledger` | `list`, `create`, `update`, `remove`, `balanceAdjustment` |
 | `settings` | `get`, `list`, `set`, `remove` |
 | `snapshots` | `save`, `list`, `latest` |
-| `catalogue` | `load`, `transitionVersion`, `getAccountLink`, `setAccountLink`, `listPhaseEvents`, `recordPhaseEvent` |
+| `catalogue` | `load`, `transitionVersion`, `getAccountLink`, `setAccountLink`, `listPhaseEvents`, `recordPhaseEvent`, `createSource`, `createDraft`, `replaceDraft`, `selectOffer`, `listOfferSelections` |
 | `journal` | `list`, `create`, `update`, `remove` |
 | `imports` | `preview`, `commit`, `list`, `problemRows` |
 | `rulebooks` | `list`, `listVersions`, `getVersion`, `getApplicable`, `createDraft`, `validateDraft`, `publish`, `assign`, `listAssignments`, `flagSourceConflict` |
@@ -722,7 +747,7 @@ Limitations:
 | Ledger | `list_ledger_entries(accountId)`, `create_ledger_entry(input)`, `update_ledger_entry(id, input)`, `delete_ledger_entry(id)`, `get_ledger_balance_adjustment(accountId)` |
 | Settings | `get_setting(key)`, `list_settings`, `set_setting(key, value)`, `remove_setting(key)` |
 | Snapshots | `save_account_snapshot(input)`, `list_account_snapshots(accountId, from?, to?, endOfDayOnly?)`, `get_latest_account_snapshot(accountId)` |
-| Catalogue | `get_catalogue`, `transition_catalogue_version(id, to, reviewer?)`, `get_account_catalogue_link(accountId)`, `set_account_catalogue_link(input)`, `list_account_phase_events(accountId)`, `record_account_phase_event(input)` |
+| Catalogue | `get_catalogue`, `transition_catalogue_version(id, to, reviewer?)`, `get_account_catalogue_link(accountId)`, `set_account_catalogue_link(input)`, `list_account_phase_events(accountId)`, `record_account_phase_event(input)`, `create_catalogue_source(input)`, `create_catalogue_draft(input)`, `replace_catalogue_draft(id, input)`, `select_account_offer(input)`, `list_account_offer_selections(accountId)` |
 | Trades | `list_trades(accountId)`, `create_trade(input)`, `update_trade(id, input)`, `delete_trade(id)` |
 | Journal | `list_journal_entries(accountId)`, `create_journal_entry(input)`, `update_journal_entry(id, input)`, `delete_journal_entry(id)` |
 | CSV | `preview_csv_import(request)`, `commit_csv_import(request)`, `list_csv_imports(accountId)`, `list_csv_import_problem_rows(batchId)` |

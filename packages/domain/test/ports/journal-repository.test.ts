@@ -36,7 +36,8 @@ describe("JournalRepository", () => {
       snapshots: { save: fail, list: none, latest: fail },
       catalogue: {
         load: fail, transitionVersion: fail, getAccountLink: fail, setAccountLink: fail,
-        listPhaseEvents: none, recordPhaseEvent: fail,
+        listPhaseEvents: none, recordPhaseEvent: fail, createSource: fail, createDraft: fail, replaceDraft: fail,
+        selectOffer: fail, listOfferSelections: none,
       },
       rulebooks: {
         list: none, listVersions: none, getVersion: fail, getApplicable: fail, createDraft: fail,

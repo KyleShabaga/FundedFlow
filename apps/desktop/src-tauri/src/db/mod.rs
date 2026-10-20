@@ -96,6 +96,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "snapshot_rulebook_fk",
         step: Step::Sql(include_str!("../../migrations/0012_snapshot_rulebook_fk.sql")),
     },
+    Migration {
+        version: 13,
+        name: "account_offer_selections",
+        step: Step::Sql(include_str!("../../migrations/0013_account_offer_selections.sql")),
+    },
 ];
 
 /// Latest schema version this build understands.
@@ -238,6 +243,11 @@ mod tests;
 mod upgrade_tests;
 #[cfg(test)]
 mod catalogue_tests;
+/// Writes the catalogue fixture into a database (any schema version from 6), for other modules' tests.
+#[cfg(test)]
+pub(crate) fn catalogue_tests_save(conn: &Connection, fixture: &crate::parity::CatalogueFixture) {
+    catalogue_tests::save_fixture(conn, fixture)
+}
 /// A database holding the whole catalogue fixture, for other modules' tests.
 #[cfg(test)]
 pub(crate) fn catalogue_tests_seeded() -> Connection {
