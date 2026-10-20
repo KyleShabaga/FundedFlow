@@ -97,3 +97,13 @@ cargo clippy --all-targets -- -D warnings
 ```
 
 `cargo test` covers schema, repositories, CSV import (including the `Performance.csv` fixture) and the golden parity fixtures in `packages/domain/test/fixtures`, which Vitest runs too. After an intentional Rust change, regenerate the expected outputs with `$env:FUNDEDFLOW_UPDATE_FIXTURES=1; cargo test --lib parity` and review the diff.
+
+## License and ownership
+
+Copyright (c) 2026 Kyle Shabaga. All rights reserved.
+
+FundedFlow is proprietary software. Its source code is publicly viewable, but it is **not open source**: being able to read it on GitHub does not give you a license to copy, modify, redistribute, sublicense or commercially use it, or to make derivative works. See [LICENSE](LICENSE) for the full terms.
+
+- Viewing the code, and the forking that GitHub's Terms of Service allow for public repositories, are fine.
+- Anything beyond that, including reuse in another project or commercial licensing, needs written permission from the copyright holder. To ask, open an issue in this repository or contact [@KyleShabaga](https://github.com/KyleShabaga) through GitHub.
+- Third-party libraries, crates and fonts used by FundedFlow keep their own licenses and notices; the FundedFlow license does not apply to them.

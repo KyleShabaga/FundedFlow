@@ -1,0 +1,91 @@
+FundedFlow
+Copyright (c) 2026 Kyle Shabaga. All rights reserved.
+
+PROPRIETARY SOFTWARE - SOURCE AVAILABLE, NOT OPEN SOURCE
+
+This repository and its contents, including source code, object code,
+documentation, designs, database schemas, test fixtures and other materials
+authored for FundedFlow (together, the "Software"), are the property of
+Kyle Shabaga (the "Copyright Holder") and are protected by copyright and other
+intellectual property laws.
+
+This is not an open-source license. It is not approved by the Open Source
+Initiative, and nothing in this file grants any of the freedoms associated
+with open-source or free-software licenses.
+
+1. No license granted
+
+   The Software is made publicly viewable for reference only. Making the
+   Software available, including on GitHub or any other public service, does
+   not grant you any license or other right to use it, except as stated in
+   Section 2 or in a separate written agreement signed by the Copyright Holder.
+
+   Without the prior written permission of the Copyright Holder, you may not,
+   in whole or in part:
+
+   (a) reproduce or copy the Software, except as permitted by Section 2;
+   (b) modify, adapt, translate or create derivative works of the Software;
+   (c) distribute, publish, sublicense, sell, rent, lease or otherwise make
+       the Software, or any derivative work, available to any third party;
+   (d) use the Software, or any part of it, for any commercial purpose,
+       including offering it or any derivative work as a product or service; or
+   (e) remove or alter any copyright, trademark or other proprietary notice in
+       the Software.
+
+2. Uses permitted by the hosting platform and by law
+
+   (a) If the Software is hosted on GitHub, you may view and fork it on GitHub
+       to the extent GitHub's Terms of Service require for content in a public
+       repository. That permission does not extend to any use described in
+       Section 1 outside GitHub's service.
+   (b) Nothing in this file restricts any use that applicable law permits
+       without the Copyright Holder's authorization, such as fair use or fair
+       dealing.
+
+3. Contributions
+
+   Unless agreed otherwise in writing, the Copyright Holder is under no
+   obligation to accept contributions. Any contribution submitted for inclusion
+   in the Software must be the subject of a separate written agreement with the
+   Copyright Holder before it is accepted.
+
+4. Additional permissions
+
+   Any permission not expressly granted in this file, including permission to
+   reuse, modify, redistribute or commercially license the Software, requires
+   the prior written authorization of the Copyright Holder.
+
+5. Third-party components
+
+   The Software uses third-party components, such as libraries, crates, npm
+   packages and fonts, that are licensed by their own authors under their own
+   terms. Those components are not owned by the Copyright Holder, and this
+   file does not apply to them or restrict any rights their licenses grant.
+   Each third-party component remains subject to its own license and notices,
+   which are found with that component, for example in its package or crate
+   metadata or its own license file.
+
+6. Disclaimer of warranty
+
+   TO THE EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE IS PROVIDED "AS IS"
+   AND "AS AVAILABLE", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+   A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. THE SOFTWARE IS A RECORD-
+   KEEPING TOOL AND DOES NOT PROVIDE FINANCIAL, TRADING OR INVESTMENT ADVICE.
+
+7. Limitation of liability
+
+   TO THE EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL THE COPYRIGHT
+   HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+   WITH THE SOFTWARE OR THE USE OF OR OTHER DEALINGS IN THE SOFTWARE. SOME
+   JURISDICTIONS DO NOT ALLOW THE EXCLUSION OR LIMITATION OF CERTAIN WARRANTIES
+   OR LIABILITIES, SO SOME OF THE ABOVE MAY NOT APPLY TO YOU.
+
+8. Reservation of rights
+
+   All rights not expressly granted in this file are reserved by the Copyright
+   Holder. Unauthorized use of the Software may infringe the Copyright
+   Holder's rights.
+
+To request permission, see the "License and ownership" section of README.md.
