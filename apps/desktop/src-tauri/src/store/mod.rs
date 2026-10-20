@@ -4,8 +4,12 @@
 
 pub mod accounts;
 pub mod attempts;
+pub mod catalogue;
 pub mod journal;
+pub mod ledger;
 pub mod rulebooks;
+pub mod settings;
+pub mod snapshots;
 pub mod trades;
 
 use std::str::FromStr;
@@ -76,5 +80,7 @@ pub(crate) fn load_instruments(conn: &Connection) -> AppResult<Vec<Instrument>> 
 
 #[cfg(test)]
 mod attempt_tests;
+#[cfg(test)]
+mod build10_tests;
 #[cfg(test)]
 pub(crate) mod tests;

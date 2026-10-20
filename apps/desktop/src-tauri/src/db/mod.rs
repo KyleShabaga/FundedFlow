@@ -91,6 +91,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "account_attempts",
         step: Step::Sql(include_str!("../../migrations/0011_account_attempts.sql")),
     },
+    Migration {
+        version: 12,
+        name: "snapshot_rulebook_fk",
+        step: Step::Sql(include_str!("../../migrations/0012_snapshot_rulebook_fk.sql")),
+    },
 ];
 
 /// Latest schema version this build understands.
@@ -161,7 +166,7 @@ pub fn migrate(conn: &mut Connection) -> Result<u32, MigrateError> {
     migrate_with(conn, MIGRATIONS)
 }
 
-fn migrate_with(conn: &mut Connection, migrations: &[Migration]) -> Result<u32, MigrateError> {
+pub(crate) fn migrate_with(conn: &mut Connection, migrations: &[Migration]) -> Result<u32, MigrateError> {
     configure(conn)?;
     let current = current_version(conn)?;
     let supported = migrations.last().map(|m| m.version).unwrap_or(0);
@@ -233,6 +238,11 @@ mod tests;
 mod upgrade_tests;
 #[cfg(test)]
 mod catalogue_tests;
+/// A database holding the whole catalogue fixture, for other modules' tests.
+#[cfg(test)]
+pub(crate) fn catalogue_tests_seeded() -> Connection {
+    catalogue_tests::seeded()
+}
 #[cfg(test)]
 mod legacy_rulebook_tests;
 #[cfg(test)]

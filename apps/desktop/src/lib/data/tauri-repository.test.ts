@@ -116,6 +116,64 @@ describe("Tauri JournalRepository adapter", () => {
     expect(calls).toEqual([]);
   });
 
+  it("sends Build 10 repository calls to the commands in commands.rs", async () => {
+    const snapshot = {
+      id: "s1", accountId: "a1", rulebookVersionId: null, tradingDay: "2026-10-19", isEndOfDay: true, dataAsOf: null,
+      dataSource: "manual", calculatedAt: "2026-10-19T21:00:00.000Z", engineVersion: "1", inputsHash: "h",
+      feesIncluded: true, unrealizedIncluded: false, balance: "50000", realizedDayPnl: "0", unrealizedPnl: null,
+      dailyLossLimit: null, dailyLossRemaining: null, drawdownMode: null, highWaterMark: null, drawdownFloor: null,
+      drawdownHeadroom: null, drawdownLocked: false, profitTarget: null, tradingDaysCompleted: 0,
+      tradingDaysRequired: null, status: "unknown", statusReasons: ["no rulebook"], explanation: { note: "x" },
+    };
+    const ledger = {
+      id: "l1", accountId: "a1", kind: "payout", amount: "-100", affectsBalance: true,
+      effectiveAt: "2026-10-19T21:30:00.000Z", tradingDay: "2026-10-20", note: null,
+      createdAt: "2026-10-19T21:30:00.000Z", updatedAt: "2026-10-19T21:30:00.000Z",
+    };
+    const { repo, calls } = fake((command) => {
+      switch (command) {
+        case "get_setting": return null;
+        case "set_setting": return { key: "ui.theme", value: { mode: "dark" }, updatedAt: "2026-10-19T21:30:00.000Z" };
+        case "list_settings": case "list_ledger_entries": case "list_account_snapshots": case "list_account_phase_events": return [];
+        case "create_ledger_entry": return ledger;
+        case "get_ledger_balance_adjustment": return "-100";
+        case "save_account_snapshot": return snapshot;
+        case "get_latest_account_snapshot": return null;
+        case "get_catalogue":
+          return { graph: { providers: [], programmeFamilies: [], programmeVariants: [], catalogueVersions: [], programmePhases: [], phasePaths: [], commercialOffers: [], promotions: [], promotionOffers: [] }, sources: [] };
+        default: return null;
+      }
+    });
+    expect(await repo.settings.get("ui.theme")).toBeNull();
+    expect((await repo.settings.set("ui.theme", { mode: "dark" })).value).toEqual({ mode: "dark" });
+    await repo.settings.list();
+    await repo.settings.remove("ui.theme");
+    expect(() => repo.settings.set("Bad Key", 1)).toThrow(/lower-case/);
+    await repo.ledger.list("a1");
+    await repo.ledger.create({ accountId: "a1", kind: "payout", amount: "-100", effectiveAt: "2026-10-19T17:30:00-04:00" });
+    expect(await repo.ledger.balanceAdjustment("a1")).toBe("-100");
+    await repo.ledger.remove("l1");
+    const saved = await repo.snapshots.save({
+      accountId: "a1", tradingDay: "2026-10-19", isEndOfDay: true, dataSource: "manual", engineVersion: "1", inputsHash: "h",
+      feesIncluded: true, unrealizedIncluded: false, balance: "50000", realizedDayPnl: "0", drawdownLocked: false,
+      tradingDaysCompleted: 0, status: "unknown", statusReasons: ["no rulebook"], explanation: { note: "x" },
+    });
+    expect(saved.unrealizedPnl).toBeNull();
+    await repo.snapshots.list("a1", { from: "2026-10-01", endOfDayOnly: true });
+    expect(await repo.snapshots.latest("a1")).toBeNull();
+    await repo.catalogue.load();
+    // The reply is not a version, so parsing rejects it; only the command and arguments matter here.
+    await repo.catalogue.transitionVersion("v1", "verified", "Kyle").catch(() => undefined);
+    await repo.catalogue.listPhaseEvents("a1");
+    expect(calls.map(([c]) => c)).toEqual([
+      "get_setting", "set_setting", "list_settings", "remove_setting", "list_ledger_entries", "create_ledger_entry",
+      "get_ledger_balance_adjustment", "delete_ledger_entry", "save_account_snapshot", "list_account_snapshots",
+      "get_latest_account_snapshot", "get_catalogue", "transition_catalogue_version", "list_account_phase_events",
+    ]);
+    expect(calls[9]?.[1]).toEqual({ accountId: "a1", from: "2026-10-01", to: null, endOfDayOnly: true });
+    expect(calls[12]?.[1]).toEqual({ id: "v1", to: "verified", reviewer: "Kyle" });
+  });
+
   it("sends rulebook calls to the commands in commands.rs", async () => {
     const { repo, calls } = fake((command) =>
       command.startsWith("list_") || command === "validate_rulebook_draft"

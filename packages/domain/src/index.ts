@@ -11,6 +11,9 @@ export * from "./contracts/account-lifecycle.js";
 export * from "./contracts/trades.js";
 export * from "./contracts/journal.js";
 export * from "./contracts/csv-import.js";
+export * from "./contracts/settings.js";
+export * from "./contracts/ledger.js";
+export * from "./contracts/snapshots.js";
 
 export * from "./catalogue/index.js";
 export * from "./rulebook/index.js";

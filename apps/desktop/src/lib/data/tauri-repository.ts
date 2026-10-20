@@ -10,6 +10,18 @@ import {
   type JournalRepository,
   RepositoryError,
   accountHistorySchema,
+  accountLinkInputSchema,
+  accountCatalogueLinkSchema,
+  accountPhaseEventSchema,
+  catalogueSnapshotSchema,
+  catalogueVersionSchema,
+  ledgerEntryInputSchema,
+  ledgerEntrySchema,
+  phaseEventInputSchema,
+  settingKey,
+  settingSchema,
+  snapshotInputSchema,
+  snapshotSchema,
   accountInputSchema,
   attemptSummarySchema,
   deletionPreviewSchema,
@@ -105,6 +117,42 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
         call("commit_csv_import", { request: validate(csvImportRequestSchema, request) }, importBatchSchema),
       list: (accountId) => call("list_csv_imports", { accountId }, z.array(importBatchSchema)),
       problemRows: (batchId) => call("list_csv_import_problem_rows", { batchId }, z.array(importRowRecordSchema)),
+    },
+    ledger: {
+      list: (accountId) => call("list_ledger_entries", { accountId }, z.array(ledgerEntrySchema)),
+      create: (input) => call("create_ledger_entry", { input: validate(ledgerEntryInputSchema, input) }, ledgerEntrySchema),
+      update: (id, input) =>
+        call("update_ledger_entry", { id, input: validate(ledgerEntryInputSchema, input) }, ledgerEntrySchema),
+      remove: (id) => done("delete_ledger_entry", { id }),
+      balanceAdjustment: (accountId) => call("get_ledger_balance_adjustment", { accountId }, z.string()),
+    },
+    settings: {
+      get: (key) => call("get_setting", { key: validate(settingKey, key) }, settingSchema.nullable()),
+      list: () => call("list_settings", {}, z.array(settingSchema)),
+      set: (key, value) => call("set_setting", { key: validate(settingKey, key), value }, settingSchema),
+      remove: (key) => done("remove_setting", { key: validate(settingKey, key) }),
+    },
+    snapshots: {
+      save: (input) => call("save_account_snapshot", { input: validate(snapshotInputSchema, input) }, snapshotSchema),
+      list: (accountId, query) =>
+        call(
+          "list_account_snapshots",
+          { accountId, from: query?.from ?? null, to: query?.to ?? null, endOfDayOnly: query?.endOfDayOnly ?? false },
+          z.array(snapshotSchema),
+        ),
+      latest: (accountId) => call("get_latest_account_snapshot", { accountId }, snapshotSchema.nullable()),
+    },
+    catalogue: {
+      load: () => call("get_catalogue", {}, catalogueSnapshotSchema),
+      transitionVersion: (id, to, reviewer) =>
+        call("transition_catalogue_version", { id, to, reviewer }, catalogueVersionSchema),
+      getAccountLink: (accountId) => call("get_account_catalogue_link", { accountId }, accountCatalogueLinkSchema),
+      setAccountLink: (input) =>
+        call("set_account_catalogue_link", { input: validate(accountLinkInputSchema, input) }, accountCatalogueLinkSchema),
+      listPhaseEvents: (accountId) =>
+        call("list_account_phase_events", { accountId }, z.array(accountPhaseEventSchema)),
+      recordPhaseEvent: (input) =>
+        call("record_account_phase_event", { input: validate(phaseEventInputSchema, input) }, accountPhaseEventSchema),
     },
     rulebooks: {
       list: (accountId) => call("list_rulebooks", { accountId }, z.array(rulebookSchema)),

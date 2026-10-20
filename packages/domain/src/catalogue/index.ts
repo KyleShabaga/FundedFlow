@@ -8,3 +8,4 @@ export * from "./versions.js";
 export * from "./offers.js";
 export * from "./lifecycle.js";
 export * from "./integrity.js";
+export * from "./operations.js";

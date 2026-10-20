@@ -15,6 +15,11 @@ use crate::rulebook::{
     AccountRulebookAssignment, ApplicableRulebook, ApplicableRulebookQuery, AssignmentInput, RuleClaim, Rulebook,
     RulebookDraftInput, RulebookVersionDetail, SourceConflictInput,
 };
+use crate::catalogue::{AccountCatalogueLink, AccountPhaseEvent, CatalogueVersion};
+use crate::store::catalogue::{self as catalogue_store, AccountLinkInput, CatalogueSnapshot, PhaseEventInput};
+use crate::store::ledger::{self, LedgerEntry, LedgerEntryInput};
+use crate::store::settings::{self, Setting};
+use crate::store::snapshots::{self, Snapshot, SnapshotInput};
 use crate::store::journal::{self, JournalEntry, JournalEntryInput};
 use crate::store::rulebooks;
 use crate::store::trades::{self, Trade, TradeInput};
@@ -196,6 +201,107 @@ pub async fn list_account_rulebook_assignments(
 #[tauri::command]
 pub async fn flag_rulebook_source_conflict(db: State<'_, Runtime>, input: SourceConflictInput) -> AppResult<RuleClaim> {
     db.with(|c| rulebooks::flag_conflict(c, input))
+}
+
+#[tauri::command]
+pub async fn get_catalogue(db: State<'_, Runtime>) -> AppResult<CatalogueSnapshot> {
+    db.with(|c| catalogue_store::load(c))
+}
+
+#[tauri::command]
+pub async fn transition_catalogue_version(
+    db: State<'_, Runtime>,
+    id: String,
+    to: String,
+    reviewer: Option<String>,
+) -> AppResult<CatalogueVersion> {
+    db.with(|c| catalogue_store::transition_version(c, &id, &to, reviewer.as_deref()))
+}
+
+#[tauri::command]
+pub async fn get_account_catalogue_link(db: State<'_, Runtime>, account_id: String) -> AppResult<AccountCatalogueLink> {
+    db.with(|c| catalogue_store::get_link(c, &account_id))
+}
+
+#[tauri::command]
+pub async fn set_account_catalogue_link(db: State<'_, Runtime>, input: AccountLinkInput) -> AppResult<AccountCatalogueLink> {
+    db.with(|c| catalogue_store::set_link(c, input))
+}
+
+#[tauri::command]
+pub async fn list_account_phase_events(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<AccountPhaseEvent>> {
+    db.with(|c| catalogue_store::list_phase_events(c, &account_id))
+}
+
+#[tauri::command]
+pub async fn record_account_phase_event(db: State<'_, Runtime>, input: PhaseEventInput) -> AppResult<AccountPhaseEvent> {
+    db.with(|c| catalogue_store::record_phase_event(c, input))
+}
+
+#[tauri::command]
+pub async fn list_ledger_entries(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<LedgerEntry>> {
+    db.with(|c| ledger::list(c, &account_id))
+}
+
+#[tauri::command]
+pub async fn create_ledger_entry(db: State<'_, Runtime>, input: LedgerEntryInput) -> AppResult<LedgerEntry> {
+    db.with(|c| ledger::create(c, input))
+}
+
+#[tauri::command]
+pub async fn update_ledger_entry(db: State<'_, Runtime>, id: String, input: LedgerEntryInput) -> AppResult<LedgerEntry> {
+    db.with(|c| ledger::update(c, &id, input))
+}
+
+#[tauri::command]
+pub async fn delete_ledger_entry(db: State<'_, Runtime>, id: String) -> AppResult<()> {
+    db.with(|c| ledger::delete(c, &id))
+}
+
+#[tauri::command]
+pub async fn get_ledger_balance_adjustment(db: State<'_, Runtime>, account_id: String) -> AppResult<String> {
+    db.with(|c| ledger::balance_adjustment(c, &account_id))
+}
+
+#[tauri::command]
+pub async fn get_setting(db: State<'_, Runtime>, key: String) -> AppResult<Option<Setting>> {
+    db.with(|c| settings::get(c, &key))
+}
+
+#[tauri::command]
+pub async fn list_settings(db: State<'_, Runtime>) -> AppResult<Vec<Setting>> {
+    db.with(|c| settings::list(c))
+}
+
+#[tauri::command]
+pub async fn set_setting(db: State<'_, Runtime>, key: String, value: serde_json::Value) -> AppResult<Setting> {
+    db.with(|c| settings::set(c, &key, &value))
+}
+
+#[tauri::command]
+pub async fn remove_setting(db: State<'_, Runtime>, key: String) -> AppResult<()> {
+    db.with(|c| settings::remove(c, &key))
+}
+
+#[tauri::command]
+pub async fn save_account_snapshot(db: State<'_, Runtime>, input: SnapshotInput) -> AppResult<Snapshot> {
+    db.with(|c| snapshots::save(c, input))
+}
+
+#[tauri::command]
+pub async fn list_account_snapshots(
+    db: State<'_, Runtime>,
+    account_id: String,
+    from: Option<String>,
+    to: Option<String>,
+    end_of_day_only: Option<bool>,
+) -> AppResult<Vec<Snapshot>> {
+    db.with(|c| snapshots::list(c, &account_id, from.as_deref(), to.as_deref(), end_of_day_only.unwrap_or(false)))
+}
+
+#[tauri::command]
+pub async fn get_latest_account_snapshot(db: State<'_, Runtime>, account_id: String) -> AppResult<Option<Snapshot>> {
+    db.with(|c| snapshots::latest(c, &account_id))
 }
 
 /// Read-only: whether the journal database is open, and why not if it isn't.

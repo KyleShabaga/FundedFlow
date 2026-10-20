@@ -31,6 +31,13 @@ describe("JournalRepository", () => {
       trades: { list: none, create: fail, update: fail, remove: fail },
       journal: { list: none, create: fail, update: fail, remove: fail },
       imports: { preview: fail, commit: fail, list: none, problemRows: none },
+      ledger: { list: none, create: fail, update: fail, remove: fail, balanceAdjustment: fail },
+      settings: { get: fail, list: none, set: fail, remove: fail },
+      snapshots: { save: fail, list: none, latest: fail },
+      catalogue: {
+        load: fail, transitionVersion: fail, getAccountLink: fail, setAccountLink: fail,
+        listPhaseEvents: none, recordPhaseEvent: fail,
+      },
       rulebooks: {
         list: none, listVersions: none, getVersion: fail, getApplicable: fail, createDraft: fail,
         validateDraft: none, publish: fail, assign: fail, listAssignments: none, flagSourceConflict: fail,
