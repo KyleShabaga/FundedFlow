@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{opt_text, trades};
 use crate::domain::{
-    format_reset_time, is_allowed_reset_time, micros_to_string, new_id, now, parse_decimal, parse_reset_time,
+    format_instant, format_reset_time, parse_payload_time, is_allowed_reset_time, micros_to_string, new_id, now, parse_decimal, parse_reset_time,
     parse_tz, to_micros, MAX_NOTES_CHARS,
 };
 use crate::error::{AppError, AppResult, Issues};
@@ -47,6 +47,12 @@ pub struct Account {
     pub notes: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    /// Set while the account is archived: hidden from live views and read-only.
+    pub archived_at: Option<String>,
+    /// The attempt this account is an evaluation reset of, if any.
+    pub predecessor_account_id: Option<String>,
+    /// The reset attempt that follows this account, if any.
+    pub successor_account_id: Option<String>,
 }
 
 struct Valid {
@@ -134,7 +140,9 @@ fn validate(input: AccountInput) -> AppResult<Valid> {
 
 const SELECT: &str = "SELECT a.id, a.name, a.broker, f.name, a.external_ref, a.account_type, a.status,
         a.currency, a.starting_balance_micros, a.timezone, a.trading_day_reset_time, a.notes_md,
-        a.created_at, a.updated_at
+        a.created_at, a.updated_at, a.archived_at,
+        (SELECT l.predecessor_account_id FROM account_attempt_links l WHERE l.successor_account_id = a.id),
+        (SELECT l.successor_account_id FROM account_attempt_links l WHERE l.predecessor_account_id = a.id)
     FROM accounts a LEFT JOIN firms f ON f.id = a.firm_id";
 
 fn from_row(r: &Row) -> rusqlite::Result<Account> {
@@ -153,19 +161,44 @@ fn from_row(r: &Row) -> rusqlite::Result<Account> {
         notes: r.get(11)?,
         created_at: r.get(12)?,
         updated_at: r.get(13)?,
+        archived_at: r.get(14)?,
+        predecessor_account_id: r.get(15)?,
+        successor_account_id: r.get(16)?,
     })
 }
 
+/// Accounts that are not archived, whatever their status. Failed, passed and
+/// closed accounts are listed; callers choose what counts as live
+/// (`status = 'active'` is what risk views use).
 pub fn list(conn: &Connection) -> AppResult<Vec<Account>> {
+    list_with(conn, false)
+}
+
+/// Accounts that can trade now: `active`, not archived. This is what risk
+/// views (Today) read. Paused, passed, failed, closed and archived accounts
+/// are history, and a reset's predecessor is already failed/passed/closed.
+pub fn list_active(conn: &Connection) -> AppResult<Vec<Account>> {
+    Ok(list(conn)?.into_iter().filter(|a| a.status == "active").collect())
+}
+
+/// As `list`, optionally with archived accounts, for history and restore.
+pub fn list_with(conn: &Connection, include_archived: bool) -> AppResult<Vec<Account>> {
     let mut stmt = conn.prepare(&format!(
-        "{SELECT} WHERE a.archived_at IS NULL ORDER BY a.name COLLATE NOCASE, a.created_at"
+        "{SELECT} WHERE (?1 OR a.archived_at IS NULL) ORDER BY a.name COLLATE NOCASE, a.created_at"
     ))?;
-    let rows = stmt.query_map([], from_row)?;
+    let rows = stmt.query_map([include_archived], from_row)?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
 pub fn get(conn: &Connection, id: &str) -> AppResult<Account> {
     conn.query_row(&format!("{SELECT} WHERE a.id = ?1 AND a.archived_at IS NULL"), [id], from_row)
+        .optional()?
+        .ok_or_else(|| AppError::not_found("account", id))
+}
+
+/// Read one account whether or not it is archived (read-only browsing).
+pub fn get_any(conn: &Connection, id: &str) -> AppResult<Account> {
+    conn.query_row(&format!("{SELECT} WHERE a.id = ?1"), [id], from_row)
         .optional()?
         .ok_or_else(|| AppError::not_found("account", id))
 }
@@ -201,18 +234,32 @@ fn provider_id(tx: &Transaction, firm_id: Option<&str>) -> AppResult<Option<Stri
 }
 
 fn record_status(tx: &Transaction, account_id: &str, status: &str, now: &str) -> AppResult<()> {
+    record_status_event(tx, account_id, status, now, None, None)
+}
+
+/// A status history row. `effective_at` is when the status took effect (the
+/// user's date, not necessarily now); `cause` and `note` are the user's own
+/// words and are never inferred.
+pub(crate) fn record_status_event(
+    tx: &Connection,
+    account_id: &str,
+    status: &str,
+    effective_at: &str,
+    cause: Option<&str>,
+    note: Option<&str>,
+) -> AppResult<()> {
     tx.execute(
-        "INSERT INTO account_status_events (id, account_id, status, effective_at, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?4)",
-        params![new_id(), account_id, status, now],
+        "INSERT INTO account_status_events (id, account_id, status, effective_at, note, created_at, cause)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![new_id(), account_id, status, effective_at, note, now(), cause],
     )?;
     Ok(())
 }
 
-fn friendly(e: rusqlite::Error) -> AppError {
+pub(crate) fn friendly(e: rusqlite::Error) -> AppError {
     match AppError::from(e) {
         AppError::Conflict { message } if message.contains("accounts.broker") => AppError::Conflict {
-            message: "another account already uses this broker and account number".into(),
+            message: "another active or paused account already uses this broker and account number".into(),
         },
         other => other,
     }
@@ -278,14 +325,181 @@ pub fn update(conn: &mut Connection, id: &str, input: AccountInput) -> AppResult
     get(conn, id)
 }
 
-/// Archive an account: it disappears from lists and can no longer be read or
-/// written, but its trades, journal entries and imports are kept.
-pub fn archive(conn: &Connection, id: &str) -> AppResult<()> {
-    match conn.execute(
+/// Archive an account: it leaves live lists and becomes read-only, but its
+/// trades, journal entries, imports and history are kept and it can be
+/// restored. Archiving never changes its status.
+pub fn archive(conn: &mut Connection, id: &str) -> AppResult<()> {
+    let at = now();
+    let tx = conn.transaction()?;
+    match tx.execute(
         "UPDATE accounts SET archived_at = ?2, updated_at = ?2 WHERE id = ?1 AND archived_at IS NULL",
-        params![id, now()],
+        params![id, at],
     )? {
-        0 => Err(AppError::not_found("account", id)),
-        _ => Ok(()),
+        0 => return Err(AppError::not_found("account", id)),
+        _ => record_archive_event(&tx, id, "archived", &at)?,
     }
+    tx.commit()?;
+    Ok(())
+}
+
+/// Restore an archived account to the lists. Its status is left exactly as it
+/// was: a restored failed account stays failed. If it could trade (active or
+/// paused) and another such account already holds its broker account number,
+/// restoring is refused and nothing changes.
+pub fn restore(conn: &mut Connection, id: &str) -> AppResult<Account> {
+    let at = now();
+    let tx = conn.transaction()?;
+    let row: Option<(Option<String>, Option<String>, String, bool)> = tx
+        .query_row(
+            "SELECT broker, external_ref, status, archived_at IS NOT NULL FROM accounts WHERE id = ?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )
+        .optional()?;
+    let (broker, external_ref, status, archived) = row.ok_or_else(|| AppError::not_found("account", id))?;
+    if !archived {
+        return Err(AppError::invalid("id", "The account is not archived"));
+    }
+    if let (Some(broker), Some(external_ref), true) =
+        (&broker, &external_ref, matches!(status.as_str(), "active" | "paused"))
+    {
+        let holder: Option<String> = tx
+            .query_row(
+                "SELECT name FROM accounts
+                 WHERE id <> ?1 AND broker = ?2 COLLATE NOCASE AND external_ref = ?3
+                   AND archived_at IS NULL AND status IN ('active', 'paused')",
+                params![id, broker, external_ref],
+                |r| r.get(0),
+            )
+            .optional()?;
+        if let Some(name) = holder {
+            return Err(AppError::Conflict {
+                message: format!(
+                    "cannot restore: '{name}' is already an active or paused account using {broker} account {external_ref}"
+                ),
+            });
+        }
+    }
+    tx.execute("UPDATE accounts SET archived_at = NULL, updated_at = ?2 WHERE id = ?1", params![id, at])
+        .map_err(friendly)?;
+    record_archive_event(&tx, id, "restored", &at)?;
+    tx.commit()?;
+    get(conn, id)
+}
+
+fn record_archive_event(tx: &Connection, account_id: &str, action: &str, at: &str) -> AppResult<()> {
+    tx.execute(
+        "INSERT INTO account_archive_events (id, account_id, action, occurred_at, created_at) VALUES (?1, ?2, ?3, ?4, ?4)",
+        params![new_id(), account_id, action, at],
+    )?;
+    Ok(())
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct StatusChangeInput {
+    pub status: String,
+    /// When the status took effect, any ISO 8601 instant with an offset. Defaults to now.
+    pub effective_at: Option<String>,
+    /// The user's own words for why; absent means unknown. Never inferred from losses.
+    pub cause: Option<String>,
+    /// Optional evidence or notes.
+    pub note: Option<String>,
+}
+
+/// Change an account's status (for example mark it failed) with the user's
+/// effective time, cause and notes. It changes nothing else: the account is
+/// not archived, deleted or reset, and no rule breach is inferred.
+pub fn change_status(conn: &mut Connection, id: &str, input: StatusChangeInput) -> AppResult<Account> {
+    let mut issues = Issues::default();
+    if !ACCOUNT_STATUSES.contains(&input.status.as_str()) {
+        issues.add("status", format!("must be one of {}", ACCOUNT_STATUSES.join(", ")));
+    }
+    let cause = opt_text(input.cause);
+    let note = opt_text(input.note);
+    if cause.as_ref().is_some_and(|c| c.chars().count() > 500) {
+        issues.add("cause", "must be at most 500 characters");
+    }
+    if note.as_ref().is_some_and(|n| n.chars().count() > MAX_NOTES_CHARS) {
+        issues.add("note", format!("must be at most {MAX_NOTES_CHARS} characters"));
+    }
+    let effective_at = match input.effective_at.as_deref() {
+        None => now(),
+        Some(s) => match parse_payload_time(s) {
+            Ok(t) => format_instant(t),
+            Err(message) => {
+                issues.add("effectiveAt", message);
+                String::new()
+            }
+        },
+    };
+    issues.into_result()?;
+
+    let tx = conn.transaction()?;
+    let (old, archived): (String, bool) = tx
+        .query_row("SELECT status, archived_at IS NOT NULL FROM accounts WHERE id = ?1", [id], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .optional()?
+        .ok_or_else(|| AppError::not_found("account", id))?;
+    if archived {
+        return Err(AppError::invalid("id", "Restore the account before changing its status"));
+    }
+    if old == input.status {
+        return Err(AppError::invalid("status", format!("The account is already {old}")));
+    }
+    tx.execute(
+        "UPDATE accounts SET status = ?2, updated_at = ?3 WHERE id = ?1",
+        params![id, input.status, now()],
+    )
+    .map_err(friendly)?;
+    record_status_event(&tx, id, &input.status, &effective_at, cause.as_deref(), note.as_deref())?;
+    tx.commit()?;
+    get(conn, id)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StatusEvent {
+    pub status: String,
+    pub effective_at: String,
+    pub cause: Option<String>,
+    pub note: Option<String>,
+    pub recorded_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveEvent {
+    /// `archived` or `restored`.
+    pub action: String,
+    pub occurred_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountHistory {
+    pub status_events: Vec<StatusEvent>,
+    pub archive_events: Vec<ArchiveEvent>,
+}
+
+/// An account's status and archive history, oldest first. Readable for archived accounts.
+pub fn history(conn: &Connection, id: &str) -> AppResult<AccountHistory> {
+    get_any(conn, id)?;
+    let mut stmt = conn.prepare(
+        "SELECT status, effective_at, cause, note, created_at FROM account_status_events
+         WHERE account_id = ?1 ORDER BY effective_at, created_at, id",
+    )?;
+    let status_events = stmt
+        .query_map([id], |r| {
+            Ok(StatusEvent { status: r.get(0)?, effective_at: r.get(1)?, cause: r.get(2)?, note: r.get(3)?, recorded_at: r.get(4)? })
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut stmt = conn.prepare(
+        "SELECT action, occurred_at FROM account_archive_events WHERE account_id = ?1 ORDER BY occurred_at, id",
+    )?;
+    let archive_events = stmt
+        .query_map([id], |r| Ok(ArchiveEvent { action: r.get(0)?, occurred_at: r.get(1)? }))?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(AccountHistory { status_events, archive_events })
 }

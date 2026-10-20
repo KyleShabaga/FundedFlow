@@ -27,6 +27,7 @@ const account: Account = {
   id: "a1", name: "Eval", broker: null, propFirm: null, externalRef: null, accountType: "evaluation",
   status: "active", currency: "USD", startingBalance: "50000", timezone: "America/New_York",
   tradingDayResetTime: "17:00", notes: null, createdAt: T, updatedAt: T,
+  archivedAt: null, predecessorAccountId: null, successorAccountId: null,
 };
 const trade = (id: string, symbol: string, entryPrice: string): Trade => ({
   id, accountId: "a1", source: "manual", importBatchId: null, brokerTradeId: null, symbol, side: "long",

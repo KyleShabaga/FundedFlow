@@ -19,6 +19,7 @@ export function ConfirmDialog({
   confirmLabel,
   onConfirm,
   onClose,
+  tone = "danger",
 }: {
   open: boolean;
   title: string;
@@ -28,6 +29,8 @@ export function ConfirmDialog({
   /** Performs the action; a rejection keeps the dialog open and shows the error. */
   onConfirm: () => Promise<void>;
   onClose: () => void;
+  /** `neutral` for reversible actions (archive, restore): no danger styling or "deleted" wording. */
+  tone?: "danger" | "neutral";
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -62,7 +65,7 @@ export function ConfirmDialog({
           </Dialog.Description>
           {error && (
             <div role="alert" className="ff-error">
-              {error} Nothing was deleted.
+              {error} {tone === "danger" ? "Nothing was deleted." : "Nothing was changed."}
             </div>
           )}
           <div className="ff-row ff-dialog-actions">
@@ -71,8 +74,8 @@ export function ConfirmDialog({
                 Cancel
               </button>
             </Dialog.Close>
-            <button type="button" className="ff-danger" disabled={busy} onClick={() => void confirm()}>
-              {busy ? "Deleting…" : confirmLabel}
+            <button type="button" className={tone === "danger" ? "ff-danger" : undefined} disabled={busy} onClick={() => void confirm()}>
+              {busy ? (tone === "danger" ? "Deleting…" : "Working…") : confirmLabel}
             </button>
           </div>
         </Dialog.Content>

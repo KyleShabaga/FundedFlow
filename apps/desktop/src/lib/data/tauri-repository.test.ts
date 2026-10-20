@@ -53,6 +53,69 @@ describe("Tauri JournalRepository adapter", () => {
     ]);
   });
 
+  it("sends account lifecycle calls to the commands in commands.rs", async () => {
+    const { repo, calls } = fake((command) => {
+      switch (command) {
+        case "list_accounts":
+        case "list_active_accounts":
+        case "get_account_lineage":
+          return [];
+        case "get_account":
+        case "restore_account":
+        case "change_account_status":
+          return account;
+        case "get_account_history":
+          return { statusEvents: [], archiveEvents: [] };
+        case "reset_account_attempt":
+          return {
+            predecessor: account, successor: { ...account, id: "a2", predecessorAccountId: "a1" },
+            link: {
+              predecessorAccountId: "a1", successorAccountId: "a2", priorOutcome: "failed", effectiveAt: "2026-10-20T19:00:00.000Z",
+              reason: null, source: "user_entered", rulebookDecision: "deferred", createdAt: "2026-10-20T19:00:00.000Z",
+            },
+            rulebookAssignment: null,
+          };
+        default:
+          return {
+            accountId: "a1", accountName: "Eval", trades: 0, deletedTrades: 0, journalEntries: 0, importBatches: 0,
+            statusEvents: 1, rulebookAssignments: 0, privateRulebooks: 0, snapshots: 0, ledgerEntries: 0, phaseEvents: 0,
+            linkedAttempts: [], blockers: ["not available"],
+          };
+      }
+    });
+    await repo.accounts.list({ includeArchived: true });
+    await repo.accounts.listActive();
+    await repo.accounts.get("a1");
+    await repo.accounts.restore("a1");
+    await repo.accounts.changeStatus("a1", { status: "failed", cause: "Hit the daily limit" });
+    await repo.accounts.history("a1");
+    await repo.accounts.lineage("a1");
+    await repo.accounts.previewDeletion("a1");
+    const reset = await repo.accounts.resetAttempt({
+      predecessorAccountId: "a1", priorOutcome: "failed", effectiveAt: "2026-10-20T15:00:00-04:00", source: "user_entered",
+      name: "Attempt 2", startingBalance: "50000", rulebook: { kind: "decideLater" },
+    });
+    expect(reset.successor.predecessorAccountId).toBe("a1");
+    expect(calls.map(([c]) => c)).toEqual([
+      "list_accounts", "list_active_accounts", "get_account", "restore_account", "change_account_status",
+      "get_account_history", "get_account_lineage", "preview_account_deletion", "reset_account_attempt",
+    ]);
+    expect(calls[0]?.[1]).toEqual({ includeArchived: true });
+    expect(calls[4]?.[1]).toMatchObject({ id: "a1", input: { status: "failed", cause: "Hit the daily limit" } });
+    expect(calls[8]?.[1]).toMatchObject({ input: { priorOutcome: "failed", rulebook: { kind: "decideLater" } } });
+  });
+
+  it("rejects a reset without a confirmed outcome before invoking anything", async () => {
+    const { repo, calls } = fake(() => null);
+    expect(() =>
+      repo.accounts.resetAttempt({
+        predecessorAccountId: "a1", effectiveAt: "2026-10-20T15:00:00-04:00", source: "user_entered", name: "x",
+        startingBalance: "50000", rulebook: { kind: "decideLater" },
+      } as never),
+    ).toThrow(/priorOutcome/);
+    expect(calls).toEqual([]);
+  });
+
   it("sends rulebook calls to the commands in commands.rs", async () => {
     const { repo, calls } = fake((command) =>
       command.startsWith("list_") || command === "validate_rulebook_draft"
@@ -95,7 +158,9 @@ describe("Tauri JournalRepository adapter", () => {
       timezone: "America/New_York",
       tradingDayResetTime: "17:00",
     } as const;
-    expect(await repo.accounts.update("a1", input)).toEqual(account);
+    expect(await repo.accounts.update("a1", input)).toEqual({
+      ...account, archivedAt: null, predecessorAccountId: null, successorAccountId: null,
+    });
     expect(calls[0]?.[0]).toBe("update_account");
     expect(Object.keys(calls[0]?.[1] ?? {})).toEqual(["id", "input"]);
   });

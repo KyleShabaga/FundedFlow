@@ -7,6 +7,7 @@ export * from "./primitives/money.js";
 
 export * from "./contracts/errors.js";
 export * from "./contracts/accounts.js";
+export * from "./contracts/account-lifecycle.js";
 export * from "./contracts/trades.js";
 export * from "./contracts/journal.js";
 export * from "./contracts/csv-import.js";

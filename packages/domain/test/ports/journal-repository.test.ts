@@ -24,7 +24,10 @@ describe("JournalRepository", () => {
     const none = () => Promise.resolve([]);
     const fail = () => Promise.reject(new RepositoryError({ kind: "unavailable", message: "offline" }));
     const repo: JournalRepository = {
-      accounts: { list: none, create: fail, update: fail, archive: fail },
+      accounts: {
+        list: none, get: fail, listActive: none, create: fail, update: fail, archive: fail, restore: fail,
+        changeStatus: fail, history: fail, resetAttempt: fail, lineage: none, previewDeletion: fail,
+      },
       trades: { list: none, create: fail, update: fail, remove: fail },
       journal: { list: none, create: fail, update: fail, remove: fail },
       imports: { preview: fail, commit: fail, list: none, problemRows: none },

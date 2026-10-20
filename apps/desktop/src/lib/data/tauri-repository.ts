@@ -9,7 +9,13 @@ import { z } from "zod";
 import {
   type JournalRepository,
   RepositoryError,
+  accountHistorySchema,
   accountInputSchema,
+  attemptSummarySchema,
+  deletionPreviewSchema,
+  resetInputSchema,
+  resetResultSchema,
+  statusChangeInputSchema,
   accountRulebookAssignmentSchema,
   accountSchema,
   appErrorSchema,
@@ -62,10 +68,21 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
 
   return {
     accounts: {
-      list: () => call("list_accounts", {}, z.array(accountSchema)),
+      list: (options) =>
+        call("list_accounts", options?.includeArchived ? { includeArchived: true } : {}, z.array(accountSchema)),
+      get: (id) => call("get_account", { id }, accountSchema),
+      listActive: () => call("list_active_accounts", {}, z.array(accountSchema)),
       create: (input) => call("create_account", { input: validate(accountInputSchema, input) }, accountSchema),
       update: (id, input) => call("update_account", { id, input: validate(accountInputSchema, input) }, accountSchema),
       archive: (id) => done("archive_account", { id }),
+      restore: (id) => call("restore_account", { id }, accountSchema),
+      changeStatus: (id, input) =>
+        call("change_account_status", { id, input: validate(statusChangeInputSchema, input) }, accountSchema),
+      history: (id) => call("get_account_history", { id }, accountHistorySchema),
+      resetAttempt: (input) =>
+        call("reset_account_attempt", { input: validate(resetInputSchema, input) }, resetResultSchema),
+      lineage: (id) => call("get_account_lineage", { id }, z.array(attemptSummarySchema)),
+      previewDeletion: (id) => call("preview_account_deletion", { id }, deletionPreviewSchema),
     },
     trades: {
       list: (accountId) => call("list_trades", { accountId }, z.array(tradeSchema)),

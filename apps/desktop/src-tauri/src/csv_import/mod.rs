@@ -633,7 +633,7 @@ pub fn get_batch(conn: &Connection, id: &str) -> AppResult<ImportBatch> {
 
 /// Import attempts for an account, newest first.
 pub fn list_batches(conn: &Connection, account_id: &str) -> AppResult<Vec<ImportBatch>> {
-    account_ctx(conn, account_id)?;
+    crate::store::require_account(conn, account_id)?;
     let mut stmt = conn.prepare(&format!("{BATCH_SELECT} WHERE account_id = ?1 ORDER BY created_at DESC, id"))?;
     let rows = stmt.query_map([account_id], batch_from_row)?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)

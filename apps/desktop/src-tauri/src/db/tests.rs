@@ -347,3 +347,56 @@ fn attachment_keys_must_be_relative() {
         assert!(r.is_err(), "{key} should be rejected");
     }
 }
+
+/// Migration 11 on a version-10 journal: archived accounts gain their archive
+/// history, existing rows and numbers are untouched, and the broker-number rule
+/// now lets a failed account share its number with a live one.
+#[test]
+fn migration_11_upgrades_a_v10_journal_without_changing_its_rows() {
+    let mut conn = Connection::open_in_memory().unwrap();
+    migrate_with(&mut conn, &MIGRATIONS[..10]).unwrap();
+    conn.execute(
+        "INSERT INTO accounts (id, name, broker, external_ref, starting_balance_micros, timezone, status, created_at, updated_at)
+         VALUES ('failed', 'Old', 'Tradovate', '777', 50000000000, 'America/New_York', 'failed', ?1, ?1)",
+        [T],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO accounts (id, name, broker, external_ref, starting_balance_micros, timezone, created_at, updated_at, archived_at)
+         VALUES ('archived', 'Hidden', 'Tradovate', '888', 50000000000, 'America/New_York', ?1, ?1, ?1)",
+        [T],
+    )
+    .unwrap();
+    // Before: the failed account still blocks a new account with its number.
+    let blocked = conn.execute(
+        "INSERT INTO accounts (id, name, broker, external_ref, starting_balance_micros, timezone, created_at, updated_at)
+         VALUES ('live', 'Next', 'Tradovate', '777', 50000000000, 'America/New_York', ?1, ?1)",
+        [T],
+    );
+    assert!(blocked.is_err());
+
+    assert_eq!(migrate_with(&mut conn, MIGRATIONS).unwrap(), 11);
+    let accounts: i64 = conn.query_row("SELECT COUNT(*) FROM accounts", [], |r| r.get(0)).unwrap();
+    assert_eq!(accounts, 2);
+    let archive_events: Vec<(String, String, String)> = conn
+        .prepare("SELECT account_id, action, occurred_at FROM account_archive_events")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(archive_events, [("archived".into(), "archived".into(), T.into())]);
+    // After: the same number is allowed beside a failed account, but not beside another live one.
+    conn.execute(
+        "INSERT INTO accounts (id, name, broker, external_ref, starting_balance_micros, timezone, created_at, updated_at)
+         VALUES ('live', 'Next', 'Tradovate', '777', 50000000000, 'America/New_York', ?1, ?1)",
+        [T],
+    )
+    .unwrap();
+    let dup = conn.execute(
+        "INSERT INTO accounts (id, name, broker, external_ref, starting_balance_micros, timezone, created_at, updated_at)
+         VALUES ('live2', 'Dup', 'Tradovate', '777', 50000000000, 'America/New_York', ?1, ?1)",
+        [T],
+    );
+    assert!(dup.is_err());
+}
