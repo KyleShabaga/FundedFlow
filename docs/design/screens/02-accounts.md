@@ -1,5 +1,7 @@
 # 2 · Accounts table
 
+**Card:** Build 15 (account onboarding and management UI); rulebook assignment and editor: Build 19; risk inputs
+and checkpoints: Build 15.5. Needs Build 14 hooks.
 Mockup: `Accounts.dc.html`. Reference: `tw-accounts.png`.
 
 ## Purpose
@@ -49,7 +51,10 @@ Footer: count, "n archived" link (shows archived accounts), rows per page, pager
 
 ## Decisions
 - Meters: amber at 70% (`WARN_AT`), red at 100%, compared in micro-units (`ruleState`).
-- Failed accounts stay in the list; the card tints `loss-soft`.
+- Failed accounts stay in the list; the card tints `loss-soft`. Failed, passed, closed and archived attempts
+  are history: they never feed Today's active-account risk.
+- An account can be saved without a rulebook (Build 6): it shows Needs setup and Unknown risk, never Safe.
+- A reset attempt is a new account with its own basis; link to the predecessor, never reuse its values.
 
 ## Open questions
 - Account size label ("$100K"): `account_size_micros` exists in the schema but no command returns it yet.

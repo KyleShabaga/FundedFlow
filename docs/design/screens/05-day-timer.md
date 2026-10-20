@@ -1,5 +1,9 @@
 # 5 · Day-ending timer
 
+**Card:** none yet; proposed in Triage. Natural homes: the shell's account context bar (Build 12 reserves the
+space) or Today's freshness block (Build 21, "effective trading day"). Not a substitute for an
+evaluation/account reset: a trading-day rollover never creates a new attempt (Build 21).
+
 Mockups: `DayTimer.dc.html`, `TimerStates.dc.html`. Reference: `day-timer.png`.
 
 ## Purpose

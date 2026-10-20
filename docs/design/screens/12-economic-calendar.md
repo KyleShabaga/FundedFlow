@@ -1,5 +1,9 @@
 # 12 · Economic calendar
 
+**Card:** Build 41 (desktop economic calendar and market-session analytics), **P2 V2.0: not V1.** The top-bar
+session clock and Trading sessions popover (`Topbar.dc.html`, `TopbarSessions.dc.html`) belong to this card too.
+Hosted push notifications: Build 41.5 (Web V2).
+
 Mockup: `EconCalendar.dc.html`. Reference: `econ-calendar.png`.
 
 ## Layout
