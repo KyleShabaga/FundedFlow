@@ -52,6 +52,37 @@ fn source_ids(conn: &Connection, table: &str, owner: &str, id: &str) -> Vec<Stri
         .unwrap()
 }
 
+/// The rulebook and versions the catalogue fixture's phases and paths
+/// reference (packages/domain/test/fixtures/rulebook.json), as drafts. Before
+/// migration 9 the references are unchecked, so nothing is needed.
+fn seed_rulebook_versions(conn: &Connection) {
+    let version: u32 = conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
+    if version < 9 {
+        return;
+    }
+    let fixture: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../../packages/domain/test/fixtures/rulebook.json")).unwrap();
+    for b in fixture["rulebooks"].as_array().unwrap() {
+        conn.execute(
+            "INSERT INTO rulebooks (id, provider_id, slug, display_name, description, record_status, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![b["id"].as_str(), b["providerId"].as_str(), b["slug"].as_str(), b["displayName"].as_str(),
+                    b["description"].as_str(), b["recordStatus"].as_str(), b["createdAt"].as_str(), b["updatedAt"].as_str()],
+        )
+        .unwrap();
+    }
+    for v in fixture["versions"].as_array().unwrap() {
+        conn.execute(
+            "INSERT INTO rulebook_versions (id, rulebook_id, version_number, schema_version, verification_status, origin,
+                                            captured_at, record_status, created_at, updated_at)
+             VALUES (?1, ?2, ?3, 1, 'draft', ?4, ?5, 'active', ?6, ?7)",
+            params![v["id"].as_str(), v["rulebookId"].as_str(), v["versionNumber"].as_i64(), v["origin"].as_str(),
+                    v["capturedAt"].as_str(), v["createdAt"].as_str(), v["updatedAt"].as_str()],
+        )
+        .unwrap();
+    }
+}
+
 /// Stores every fixture record, in dependency order.
 fn save(conn: &Connection, f: &CatalogueFixture) {
     let g = &f.graph;
@@ -122,6 +153,7 @@ fn save(conn: &Connection, f: &CatalogueFixture) {
             .unwrap();
         }
     }
+    seed_rulebook_versions(conn);
     for p in &g.programme_phases {
         conn.execute(
             "INSERT INTO programme_phases (id, catalogue_version_id, phase_key, provider_label, display_order,
@@ -439,7 +471,7 @@ fn load(conn: &Connection, description: String) -> CatalogueFixture {
 }
 
 /// A database holding the whole fixture.
-fn seeded() -> Connection {
+pub(super) fn seeded() -> Connection {
     let conn = db();
     let (_, fixture) = catalogue_fixture();
     save(&conn, &fixture);
@@ -447,12 +479,12 @@ fn seeded() -> Connection {
 }
 
 /// Fixture ids: `id(0x31)` is the 50K version, `id(0xa1)` a rulebook ref.
-fn id(n: u32) -> String {
+pub(super) fn id(n: u32) -> String {
     format!("01900000-0000-7000-8000-{n:012x}")
 }
 
 #[track_caller]
-fn rejects(conn: &Connection, sql: &str, expected: &str) {
+pub(super) fn rejects(conn: &Connection, sql: &str, expected: &str) {
     let err = conn.execute_batch(sql).expect_err(sql).to_string();
     assert!(err.contains(expected), "{sql}\n  failed with {err:?}, expected {expected:?}");
 }
@@ -1017,7 +1049,7 @@ fn a_v7_journal_with_reviewed_versions_upgrades_without_changes() {
     };
 
     let conn = open_file(&db.0).unwrap();
-    assert_eq!(version(&conn), 8);
+    assert_eq!(version(&conn), latest_version());
     assert_eq!(version(&read_only(&db.backup())), 7, "the backup is the journal as it was");
     assert_eq!(dump_like(&conn, &before), before);
     let fk_problems: i64 = conn.query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| r.get(0)).unwrap();

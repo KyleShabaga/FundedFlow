@@ -28,6 +28,10 @@ describe("JournalRepository", () => {
       trades: { list: none, create: fail, update: fail, remove: fail },
       journal: { list: none, create: fail, update: fail, remove: fail },
       imports: { preview: fail, commit: fail, list: none, problemRows: none },
+      rulebooks: {
+        list: none, listVersions: none, getVersion: fail, getApplicable: fail, createDraft: fail,
+        validateDraft: none, publish: fail, assign: fail, listAssignments: none, flagSourceConflict: fail,
+      },
     };
     expect(await repo.accounts.list()).toEqual([]);
     await expect(repo.trades.remove("t1")).rejects.toBeInstanceOf(RepositoryError);

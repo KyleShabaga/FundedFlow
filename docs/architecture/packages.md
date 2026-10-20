@@ -32,8 +32,20 @@ type-check in the package.
   `apps/desktop/vite.config.ts` keeps `tsc --watch` running on the package. An edit under `packages/domain/src`
   is recompiled into `dist`, and Vite hot-reloads it.
 
-Later builds add modules beside the existing ones (rulebook: Build 9.5, engine: Build 16, CSV import: Build 17)
-and export them from `src/index.ts`. There are no deep imports.
+Later builds add modules beside the existing ones (engine: Build 16, CSV import: Build 17) and export them from
+`src/index.ts`. There are no deep imports.
+
+## Rulebook module (Build 9.5)
+
+`src/rulebook` holds the rulebook contracts:
+- tagged presence states (`presence.ts`);
+- one discriminated Zod schema per rule type (`rules.ts`);
+- rulebooks, versions, applicability, claims, assignments and the repository inputs (`versions.ts`);
+- `checkRuleDefinitions`, `canAssign` and `checkPublish` (`integrity.ts`).
+
+The rules engine (Build 16) imports these schemas and must not redefine them. The Rust adapter checks the same
+shapes in `src-tauri/src/rulebook.rs`. `test/fixtures/rulebook-legacy-conversion.json`, written by the Rust
+conversion test, pins the two sides together. See `docs/data-model.md#rulebooks`.
 
 ## Catalogue module (Build 9)
 

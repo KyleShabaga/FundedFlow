@@ -53,6 +53,37 @@ describe("Tauri JournalRepository adapter", () => {
     ]);
   });
 
+  it("sends rulebook calls to the commands in commands.rs", async () => {
+    const { repo, calls } = fake((command) =>
+      command.startsWith("list_") || command === "validate_rulebook_draft"
+        ? []
+        : command === "get_applicable_rulebook"
+          ? { status: "none", rulebookVersionIds: [] }
+          : null,
+    );
+    const phase = "01900000-0000-7000-8000-000000000041";
+    await repo.rulebooks.list(null);
+    await repo.rulebooks.list("a1");
+    await repo.rulebooks.listVersions("rb1");
+    await repo.rulebooks.getApplicable({ programmePhaseId: phase, phasePathId: null });
+    await repo.rulebooks.validateDraft("v1");
+    await repo.rulebooks.listAssignments("a1");
+    expect(calls).toEqual([
+      ["list_rulebooks", { accountId: null }],
+      ["list_rulebooks", { accountId: "a1" }],
+      ["list_rulebook_versions", { rulebookId: "rb1" }],
+      ["get_applicable_rulebook", { query: { programmePhaseId: phase, phasePathId: null } }],
+      ["validate_rulebook_draft", { id: "v1" }],
+      ["list_account_rulebook_assignments", { accountId: "a1" }],
+    ]);
+    // Inputs are validated before invoking.
+    const bad = await Promise.resolve()
+      .then(() => repo.rulebooks.assign({ accountId: "a1", rulebookVersionId: "v1", effectiveFrom: "10/01/2026" } as never))
+      .catch((e: unknown) => e);
+    expect(bad).toBeInstanceOf(RepositoryError);
+    expect(calls).toHaveLength(6);
+  });
+
   it("wraps inputs as { id, input } and parses the response", async () => {
     const { repo, calls } = fake(() => account);
     const input = {

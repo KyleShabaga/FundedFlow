@@ -11,7 +11,7 @@ use std::path::Path;
 
 use rusqlite::{Connection, Transaction};
 
-pub(crate) use steps::{map_legacy_catalogue, provider_for_firm, rederive_trading_days};
+pub(crate) use steps::{convert_legacy_rulebooks, map_legacy_catalogue, provider_for_firm, rederive_trading_days};
 
 /// File name of the journal database inside the app data directory
 /// (`%APPDATA%\com.fundedflow.desktop\` on Windows).
@@ -75,6 +75,16 @@ pub const MIGRATIONS: &[Migration] = &[
         version: 8,
         name: "freeze_ever_verified",
         step: Step::Sql(include_str!("../../migrations/0008_freeze_ever_verified.sql")),
+    },
+    Migration {
+        version: 9,
+        name: "rulebooks",
+        step: Step::Sql(include_str!("../../migrations/0009_rulebooks.sql")),
+    },
+    Migration {
+        version: 10,
+        name: "convert_legacy_rulebooks",
+        step: Step::Rust(|tx| convert_legacy_rulebooks(tx)),
     },
 ];
 
@@ -196,3 +206,5 @@ mod upgrade_tests;
 mod catalogue_tests;
 #[cfg(test)]
 mod legacy_rulebook_tests;
+#[cfg(test)]
+mod rulebook_tests;

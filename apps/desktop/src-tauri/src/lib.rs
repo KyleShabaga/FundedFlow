@@ -6,6 +6,7 @@ mod domain;
 mod error;
 #[cfg(test)]
 mod parity;
+mod rulebook;
 mod runtime;
 mod store;
 
@@ -47,6 +48,16 @@ pub fn run() {
             commands::commit_csv_import,
             commands::list_csv_imports,
             commands::list_csv_import_problem_rows,
+            commands::list_rulebooks,
+            commands::list_rulebook_versions,
+            commands::get_rulebook_version,
+            commands::get_applicable_rulebook,
+            commands::create_rulebook_draft,
+            commands::validate_rulebook_draft,
+            commands::publish_rulebook_version,
+            commands::assign_rulebook_to_account,
+            commands::list_account_rulebook_assignments,
+            commands::flag_rulebook_source_conflict,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,15 +1,15 @@
-//! Build 8.75 handoff to Build 9.5: `fixtures/fundedflow-v8-legacy-rules.db`
-//! holds every shape of legacy account-owned rulebook, rule and snapshot that
+//! Legacy rulebook conversion (Build 8.75 handoff, done by Build 9.5's
+//! migrations 9 and 10): `fixtures/fundedflow-v8-legacy-rules.db` holds every
+//! shape of legacy account-owned rulebook, rule and snapshot that
 //! docs/rulebook-migration.md maps. These tests pin what the fixture contains,
-//! that this build opens it without change, and that the matrix's derived
-//! values (assignment intervals, rule keys, parameter keys) are computable
-//! from the legacy rows alone.
+//! that the matrix's derived values are computable from the legacy rows, and
+//! that upgrading converts them as the matrix says without losing any row.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use rusqlite::Connection;
 
-use super::upgrade_tests::{dump, dump_like, read_only, version, Journal};
+use super::upgrade_tests::{dump, dump_like, read_only, version, Dump, Journal};
 use super::*;
 
 const LEGACY_RULES: &[u8] = include_bytes!("fixtures/fundedflow-v8-legacy-rules.db");
@@ -91,15 +91,142 @@ fn the_legacy_rules_fixture_covers_every_matrix_case() {
     );
 }
 
-#[test]
-fn this_build_opens_the_legacy_rules_journal_without_changes() {
+/// The fixture upgraded to the current schema, with the dump taken before.
+fn upgraded() -> (Journal, Dump, Connection) {
     let db = Journal::copy_of(LEGACY_RULES);
     let before = dump(&read_only(&db.0), &[]);
     let conn = open_file(&db.0).unwrap();
+    (db, before, conn)
+}
+
+#[test]
+fn upgrading_keeps_every_legacy_row_and_converts_it_per_the_matrix() {
+    let (db, mut before, conn) = upgraded();
     assert_eq!(version(&conn), latest_version());
-    assert_eq!(dump_like(&conn, &before), before);
+    assert_eq!(version(&read_only(&db.backup())), 8, "the backup is the journal as it was");
     assert_eq!(count(&conn, "SELECT count(*) FROM pragma_foreign_key_check"), 0);
-    assert_eq!(count(&conn, "SELECT count(*) FROM rules"), 18);
+
+    // Every legacy row survives, under the renamed tables; only the user-manual
+    // sources the conversion adds are new.
+    let sources = before.remove("catalogue_sources").unwrap();
+    assert!(sources.1.is_empty());
+    assert_eq!(dump_like(&conn, &before), before);
+    assert_eq!(
+        strings(&conn, "SELECT descriptor || '|' || source_type || '|' || verification_status FROM catalogue_sources"),
+        [
+            "copied from Eval 50K v2|user_manual|needs_review",
+            "copied from v2|user_manual|needs_review",
+            "https://help.example/apex-50k read 2026-08-30|user_manual|needs_review",
+        ]
+        .map(String::from)
+        .into(),
+    );
+
+    // One private rulebook per account with legacy versions, never a catalogue one.
+    assert_eq!(
+        strings(&conn, "SELECT a.name || '|' || b.record_status || '|' || (b.provider_id IS a.provider_id)
+                        FROM rulebooks b JOIN accounts a ON a.id = b.owner_account_id"),
+        ["Eval 50K|active|1", "Funded 50K|active|1", "Personal limits|archived|1"].map(String::from).into(),
+    );
+    assert_eq!(count(&conn, "SELECT count(*) FROM rulebooks WHERE owner_account_id IS NULL"), 0);
+
+    // Versions keep their IDs and numbers; published means needs_review, never verified.
+    let versions: BTreeMap<String, (String, String, String, Option<String>)> = conn
+        .prepare("SELECT id, verification_status, origin, record_status, user_confirmed_at FROM rulebook_versions")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, (r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    let v = |s: &str, o: &str, rs: &str, c: Option<&str>| (s.into(), o.into(), rs.into(), c.map(String::from));
+    assert_eq!(
+        versions,
+        BTreeMap::from([
+            (rv(1), v("needs_review", "legacy_manual", "active", Some("2026-08-31T09:00:00.000Z"))),
+            (rv(2), v("needs_review", "legacy_template", "active", None)),
+            (rv(3), v("draft", "legacy_copied", "active", None)),
+            (rv(4), v("draft", "legacy_manual", "archived", None)),
+            (rv(0x11), v("needs_review", "legacy_copied", "active", Some("2026-10-14T18:00:00.000Z"))),
+            (rv(0x21), v("needs_review", "legacy_manual", "active", None)),
+        ])
+    );
+    assert_eq!(count(&conn, "SELECT count(*) FROM rulebook_versions WHERE verified_at IS NOT NULL"), 0);
+
+    // Rules keep their IDs; personal rules are overrides, never provider claims.
+    assert_eq!(count(&conn, "SELECT count(*) FROM rule_definitions WHERE id IN (SELECT id FROM legacy_account_rules)"), 18);
+    assert_eq!(
+        count(&conn, "SELECT count(*) FROM rule_definitions d JOIN legacy_account_rules l ON l.id = d.id
+                      WHERE (l.origin = 'personal') <> (d.override_kind IS 'personal_limit') OR d.provider_label IS NOT NULL"),
+        0
+    );
+    // Rules of versions with a source reference carry an unreviewed claim on it.
+    assert_eq!(count(&conn, "SELECT count(*) FROM rule_claims WHERE claim_status = 'candidate' AND origin = 'user_entered'"), 13);
+
+    // Assignments are the matrix's intervals.
+    let assignments: Vec<(String, String, Option<String>, String)> = conn
+        .prepare("SELECT rulebook_version_id, effective_from, effective_to, assignment_source
+                  FROM account_rulebook_assignments ORDER BY rulebook_version_id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    let a = |id: String, from: &str, to: Option<&str>, src: &str| (id, from.into(), to.map(String::from), src.into());
+    assert_eq!(
+        assignments,
+        vec![
+            a(rv(1), "2026-09-01", Some("2026-10-01"), "legacy_manual"),
+            a(rv(2), "2026-10-01", None, "legacy_template"),
+            a(rv(0x11), "2026-10-15", None, "legacy_copied"),
+            a(rv(0x21), "2026-10-01", None, "legacy_manual"),
+        ]
+    );
+
+    // Snapshots still resolve, to the converted version with the same ID.
+    assert_eq!(
+        count(&conn, "SELECT count(*) FROM account_snapshots s JOIN rulebook_versions v ON v.id = s.rulebook_version_id"),
+        3
+    );
+
+    // A private version can never become provider-verified.
+    let err = conn
+        .execute_batch(&format!(
+            "UPDATE rulebook_versions SET verification_status = 'verified', verified_by = 'x', verified_at = '2026-10-20T00:00:00.000Z'
+             WHERE id = '{}'",
+            rv(2)
+        ))
+        .unwrap_err();
+    assert!(err.to_string().contains("never provider-verified"), "{err}");
+}
+
+#[test]
+fn converting_again_changes_nothing() {
+    let (_db, _, conn) = upgraded();
+    let once = dump(&conn, &[]);
+    convert_legacy_rulebooks(&conn).unwrap();
+    assert_eq!(dump(&conn, &[]), once);
+}
+
+/// `packages/domain/test/fixtures/rulebook-legacy-conversion.json`: the
+/// converted rules as the store returns them. The TypeScript tests parse the
+/// same file with the Zod contracts, which pins the two sides together. Set
+/// UPDATE_GOLDEN=1 to rewrite it after an intended change.
+#[test]
+fn converted_rules_match_the_shared_golden_file() {
+    let (_db, _, conn) = upgraded();
+    let mut details = Vec::new();
+    for id in [rv(1), rv(2), rv(3), rv(4), rv(0x11), rv(0x21)] {
+        let d = crate::store::rulebooks::get_version(&conn, &id).unwrap();
+        details.push(serde_json::json!({ "versionId": id, "rules": d.rules }));
+    }
+    let actual = serde_json::to_string_pretty(&details).unwrap() + "\n";
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../packages/domain/test/fixtures/rulebook-legacy-conversion.json");
+    if std::env::var_os("UPDATE_GOLDEN").is_some() {
+        std::fs::write(&path, &actual).unwrap();
+    }
+    let expected = std::fs::read_to_string(&path).unwrap().replace("\r\n", "\n");
+    assert_eq!(actual, expected, "run with UPDATE_GOLDEN=1 if the change is intended");
 }
 
 #[test]

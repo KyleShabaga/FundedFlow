@@ -223,11 +223,24 @@ fn deleting_an_account_removes_everything_it_owns() {
          INSERT INTO trade_reviews (id, trade_id, created_at, updated_at) VALUES ('tr1', 't1', '{T}', '{T}');
          INSERT INTO account_status_events (id, account_id, status, effective_at, created_at)
            VALUES ('s1', 'acc1', 'active', '{T}', '{T}');
-         INSERT INTO rulebook_versions (id, account_id, version_number, effective_from, created_at, updated_at)
+         INSERT INTO legacy_account_rulebook_versions (id, account_id, version_number, effective_from, created_at, updated_at)
            VALUES ('rv1', 'acc1', 1, '2026-11-01', '{T}', '{T}');
-         INSERT INTO rules (id, rulebook_version_id, rule_type, created_at, updated_at)
+         INSERT INTO legacy_account_rules (id, rulebook_version_id, rule_type, created_at, updated_at)
            VALUES ('r1', 'rv1', 'profit_target', '{T}', '{T}');
-         UPDATE rulebook_versions SET status = 'active', activated_at = '{T}' WHERE id = 'rv1';"
+         UPDATE legacy_account_rulebook_versions SET status = 'active', activated_at = '{T}' WHERE id = 'rv1';
+         INSERT INTO rulebooks (id, owner_account_id, slug, display_name, record_status, created_at, updated_at)
+           VALUES ('rb1', 'acc1', 'acc1-rules', 'Rules', 'active', '{T}', '{T}');
+         INSERT INTO rulebook_versions (id, rulebook_id, version_number, schema_version, verification_status, origin,
+                                        captured_at, record_status, created_at, updated_at)
+           VALUES ('nv1', 'rb1', 1, 1, 'draft', 'user_authored', '{T}', 'active', '{T}', '{T}');
+         INSERT INTO rule_definitions (id, rulebook_version_id, rule_key, rule_type, parameter_schema_version,
+                                       parameters_json, support_status, display_order, created_at, updated_at)
+           VALUES ('nr1', 'nv1', 'max_trades_per_day', 'max_trades_per_day', 1,
+                   '{{\"count\":{{\"state\":\"value\",\"value\":3}}}}', 'supported', 0, '{T}', '{T}');
+         UPDATE rulebook_versions SET verification_status = 'needs_review' WHERE id = 'nv1';
+         INSERT INTO account_rulebook_assignments (id, account_id, rulebook_version_id, effective_from, assigned_at,
+                                                   assignment_source)
+           VALUES ('as1', 'acc1', 'nv1', '2026-10-01', '{T}', 'user');"
     ))
     .unwrap();
 
@@ -236,7 +249,8 @@ fn deleting_an_account_removes_everything_it_owns() {
     conn.execute("DELETE FROM accounts WHERE id = 'acc1'", []).unwrap();
     for table in [
         "trades", "import_batches", "import_rows", "journal_entries", "journal_entry_tags", "trade_reviews",
-        "account_status_events", "rulebook_versions", "rules",
+        "account_status_events", "legacy_account_rulebook_versions", "legacy_account_rules",
+        "rulebooks", "rulebook_versions", "rule_definitions", "account_rulebook_assignments",
     ] {
         assert_eq!(count(&conn, table), 0, "{table} should be empty");
     }
@@ -259,50 +273,50 @@ fn hard_deleting_a_trade_unlinks_journal_entries() {
 }
 
 #[test]
-fn activated_rulebooks_are_frozen() {
+fn activated_legacy_rulebooks_are_frozen() {
     let conn = db();
     seed_account(&conn, "acc1");
     conn.execute_batch(&format!(
-        "INSERT INTO rulebook_versions (id, account_id, version_number, effective_from, created_at, updated_at)
+        "INSERT INTO legacy_account_rulebook_versions (id, account_id, version_number, effective_from, created_at, updated_at)
            VALUES ('rv1', 'acc1', 1, '2026-10-01', '{T}', '{T}');
-         INSERT INTO rules (id, rulebook_version_id, rule_type, params_json, created_at, updated_at)
+         INSERT INTO legacy_account_rules (id, rulebook_version_id, rule_type, params_json, created_at, updated_at)
            VALUES ('r1', 'rv1', 'max_drawdown',
                    '{{\"mode\":\"eod_trailing\",\"amount_micros\":2000000000,\"includes_unrealized\":false,\"lock\":null}}',
                    '{T}', '{T}');
-         UPDATE rules SET label = 'Trailing DD' WHERE id = 'r1';
-         UPDATE rulebook_versions SET status = 'active', activated_at = '{T}' WHERE id = 'rv1';"
+         UPDATE legacy_account_rules SET label = 'Trailing DD' WHERE id = 'r1';
+         UPDATE legacy_account_rulebook_versions SET status = 'active', activated_at = '{T}' WHERE id = 'rv1';"
     ))
     .unwrap();
 
-    assert!(conn.execute("UPDATE rules SET params_json = '{}' WHERE id = 'r1'", []).is_err());
-    assert!(conn.execute("DELETE FROM rules WHERE id = 'r1'", []).is_err());
+    assert!(conn.execute("UPDATE legacy_account_rules SET params_json = '{}' WHERE id = 'r1'", []).is_err());
+    assert!(conn.execute("DELETE FROM legacy_account_rules WHERE id = 'r1'", []).is_err());
     assert!(conn
         .execute(
-            &format!("INSERT INTO rules (id, rulebook_version_id, rule_type, created_at, updated_at)
+            &format!("INSERT INTO legacy_account_rules (id, rulebook_version_id, rule_type, created_at, updated_at)
                       VALUES ('r2', 'rv1', 'profit_target', '{T}', '{T}')"),
             [],
         )
         .is_err());
     assert!(conn
-        .execute("UPDATE rulebook_versions SET effective_from = '2026-09-01' WHERE id = 'rv1'", [])
+        .execute("UPDATE legacy_account_rulebook_versions SET effective_from = '2026-09-01' WHERE id = 'rv1'", [])
         .is_err());
     // Retiring is the one allowed transition.
-    conn.execute("UPDATE rulebook_versions SET status = 'retired', updated_at = 'x' WHERE id = 'rv1'", [])
+    conn.execute("UPDATE legacy_account_rulebook_versions SET status = 'retired', updated_at = 'x' WHERE id = 'rv1'", [])
         .unwrap();
 }
 
 #[test]
-fn manual_check_rules_require_manual_confirmation() {
+fn legacy_manual_check_rules_require_manual_confirmation() {
     let conn = db();
     seed_account(&conn, "acc1");
     conn.execute(
-        &format!("INSERT INTO rulebook_versions (id, account_id, version_number, effective_from, created_at, updated_at)
+        &format!("INSERT INTO legacy_account_rulebook_versions (id, account_id, version_number, effective_from, created_at, updated_at)
                   VALUES ('rv1', 'acc1', 1, '2026-10-01', '{T}', '{T}')"),
         [],
     )
     .unwrap();
     let calculated = conn.execute(
-        &format!("INSERT INTO rules (id, rulebook_version_id, rule_type, evaluation, created_at, updated_at)
+        &format!("INSERT INTO legacy_account_rules (id, rulebook_version_id, rule_type, evaluation, created_at, updated_at)
                   VALUES ('r1', 'rv1', 'manual_check', 'calculated', '{T}', '{T}')"),
         [],
     );

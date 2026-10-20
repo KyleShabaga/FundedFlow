@@ -1,16 +1,30 @@
 # Legacy rulebook migration matrix (Build 8.75 → Build 9.5)
 
-Status: **handoff, not implemented.** This is the field-level plan for converting the legacy account-owned
-`rulebook_versions` and `rules` (migration 0001) into the reusable rulebooks of Build 9.5. Build 9.5 owns the
-target schema and may rename target fields. Any decision below that it changes must be recorded here, with
-the evidence tests updated to match.
+Status: **implemented** by migrations 9 (`0009_rulebooks.sql`) and 10 (`convert_legacy_rulebooks` in
+`db/steps.rs`). This is the field-level conversion of the legacy account-owned `rulebook_versions` and `rules`
+(migration 0001) into the reusable rulebooks of Build 9.5. Where Build 9.5 settled a detail differently from the
+original handoff, the "As built" notes below say so.
 
 Evidence: `apps/desktop/src-tauri/src/db/fixtures/fundedflow-v8-legacy-rules.db` and
-`src/db/legacy_rulebook_tests.rs`. The tests pin the fixture's contents, check that this build opens it
-unchanged, and check that the derived values below (assignment intervals, rule keys, parameter keys) can be
-computed from the legacy rows alone.
+`src/db/legacy_rulebook_tests.rs`. The tests check that:
+- every legacy shape is in the fixture;
+- upgrading keeps every legacy row under the renamed tables and converts them as below;
+- running the conversion again changes nothing.
 
-## What exists today
+The converted rules are written to `packages/domain/test/fixtures/rulebook-legacy-conversion.json`, which the
+Zod tests parse.
+
+**As built:**
+- Sources reuse the catalogue's `catalogue_sources`: `source_type = 'user_manual'`, `descriptor` set,
+  `verification_status = 'needs_review'`.
+- Claims are `rule_claims` with `origin = 'user_entered'`, `claim_status = 'candidate'`.
+- Converted versions keep `effective_from`/`effective_to` NULL, because the legacy dates are account trading days,
+  not provider-stated validity; they live on the assignments.
+- The rulebook slug is the account name plus "rules".
+- Legacy params that do not have the documented shape become an `unknown` rule (`unsupported`) whose
+  description quotes them, so nothing is guessed.
+
+## Before migration 9
 
 - The legacy tables are **reserved**: no command or store code reads or writes them, in any release so far.
   So a user's journal can hold legacy rulebook rows only if they were written outside the app. The
@@ -63,7 +77,7 @@ and, if it was ever active, one assignment.
 | `effective_from` (trading day) | `account_rulebook_assignments.effective_from` | Same trading day | |
 | (derived) | `account_rulebook_assignments.effective_to` | Next active-or-retired, non-deleted version of the account by `effective_from` (query below); half-open | `assignment_intervals_…` test |
 | `source = 'manual' / 'template' / 'copied'` | `rulebook_versions.origin` and `assignment_source` | `'legacy_manual'` / `'legacy_template'` / `'legacy_copied'` | all three present |
-| `source_reference` | `rule_sources` (one per version) | `source_type = 'manual_descriptor'`, `descriptor = source_reference`, `captured_at = created_at`, verification `'candidate'`; linked to every rule of the version as an unreviewed claim | 3 versions |
+| `source_reference` | `catalogue_sources` (one per version) | `source_type = 'user_manual'`, `descriptor = source_reference`, `captured_at = created_at`, `verification_status = 'needs_review'`; each rule of the version gets a `rule_claims` row (`user_entered`, `candidate`) | 3 versions |
 | `verified_at` | `rulebook_versions.user_confirmed_at` | Same instant; **not** `verified_at` (decision 3) | 2 versions |
 | `activated_at` | `account_rulebook_assignments.assigned_at` | Same instant | |
 | `notes_md` | `rulebook_versions.change_reason` | Same text | |
@@ -108,12 +122,18 @@ Every legacy key, and nothing else, appears in the fixture (`legacy_parameters_u
 
 | `rule_type` | Legacy params | Target parameters |
 |---|---|---|
-| `profit_target` | `amount_micros` | `{ kind: "amount", amount }` (decimal string from micros) |
-| `daily_loss_limit` | `amount_micros`, `basis` (`realized` / `realized_and_unrealized`) | `{ amount, includesUnrealized: basis = 'realized_and_unrealized', resetBasis: "account_trading_day" }` |
-| `max_drawdown` | `mode` (`static` / `eod_trailing` / `intraday_trailing`), `amount_micros`, `includes_unrealized`, `lock` (`{trigger_balance_micros, locked_floor_micros}` or null) | `{ method: "static" / "end_of_day_trailing" / "intraday_trailing", amount, includesUnrealized, lock: { triggerBalance, lockedFloor } / null }` |
-| `min_trading_days` | `days`, `min_day_profit_micros` (or null) | `qualifying_profit_days`-compatible `{ days, minDayProfit / null }` |
-| `consistency` | `max_best_day_share_bps` | `{ maxBestDayShare: bps / 10000 as decimal string }` (3000 → `"0.3"`) |
-| `max_position_size` | `max_contracts`, `symbol_root` (or null) | `{ capacity: [{ contractClass: symbol_root / "any", max: max_contracts }] }`; several legacy rows of one version stay separate rules and are **not** merged into an "either/or" capacity |
+As built. Values are tagged presences (`{ state: "value", value }`). A legacy `value_state = 'unknown'` gives
+every value `{ state: "unknown" }` and `needs_setup`. A calculated rule marked `manual_confirmation` becomes a
+`manual_check` quoting it.
+
+| `rule_type` | Legacy params | Target parameters |
+|---|---|---|
+| `profit_target` | `amount_micros` | `{ amount, basis: "unknown" }` (decimal string from micros) |
+| `daily_loss_limit` | `amount_micros`, `basis` (`realized` / `realized_and_unrealized`) | `{ limit, basis, resetBasis: "account_trading_day", breach: "unknown", condition: "always" }` |
+| `max_drawdown` | `mode` (`static` / `eod_trailing` / `intraday_trailing`), `amount_micros`, `includes_unrealized`, `lock` (`{trigger_balance_micros, locked_floor_micros}` or null) | `{ amount, method: "static" / "end_of_day_trailing" / "intraday_trailing", basis, lock: value { triggerBalance, lockedFloor } / explicit_none }` |
+| `min_trading_days` | `days`, `min_day_profit_micros` (or null) | `{ days, minDayProfit: value / explicit_none, dayBasis: "trading_day" }` |
+| `consistency` | `max_best_day_share_bps` | `{ maxBestDayShare: bps / 10000 as decimal string, denominator: "unknown", appliesTo: "unknown" }` (3000 → `"0.3"`) |
+| `max_position_size` | `max_contracts`, `symbol_root` (or null) | `{ limits: [{ contractClass: "any", symbolRoot, maxContracts }], combination: "each", microsPerMini: unknown }`; several legacy rows of one version stay separate rules and are **not** merged into an "either/or" capacity |
 | `max_trades_per_day` | `count` | `{ count }` |
 | `manual_check` | `description` | `{ description }` |
 

@@ -1,0 +1,430 @@
+[
+  {
+    "rules": [
+      {
+        "displayLabel": "Profit target",
+        "displayOrder": 0,
+        "id": "01900000-0000-7000-8000-0000000a0001-r0",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "amount": {
+            "state": "value",
+            "value": "3000"
+          },
+          "basis": "unknown"
+        },
+        "providerLabel": null,
+        "ruleKey": "profit_target",
+        "ruleType": "profit_target",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0001",
+        "sourceText": null,
+        "supportStatus": "supported"
+      },
+      {
+        "displayLabel": null,
+        "displayOrder": 1,
+        "id": "01900000-0000-7000-8000-0000000a0001-r1",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "basis": "realized",
+          "breach": "unknown",
+          "condition": "always",
+          "limit": {
+            "state": "value",
+            "value": "1000"
+          },
+          "resetBasis": "account_trading_day"
+        },
+        "providerLabel": null,
+        "ruleKey": "daily_loss_limit",
+        "ruleType": "daily_loss_limit",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0001",
+        "sourceText": null,
+        "supportStatus": "supported"
+      },
+      {
+        "displayLabel": "Trailing drawdown",
+        "displayOrder": 2,
+        "id": "01900000-0000-7000-8000-0000000a0001-r2",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "amount": {
+            "state": "value",
+            "value": "2000"
+          },
+          "basis": "realized",
+          "lock": {
+            "state": "value",
+            "value": {
+              "lockedFloor": "50100",
+              "triggerBalance": "52100"
+            }
+          },
+          "method": "end_of_day_trailing"
+        },
+        "providerLabel": null,
+        "ruleKey": "max_drawdown",
+        "ruleType": "max_drawdown",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0001",
+        "sourceText": null,
+        "supportStatus": "supported"
+      },
+      {
+        "displayLabel": null,
+        "displayOrder": 3,
+        "id": "01900000-0000-7000-8000-0000000a0001-r3",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "dayBasis": "trading_day",
+          "days": {
+            "state": "value",
+            "value": 5
+          },
+          "minDayProfit": {
+            "state": "value",
+            "value": "150"
+          }
+        },
+        "providerLabel": null,
+        "ruleKey": "min_trading_days",
+        "ruleType": "min_trading_days",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0001",
+        "sourceText": null,
+        "supportStatus": "supported"
+      },
+      {
+        "displayLabel": null,
+        "displayOrder": 4,
+        "id": "01900000-0000-7000-8000-0000000a0001-r4",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "appliesTo": "unknown",
+          "denominator": "unknown",
+          "maxBestDayShare": {
+            "state": "value",
+            "value": "0.5"
+          }
+        },
+        "providerLabel": null,
+        "ruleKey": "consistency",
+        "ruleType": "consistency",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0001",
+        "sourceText": null,
+        "supportStatus": "supported"
+      },
+      {
+        "displayLabel": "4 minis",
+        "displayOrder": 5,
+        "id": "01900000-0000-7000-8000-0000000a0001-r5",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "combination": "each",
+          "limits": {
+            "state": "value",
+            "value": [
+              {
+                "contractClass": "any",
+                "maxContracts": 4,
+                "symbolRoot": "ES"
+              }
+            ]
+          },
+          "microsPerMini": {
+            "state": "unknown"
+          }
+        },
+        "providerLabel": null,
+        "ruleKey": "max_position_size:firm:5",
+        "ruleType": "max_position_size",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0001",
+        "sourceText": null,
+        "supportStatus": "supported"
+      },
+      {
+        "displayLabel": "40 micros",
+        "displayOrder": 6,
+        "id": "01900000-0000-7000-8000-0000000a0001-r6",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "combination": "each",
+          "limits": {
+            "state": "value",
+            "value": [
+              {
+                "contractClass": "any",
+                "maxContracts": 40,
+                "symbolRoot": "MES"
+              }
+            ]
+          },
+          "microsPerMini": {
+            "state": "unknown"
+          }
+        },
+        "providerLabel": null,
+        "ruleKey": "max_position_size:firm:6",
+        "ruleType": "max_position_size",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0001",
+        "sourceText": null,
+        "supportStatus": "supported"
+      },
+      {
+        "displayLabel": "My limit",
+        "displayOrder": 7,
+        "id": "01900000-0000-7000-8000-0000000a0001-r7",
+        "overrideKind": "personal_limit",
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "count": {
+            "state": "value",
+            "value": 6
+          }
+        },
+        "providerLabel": null,
+        "ruleKey": "max_trades_per_day:personal",
+        "ruleType": "max_trades_per_day",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0001",
+        "sourceText": null,
+        "supportStatus": "supported"
+      },
+      {
+        "displayLabel": "News",
+        "displayOrder": 8,
+        "id": "01900000-0000-7000-8000-0000000a0001-r8",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "description": "No trading during tier-1 news"
+        },
+        "providerLabel": null,
+        "ruleKey": "manual_check:firm:8",
+        "ruleType": "manual_check",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0001",
+        "sourceText": null,
+        "supportStatus": "manual_only"
+      },
+      {
+        "displayLabel": null,
+        "displayOrder": 9,
+        "id": "01900000-0000-7000-8000-0000000a0001-r9",
+        "overrideKind": "personal_limit",
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "description": "Stop after two losses"
+        },
+        "providerLabel": null,
+        "ruleKey": "manual_check:personal:9",
+        "ruleType": "manual_check",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0001",
+        "sourceText": null,
+        "supportStatus": "manual_only"
+      }
+    ],
+    "versionId": "01900000-0000-7000-8000-0000000a0001"
+  },
+  {
+    "rules": [
+      {
+        "displayLabel": null,
+        "displayOrder": 0,
+        "id": "01900000-0000-7000-8000-0000000a0002-r0",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "amount": {
+            "state": "value",
+            "value": "3000"
+          },
+          "basis": "unknown"
+        },
+        "providerLabel": null,
+        "ruleKey": "profit_target",
+        "ruleType": "profit_target",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0002",
+        "sourceText": null,
+        "supportStatus": "supported"
+      },
+      {
+        "displayLabel": "Drawdown (to confirm)",
+        "displayOrder": 1,
+        "id": "01900000-0000-7000-8000-0000000a0002-r1",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "amount": {
+            "state": "unknown"
+          },
+          "basis": "unknown",
+          "lock": {
+            "state": "unknown"
+          },
+          "method": "unknown"
+        },
+        "providerLabel": null,
+        "ruleKey": "max_drawdown",
+        "ruleType": "max_drawdown",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0002",
+        "sourceText": null,
+        "supportStatus": "needs_setup"
+      },
+      {
+        "displayLabel": null,
+        "displayOrder": 2,
+        "id": "01900000-0000-7000-8000-0000000a0002-r2",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "basis": "unknown",
+          "breach": "unknown",
+          "condition": "unknown",
+          "limit": {
+            "state": "unknown"
+          },
+          "resetBasis": "unknown"
+        },
+        "providerLabel": null,
+        "ruleKey": "daily_loss_limit",
+        "ruleType": "daily_loss_limit",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0002",
+        "sourceText": null,
+        "supportStatus": "needs_setup"
+      }
+    ],
+    "versionId": "01900000-0000-7000-8000-0000000a0002"
+  },
+  {
+    "rules": [
+      {
+        "displayLabel": null,
+        "displayOrder": 0,
+        "id": "01900000-0000-7000-8000-0000000a0003-r0",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "amount": {
+            "state": "value",
+            "value": "2500"
+          },
+          "basis": "unknown"
+        },
+        "providerLabel": null,
+        "ruleKey": "profit_target",
+        "ruleType": "profit_target",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0003",
+        "sourceText": null,
+        "supportStatus": "supported"
+      }
+    ],
+    "versionId": "01900000-0000-7000-8000-0000000a0003"
+  },
+  {
+    "rules": [],
+    "versionId": "01900000-0000-7000-8000-0000000a0004"
+  },
+  {
+    "rules": [
+      {
+        "displayLabel": null,
+        "displayOrder": 0,
+        "id": "01900000-0000-7000-8000-0000000a0011-r0",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "basis": "realized_and_unrealized",
+          "breach": "unknown",
+          "condition": "always",
+          "limit": {
+            "state": "value",
+            "value": "1000"
+          },
+          "resetBasis": "account_trading_day"
+        },
+        "providerLabel": null,
+        "ruleKey": "daily_loss_limit",
+        "ruleType": "daily_loss_limit",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0011",
+        "sourceText": null,
+        "supportStatus": "supported"
+      },
+      {
+        "displayLabel": null,
+        "displayOrder": 1,
+        "id": "01900000-0000-7000-8000-0000000a0011-r1",
+        "overrideKind": null,
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "amount": {
+            "state": "value",
+            "value": "2000"
+          },
+          "basis": "realized_and_unrealized",
+          "lock": {
+            "state": "explicit_none"
+          },
+          "method": "static"
+        },
+        "providerLabel": null,
+        "ruleKey": "max_drawdown",
+        "ruleType": "max_drawdown",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0011",
+        "sourceText": null,
+        "supportStatus": "supported"
+      }
+    ],
+    "versionId": "01900000-0000-7000-8000-0000000a0011"
+  },
+  {
+    "rules": [
+      {
+        "displayLabel": null,
+        "displayOrder": 0,
+        "id": "01900000-0000-7000-8000-0000000a0021-r0",
+        "overrideKind": "personal_limit",
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "count": {
+            "state": "value",
+            "value": 3
+          }
+        },
+        "providerLabel": null,
+        "ruleKey": "max_trades_per_day:personal",
+        "ruleType": "max_trades_per_day",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0021",
+        "sourceText": null,
+        "supportStatus": "supported"
+      },
+      {
+        "displayLabel": "My stop",
+        "displayOrder": 1,
+        "id": "01900000-0000-7000-8000-0000000a0021-r1",
+        "overrideKind": "personal_limit",
+        "parameterSchemaVersion": 1,
+        "parameters": {
+          "basis": "realized",
+          "breach": "unknown",
+          "condition": "always",
+          "limit": {
+            "state": "value",
+            "value": "300"
+          },
+          "resetBasis": "account_trading_day"
+        },
+        "providerLabel": null,
+        "ruleKey": "daily_loss_limit:personal",
+        "ruleType": "daily_loss_limit",
+        "rulebookVersionId": "01900000-0000-7000-8000-0000000a0021",
+        "sourceText": null,
+        "supportStatus": "supported"
+      }
+    ],
+    "versionId": "01900000-0000-7000-8000-0000000a0021"
+  }
+]

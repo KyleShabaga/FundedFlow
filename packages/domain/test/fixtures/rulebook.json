@@ -1,0 +1,462 @@
+{
+  "description": "Synthetic 50K FLEX-shaped rulebook (candidate claims only, never a real provider's terms). Versions a1/a2/a3 are the rulebook IDs catalogue.json's Evaluation phase, Daily and Flex paths reference.",
+  "rulebooks": [
+    {
+      "id": "01900000-0000-7000-8000-000000000090",
+      "providerId": "01900000-0000-7000-8000-000000000001",
+      "ownerAccountId": null,
+      "slug": "example-50k-flex",
+      "displayName": "Example 50K FLEX",
+      "description": "Synthetic terms; not a real provider's rules.",
+      "recordStatus": "active",
+      "createdAt": "2026-10-19T18:00:00.000Z",
+      "updatedAt": "2026-10-19T18:00:00.000Z"
+    }
+  ],
+  "versions": [
+    {
+      "id": "01900000-0000-7000-8000-0000000000a1",
+      "rulebookId": "01900000-0000-7000-8000-000000000090",
+      "versionNumber": 1,
+      "schemaVersion": 1,
+      "verificationStatus": "needs_review",
+      "origin": "catalogue",
+      "capturedAt": "2026-10-19T18:00:00.000Z",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "verifiedBy": null,
+      "verifiedAt": null,
+      "userConfirmedAt": null,
+      "changeReason": "Evaluation terms",
+      "supersedesVersionId": null,
+      "recordStatus": "active",
+      "createdAt": "2026-10-19T18:00:00.000Z",
+      "updatedAt": "2026-10-19T18:00:00.000Z"
+    },
+    {
+      "id": "01900000-0000-7000-8000-0000000000a2",
+      "rulebookId": "01900000-0000-7000-8000-000000000090",
+      "versionNumber": 2,
+      "schemaVersion": 1,
+      "verificationStatus": "needs_review",
+      "origin": "catalogue",
+      "capturedAt": "2026-10-19T18:00:00.000Z",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "verifiedBy": null,
+      "verifiedAt": null,
+      "userConfirmedAt": null,
+      "changeReason": "Funded, Daily path",
+      "supersedesVersionId": null,
+      "recordStatus": "active",
+      "createdAt": "2026-10-19T18:00:00.000Z",
+      "updatedAt": "2026-10-19T18:00:00.000Z"
+    },
+    {
+      "id": "01900000-0000-7000-8000-0000000000a3",
+      "rulebookId": "01900000-0000-7000-8000-000000000090",
+      "versionNumber": 3,
+      "schemaVersion": 1,
+      "verificationStatus": "needs_review",
+      "origin": "catalogue",
+      "capturedAt": "2026-10-19T18:00:00.000Z",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "verifiedBy": null,
+      "verifiedAt": null,
+      "userConfirmedAt": null,
+      "changeReason": "Funded, Flex path",
+      "supersedesVersionId": null,
+      "recordStatus": "active",
+      "createdAt": "2026-10-19T18:00:00.000Z",
+      "updatedAt": "2026-10-19T18:00:00.000Z"
+    }
+  ],
+  "rules": [
+    {
+      "id": "01900000-0000-7000-8000-000000000101",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a1",
+      "ruleKey": "profit_target",
+      "ruleType": "profit_target",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "Profit Target",
+      "displayLabel": null,
+      "sourceText": "$3,000",
+      "supportStatus": "supported",
+      "overrideKind": null,
+      "displayOrder": 0,
+      "parameters": {
+        "amount": {
+          "state": "value",
+          "value": "3000"
+        },
+        "basis": "unknown"
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000102",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a1",
+      "ruleKey": "daily_loss_limit",
+      "ruleType": "daily_loss_limit",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "DLL",
+      "displayLabel": null,
+      "sourceText": "OFF",
+      "supportStatus": "supported",
+      "overrideKind": null,
+      "displayOrder": 1,
+      "parameters": {
+        "limit": {
+          "state": "disabled"
+        },
+        "basis": "unknown",
+        "resetBasis": "unknown",
+        "breach": "unknown",
+        "condition": "always"
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000103",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a1",
+      "ruleKey": "max_drawdown",
+      "ruleType": "max_drawdown",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "Max Loss (EOD)",
+      "displayLabel": null,
+      "sourceText": "$2,000 EOD",
+      "supportStatus": "needs_setup",
+      "overrideKind": null,
+      "displayOrder": 2,
+      "parameters": {
+        "amount": {
+          "state": "value",
+          "value": "2000"
+        },
+        "method": "unknown",
+        "basis": "unknown",
+        "lock": {
+          "state": "unknown"
+        }
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000104",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a1",
+      "ruleKey": "consistency",
+      "ruleType": "consistency",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "Consistency",
+      "displayLabel": null,
+      "sourceText": "50%",
+      "supportStatus": "supported",
+      "overrideKind": null,
+      "displayOrder": 3,
+      "parameters": {
+        "maxBestDayShare": {
+          "state": "value",
+          "value": "0.5"
+        },
+        "denominator": "unknown",
+        "appliesTo": "evaluation"
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000105",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a1",
+      "ruleKey": "max_position_size",
+      "ruleType": "max_position_size",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "Max Contracts",
+      "displayLabel": null,
+      "sourceText": "4 minis OR 40 micros",
+      "supportStatus": "needs_setup",
+      "overrideKind": null,
+      "displayOrder": 4,
+      "parameters": {
+        "limits": {
+          "state": "value",
+          "value": [
+            {
+              "contractClass": "mini",
+              "symbolRoot": null,
+              "maxContracts": 4
+            },
+            {
+              "contractClass": "micro",
+              "symbolRoot": null,
+              "maxContracts": 40
+            }
+          ]
+        },
+        "combination": "unknown",
+        "microsPerMini": {
+          "state": "unknown"
+        }
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000201",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a2",
+      "ruleKey": "max_drawdown",
+      "ruleType": "max_drawdown",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "Max Loss",
+      "displayLabel": null,
+      "sourceText": "$2,000",
+      "supportStatus": "needs_setup",
+      "overrideKind": null,
+      "displayOrder": 0,
+      "parameters": {
+        "amount": {
+          "state": "value",
+          "value": "2000"
+        },
+        "method": "unknown",
+        "basis": "unknown",
+        "lock": {
+          "state": "unknown"
+        }
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000202",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a2",
+      "ruleKey": "daily_loss_limit",
+      "ruleType": "daily_loss_limit",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "DLL (Below Initial Trail)",
+      "displayLabel": null,
+      "sourceText": "NONE",
+      "supportStatus": "supported",
+      "overrideKind": null,
+      "displayOrder": 1,
+      "parameters": {
+        "limit": {
+          "state": "explicit_none"
+        },
+        "basis": "unknown",
+        "resetBasis": "unknown",
+        "breach": "unknown",
+        "condition": "below_initial_trail"
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000203",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a2",
+      "ruleKey": "consistency",
+      "ruleType": "consistency",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "Consistency",
+      "displayLabel": null,
+      "sourceText": "- (No Consistency in Funded)",
+      "supportStatus": "supported",
+      "overrideKind": null,
+      "displayOrder": 2,
+      "parameters": {
+        "maxBestDayShare": {
+          "state": "explicit_none"
+        },
+        "denominator": "unknown",
+        "appliesTo": "payout"
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000204",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a2",
+      "ruleKey": "min_trading_days",
+      "ruleType": "min_trading_days",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "Profit days",
+      "displayLabel": null,
+      "sourceText": "5 days of $150",
+      "supportStatus": "supported",
+      "overrideKind": null,
+      "displayOrder": 3,
+      "parameters": {
+        "days": {
+          "state": "value",
+          "value": 5
+        },
+        "minDayProfit": {
+          "state": "value",
+          "value": "150"
+        },
+        "dayBasis": "unknown"
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000205",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a2",
+      "ruleKey": "payout_eligibility",
+      "ruleType": "payout_eligibility",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "Payout",
+      "displayLabel": null,
+      "sourceText": "after 5 days",
+      "supportStatus": "supported",
+      "overrideKind": null,
+      "displayOrder": 4,
+      "parameters": {
+        "initialWaitingDays": {
+          "state": "value",
+          "value": 5
+        },
+        "frequency": {
+          "state": "unknown"
+        },
+        "minBalance": {
+          "state": "unknown"
+        },
+        "minProfit": {
+          "state": "unknown"
+        },
+        "perRequestCap": {
+          "state": "unknown"
+        }
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000206",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a2",
+      "ruleKey": "payout_count_transition",
+      "ruleType": "payout_count_transition",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "Payouts to Live",
+      "displayLabel": null,
+      "sourceText": "5",
+      "supportStatus": "supported",
+      "overrideKind": null,
+      "displayOrder": 5,
+      "parameters": {
+        "payoutsRequired": {
+          "state": "value",
+          "value": 5
+        },
+        "nextPhase": "live_funded"
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000207",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a2",
+      "ruleKey": "scaling_plan",
+      "ruleType": "scaling_plan",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "Scaling plan",
+      "displayLabel": null,
+      "sourceText": "Yes",
+      "supportStatus": "needs_setup",
+      "overrideKind": null,
+      "displayOrder": 6,
+      "parameters": {
+        "offered": {
+          "state": "value",
+          "value": true
+        },
+        "schedule": {
+          "state": "unknown"
+        }
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000301",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a3",
+      "ruleKey": "max_drawdown",
+      "ruleType": "max_drawdown",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "Max Loss",
+      "displayLabel": null,
+      "sourceText": "$2,000",
+      "supportStatus": "needs_setup",
+      "overrideKind": null,
+      "displayOrder": 0,
+      "parameters": {
+        "amount": {
+          "state": "value",
+          "value": "2000"
+        },
+        "method": "unknown",
+        "basis": "unknown",
+        "lock": {
+          "state": "unknown"
+        }
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000302",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a3",
+      "ruleKey": "daily_loss_limit",
+      "ruleType": "daily_loss_limit",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "DLL",
+      "displayLabel": null,
+      "sourceText": null,
+      "supportStatus": "needs_setup",
+      "overrideKind": null,
+      "displayOrder": 1,
+      "parameters": {
+        "limit": {
+          "state": "unknown"
+        },
+        "basis": "unknown",
+        "resetBasis": "unknown",
+        "breach": "unknown",
+        "condition": "unknown"
+      }
+    },
+    {
+      "id": "01900000-0000-7000-8000-000000000303",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a3",
+      "ruleKey": "news",
+      "ruleType": "trading_restriction",
+      "parameterSchemaVersion": 1,
+      "providerLabel": "News",
+      "displayLabel": null,
+      "sourceText": null,
+      "supportStatus": "manual_only",
+      "overrideKind": null,
+      "displayOrder": 2,
+      "parameters": {
+        "category": "news",
+        "description": "Flat 2 minutes around tier-1 news"
+      }
+    }
+  ],
+  "applicability": [
+    {
+      "id": "01900000-0000-7000-8000-0000000000b1",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a1",
+      "catalogueVersionId": "01900000-0000-7000-8000-000000000031",
+      "programmePhaseId": "01900000-0000-7000-8000-000000000041",
+      "phasePathId": null
+    },
+    {
+      "id": "01900000-0000-7000-8000-0000000000b2",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a2",
+      "catalogueVersionId": "01900000-0000-7000-8000-000000000031",
+      "programmePhaseId": "01900000-0000-7000-8000-000000000042",
+      "phasePathId": "01900000-0000-7000-8000-000000000051"
+    },
+    {
+      "id": "01900000-0000-7000-8000-0000000000b3",
+      "rulebookVersionId": "01900000-0000-7000-8000-0000000000a3",
+      "catalogueVersionId": "01900000-0000-7000-8000-000000000031",
+      "programmePhaseId": "01900000-0000-7000-8000-000000000042",
+      "phasePathId": "01900000-0000-7000-8000-000000000052"
+    }
+  ],
+  "claims": [
+    {
+      "id": "01900000-0000-7000-8000-0000000000c1",
+      "ruleDefinitionId": "01900000-0000-7000-8000-000000000101",
+      "sourceId": "01900000-0000-7000-8000-000000000091",
+      "field": "amount",
+      "origin": "provider_stated",
+      "providerText": "Profit Target $3,000",
+      "claimStatus": "candidate",
+      "note": null,
+      "reviewedBy": null,
+      "reviewedAt": null,
+      "createdAt": "2026-10-19T18:00:00.000Z"
+    }
+  ]
+}

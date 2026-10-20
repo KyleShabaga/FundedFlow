@@ -10,8 +10,18 @@ import {
   type JournalRepository,
   RepositoryError,
   accountInputSchema,
+  accountRulebookAssignmentSchema,
   accountSchema,
   appErrorSchema,
+  applicableRulebookQuerySchema,
+  applicableRulebookSchema,
+  assignmentInputSchema,
+  draftIssueSchema,
+  ruleClaimSchema,
+  rulebookDraftInputSchema,
+  rulebookSchema,
+  rulebookVersionDetailSchema,
+  sourceConflictInputSchema,
   csvImportRequestSchema,
   csvPreviewSchema,
   importBatchSchema,
@@ -78,6 +88,24 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
         call("commit_csv_import", { request: validate(csvImportRequestSchema, request) }, importBatchSchema),
       list: (accountId) => call("list_csv_imports", { accountId }, z.array(importBatchSchema)),
       problemRows: (batchId) => call("list_csv_import_problem_rows", { batchId }, z.array(importRowRecordSchema)),
+    },
+    rulebooks: {
+      list: (accountId) => call("list_rulebooks", { accountId }, z.array(rulebookSchema)),
+      listVersions: (rulebookId) =>
+        call("list_rulebook_versions", { rulebookId }, z.array(rulebookVersionDetailSchema)),
+      getVersion: (id) => call("get_rulebook_version", { id }, rulebookVersionDetailSchema),
+      getApplicable: (query) =>
+        call("get_applicable_rulebook", { query: validate(applicableRulebookQuerySchema, query) }, applicableRulebookSchema),
+      createDraft: (input) =>
+        call("create_rulebook_draft", { input: validate(rulebookDraftInputSchema, input) }, rulebookVersionDetailSchema),
+      validateDraft: (id) => call("validate_rulebook_draft", { id }, z.array(draftIssueSchema)),
+      publish: (id, reviewer) => call("publish_rulebook_version", { id, reviewer }, rulebookVersionDetailSchema),
+      assign: (input) =>
+        call("assign_rulebook_to_account", { input: validate(assignmentInputSchema, input) }, accountRulebookAssignmentSchema),
+      listAssignments: (accountId) =>
+        call("list_account_rulebook_assignments", { accountId }, z.array(accountRulebookAssignmentSchema)),
+      flagSourceConflict: (input) =>
+        call("flag_rulebook_source_conflict", { input: validate(sourceConflictInputSchema, input) }, ruleClaimSchema),
     },
   };
 }
