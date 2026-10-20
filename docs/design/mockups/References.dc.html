@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reference screens</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;background:#070b14}
+.ref{display:grid;gap:10px;align-content:start}
+.ref-img{height:236px;border-radius:10px;border:1px solid var(--line-100);background:#000;display:grid;place-items:center;overflow:hidden}
+.ref-img img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.ref h3{margin:0;font:600 14px/20px var(--font-display)}
+.ref p{margin:0;font-size:12.5px;line-height:18px;color:var(--ink-muted)}
+.ref .to{font-size:12px;color:var(--flow);font-weight:600}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="width: 1440px; height: 2300px; box-sizing: border-box; padding: 48px 56px; background: var(--bg-000); color: var(--ink); font: 400 14px/20px var(--font-sans); display: flex; flex-direction: column; gap: 32px;">
+  <div>
+    <h1 class="h1">Reference screens from the chat</h1>
+    <p class="sub" style="max-width: 900px;">All 18 images you shared, with what each one fed into on this canvas. FundedFlow keeps the patterns, not the look: every screen is drawn in the FundedFlow tokens and components.</p>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px 24px;">
+    <div class="ref"><div class="ref-img"><img src="/_blob/6951b9265f8dfeb0bef312278b387c00" alt="TraderWaves dashboard with net P&amp;L, risk and balance chart"></div><h3>TraderWaves · Dashboard metrics</h3><p>Net P&amp;L with win rate, profit factor and expectancy, a risk block and a stepped balance chart.</p><span class="to">→ 1 · Dashboard KPI row and balance</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/356e7a948c48c97e2575b3a839a8e707" alt="TradeZella dashboard with KPI tiles, cumulative P&amp;L and calendar"></div><h3>TradeZella · Dashboard</h3><p>Tiles with a small gauge or ratio bar beside each number; cumulative and daily P&amp;L charts.</p><span class="to">→ 1 · Dashboard tiles, Win rate gauge</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/bdb11c9f6add276205fde0211b2b959f" alt="TraderWaves home with quick actions and app tiles"></div><h3>TraderWaves · Home</h3><p>Greeting, quick actions, "continue where you left off" and the apps grouped by space.</p><span class="to">→ Home</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/d64d9e052676100a6584f59e67d34fc4" alt="TraderWaves accounts table"></div><h3>TraderWaves · Accounts</h3><p>Platform, name, type, provider, balance, last sync and row actions, with page size and paging.</p><span class="to">→ 2 · Accounts table</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/4a34021ecdfb6e5e5d2aee7f3c1eb446" alt="Journal entries grouped by day with stats and balance chart"></div><h3>Journal · Entries by day</h3><p>A collapsible day with a stats strip, a balance-over-time chart and that day's trades.</p><span class="to">→ 3 · Journal, By day</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/30868d5a6e12b86919628022faf77d22" alt="TraderWaves daily journal with recent activity list"></div><h3>TraderWaves · Daily journal</h3><p>Recent days down the side with sparklines; Overview, Notes and Trades tabs for the chosen day.</p><span class="to">→ 3 · Journal days, Calendar day panel</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/f86e92a5f984e39be18effdd64a30b1d" alt="Trade log with tiles and a paginated table"></div><h3>Trade log · Your logs</h3><p>Summary tiles over a selectable table with tags, entry and exit times in the account zone, paging.</p><span class="to">→ 3 · Journal, Trade log</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/cd863d93939d8981eac6a3d6d784a042" alt="TraderSync trade log with status, side, setups and mistakes"></div><h3>TraderSync · Trade log</h3><p>WIN/LOSS and LONG/SHORT badges, setup tags, and setups and mistakes ranked by P&amp;L on the side.</p><span class="to">→ 3 · Trade log badges, 7 · Setups and mistakes</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/39602e8b57d0083328c5114e8050e4d3" alt="TradeZella trade log with reviewed column and mistakes"></div><h3>TradeZella · Trade log</h3><p>A Reviewed column, realized R multiple and mistake chips per trade.</p><span class="to">→ Trade detail review, 3 · Trade log</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/f074380b250daaf866e1b34f1924f04d" alt="TraderWaves trade history with rating and mindset"></div><h3>TraderWaves · Trade history</h3><p>Rating, mindset and strategy tags on every trade, with a summary row above.</p><span class="to">→ Trade detail: rating, mindset, strategy</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/9fcf352d4ead6ce49e8487d00aa4f9b0" alt="TraderSync trade detail with chart, executions, targets and stops"></div><h3>TraderSync · Trade detail</h3><p>Chart with entries and exits, trade summary, targets, stops, executions, setups and mistakes.</p><span class="to">→ Trade detail and review</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/13f8b4a991f3c5d15799d31f3ce2eebe" alt="TraderWaves journal library with search"></div><h3>TraderWaves · Library</h3><p>Saved trade journals, daily journals, strategies and templates, searchable by symbol.</p><span class="to">→ Journal library</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/1203205cbaa8e9f2f59d7f0e7df73af7" alt="TraderWaves calendar with yearly performance"></div><h3>TraderWaves · Calendar</h3><p>Month grid with week totals, daily win rate, net daily P&amp;L and a yearly performance strip.</p><span class="to">→ 4 · Calendar and yearly performance</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/986ad1ebb47816f8edaabd07a6b95d9d" alt="TraderSync calendar with setup tags per day"></div><h3>TraderSync · Calendar</h3><p>Full-colour days with trade counts and setup tags; week totals in the last column.</p><span class="to">→ 4 · Calendar day cells</span></div>
+    <div class="ref"><div class="ref-img" style="background: var(--bg-100);"><img src="/_blob/80bf7a53514687fd4e97e9e55b44b8d6" alt="Day ending in 04:17:27 chip" style="transform: scale(2);"></div><h3>Day ending timer</h3><p>A pill that counts down to the end of the trading day.</p><span class="to">→ 5 · Day-ending timer</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/0f25b14f789e1f4e08e3fc2c3806fd2a" alt="Reports overview with all-time stats"></div><h3>Reports · Overview</h3><p>Best, lowest and average month over two all-time stat lists; sections by date, time, instrument and tags.</p><span class="to">→ 7 · Reports</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/b0e5e0505289f18d247a00e5a7f307f4" alt="TraderWaves reports overview with 32 metrics"></div><h3>TraderWaves · Reports</h3><p>Grouped metrics (performance, outcomes, risk, activity) with info icons and tabbed report areas.</p><span class="to">→ 7 · Reports metric groups</span></div>
+    <div class="ref"><div class="ref-img"><img src="/_blob/ef7f39a96044df3d32737c4e2b6744ef" alt="TradingView economic calendar"></div><h3>TradingView · Economic calendar</h3><p>Events by time and country with importance, actual, forecast and prior values.</p><span class="to">→ Economic calendar, Dashboard events strip</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":2300}}'>
+class Component extends DCLogic {
+  renderVals() { return { theme: this.props.theme ?? 'dark' }; }
+}
+</script>
+</body>
+</html>

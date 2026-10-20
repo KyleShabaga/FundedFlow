@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Economic calendar</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;background:#070b14}
+.imp{display:inline-flex;gap:2px;align-items:flex-end;height:14px}
+.imp i{width:4px;border-radius:1px;background:var(--bg-300);display:block}
+.imp i:nth-child(1){height:6px}.imp i:nth-child(2){height:10px}.imp i:nth-child(3){height:14px}
+.imp.l1 i:nth-child(1){background:var(--ink-faint)}
+.imp.l2 i:nth-child(-n+2){background:var(--warn)}
+.imp.l3 i{background:var(--loss)}
+.cc{display:inline-grid;place-items:center;width:28px;height:20px;border-radius:4px;background:var(--bg-300);font:600 10.5px/1 var(--font-mono);color:var(--ink)}
+</style>
+</helmet>
+<div class="app" data-theme="{{theme}}">
+  <dc-import name="Sidebar" active="econ" hint-size="248px,100%"></dc-import>
+  <div class="app-main">
+    <dc-import name="Topbar" hint-size="100%,64px"></dc-import>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="h1">Economic calendar</h1>
+          <p class="sub">Scheduled releases that can move your markets, in your account's time zone (America/Chicago).</p>
+        </div>
+        <label style="display: flex; gap: 8px; align-items: center; font-size: 13px;"><input type="checkbox" class="check" checked="{{mine}}" onChange="{{toggleMine}}"> Only countries for my instruments (MNQ, MES: US)</label>
+      </div>
+
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+        <div class="seg" role="group" aria-label="Importance">
+          <sc-for list="{{levels}}" as="l" hint-placeholder-count="3"><button type="button" class="{{l.cls}}" aria-pressed="{{l.on}}" onClick="{{l.pick}}">{{l.label}}</button></sc-for>
+        </div>
+        <div class="seg" role="group" aria-label="Range"><button type="button" class="is-on" aria-pressed="true">Today + tomorrow</button><button type="button" aria-pressed="false">This week</button></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start;">
+        <section class="dt-card" aria-label="Events">
+          <div class="dt-scroll">
+            <table class="dt">
+              <thead><tr><th><span>Time</span></th><th><span>Country</span></th><th><span>Impact</span></th><th><span>Event</span></th><th class="num"><span>Actual</span></th><th class="num"><span>Forecast</span></th><th class="num"><span>Prior</span></th><th><span></span></th></tr></thead>
+              <tbody>
+                <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+                  <tr><td colspan="8" style="background: var(--bg-200); font: 600 12px/16px var(--font-sans); color: var(--ink-muted); letter-spacing: .4px;">{{g.day}}</td></tr>
+                  <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="6">
+                    <tr style="{{r.trStyle}}">
+                      <td class="mono" style="font-weight: 600;">{{r.time}}</td>
+                      <td><span style="display: flex; gap: 8px; align-items: center;"><span class="cc">{{r.cc}}</span>{{r.country}}</span></td>
+                      <td><span class="{{r.impCls}}" aria-label="{{r.impLabel}}" role="img"><i></i><i></i><i></i></span></td>
+                      <td style="white-space: normal;">{{r.event}}</td>
+                      <td class="num"><span class="{{r.actCls}}">{{r.actual}}</span></td>
+                      <td class="num" style="color: var(--ink-muted);">{{r.forecast}}</td>
+                      <td class="num" style="color: var(--ink-muted);">{{r.prior}}</td>
+                      <td><span class="{{r.tagCls}}">{{r.tag}}</span></td>
+                    </tr>
+                  </sc-for>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+          <div class="dt-foot"><span>Source: placeholder data until a calendar feed is chosen</span><span>Updated 4:12 PM</span></div>
+        </section>
+
+        <aside style="display: grid; gap: 16px;">
+          <section class="card" style="padding: 16px; display: grid; gap: 12px;">
+            <h2 class="h2">During your session</h2>
+            <p style="margin: 0; color: var(--ink-muted); font-size: 13px;">You usually trade 07:30–11:00 CT. One high-impact US release falls inside that window tomorrow.</p>
+            <div style="display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 8px; background: var(--loss-soft);"><span class="mono" style="font-weight: 600;">07:30</span><span style="flex: 1;">US · Initial jobless claims</span><span class="badge b-loss">High</span></div>
+          </section>
+          <section class="card" style="padding: 16px; display: grid; gap: 10px;">
+            <h2 class="h2">News rules on your accounts</h2>
+            <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 13px;"><span>Topstep $50K</span><span class="badge b-flow">Manual check</span></div>
+            <p class="faint" style="margin: 0;">"No trading 1 minute before and after tier-1 releases." Recorded in the rulebook as a manual check, so FundedFlow reminds you but does not enforce it.</p>
+            <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 13px;"><span>Apex $100K</span><span class="badge b-neutral">None</span></div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":1060}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { min: 1, mine: false }; }
+  renderVals() {
+    var self = this, st = this.state;
+    var all = [
+      { d: 0, time: '02:30', cc: 'TR', country: 'Turkey', imp: 1, event: 'Central government debt stock', actual: '—', forecast: '—', prior: '15,893.8B' },
+      { d: 0, time: '15:30', cc: 'US', country: 'United States', imp: 2, event: 'API weekly crude stock', actual: '−1.281M', forecast: '−1.0M', prior: '−11.123M', surprise: 'neg' },
+      { d: 0, time: '15:30', cc: 'US', country: 'United States', imp: 1, event: 'API Cushing number', actual: '1.823M', forecast: '—', prior: '0.81M' },
+      { d: 0, time: '15:30', cc: 'US', country: 'United States', imp: 1, event: 'API weekly gasoline stock', actual: '−0.35M', forecast: '—', prior: '1.091M' },
+      { d: 0, time: '17:00', cc: 'KR', country: 'South Korea', imp: 2, event: 'BOK manufacturing BSI', actual: '—', forecast: '—', prior: '72', now: true },
+      { d: 0, time: '18:50', cc: 'JP', country: 'Japan', imp: 2, event: 'Exports YoY', actual: '—', forecast: '20.1%', prior: '19.3%' },
+      { d: 0, time: '18:50', cc: 'JP', country: 'Japan', imp: 2, event: 'Trade balance', actual: '—', forecast: '−181B', prior: '−1,111.9B' },
+      { d: 1, time: '01:00', cc: 'UK', country: 'United Kingdom', imp: 3, event: 'Core CPI YoY', actual: '—', forecast: '2.7%', prior: '2.6%' },
+      { d: 1, time: '07:30', cc: 'US', country: 'United States', imp: 3, event: 'Initial jobless claims', actual: '—', forecast: '231K', prior: '228K', session: true },
+      { d: 1, time: '09:30', cc: 'US', country: 'United States', imp: 2, event: 'EIA crude oil inventories', actual: '—', forecast: '−1.2M', prior: '−2.4M', session: true },
+      { d: 1, time: '13:00', cc: 'US', country: 'United States', imp: 3, event: 'FOMC member speaks', actual: '—', forecast: '—', prior: '—' }
+    ];
+    var levels = [[1, 'All'], [2, 'Medium and high'], [3, 'High only']].map(function (l) {
+      var on = st.min === l[0];
+      return { label: l[1], on: on, cls: on ? 'is-on' : '', pick: function () { self.setState({ min: l[0] }); } };
+    });
+    var rows = all.filter(function (r) { return r.imp >= st.min && (!st.mine || r.cc === 'US'); });
+    var map = function (r) {
+      return Object.assign({}, r, {
+        impCls: 'imp l' + r.imp, impLabel: ['', 'Low', 'Medium', 'High'][r.imp] + ' impact',
+        actCls: r.surprise === 'neg' ? 'neg' : r.actual === '—' ? 'faint' : '',
+        tag: r.now ? 'Next' : r.session ? 'In your session' : '', tagCls: r.now ? 'badge b-flow' : r.session ? 'badge b-warn' : '',
+        trStyle: r.now ? 'box-shadow: inset 0 2px 0 var(--flow);' : ''
+      });
+    };
+    var groups = [
+      { day: 'Today · Tuesday, Oct 20', rows: rows.filter(function (r) { return r.d === 0; }).map(map) },
+      { day: 'Tomorrow · Wednesday, Oct 21', rows: rows.filter(function (r) { return r.d === 1; }).map(map) }
+    ].filter(function (g) { return g.rows.length; });
+    return { theme: this.props.theme ?? 'dark', levels: levels, groups: groups, mine: st.mine, toggleMine: function () { self.setState({ mine: !st.mine }); } };
+  }
+}
+</script>
+</body>
+</html>

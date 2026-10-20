@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dashboard</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}</style>
+</helmet>
+<div class="app" data-theme="{{theme}}">
+  <dc-import name="Sidebar" active="dashboard" start-collapsed="{{collapsed}}" hint-size="248px,100%"></dc-import>
+  <div class="app-main">
+    <dc-import name="Topbar" hint-size="100%,64px"></dc-import>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="h1">Dashboard</h1>
+          <p class="sub">Apex $100K · PA-48213 and Topstep $50K · Combine #2, Sep 20 – Oct 20, 2026</p>
+        </div>
+        <div class="seg" role="group" aria-label="P&amp;L basis">
+          <button type="button" class="is-on" aria-pressed="true">Net P&amp;L</button>
+          <button type="button" aria-pressed="false">Gross P&amp;L</button>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="card tile">
+          <div style="display: flex; justify-content: space-between;"><span class="label">Net P&amp;L</span><span class="faint">579 trades</span></div>
+          <x-import component-from-global-scope="FundedFlow.Pnl" value="{{204.32}}" size="xl"></x-import>
+          <div class="faint">After $1,672.18 in commissions and fees</div>
+        </div>
+        <div class="card tile" style="grid-template-columns: 1fr auto; align-items: end;">
+          <div style="display: grid; gap: 8px;">
+            <span class="label">Win rate</span>
+            <span class="tile-v">61.1%</span>
+            <span class="faint">354 W · 225 L</span>
+          </div>
+          <x-import component-from-global-scope="FundedFlow.WinGauge" wins="{{354}}" losses="{{225}}" width="{{104}}"></x-import>
+        </div>
+        <div class="card tile">
+          <span class="label">Profit factor</span>
+          <span class="tile-v">1.02</span>
+          <span class="faint">Gross wins ÷ gross losses</span>
+        </div>
+        <div class="card tile">
+          <span class="label">Avg win / avg loss</span>
+          <span class="tile-v">0.65</span>
+          <div style="display: flex; height: 6px; border-radius: 4px; overflow: hidden; gap: 2px;"><div style="flex: 24.8; background: var(--profit);"></div><div style="flex: 38.12; background: var(--loss);"></div></div>
+          <div style="display: flex; justify-content: space-between;" class="mono"><span class="pos" style="font-size: 12px;">+$24.80</span><span class="neg" style="font-size: 12px;">−$38.12</span></div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 16px; align-items: start;">
+        <section class="card" style="padding: 16px; display: grid; gap: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+            <h2 class="h2">Balance · Apex $100K</h2>
+            <span style="display: flex; gap: 12px; align-items: baseline;"><span class="mono" style="font-weight: 600;">$105,100.00</span><span class="mono pos">+$5,100.00</span></span>
+          </div>
+          <x-import component-from-global-scope="FundedFlow.EquityCurve" points="{{bal}}" floor="{{floor}}" target="{{106000}}" height="{{220}}"></x-import>
+          <div style="display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--ink-muted);">
+            <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 14px; border-top: 2px solid var(--flow);"></span>Balance</span>
+            <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 14px; border-top: 2px dashed var(--loss);"></span>Drawdown floor</span>
+            <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 14px; border-top: 2px dashed var(--profit);"></span>Profit target</span>
+          </div>
+        </section>
+        <section class="card" style="padding: 16px; display: grid; gap: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;"><h2 class="h2">Rules today</h2><x-import component-from-global-scope="FundedFlow.Badge" tone="flow">Evaluation</x-import></div>
+          <div style="display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 8px; background: var(--bg-200); font-size: 12px;">
+            <span>Rulebook <b>Apex 100K Evaluation · v3</b></span>
+            <span class="pos" style="font-weight: 600;">Verified</span>
+          </div>
+          <x-import component-from-global-scope="FundedFlow.RuleMeter" label="Profit target" kind="target" used="{{5100}}" limit="{{6000}}"></x-import>
+          <x-import component-from-global-scope="FundedFlow.RuleMeter" label="Trailing drawdown (EOD)" used="{{2200}}" limit="{{3000}}" note="Floor $100,000"></x-import>
+          <x-import component-from-global-scope="FundedFlow.RuleMeter" label="Minimum trading days" kind="count" used="{{6}}" limit="{{7}}" unit="day"></x-import>
+          <div style="display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line-100);">
+            <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px;"><span class="label">Daily loss limit</span><span class="badge b-neutral">None</span></div>
+            <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; align-items: center;"><span class="label">Consistency</span><span style="display: flex; gap: 8px; align-items: center;"><span class="badge b-warn">Needs setup</span><a href="#rulebook" class="btn btn-ghost btn-sm">Add best-day share</a></span></div>
+            <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; align-items: center;"><span class="label">No trading during red-folder news</span><span class="badge b-flow">Manual check</span></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="card" style="padding: 16px; display: grid; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;"><h2 class="h2">High-impact events today</h2><a href="#econ" class="btn btn-ghost btn-sm">Economic calendar</a></div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px;">
+          <div style="display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 8px; background: var(--bg-200);"><span class="mono" style="font-weight: 600;">08:30</span><span>US · API weekly crude stock</span><span class="badge b-warn" style="margin-left: auto;">High</span></div>
+          <div style="display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 8px; background: var(--bg-200);"><span class="mono" style="font-weight: 600;">17:50</span><span>JP · Trade balance</span><span class="badge b-neutral" style="margin-left: auto;">Medium</span></div>
+          <div style="display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 8px; background: var(--bg-200);"><span class="mono" style="font-weight: 600;">00:00</span><span>UK · Core CPI YY</span><span class="badge b-warn" style="margin-left: auto;">High</span></div>
+        </div>
+        <p class="faint" style="margin: 0;">Times in America/Chicago. Event data is a placeholder until a calendar source is chosen.</p>
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"collapsed":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      theme: this.props.theme ?? 'dark',
+      collapsed: !!this.props.collapsed,
+      bal: [100000, 100250, 99800, 100120, 101400, 101100, 102300, 102050, 103400, 103900, 103300, 104800, 105300, 105100],
+      floor: [97000, 97250, 97250, 97250, 98400, 98400, 99300, 99300, 100000, 100000, 100000, 100000, 100000, 100000]
+    };
+  }
+}
+</script>
+</body>
+</html>

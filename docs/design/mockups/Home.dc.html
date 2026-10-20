@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;background:#070b14}
+.qa{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line-100);background:var(--bg-100);color:var(--ink);text-decoration:none;font:500 13px/18px var(--font-sans)}
+.qa:hover{border-color:var(--line-200)}
+.appt{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:12px;border:1px solid var(--line-100);background:var(--bg-100);color:var(--ink);text-decoration:none}
+.appt:hover{border-color:var(--line-200);background:var(--bg-200)}
+.appt-i{width:36px;height:36px;border-radius:8px;background:var(--flow-soft);color:var(--flow);display:grid;place-items:center;flex:none}
+</style>
+</helmet>
+<div class="app" data-theme="{{theme}}">
+  <dc-import name="Sidebar" active="home" hint-size="248px,100%"></dc-import>
+  <div class="app-main">
+    <dc-import name="Topbar" hint-size="100%,64px"></dc-import>
+    <main class="page" style="max-width: 1200px;">
+      <div>
+        <h1 class="h1" style="font-size: 32px; line-height: 40px;"><span class="flowc">Good afternoon,</span> Kyle</h1>
+        <p class="sub">Monday's session closed up. Review it, then plan tomorrow.</p>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <a href="Import.dc.html" class="qa"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M4 15v5h16v-5"></path></svg>Import trades</a>
+        <a href="#add" class="qa"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add trade</a>
+        <a href="Journal.dc.html" class="qa"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5zM9 8h6M9 12h6"></path></svg>Review today</a>
+        <a href="EconCalendar.dc.html" class="qa"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM3 12h18"></path></svg>Today's events</a>
+        <a href="Accounts.dc.html" class="qa"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 11h18"></path></svg>Check account rules</a>
+      </div>
+
+      <div style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start;">
+        <section class="card" style="padding: 18px 20px; display: grid; gap: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div><span class="overline flowc">Continue</span><h2 class="h2" style="margin-top: 4px;">Review Monday, Oct 19</h2></div>
+            <a href="Journal.dc.html" class="btn btn-primary">Open journal</a>
+          </div>
+          <div class="strip">
+            <div><span class="label">Net P&amp;L</span><x-import component-from-global-scope="FundedFlow.Pnl" value="{{1197.6}}" size="m"></x-import></div>
+            <div><span class="label">Trades</span><b>67</b></div>
+            <div><span class="label">Win rate</span><b>61.2%</b></div>
+            <div><span class="label">Notes</span><b style="font-family: var(--font-sans); font-size: 14px;" class="wrn">Review missing</b></div>
+          </div>
+        </section>
+        <section class="card" style="padding: 18px 20px; display: grid; gap: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;"><h2 class="h2">Accounts today</h2><dc-import name="DayTimer" seconds-left="{{15447}}" hint-size="220px,34px"></dc-import></div>
+          <div style="display: grid; gap: 10px;">
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center;"><span><b>Apex $100K</b> <span class="faint">Evaluation</span></span><span class="badge b-warn">73% of drawdown</span><div class="mini-track" style="grid-column: 1 / -1;"><div class="mini-fill wrn" style="width: 73%;"></div></div></div>
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center;"><span><b>Topstep $50K</b> <span class="faint">Funded</span></span><span class="badge b-flow">10% of drawdown</span><div class="mini-track" style="grid-column: 1 / -1;"><div class="mini-fill" style="width: 10%;"></div></div></div>
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center;"><span><b>FTMO $100K</b> <span class="faint">Passed</span></span><span class="badge b-profit">Target hit</span><div class="mini-track" style="grid-column: 1 / -1;"><div class="mini-fill pos" style="width: 100%;"></div></div></div>
+          </div>
+        </section>
+      </div>
+
+      <section style="display: grid; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;"><h2 class="h2">Recent days</h2><a href="Calendar.dc.html" class="btn btn-ghost btn-sm">Calendar</a></div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+          <x-import component-from-global-scope="FundedFlow.DayCard" date="Mon Oct 19" trades="{{67}}" pnl="{{1197.6}}" win-rate="{{61}}" spark="{{s1}}"></x-import>
+          <x-import component-from-global-scope="FundedFlow.DayCard" date="Fri Oct 16" trades="{{41}}" pnl="{{-1281.8}}" win-rate="{{39}}" spark="{{s2}}"></x-import>
+          <x-import component-from-global-scope="FundedFlow.DayCard" date="Thu Oct 15" trades="{{3}}" pnl="{{562.1}}" win-rate="{{100}}" spark="{{s3}}"></x-import>
+          <x-import component-from-global-scope="FundedFlow.DayCard" date="Wed Oct 14" trades="{{1}}" pnl="{{-177}}" win-rate="{{0}}" spark="{{s4}}"></x-import>
+        </div>
+      </section>
+
+      <section style="display: grid; gap: 16px;">
+        <h2 class="h2">Everything in FundedFlow</h2>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+          <a href="Main.dc.html" class="appt"><span class="appt-i"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z"></path></svg></span><span><b>Dashboard</b><br><span class="faint">Performance and rules at a glance</span></span></a>
+          <a href="Journal.dc.html" class="appt"><span class="appt-i"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5zM9 8h6M9 12h6M9 16h4"></path></svg></span><span><b>Journal</b><br><span class="faint">Turn each day into lessons</span></span></a>
+          <a href="Calendar.dc.html" class="appt"><span class="appt-i"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v16H4zM4 9h16M8 3v4M16 3v4"></path></svg></span><span><b>Calendar</b><br><span class="faint">P&amp;L by day, week and month</span></span></a>
+          <a href="Reports.dc.html" class="appt"><span class="appt-i"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M2 20h20"></path></svg></span><span><b>Reports</b><br><span class="faint">Where your edge comes from</span></span></a>
+          <a href="Accounts.dc.html" class="appt"><span class="appt-i"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 11h18M7 15h3"></path></svg></span><span><b>Accounts</b><br><span class="faint">Rules, limits and room left</span></span></a>
+          <a href="Import.dc.html" class="appt"><span class="appt-i"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M4 15v5h16v-5"></path></svg></span><span><b>Import trades</b><br><span class="faint">From your platform's CSV</span></span></a>
+          <a href="Library.dc.html" class="appt"><span class="appt-i"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v16H4zM10 4h4v16h-4zM15 5l4-1 3 15-4 1z"></path></svg></span><span><b>Library</b><br><span class="faint">Saved notes, playbooks, templates</span></span></a>
+          <a href="EconCalendar.dc.html" class="appt"><span class="appt-i"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"></path></svg></span><span><b>Economic calendar</b><br><span class="faint">Events that move your markets</span></span></a>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      theme: this.props.theme ?? 'dark',
+      s1: [0, 24, 70, 150, 420, 610, 905, 1197.6], s2: [0, -120, -300, -260, -700, -1100, -1281.8], s3: [0, 210, 180, 420, 562.1], s4: [0, -60, -177]
+    };
+  }
+}
+</script>
+</body>
+</html>

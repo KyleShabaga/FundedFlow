@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Day-ending timer</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}</style>
+</helmet>
+<div data-theme="{{theme}}" style="width: 1440px; height: 760px; box-sizing: border-box; padding: 48px 56px; background: var(--bg-000); color: var(--ink); font: 400 14px/20px var(--font-sans); display: flex; flex-direction: column; gap: 32px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px;">
+    <div>
+      <h1 class="h1">Day-ending timer</h1>
+      <p class="sub" style="max-width: 760px;">Counts down to the account's trading-day reset (its time zone and reset time), the moment daily loss limits start over. It lives in the top bar on every screen.</p>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;">
+    <div class="card" style="padding: 20px; display: grid; gap: 14px; align-content: start;">
+      <span class="overline">Normal · more than 1 hour</span>
+      <dc-import name="DayTimer" seconds-left="{{15447}}" hint-size="220px,34px"></dc-import>
+      <p style="margin: 0; color: var(--ink-muted); font-size: 13px;">Brand blue on a soft ground. Quiet enough to ignore while you trade.</p>
+    </div>
+    <div class="card" style="padding: 20px; display: grid; gap: 14px; align-content: start;">
+      <span class="overline">Last hour</span>
+      <dc-import name="DayTimer" seconds-left="{{2530}}" hint-size="220px,34px"></dc-import>
+      <p style="margin: 0; color: var(--ink-muted); font-size: 13px;">Amber from 60 minutes: time to decide whether to take another setup.</p>
+    </div>
+    <div class="card" style="padding: 20px; display: grid; gap: 14px; align-content: start;">
+      <span class="overline">Last 15 minutes</span>
+      <dc-import name="DayTimer" seconds-left="{{511}}" hint-size="220px,34px"></dc-import>
+      <p style="margin: 0; color: var(--ink-muted); font-size: 13px;">Red from 15 minutes. Firms that flatten positions at the reset close them here.</p>
+    </div>
+    <div class="card" style="padding: 20px; display: grid; gap: 14px; align-content: start;">
+      <span class="overline">Weekend</span>
+      <dc-import name="DayTimer" closed="{{true}}" hint-size="220px,34px"></dc-import>
+      <p style="margin: 0; color: var(--ink-muted); font-size: 13px;">Grey while closed. Weekend activity counts toward Monday's trading day.</p>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 24px; align-items: start;">
+    <div class="card" style="padding: 20px; display: grid; gap: 12px;">
+      <h2 class="h2">Behaviour</h2>
+      <ul style="margin: 0; padding-left: 18px; display: grid; gap: 8px; color: var(--ink-muted);">
+        <li>One account selected: counts to that account's reset, in its own time zone (for example 5:00 PM America/Chicago).</li>
+        <li>Several accounts: shows the soonest reset; clicking it lists each account (right).</li>
+        <li>At zero the label changes to "New trading day" for one minute, and the dashboard's daily-loss meters drop back to zero.</li>
+        <li>Screen readers hear the time on focus only; it never announces every second.</li>
+        <li>Hover shows the exact reset: "Your account's trading day resets at 5:00 PM CT. Daily loss limits reset then."</li>
+      </ul>
+    </div>
+    <div class="pop" role="dialog" aria-label="Trading day resets" style="padding: 8px;">
+      <div style="padding: 10px 12px 6px;"><span class="overline">Trading day resets</span></div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 8px; background: var(--bg-200);">
+        <div style="display: grid;"><span style="font-weight: 600;">Apex $100K</span><span class="faint">5:00 PM · America/Chicago</span></div>
+        <span class="mono flowc" style="font-weight: 600;">04:17:27</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px;">
+        <div style="display: grid;"><span style="font-weight: 600;">Topstep $50K</span><span class="faint">5:00 PM · America/Chicago</span></div>
+        <span class="mono flowc" style="font-weight: 600;">04:17:27</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px;">
+        <div style="display: grid;"><span style="font-weight: 600;">FTMO $100K</span><span class="faint">Midnight · Europe/Prague</span></div>
+        <span class="mono flowc" style="font-weight: 600;">10:17:27</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() { return { theme: this.props.theme ?? 'dark' }; }
+}
+</script>
+</body>
+</html>

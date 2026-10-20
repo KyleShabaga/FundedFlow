@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Import trades</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}</style>
+</helmet>
+<div class="app" data-theme="{{theme}}">
+  <dc-import name="Sidebar" active="import" hint-size="248px,100%"></dc-import>
+  <div class="app-main">
+    <dc-import name="Topbar" hint-size="100%,64px"></dc-import>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="h1">Import trades</h1>
+          <p class="sub">Check every row before anything is saved. The file stays on this computer.</p>
+        </div>
+      </div>
+
+      <ol aria-label="Import steps" style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+        <li style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; background: var(--bg-100); border: 1px solid var(--line-100);"><span style="width: 24px; height: 24px; border-radius: 50%; background: var(--profit-soft); color: var(--profit); display: grid; place-items: center;"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span><span><span class="faint">Step 1</span><br>Choose file</span></li>
+        <li style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; background: var(--bg-100); border: 1px solid var(--line-100);"><span style="width: 24px; height: 24px; border-radius: 50%; background: var(--profit-soft); color: var(--profit); display: grid; place-items: center;"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span><span><span class="faint">Step 2</span><br>Match columns</span></li>
+        <li aria-current="step" style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; background: var(--flow-soft); border: 1px solid var(--flow);"><span style="width: 24px; height: 24px; border-radius: 50%; background: var(--flow-fill); color: var(--on-flow); display: grid; place-items: center; font: 600 12px/1 var(--font-mono);">3</span><span><span class="faint">Step 3</span><br><b>Review rows</b></span></li>
+        <li style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; background: var(--bg-100); border: 1px solid var(--line-100);"><span style="width: 24px; height: 24px; border-radius: 50%; background: var(--bg-300); color: var(--ink-muted); display: grid; place-items: center; font: 600 12px/1 var(--font-mono);">4</span><span><span class="faint">Step 4</span><br>Import</span></li>
+      </ol>
+
+      <section class="card" style="padding: 16px 20px; display: grid; grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <span style="width: 40px; height: 40px; border-radius: 8px; background: var(--bg-200); display: grid; place-items: center; color: var(--ink-muted);"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"></path></svg></span>
+          <div style="display: grid;"><b>Performance.csv</b><span class="faint">67 rows · 9.8 KB · read on this computer</span></div>
+        </div>
+        <div style="display: grid; gap: 4px;"><span class="label">Format</span><span style="display: flex; gap: 6px; align-items: center;"><span class="badge b-flow">Detected</span> Performance export (paired fills)</span><span class="faint">Tradovate: buy first = long, sell first = short</span></div>
+        <label class="field" for="imp-acct"><span class="label">Import into</span><select id="imp-acct" class="input select"><option>Apex $100K · PA-48213</option><option>Topstep $50K · XFA-1182</option></select></label>
+        <div style="display: grid; gap: 4px;"><span class="label">Dates</span><span>Month / day / year</span><span class="faint">Every date fits only this order (10/19/2026)</span></div>
+      </section>
+
+      <div class="kpis" style="grid-template-columns: repeat(5, minmax(0, 1fr));">
+        <div class="card tile"><span class="label">Will import</span><span class="tile-v">64</span><span class="faint">1 of them restores a deleted trade</span></div>
+        <div class="card tile"><span class="label">Net P&amp;L of new trades</span><span class="tile-v pos">+$1,172.00</span><span class="faint">After $125.40 in fees</span></div>
+        <div class="card tile"><span class="label">Duplicates · skipped</span><span class="tile-v">2</span><span class="faint">Same fill pair already saved</span></div>
+        <div class="card tile"><span class="label">Errors · left out</span><span class="tile-v neg">1</span><span class="faint">Fix in the file and import again</span></div>
+        <div class="card tile"><span class="label">Warnings</span><span class="tile-v wrn">2</span><span class="faint">Imported, worth a look</span></div>
+      </div>
+
+      <section class="dt-card" aria-label="Rows in the file">
+        <div class="dt-toolbar">
+          <div class="seg" role="group" aria-label="Show rows">
+            <sc-for list="{{filters}}" as="f" hint-placeholder-count="6">
+              <button type="button" class="{{f.cls}}" aria-pressed="{{f.on}}" onClick="{{f.pick}}">{{f.label}} <span class="mono" style="font-size: 11px; color: var(--ink-faint);">{{f.n}}</span></button>
+            </sc-for>
+          </div>
+          <span class="faint">Showing {{shown}} · original cells are kept with each trade</span>
+        </div>
+        <div class="dt-scroll">
+          <table class="dt">
+            <thead><tr>
+              <th class="num"><span>Line</span></th><th><span>Status</span></th><th><span>Symbol</span></th><th><span>Side</span></th>
+              <th class="num"><span>Qty</span></th><th><span>Opened</span></th><th class="num"><span>Entry</span></th><th class="num"><span>Exit</span></th>
+              <th class="num"><span>File P&amp;L</span></th><th class="num"><span>Net P&amp;L</span></th><th><span>Fill IDs</span></th><th><span>Details</span></th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{rows}}" as="r" hint-placeholder-count="10">
+                <tr style="{{r.trStyle}}">
+                  <td class="num" style="color: var(--ink-faint);">{{r.line}}</td>
+                  <td><span class="{{r.stCls}}">{{r.st}}</span></td>
+                  <td class="sym">{{r.sym}}</td>
+                  <td><span class="{{r.sideCls}}">{{r.side}}</span></td>
+                  <td class="num">{{r.qty}}</td>
+                  <td class="mono" style="font-size: 12.5px;">{{r.time}}</td>
+                  <td class="num">{{r.entry}}</td><td class="num">{{r.exit}}</td>
+                  <td class="num" style="color: var(--ink-muted);">{{r.file}}</td>
+                  <td class="num"><span class="{{r.netCls}}">{{r.net}}</span></td>
+                  <td class="mono" style="font-size: 11.5px; color: var(--ink-faint);">{{r.fills}}</td>
+                  <td style="white-space: normal; min-width: 260px; font-size: 12.5px;"><span class="{{r.noteCls}}">{{r.note}}</span></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 20px; border-color: var(--line-200); box-shadow: var(--shadow-pop);">
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--flow);"><path d="M12 3l8 4v6c0 4-3.5 7-8 8c-4.5-1-8-4-8-8V7z"></path></svg>
+          <span>Nothing is saved until you import. All 64 trades are written together, or none are.</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <x-import component-from-global-scope="FundedFlow.Button">Cancel</x-import>
+          <x-import component-from-global-scope="FundedFlow.Button" variant="primary">Import 64 trades into Apex $100K</x-import>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":1460}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { f: 'all' }; }
+  renderVals() {
+    var self = this, f = this.state.f;
+    var all = [
+      { line: 2, st: 'new', sym: 'MNQZ6', side: 'Long', qty: 1, time: '07:47:48', entry: '29,774.25', exit: '29,787.25', file: '$26.00', net: 24.10, fills: '…450007 / …450023', note: '' },
+      { line: 3, st: 'dup', sym: 'MNQZ6', side: 'Long', qty: 1, time: '07:47:48', entry: '29,774.25', exit: '29,774.25', file: '$0.00', net: -1.90, fills: '…450007 / …450038', note: 'Same fill pair as a trade saved on Oct 19, 4:12 PM' },
+      { line: 4, st: 'new', sym: 'MNQZ6', side: 'Long', qty: 1, time: '07:47:48', entry: '29,774.25', exit: '29,774.25', file: '$0.00', net: -1.90, fills: '…450007 / …450046', note: 'Shares a buy fill with line 3; a different sell fill, so not a duplicate' },
+      { line: 5, st: 'new', sym: 'MNQZ6', side: 'Long', qty: 1, time: '07:50:01', entry: '29,761.25', exit: '29,769.50', file: '$16.50', net: 14.60, fills: '…450060 / …450069', note: '' },
+      { line: 6, st: 'restore', sym: 'MNQZ6', side: 'Long', qty: 1, time: '07:50:01', entry: '29,761.25', exit: '29,779.00', file: '$35.50', net: 33.60, fills: '…450060 / …450086', note: 'Matches a trade you deleted on Oct 20. Importing restores that original trade instead of adding a copy.' },
+      { line: 8, st: 'warn', sym: 'MNQZ6', side: 'Short', qty: 3, time: '07:52:38', entry: '29,733.25', exit: '29,728.25', file: '$30.00', net: 24.30, fills: '…450139 / …450114', note: 'Sell filled before buy, so imported as a short' },
+      { line: 9, st: 'warn', sym: 'MNQZ6', side: 'Short', qty: 3, time: '07:53:05', entry: '29,739.75', exit: '29,738.00', file: '$10.00', net: 4.80, fills: '…450168 / …450123', note: 'File P&L $10.00 differs from calculated $10.50; calculated value used' },
+      { line: 41, st: 'err', sym: 'MNQZ6', side: '—', qty: 0, time: '08:21:14', entry: '29,840.50', exit: '29,841.00', file: '$0.00', net: null, fills: '…450811 / …450830', note: 'qty: must be greater than 0' },
+      { line: 66, st: 'dup', sym: 'MNQZ6', side: 'Long', qty: 3, time: '08:40:18', entry: '29,799.00', exit: '29,805.00', file: '$36.00', net: 30.30, fills: '…451285 / …451304', note: 'Same fill pair as a trade saved on Oct 19, 4:12 PM' },
+      { line: 67, st: 'new', sym: 'MNQZ6', side: 'Long', qty: 3, time: '08:40:18', entry: '29,799.00', exit: '29,805.00', file: '$36.00', net: 30.30, fills: '…451294 / …451304', note: 'Shares a sell fill with line 66 but has its own buy fill, so it is a separate trade' }
+    ];
+    var meta = {
+      new: ['New', 'badge b-profit', ''], restore: ['Restore', 'badge b-flow', 'flowc'], dup: ['Duplicate', 'badge b-neutral', 'faint'],
+      warn: ['Warning', 'badge b-warn', 'wrn'], err: ['Error', 'badge b-loss', 'neg']
+    };
+    var keep = { all: null, new: ['new', 'restore', 'warn'], dup: ['dup'], err: ['err'], warn: ['warn'] };
+    var counts = { all: 67, new: 64, dup: 2, err: 1, warn: 2 };
+    var filters = [['all', 'All'], ['new', 'Will import'], ['dup', 'Duplicates'], ['err', 'Errors'], ['warn', 'Warnings']].map(function (x) {
+      var on = f === x[0];
+      return { label: x[1], n: counts[x[0]], on: on, cls: on ? 'is-on' : '', pick: function () { self.setState({ f: x[0] }); } };
+    });
+    var rows = all.filter(function (r) { return !keep[f] || keep[f].indexOf(r.st) >= 0; }).map(function (r) {
+      var m = meta[r.st], skipped = r.st === 'dup' || r.st === 'err';
+      return Object.assign({}, r, {
+        st: m[0], stCls: m[1], noteCls: m[2],
+        sideCls: r.side === 'Short' ? 'badge b-out-loss' : r.side === 'Long' ? 'badge b-out-profit' : 'faint',
+        net: r.net == null ? '—' : (r.net < 0 ? '−' : '+') + '$' + Math.abs(r.net).toFixed(2),
+        netCls: r.net == null ? 'faint' : r.net < 0 ? 'neg' : 'pos',
+        trStyle: skipped ? 'opacity: .62' : ''
+      });
+    });
+    return { theme: this.props.theme ?? 'dark', filters: filters, rows: rows, shown: rows.length + ' example rows of ' + counts[f] };
+  }
+}
+</script>
+</body>
+</html>

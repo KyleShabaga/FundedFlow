@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Design system coverage</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;background:#070b14}
+.cov{background:var(--bg-100);border:1px solid var(--line-100);border-radius:12px;padding:16px;display:grid;gap:12px;align-content:start;min-width:0}
+.cov-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.cov-h b{font:600 14px/20px var(--font-display)}
+.cov-u{font-size:12px;color:var(--ink-faint)}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="width: 1440px; height: 1640px; box-sizing: border-box; padding: 48px 56px; background: var(--bg-000); color: var(--ink); font: 400 14px/20px var(--font-sans); display: flex; flex-direction: column; gap: 28px;">
+  <div>
+    <h1 class="h1">Design system components on this canvas</h1>
+    <p class="sub" style="max-width: 940px;">All 12 FundedFlow components, mounted from the design system (not redrawn), with the screens that use them. Below: the patterns these screens add, which belong in the design system next.</p>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+    <div class="cov">
+      <div class="cov-h"><b>Button</b><span class="cov-u">Top bar, Accounts, Import</span></div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <x-import component-from-global-scope="FundedFlow.Button" variant="primary">Add trade</x-import>
+        <x-import component-from-global-scope="FundedFlow.Button">Import CSV</x-import>
+        <x-import component-from-global-scope="FundedFlow.Button" variant="ghost">Find insights</x-import>
+        <x-import component-from-global-scope="FundedFlow.Button" variant="danger">Delete account</x-import>
+      </div>
+    </div>
+    <div class="cov">
+      <div class="cov-h"><b>Badge</b><span class="cov-u">Every table, Rules, Import</span></div>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+        <x-import component-from-global-scope="FundedFlow.Badge" tone="profit">Win</x-import>
+        <x-import component-from-global-scope="FundedFlow.Badge" tone="loss">Loss</x-import>
+        <x-import component-from-global-scope="FundedFlow.Badge">BE</x-import>
+        <x-import component-from-global-scope="FundedFlow.Badge" tone="warn">Needs setup</x-import>
+        <x-import component-from-global-scope="FundedFlow.Badge" tone="profit" variant="outline">Long</x-import>
+        <x-import component-from-global-scope="FundedFlow.Badge" tone="loss" variant="outline">Short</x-import>
+        <x-import component-from-global-scope="FundedFlow.Badge" tone="flow">Evaluation</x-import>
+      </div>
+    </div>
+    <div class="cov">
+      <div class="cov-h"><b>Pnl</b><span class="cov-u">Dashboard, every P&amp;L cell</span></div>
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline;">
+        <x-import component-from-global-scope="FundedFlow.Pnl" value="{{1197.6}}" percent="{{1.2}}" size="xl"></x-import>
+        <x-import component-from-global-scope="FundedFlow.Pnl" value="{{-275.73}}"></x-import>
+        <x-import component-from-global-scope="FundedFlow.Pnl" value="{{14250}}" compact="{{true}}"></x-import>
+      </div>
+    </div>
+    <div class="cov">
+      <div class="cov-h"><b>StatTile</b><span class="cov-u">Dashboard, Journal, Reports</span></div>
+      <x-import component-from-global-scope="FundedFlow.StatTile" label="Profit factor" aside="579 trades" value="1.02" sub="Gross wins ÷ gross losses"></x-import>
+    </div>
+    <div class="cov">
+      <div class="cov-h"><b>WinGauge</b><span class="cov-u">Dashboard win-rate tile</span></div>
+      <x-import component-from-global-scope="FundedFlow.WinGauge" wins="{{354}}" losses="{{225}}"></x-import>
+    </div>
+    <div class="cov">
+      <div class="cov-h"><b>Tabs</b><span class="cov-u">Journal views, Reports basis, Trade detail</span></div>
+      <x-import component-from-global-scope="FundedFlow.Tabs" items="{{tabs}}"></x-import>
+    </div>
+    <div class="cov">
+      <div class="cov-h"><b>RuleMeter</b><span class="cov-u">Dashboard rules, Accounts</span></div>
+      <x-import component-from-global-scope="FundedFlow.RuleMeter" label="Daily loss limit" used="{{3600}}" limit="{{5000}}" note="Resets 5:00 PM CT"></x-import>
+      <x-import component-from-global-scope="FundedFlow.RuleMeter" label="Profit target" kind="target" used="{{5100}}" limit="{{6000}}"></x-import>
+    </div>
+    <div class="cov" style="grid-column: span 2;">
+      <div class="cov-h"><b>EquityCurve</b><span class="cov-u">Dashboard balance, Journal day, Trade detail</span></div>
+      <x-import component-from-global-scope="FundedFlow.EquityCurve" points="{{bal}}" floor="{{floor}}" target="{{106000}}" height="{{150}}"></x-import>
+    </div>
+    <div class="cov">
+      <div class="cov-h"><b>AccountCard</b><span class="cov-u">Accounts, Cards view</span></div>
+      <x-import component-from-global-scope="FundedFlow.AccountCard" firm="Apex" size="$100K" name="PA-48213 · Tradovate" phase="Evaluation" balance="{{105100}}" start="{{100000}}" rules="{{rules}}"></x-import>
+    </div>
+    <div class="cov">
+      <div class="cov-h"><b>DayCard</b><span class="cov-u">Journal recent days, Home</span></div>
+      <div style="display: grid; gap: 8px;">
+        <x-import component-from-global-scope="FundedFlow.DayCard" date="Mon Oct 19" trades="{{67}}" pnl="{{1197.6}}" win-rate="{{61}}" spark="{{spark}}" active="{{true}}"></x-import>
+        <x-import component-from-global-scope="FundedFlow.DayCard" date="Fri Oct 16" trades="{{41}}" pnl="{{-1281.8}}" win-rate="{{39}}" spark="{{sparkDown}}"></x-import>
+      </div>
+    </div>
+    <div class="cov">
+      <div class="cov-h"><b>PnlCalendar</b><span class="cov-u">Calendar, Home</span></div>
+      <div style="transform: scale(.62); transform-origin: top left; width: 161%; height: 300px;">
+        <x-import component-from-global-scope="FundedFlow.PnlCalendar" year="{{2026}}" month="{{10}}" today="{{20}}" days="{{days}}"></x-import>
+      </div>
+    </div>
+    <div class="cov" style="grid-column: 1 / -1;">
+      <div class="cov-h"><b>TradeTable</b><span class="cov-u">Trade detail, Journal (the screens extend it with close time, hold and tags)</span></div>
+      <x-import component-from-global-scope="FundedFlow.TradeTable" trades="{{trades}}"></x-import>
+    </div>
+  </div>
+
+  <section style="display: grid; gap: 12px;">
+    <h2 class="h2">Patterns these screens add (not in the design system yet)</h2>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+      <div class="cov"><b style="font: 600 14px/20px var(--font-display);">Sidebar</b><p style="margin: 0; color: var(--ink-muted); font-size: 12.5px;">Collapsible 248 → 72 px rail with groups, counts and a local-save status. Shared component on this canvas.</p></div>
+      <div class="cov"><b style="font: 600 14px/20px var(--font-display);">DataTable</b><p style="margin: 0; color: var(--ink-muted); font-size: 12.5px;">Toolbar, sortable headers with aria-sort, row selection with bulk actions, mini meters, page size and pager.</p></div>
+      <div class="cov"><b style="font: 600 14px/20px var(--font-display);">MonthYearPicker</b><p style="margin: 0; color: var(--ink-muted); font-size: 12.5px;">Popover with a year stepper and 12 P&amp;L-tinted months; future months disabled.</p></div>
+      <div class="cov"><b style="font: 600 14px/20px var(--font-display);">DayTimer</b><p style="margin: 0; color: var(--ink-muted); font-size: 12.5px;">Countdown to the account's trading-day reset; blue, amber at 1 h, red at 15 min, grey when closed.</p></div>
+      <div class="cov"><b style="font: 600 14px/20px var(--font-display);">StatList</b><p style="margin: 0; color: var(--ink-muted); font-size: 12.5px;">Label and value rows for Reports and the selected-day panel.</p></div>
+      <div class="cov"><b style="font: 600 14px/20px var(--font-display);">Stepper</b><p style="margin: 0; color: var(--ink-muted); font-size: 12.5px;">Numbered steps with done and current states, used by Import.</p></div>
+      <div class="cov"><b style="font: 600 14px/20px var(--font-display);">RuleState</b><p style="margin: 0; color: var(--ink-muted); font-size: 12.5px;">Rulebook states beside RuleMeter: Needs setup, None, Off, Manual check, rulebook verified or needing review.</p></div>
+      <div class="cov"><b style="font: 600 14px/20px var(--font-display);">Popover</b><p style="margin: 0; color: var(--ink-muted); font-size: 12.5px;">Menu surface on shadow-pop for the picker, timer resets and column chooser.</p></div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":1640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      theme: this.props.theme ?? 'dark',
+      tabs: [{ id: 'overview', label: 'Overview' }, { id: 'notes', label: 'Notes' }, { id: 'trades', label: 'Trades', count: 67 }],
+      bal: [100000, 100250, 99800, 100120, 101400, 101100, 102300, 102050, 103400, 103900, 103300, 104800, 105300, 105100],
+      floor: [97000, 97250, 97250, 97250, 98400, 98400, 99300, 99300, 100000, 100000, 100000, 100000, 100000, 100000],
+      rules: [{ kind: 'target', label: 'Profit target', used: 5100, limit: 6000 }, { label: 'Trailing drawdown', used: 2200, limit: 3000 }],
+      spark: [0, 24, 70, 150, 420, 610, 905, 1197.6],
+      sparkDown: [0, -120, -300, -260, -700, -1100, -1281.8],
+      days: { 1: { pnl: -122.85, trades: 3 }, 2: { pnl: 156.62, trades: 2 }, 5: { pnl: -46.81, trades: 1 }, 6: { pnl: 66.49, trades: 1 }, 9: { pnl: 40.48, trades: 1 }, 12: { pnl: 147.26, trades: 1 }, 13: { pnl: 171.38, trades: 1 }, 15: { pnl: 562.1, trades: 3 }, 16: { pnl: -1281.8, trades: 41 }, 19: { pnl: 1197.6, trades: 67 } },
+      trades: [
+        { status: 'WIN', side: 'Long', symbol: 'MNQZ6', opened: 'Oct 19 07:47', entry: '29,774.25', exit: '29,787.25', qty: 1, pnl: 24.1, r: 0.48, setup: 'ORB' },
+        { side: 'Short', symbol: 'MNQZ6', opened: 'Oct 19 07:52', entry: '29,733.25', exit: '29,728.25', qty: 3, pnl: 24.3, r: 0.4, setup: 'Reversal' },
+        { side: 'Long', symbol: 'MNQZ6', opened: 'Oct 19 08:40', entry: '29,789.25', exit: '29,790.00', qty: 3, pnl: -1.2, r: -0.02, mistakes: ['Chased entry'] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

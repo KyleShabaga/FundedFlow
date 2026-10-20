@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Day timer</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}</style>
+</helmet>
+<div class="{{cls}}" role="timer" aria-live="off" aria-label="{{aria}}" title="{{tip}}" style="font-family: var(--font-sans);">
+  <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 7v5l3 2"></path></svg>
+  <span>{{lead}}</span>
+  <b>{{clock}}</b>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"secondsLeft":{"editor":"int","min":0,"max":86400,"default":15447},"closed":{"editor":"boolean","default":false},"resetLabel":{"editor":"text","default":"5:00 PM CT"},"live":{"editor":"boolean","default":true},"$preview":{"width":240,"height":40}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { left: props.secondsLeft ?? 15447 }; }
+  componentDidMount() {
+    var self = this;
+    this.t = setInterval(function () {
+      if (self.props.live === false || self.props.closed) return;
+      self.setState({ left: Math.max(0, self.state.left - 1) });
+    }, 1000);
+  }
+  componentDidUpdate(prev) { if (prev.secondsLeft !== this.props.secondsLeft) this.setState({ left: this.props.secondsLeft ?? 0 }); }
+  componentWillUnmount() { clearInterval(this.t); }
+  renderVals() {
+    var s = this.state.left, closed = !!this.props.closed;
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    var clock = p(Math.floor(s / 3600)) + ':' + p(Math.floor(s / 60) % 60) + ':' + p(s % 60);
+    var tone = closed ? ' is-closed' : s <= 900 ? ' is-urgent' : s <= 3600 ? ' is-warn' : '';
+    var reset = this.props.resetLabel ?? '5:00 PM CT';
+    return {
+      cls: 'timer' + tone,
+      lead: closed ? 'Market closed · opens' : 'Day ends in',
+      clock: closed ? 'Sun 5:00 PM' : clock,
+      aria: closed ? 'Market closed. Monday\u2019s session opens Sunday at ' + reset : 'Trading day ends in ' + clock + ', at ' + reset,
+      tip: 'Your account’s trading day resets at ' + reset + '. Daily loss limits reset then.'
+    };
+  }
+}
+</script>
+</body>
+</html>

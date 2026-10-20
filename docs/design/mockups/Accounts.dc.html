@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Accounts</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ds/fundedflow/components/bundle.css">
+<script src="ds/fundedflow/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}</style>
+</helmet>
+<div class="app" data-theme="{{theme}}">
+  <dc-import name="Sidebar" active="accounts" hint-size="248px,100%"></dc-import>
+  <div class="app-main">
+    <dc-import name="Topbar" hint-size="100%,64px"></dc-import>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="h1">Accounts</h1>
+          <p class="sub">Every account you journal, with the rules it has to survive and how much room is left.</p>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <a href="Import.dc.html" class="btn">
+            <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M4 15v5h16v-5"></path></svg>
+            Import trades
+          </a>
+          <div class="seg" role="group" aria-label="Layout">
+            <button type="button" class="{{tableCls}}" aria-pressed="{{isTable}}" onClick="{{showTable}}">Table</button>
+            <button type="button" class="{{cardsCls}}" aria-pressed="{{isCards}}" onClick="{{showCards}}">Cards</button>
+          </div>
+          <x-import component-from-global-scope="FundedFlow.Button" variant="primary">+ Add account</x-import>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="card tile"><span class="label">Active accounts</span><span class="tile-v">2</span><span class="faint">1 evaluation · 1 funded · 1 paused</span></div>
+        <div class="card tile"><span class="label">Combined balance</span><span class="tile-v">$156,457.20</span><span class="faint mono pos">+$6,457.20 across active accounts</span></div>
+        <div class="card tile"><span class="label">Closest to a limit</span><span class="tile-v wrn">73%</span><span class="faint">Apex $100K trailing drawdown · $800 room left</span></div>
+        <div class="card tile"><span class="label">Last import</span><span class="tile-v" style="font-size: 18px;">Today, 4:12 PM</span><span class="faint">Performance.csv · 67 trades into Apex $100K</span></div>
+      </div>
+
+      <sc-if value="{{isTable}}" hint-placeholder-val="{{ true }}">
+      <section class="dt-card" aria-label="Accounts table">
+        <div class="dt-toolbar">
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <label style="position: relative; display: flex; align-items: center;">
+              <span class="sr-only" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Search accounts</span>
+              <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true" style="position: absolute; left: 10px; color: var(--ink-faint);"><path d="M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14zM20 20l-4-4"></path></svg>
+              <input class="input" type="search" placeholder="Search name, firm or ID" style="padding-left: 34px; width: 260px;">
+            </label>
+            <div class="seg" role="group" aria-label="Status">
+              <sc-for list="{{filters}}" as="f" hint-placeholder-count="5">
+                <button type="button" class="{{f.cls}}" aria-pressed="{{f.on}}" onClick="{{f.pick}}">{{f.label}} <span class="mono" style="font-size: 11px; color: var(--ink-faint);">{{f.n}}</span></button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <sc-if value="{{hasSel}}" hint-placeholder-val="{{ false }}">
+              <span class="faint" style="font-size: 13px;">{{selText}}</span>
+              <button type="button" class="btn btn-sm">Archive</button>
+              <button type="button" class="btn btn-sm">Export CSV</button>
+            </sc-if>
+            <button type="button" class="btn btn-sm">
+              <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h4v14H4zM10 5h4v14h-4zM16 5h4v14h-4z"></path></svg>
+              Columns
+            </button>
+          </div>
+        </div>
+        <div class="dt-scroll">
+          <table class="dt">
+            <thead>
+              <tr>
+                <th class="w-check"><span><input type="checkbox" class="check" aria-label="Select all accounts" checked="{{allSel}}" onChange="{{toggleAll}}"></span></th>
+                <th aria-sort="{{sortName}}"><button type="button" onClick="{{sortByName}}">Account <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"></path></svg></button></th>
+                <th><span>Platform</span></th>
+                <th><span>Type</span></th>
+                <th><span>Status</span></th>
+                <th class="num is-sorted" aria-sort="{{sortBal}}"><button type="button" onClick="{{sortByBal}}">Balance <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="{{balArrow}}"></path></svg></button></th>
+                <th class="num"><span>P&amp;L</span></th>
+                <th><span>Drawdown used</span></th>
+                <th><span>Profit target</span></th>
+                <th><span>Rulebook</span></th>
+                <th class="num"><span>Trades</span></th>
+                <th><span>Last import</span></th>
+                <th><span class="sr-only" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+                <tr class="{{r.trCls}}">
+                  <td class="w-check"><input type="checkbox" class="check" aria-label="{{r.selLabel}}" checked="{{r.sel}}" onChange="{{r.toggle}}"></td>
+                  <td>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <span style="{{r.markStyle}}">{{r.initial}}</span>
+                      <div style="display: grid;">
+                        <span style="font-weight: 600;">{{r.firm}} <span style="color: var(--ink-muted); font-weight: 500;">{{r.size}}</span></span>
+                        <span class="faint">{{r.name}}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{r.platform}}</td>
+                  <td><span class="{{r.typeCls}}">{{r.type}}</span></td>
+                  <td><span class="{{r.statusCls}}">{{r.status}}</span></td>
+                  <td class="num" style="color: var(--ink); font-weight: 600;">{{r.balance}}</td>
+                  <td class="num"><span class="{{r.pnlCls}}">{{r.pnl}}</span></td>
+                  <td>
+                    <sc-if value="{{r.hasDd}}" hint-placeholder-val="{{ true }}">
+                      <div class="mini-meter"><div style="display: flex; justify-content: space-between; gap: 8px; font-size: 12px;"><span class="mono">{{r.ddText}}</span><span class="{{r.ddNoteCls}}">{{r.ddNote}}</span></div><div class="mini-track"><div class="{{r.ddFill}}" style="{{r.ddW}}"></div></div></div>
+                    </sc-if>
+                    <sc-if value="{{r.noDd}}" hint-placeholder-val="{{ false }}"><span class="faint">No rules</span></sc-if>
+                  </td>
+                  <td>
+                    <sc-if value="{{r.hasTgt}}" hint-placeholder-val="{{ true }}">
+                      <div class="mini-meter"><div style="display: flex; justify-content: space-between; gap: 8px; font-size: 12px;"><span class="mono">{{r.tgtText}}</span><span class="{{r.tgtNoteCls}}">{{r.tgtNote}}</span></div><div class="mini-track"><div class="{{r.tgtFill}}" style="{{r.tgtW}}"></div></div></div>
+                    </sc-if>
+                    <sc-if value="{{r.noTgt}}" hint-placeholder-val="{{ false }}"><span class="faint">{{r.tgtNone}}</span></sc-if>
+                  </td>
+                  <td><div style="display: grid; gap: 2px;"><span style="font-size: 12.5px;">{{r.rb}}</span><span class="{{r.rbCls}}" style="font-size: 11px; font-weight: 600;">{{r.rbState}}</span></div></td>
+                  <td class="num">{{r.trades}}</td>
+                  <td class="faint" style="font-size: 13px;">{{r.last}}</td>
+                  <td><button type="button" class="icon-btn" aria-label="{{r.menuLabel}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01"></path></svg></button></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <div class="dt-foot">
+          <span>{{footText}} · <a href="#archived" style="color: var(--flow); font-weight: 600; text-decoration: none;">1 archived</a></span>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <label style="display: flex; gap: 8px; align-items: center;">Rows <select class="input select" style="height: 30px; width: 68px;"><option>10</option><option>25</option><option>50</option></select></label>
+            <div class="pager"><button type="button" aria-label="Previous page" disabled>‹</button><button type="button" class="is-on" aria-current="page">1</button><button type="button" aria-label="Next page" disabled>›</button></div>
+          </div>
+        </div>
+      </section>
+      </sc-if>
+      <sc-if value="{{isCards}}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px;">
+          <sc-for list="{{cards}}" as="c" hint-placeholder-count="4">
+            <x-import component-from-global-scope="FundedFlow.AccountCard" firm="{{c.firm}}" size="{{c.size}}" name="{{c.name}}" phase="{{c.phase}}" balance="{{c.bal}}" start="{{c.start}}" rules="{{c.rules}}"></x-import>
+          </sc-for>
+        </div>
+      </sc-if>
+      <p class="faint" style="margin: 0;">Drawdown and target meters turn amber at 70% of a limit and red at 100%. Rule values come from the rulebook version assigned to each account. A rule with an unknown value shows Needs setup instead of a meter; NONE and OFF rules show as text.</p>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { filter: 'all', sel: {}, sort: 'bal-desc', view: 'table' }; }
+  renderVals() {
+    var self = this, st = this.state;
+    var data = [
+      { id: 'a1', firm: 'Apex', size: '$100K', name: 'PA-48213', platform: 'Tradovate', type: 'Evaluation', status: 'Active', bal: 105100, pnl: 5100, dd: [2200, 3000], tgt: [5100, 6000], trades: 214, last: 'Today, 4:12 PM', tone: 'flow', rb: ['Apex 100K Eval · v3', 'Verified', 'pos'] },
+      { id: 'a2', firm: 'Topstep', size: '$50K', name: 'Combine #2', platform: 'Tradovate', type: 'Evaluation', status: 'Failed', bal: 47910, pnl: -2090, dd: [2090, 2000], tgt: [0, 3000], trades: 96, last: 'Oct 14', tone: 'warn', rb: ['Topstep 50K Combine · v2', 'Verified', 'pos'] },
+      { id: 'a3', firm: 'Topstep', size: '$50K', name: 'XFA-1182', platform: 'Tradovate', type: 'Sim funded', status: 'Active', bal: 51357.2, pnl: 1357.2, dd: [204, 2000], tgt: null, trades: 120, last: 'Yesterday', tone: 'warn', rb: ['Topstep XFA · v1', 'Needs review', 'wrn'] },
+      { id: 'a4', firm: 'FTMO', size: '$100K', name: '1080442', platform: 'MetaTrader 5', type: 'Evaluation', status: 'Passed', bal: 110420, pnl: 10420, dd: [1150, 10000], tgt: [10420, 10000], trades: 88, last: 'Sep 30', tone: 'profit', rb: ['Account rules · private', 'You confirmed Sep 2', 'faint'] },
+      { id: 'a5', firm: 'Personal', size: '', name: 'IBKR cash', platform: 'Interactive Brokers', type: 'Personal', status: 'Paused', bal: 12480.55, pnl: 480.55, dd: null, tgt: null, trades: 61, last: 'Aug 28', tone: 'neutral', rb: ['Personal limits', 'Daily stop −$300', 'faint'] }
+    ];
+    var money = function (v, signed) { var s = Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return (v < 0 ? '−' : signed && v > 0 ? '+' : '') + '$' + s; };
+    var whole = function (v) { return '$' + Math.round(v).toLocaleString('en-US'); };
+    var counts = { all: 5, active: 2, passed: 1, failed: 1, paused: 1 };
+    var filters = [['all', 'All'], ['active', 'Active'], ['passed', 'Passed'], ['failed', 'Failed'], ['paused', 'Paused']].map(function (f) {
+      var on = st.filter === f[0];
+      return { label: f[1], n: counts[f[0]], on: on, cls: on ? 'is-on' : '', pick: function () { self.setState({ filter: f[0] }); } };
+    });
+    var list = data.filter(function (d) { return st.filter === 'all' || d.status.toLowerCase() === st.filter; });
+    list.sort(function (a, b) {
+      if (st.sort === 'name') return (a.firm + a.name).localeCompare(b.firm + b.name);
+      return st.sort === 'bal-asc' ? a.bal - b.bal : b.bal - a.bal;
+    });
+    var statusCls = { Active: 'badge b-flow', Passed: 'badge b-profit', Failed: 'badge b-loss', Paused: 'badge b-neutral', Closed: 'badge b-neutral' };
+    var markBg = { flow: 'var(--flow-soft);color:var(--flow)', warn: 'var(--warn-soft);color:var(--warn)', profit: 'var(--profit-soft);color:var(--profit)', neutral: 'var(--bg-300);color:var(--ink-muted)' };
+    var rows = list.map(function (d) {
+      var sel = !!st.sel[d.id];
+      var ddR = d.dd ? d.dd[0] / d.dd[1] : 0, tgR = d.tgt ? d.tgt[0] / d.tgt[1] : 0;
+      var ddTone = ddR >= 1 ? 'neg' : ddR >= 0.7 ? 'wrn' : '';
+      return {
+        firm: d.firm, size: d.size, name: d.name, platform: d.platform, type: d.type, status: d.status, trades: d.trades, last: d.last,
+        initial: d.firm.slice(0, 1),
+        markStyle: 'width:32px;height:32px;border-radius:8px;display:grid;place-items:center;font:600 14px/1 var(--font-display);flex:none;background:' + markBg[d.tone],
+        typeCls: 'badge ' + (d.type === 'Personal' ? 'b-neutral' : d.type === 'Evaluation' ? 'b-flow' : 'b-profit'),
+        statusCls: statusCls[d.status],
+        balance: money(d.bal, false), pnl: money(d.pnl, true), pnlCls: d.pnl >= 0 ? 'pos' : 'neg',
+        hasDd: !!d.dd, noDd: !d.dd,
+        ddText: d.dd ? whole(d.dd[0]) + ' / ' + whole(d.dd[1]) : '',
+        ddNote: d.dd ? (ddR >= 1 ? 'Breached' : whole(d.dd[1] - d.dd[0]) + ' left') : '',
+        ddNoteCls: ddR >= 1 ? 'neg' : ddR >= 0.7 ? 'wrn' : 'faint',
+        ddFill: 'mini-fill ' + ddTone, ddW: 'width:' + Math.min(100, ddR * 100).toFixed(0) + '%',
+        hasTgt: !!d.tgt, noTgt: !d.tgt, tgtNone: d.type === 'Personal' ? 'No rules' : 'Funded, no target',
+        tgtText: d.tgt ? whole(d.tgt[0]) + ' / ' + whole(d.tgt[1]) : '',
+        tgtNote: d.tgt ? (tgR >= 1 ? 'Hit' : Math.round(tgR * 100) + '%') : '',
+        tgtNoteCls: tgR >= 1 ? 'pos' : 'faint',
+        tgtFill: 'mini-fill pos', tgtW: 'width:' + Math.min(100, tgR * 100).toFixed(0) + '%',
+        rb: d.rb[0], rbState: d.rb[1], rbCls: d.rb[2],
+        sel: sel, trCls: sel ? 'is-on' : '', selLabel: 'Select ' + d.firm + ' ' + d.name, menuLabel: 'Actions for ' + d.firm + ' ' + d.name,
+        toggle: function () { var s = Object.assign({}, st.sel); s[d.id] = !sel; self.setState({ sel: s }); }
+      };
+    });
+    var nSel = Object.keys(st.sel).filter(function (k) { return st.sel[k]; }).length;
+    var allSel = list.length > 0 && list.every(function (d) { return st.sel[d.id]; });
+    var phaseOf = { Active: null, Passed: 'Passed', Failed: 'Breached', Paused: 'Paused' };
+    var cards = list.map(function (d) {
+      var rules = [];
+      if (d.tgt) rules.push({ kind: 'target', label: 'Profit target', used: Math.max(0, d.tgt[0]), limit: d.tgt[1] });
+      if (d.dd) rules.push({ label: 'Drawdown', used: d.dd[0], limit: d.dd[1] });
+      return { firm: d.firm, size: d.size, name: d.name + ' \u00b7 ' + d.platform, phase: phaseOf[d.status] || (d.type === 'Sim funded' ? 'Funded' : d.type), bal: d.bal, start: d.bal - d.pnl, rules: rules };
+    });
+    return {
+      isTable: st.view !== 'cards', isCards: st.view === 'cards', tableCls: st.view !== 'cards' ? 'is-on' : '', cardsCls: st.view === 'cards' ? 'is-on' : '',
+      showTable: function () { self.setState({ view: 'table' }); }, showCards: function () { self.setState({ view: 'cards' }); }, cards: cards,
+      theme: this.props.theme ?? 'dark', filters: filters, rows: rows,
+      hasSel: nSel > 0, selText: nSel + ' selected', allSel: allSel,
+      toggleAll: function () { var s = {}; if (!allSel) list.forEach(function (d) { s[d.id] = true; }); self.setState({ sel: s }); },
+      sortBal: st.sort === 'name' ? 'none' : st.sort === 'bal-asc' ? 'ascending' : 'descending',
+      sortName: st.sort === 'name' ? 'ascending' : 'none',
+      balArrow: st.sort === 'bal-asc' ? 'M8 14l4-4 4 4' : 'M8 10l4 4 4-4',
+      sortByBal: function () { self.setState({ sort: st.sort === 'bal-desc' ? 'bal-asc' : 'bal-desc' }); },
+      sortByName: function () { self.setState({ sort: 'name' }); },
+      footText: 'Showing 1–' + rows.length + ' of ' + rows.length
+    };
+  }
+}
+</script>
+</body>
+</html>
