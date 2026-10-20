@@ -7,7 +7,6 @@ pub mod journal;
 pub mod trades;
 
 use std::str::FromStr;
-use std::sync::Mutex;
 
 use chrono::NaiveTime;
 use chrono_tz::Tz;
@@ -16,23 +15,6 @@ use rust_decimal::Decimal;
 
 use crate::domain::{parse_reset_time, parse_tz, Instrument};
 use crate::error::{AppError, AppResult};
-
-/// Tauri-managed handle to the single journal connection.
-pub struct Db(Mutex<Connection>);
-
-impl Db {
-    pub fn new(conn: Connection) -> Self {
-        Db(Mutex::new(conn))
-    }
-
-    pub fn with<T>(&self, f: impl FnOnce(&mut Connection) -> AppResult<T>) -> AppResult<T> {
-        // A panic while the lock was held poisons it. Every write runs in a
-        // transaction that rolls back on drop, so the connection is still
-        // consistent: recover it instead of failing every later command.
-        let mut conn = self.0.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-        f(&mut conn)
-    }
-}
 
 /// Trim; treat blank as absent.
 pub(crate) fn opt_text(s: Option<String>) -> Option<String> {

@@ -26,6 +26,8 @@ pub enum AppError {
     /// A uniqueness or relationship constraint rejected the write.
     Conflict { message: String },
     Database { message: String },
+    /// The journal database is not open; see `runtime_status`.
+    Unavailable { message: String },
 }
 
 pub type AppResult<T> = Result<T, AppError>;
@@ -65,7 +67,8 @@ impl std::fmt::Display for AppError {
             AppError::Validation { message, .. }
             | AppError::NotFound { message }
             | AppError::Conflict { message }
-            | AppError::Database { message } => f.write_str(message),
+            | AppError::Database { message }
+            | AppError::Unavailable { message } => f.write_str(message),
         }
     }
 }

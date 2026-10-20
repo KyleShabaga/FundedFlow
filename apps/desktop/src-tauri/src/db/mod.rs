@@ -64,6 +64,9 @@ pub enum MigrateError {
     NewerSchema { found: u32, supported: u32 },
     /// A migration failed; the database stays at the previous version.
     Migration { name: &'static str, source: rusqlite::Error },
+    /// The pre-upgrade backup could not be written (e.g. disk full); the
+    /// upgrade was not attempted.
+    Backup(String),
     Sqlite(rusqlite::Error),
     Io(std::io::Error),
 }
@@ -85,6 +88,7 @@ impl std::fmt::Display for MigrateError {
                 write!(f, "migration '{name}' failed: {source}")
             }
             MigrateError::Sqlite(e) => write!(f, "database error: {e}"),
+            MigrateError::Backup(e) => write!(f, "could not write the pre-upgrade backup: {e}"),
             MigrateError::Io(e) => write!(f, "could not prepare the data directory: {e}"),
         }
     }
@@ -139,9 +143,10 @@ pub fn open_file(path: &Path) -> Result<Connection, MigrateError> {
         // upgrade goes wrong. Overwrites the backup of the previous upgrade.
         let backup = path.with_extension(format!("db.before-v{}.bak", latest_version()));
         if backup.exists() {
-            std::fs::remove_file(&backup).map_err(MigrateError::Io)?;
+            std::fs::remove_file(&backup).map_err(|e| MigrateError::Backup(e.to_string()))?;
         }
-        conn.execute("VACUUM INTO ?1", [backup.to_string_lossy()])?;
+        conn.execute("VACUUM INTO ?1", [backup.to_string_lossy()])
+            .map_err(|e| MigrateError::Backup(e.to_string()))?;
     }
     migrate(&mut conn)?;
     Ok(conn)
