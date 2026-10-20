@@ -410,6 +410,9 @@ fn preview_exit_worker() {
     std::process::exit(37);
 }
 
+#[path = "golden_tests.rs"]
+mod golden;
+
 #[test]
 fn submillisecond_fill_order_cannot_be_previewed_as_a_persistable_trade() {
     let (mut conn, account) = setup();
