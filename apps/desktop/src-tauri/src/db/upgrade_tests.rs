@@ -121,6 +121,46 @@ fn account_id(conn: &Connection, name: &str) -> String {
     conn.query_row("SELECT id FROM accounts WHERE name = ?1", [name], |r| r.get(0)).unwrap()
 }
 
+fn count(conn: &Connection, sql: &str) -> i64 {
+    conn.query_row(sql, [], |r| r.get(0)).unwrap()
+}
+
+/// Migrations 6 and 7 on a journal from before the catalogue: each firm got a
+/// provider and each programme a family, every account with a firm points at
+/// its firm's provider, and nothing else was inferred.
+fn assert_catalogue_mapped(conn: &Connection, before: &Dump) {
+    let rows_before = |table: &str| before[table].1.len() as i64;
+    assert_eq!(count(conn, "SELECT count(*) FROM providers"), rows_before("firms"));
+    assert_eq!(count(conn, "SELECT count(*) FROM programme_families"), rows_before("programmes"));
+    assert_eq!(
+        count(conn, "SELECT count(*) FROM providers p JOIN firms f ON f.id = p.legacy_firm_id
+                     WHERE p.display_name = f.name AND p.record_status = 'unknown' AND p.aliases = '[]'"),
+        rows_before("firms")
+    );
+    let slugs: Vec<String> =
+        conn.prepare("SELECT slug FROM providers ORDER BY slug").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+    assert_eq!(slugs, ["apex"]);
+    assert_eq!(
+        count(conn, "SELECT count(*) FROM accounts a WHERE a.provider_id IS NOT
+                     (SELECT p.id FROM providers p WHERE p.legacy_firm_id = a.firm_id)"),
+        0
+    );
+    assert!(count(conn, "SELECT count(*) FROM accounts WHERE provider_id IS NOT NULL") > 0);
+    assert_eq!(
+        count(conn, "SELECT count(*) FROM accounts WHERE programme_variant_id IS NOT NULL
+                     OR catalogue_version_id IS NOT NULL OR selected_phase_path_id IS NOT NULL
+                     OR size_source <> 'unknown'"),
+        0,
+        "no catalogue match is guessed"
+    );
+    for table in [
+        "programme_variants", "catalogue_versions", "catalogue_sources", "programme_phases", "phase_paths",
+        "commercial_offers", "promotions", "account_phase_events",
+    ] {
+        assert_eq!(count(conn, &format!("SELECT count(*) FROM {table}")), 0, "{table}");
+    }
+}
+
 /// The upgraded journal still works through the store: lists, a new write
 /// with the current rules, and a re-import that finds every saved trade by
 /// its original dedup key.
@@ -173,6 +213,7 @@ fn a_v3_journal_from_before_the_weekend_roll_upgrades_without_data_loss() {
     assert_eq!(dump_like(&conn, &before), before);
     let archived: i64 = conn.query_row("SELECT count(*) FROM accounts WHERE archived_at IS NOT NULL", [], |r| r.get(0)).unwrap();
     assert_eq!(archived, 0);
+    assert_catalogue_mapped(&conn, &before);
 
     // Exactly the trades the documented rules put on a weekend move to Monday.
     let days_after = trading_days(&conn);
@@ -210,8 +251,10 @@ fn a_v4_journal_from_the_current_release_upgrades_without_changes() {
     assert_eq!(version(&conn), latest_version());
     assert_healthy(&conn);
     assert_eq!(version(&read_only(&db.backup())), 4);
-    // This release already stored rolled days, so the re-derive changes nothing.
-    assert_eq!(dump(&conn, &[]), before);
+    // This release already stored rolled days, so the re-derive changes nothing,
+    // and the catalogue migrations only add tables and columns.
+    assert_eq!(dump_like(&conn, &before), before);
+    assert_catalogue_mapped(&conn, &before);
     // The archived account and its trade are kept, hidden from the store.
     assert_eq!(accounts::list(&conn).unwrap().len(), 2);
     assert_eq!(trading_days(&conn)[&("Archived".into(), "archived fri".into())], "2026-10-19");
@@ -231,6 +274,8 @@ fn reopening_an_upgraded_journal_is_a_no_op() {
     assert_eq!(dump(&conn, &[]), before);
     assert_eq!(migrate(&mut conn).unwrap(), latest_version());
     assert_eq!(rederive_trading_days(&conn).unwrap(), 0, "the re-derive is idempotent");
+    map_legacy_catalogue(&conn).unwrap();
+    assert_eq!(dump(&conn, &[]), before, "the catalogue mapping is idempotent");
 }
 
 #[test]

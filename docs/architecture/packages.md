@@ -59,7 +59,7 @@ Rules for this module:
   units (cents) are not used, so units are never mixed. `null` means unknown and `"0"` means an explicit known zero.
 - No rule values or formulas live here. Phases and paths hold nullable rulebook-version IDs, and Build 9.5 owns
   the rulebook types and the tagged OFF/NONE/not-applicable claim states.
-- The integrity checks mirror the constraints that Build 10 adds in SQLite. Rust stays authoritative at write time.
+- The integrity checks mirror the SQLite constraints and triggers of migration 6. Rust stays authoritative at write time.
 
 `src/ports/journal-repository.ts` holds the `JournalRepository` port and `RepositoryError`, which are types and one
 error class, with no I/O. Each host supplies an adapter: the desktop's adapter calls Tauri, and a Stage 2 adapter
@@ -127,9 +127,9 @@ run.
 
 `catalogue.json` is a **contract fixture**, not a parity fixture. It holds synthetic, human-written catalogue
 records: providers through promotions, account links and phase events. Vitest checks that they parse unchanged
-and form a consistent graph. No Rust catalogue code exists yet, so it has no Rust-generated outputs. Build 10
-adds a serde round trip over the file in `parity.rs` when the Rust structs land, after which Rust owns any
-outputs added to it.
+and form a consistent graph. It has no Rust-generated outputs. `parity.rs` round-trips the file through the Rust
+serde structs (`src-tauri/src/catalogue.rs`), and `db/catalogue_tests.rs` round-trips it through the SQLite tables;
+Rust owns any outputs added to it later.
 
 The pilot covers decimal ↔ micro-unit conversion (`money.json`) and the Account/Trade DTO contract
 (`trade-contract.json`). The trade cases cover ES/MES/MNQ root resolution, long/short, fees, open trades, the

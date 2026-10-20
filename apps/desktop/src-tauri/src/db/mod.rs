@@ -11,7 +11,7 @@ use std::path::Path;
 
 use rusqlite::{Connection, Transaction};
 
-pub(crate) use steps::rederive_trading_days;
+pub(crate) use steps::{map_legacy_catalogue, provider_for_firm, rederive_trading_days};
 
 /// File name of the journal database inside the app data directory
 /// (`%APPDATA%\com.fundedflow.desktop\` on Windows).
@@ -60,6 +60,16 @@ pub const MIGRATIONS: &[Migration] = &[
         version: 5,
         name: "rederive_trading_days",
         step: Step::Rust(|tx| rederive_trading_days(tx).map(|_| ())),
+    },
+    Migration {
+        version: 6,
+        name: "provider_catalogue",
+        step: Step::Sql(include_str!("../../migrations/0006_provider_catalogue.sql")),
+    },
+    Migration {
+        version: 7,
+        name: "map_legacy_catalogue",
+        step: Step::Rust(|tx| map_legacy_catalogue(tx)),
     },
 ];
 
@@ -177,3 +187,5 @@ pub fn open_file(path: &Path) -> Result<Connection, MigrateError> {
 mod tests;
 #[cfg(test)]
 mod upgrade_tests;
+#[cfg(test)]
+mod catalogue_tests;
