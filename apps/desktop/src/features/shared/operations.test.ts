@@ -2,7 +2,7 @@ import { RepositoryError } from "@fundedflow/domain";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { account, trade, batch, T, deferred } from "./test-fixtures";
 import { normalizeError } from "./errors";
-import { readOperation, READ_TIMEOUT_MS } from "./operations";
+import { PREVIEW_TIMEOUT_MS, readOperation, READ_TIMEOUT_MS } from "./operations";
 import { readAccounts, createAccount } from "../accounts/api/accounts";
 import { readTrades, removeTrade, saveTrade } from "../trades/api/trades";
 import { readImportProblemRows } from "../imports/api/imports";
@@ -67,4 +67,33 @@ it("bounds read consumption, aborts without starting future reads and ignores la
   const signal = new AbortController(); signal.abort();
   await expect(readOperation(task, value => value, signal.signal)).rejects.toMatchObject({ category: "cancelled" });
   expect(task).toHaveBeenCalledTimes(1);
+});
+it("gives CSV previews their own longer deadline than plain reads", async () => {
+  vi.useFakeTimers();
+  const response = deferred<number>();
+  const promise = readOperation(() => response.promise, value => value, undefined, PREVIEW_TIMEOUT_MS);
+  let settled = false;
+  promise.then(() => (settled = true), () => (settled = true));
+  await vi.advanceTimersByTimeAsync(READ_TIMEOUT_MS + 1);
+  expect(settled).toBe(false);
+  const rejected = expect(promise).rejects.toMatchObject({ category: "timeout" });
+  await vi.advanceTimersByTimeAsync(PREVIEW_TIMEOUT_MS);
+  await rejected;
+});
+it("keeps actionable field messages and hides unsafe ones", async () => {
+  await expect(createAccount({ name: "", accountType: "evaluation", status: "active", currency: "dollars", startingBalance: "100", timezone: "UTC", tradingDayResetTime: "00:00" }))
+    .rejects.toMatchObject({ category: "validation", issues: expect.arrayContaining([
+      { field: "name", message: "Required" },
+      { field: "currency", message: "Use a 3-letter code such as USD" },
+    ]) });
+  const backend = normalizeError(new RepositoryError({ kind: "validation", message: "x", issues: [
+    { field: "quantity", message: "must be greater than zero" },
+    { field: "side", message: "must be long or short (buy/sell accepted)" },
+    { field: "fees", message: "SQL error at C:\Users\me\journal.db" },
+    { field: "notes", message: "panicked at src/store.rs:12" },
+    { field: "symbol", message: "line one\nline two" },
+  ] }));
+  expect(backend.issues.map(issue => issue.message)).toEqual([
+    "must be greater than zero", "must be long or short (buy/sell accepted)", "Check this value.", "Check this value.", "Check this value.",
+  ]);
 });

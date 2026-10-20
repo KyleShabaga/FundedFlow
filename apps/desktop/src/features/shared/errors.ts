@@ -28,7 +28,7 @@ export function normalizeError(error: unknown, write = false): FeatureDataError 
     const category = { validation: "validation", notFound: "not-found", conflict: "conflict", unavailable: "unavailable", database: write ? "uncertain-outcome" : "unexpected" } as const;
     const issues = error.issues.map(issue => ({
       field: /^[a-zA-Z][a-zA-Z0-9_.\[\]]{0,100}$/.test(issue.field) ? issue.field : "input",
-      message: "Check this value.",
+      message: safeIssueMessage(issue.message),
     }));
     return new FeatureDataError(category[kind], kind, issues);
   }
@@ -38,5 +38,23 @@ export function normalizeError(error: unknown, write = false): FeatureDataError 
 export function validateInput<S extends z.ZodType>(schema: S, value: unknown): z.output<S> {
   const result = schema.safeParse(value);
   if (result.success) return result.data;
-  throw new FeatureDataError("validation", null, result.error.issues.map(issue => ({ field: issue.path.join("."), message: "Check this value." })));
+  throw new FeatureDataError("validation", null, result.error.issues.map(issue => ({ field: issue.path.join("."), message: zodIssueMessage(issue) })));
+}
+export const GENERIC_ISSUE_MESSAGE = "Check this value.";
+// Paths, SQL, Rust sources, stack traces and multi-line text never reach the UI.
+const UNSAFE_MESSAGE = /[\\]|\/\w+\/|\b(sql|sqlite|select\s|insert\s|panicked|stack trace)\b|\.rs\b|[\r\n]/i;
+/**
+ * A field message safe to show: the backend's or schema's own text when it is short, single-line and free of
+ * internals; otherwise a generic prompt. Messages may be relative to the field ("must be greater than zero").
+ */
+export function safeIssueMessage(message: unknown): string {
+  if (typeof message !== "string") return GENERIC_ISSUE_MESSAGE;
+  const text = message.trim();
+  if (!text || text.length > 200 || UNSAFE_MESSAGE.test(text)) return GENERIC_ISSUE_MESSAGE;
+  return text;
+}
+/** Frontend schemas are ours, so their custom messages are actionable; Zod's type-mismatch text is replaced. */
+function zodIssueMessage(issue: z.core.$ZodIssue): string {
+  if (issue.code === "invalid_type") return /received (undefined|null)/.test(issue.message) ? "Required" : "Enter a valid value";
+  return safeIssueMessage(issue.message);
 }

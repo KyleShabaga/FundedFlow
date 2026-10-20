@@ -39,8 +39,12 @@ it("separates initial loading, successful records and valid empty results", asyn
 it.each(["unavailable", "unsupported-schema", "checking", "recovering"] as const)("gates %s without false empty results or background calls", async kind => {
   runtime.state = { kind } as RuntimeState;
   const { result } = renderHook(() => useAccounts(), { wrapper: Wrapper });
-  expect(result.current.isEmpty).toBeNull(); expect(result.current.isInitialLoading).toBe(false);
-  expect(result.current.isUnavailable).toBe(true); expect(result.current.isUsable).toBe(false);
+  const pending = kind === "checking" || kind === "recovering";
+  // Startup checks and recovery retries read as loading; only settled failures are unavailable.
+  expect(result.current.isEmpty).toBeNull(); expect(result.current.isInitialLoading).toBe(pending);
+  expect(result.current.isRuntimePending).toBe(pending);
+  expect(result.current.isUnavailable).toBe(!pending); expect(result.current.isUsable).toBe(false);
+  expect(result.current.error === null).toBe(pending);
   expect(result.current.isUnsupported).toBe(kind === "unsupported-schema");
   await expect(result.current.refresh()).rejects.toMatchObject({ category: "unavailable" });
   expect(repo.accounts.list).not.toHaveBeenCalled();

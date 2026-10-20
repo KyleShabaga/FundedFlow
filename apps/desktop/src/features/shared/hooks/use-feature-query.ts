@@ -9,15 +9,23 @@ export function querySemantics<T>(query: Pick<UseQueryResult<ReadReceipt<T>, Fea
   runtimeKind: RuntimeState["kind"], enabled: boolean, isEmpty: (value: T) => boolean) {
   const hasData = query.data !== undefined;
   const runtimeReady = runtimeKind === "ready";
-  const error = !runtimeReady ? new FeatureDataError(runtimeKind === "unsupported-schema" ? "unsupported-schema" : "unavailable") : query.error;
+  // Startup checks and recovery retries are transient: they read as loading, not as unavailable data.
+  const runtimePending = runtimeKind === "checking" || runtimeKind === "recovering";
+  const error = runtimeReady ? query.error : runtimePending ? null : new FeatureDataError(runtimeKind === "unsupported-schema" ? "unsupported-schema" : "unavailable");
   const isStale = hasData && (!runtimeReady || query.error !== null || query.isStale);
   return {
     data: query.data?.value, error, queryError: query.error, runtimeKind,
-    isInitialLoading: enabled && runtimeReady && query.isPending,
+    isRuntimePending: runtimePending,
+    isInitialLoading: enabled && !hasData && (runtimePending || (runtimeReady && query.isPending)),
     isRefreshing: hasData && query.isFetching,
     isEmpty: enabled && runtimeReady && query.status === "success" && !query.error && hasData ? isEmpty(query.data!.value) : null,
+    /**
+     * "cache-age" only means TanStack would refetch on next use (older than FEATURE_STALE_MS). Local SQLite data
+     * changes only through this app's invalidated writes, so it is not a user-facing freshness problem: do not
+     * show a stale notice for it. "refresh-error" and "runtime" are real: the data could not be confirmed.
+     */
     isStale, staleReason: !isStale ? null : !runtimeReady ? "runtime" as const : query.error ? "refresh-error" as const : "cache-age" as const,
-    isUnavailable: !runtimeReady || error?.category === "unavailable",
+    isUnavailable: (!runtimeReady && !runtimePending) || error?.category === "unavailable",
     isUnsupported: runtimeKind === "unsupported-schema" || error?.category === "unsupported",
     isUsable: enabled && runtimeReady && query.status === "success" && !query.error,
     /** Client receipt time, not the snapshot's calculatedAt / stored updatedAt. */

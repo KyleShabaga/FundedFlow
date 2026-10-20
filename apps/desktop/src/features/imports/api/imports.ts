@@ -4,7 +4,7 @@ import { repository } from "../../../lib/data/api";
 import { readAccount } from "../../accounts/api/accounts";
 import { recordId } from "../../shared/contracts";
 import { FeatureDataError, validateInput } from "../../shared/errors";
-import { readOperation, requireAccount, writeOperation } from "../../shared/operations";
+import { PREVIEW_TIMEOUT_MS, readOperation, requireAccount, writeOperation } from "../../shared/operations";
 import { importProblemRowSchema, previewViewModelSchema, toImportViewModel } from "../view-models/import";
 
 export async function readImportHistory(accountId: string, signal?: AbortSignal) {
@@ -27,7 +27,7 @@ export async function previewImport(request: CsvImportRequest, signal?: AbortSig
   const parsed = validateInput(csvImportRequestSchema, request);
   const account = (await readAccount(parsed.accountId, signal)).value;
   return readOperation(() => repository.imports.preview(parsed), preview => previewViewModelSchema.parse({ phase: "preview", accountId: parsed.accountId,
-    fileName: parsed.fileName, currency: account.currency, preview }), signal);
+    fileName: parsed.fileName, currency: account.currency, preview }), signal, PREVIEW_TIMEOUT_MS);
 }
 export async function commitImport(request: CsvImportRequest) {
   const parsed = validateInput(csvImportRequestSchema, request);
