@@ -5,7 +5,7 @@ FundedFlow is one npm workspace (`apps/*`, `packages/*`, one root `package-lock.
 | Package | Path | Owns | May import |
 |---|---|---|---|
 | `@fundedflow/desktop` | `apps/desktop` | React UI, Tauri host (`src-tauri`), the IPC gateway (`src/lib/data/api.ts`, `runtime.ts`), command names, desktop error mapping | `@fundedflow/domain` (entry point only), React, Tauri, Zod |
-| `@fundedflow/domain` | `packages/domain` | Portable contracts (Zod DTO schemas in `src/contracts`) and primitives (`src/primitives`) | `zod` only |
+| `@fundedflow/domain` | `packages/domain` | Portable contracts (Zod DTO schemas in `src/contracts`), primitives (`src/primitives`) and the provider catalogue (`src/catalogue`) | `zod` only |
 
 Dependencies point one way: desktop → domain. The domain package never imports `apps/desktop`, React, Tauri,
 Node built-ins (`fs`, `net`, `process`, …), browser globals, network calls, clock reads or randomness. Results
@@ -32,8 +32,34 @@ type-check in the package.
   `apps/desktop/vite.config.ts` keeps `tsc --watch` running on the package. An edit under `packages/domain/src`
   is recompiled into `dist`, and Vite hot-reloads it.
 
-Later builds add modules beside the existing ones (catalogue: Build 9, rulebook: Build 9.5, engine: Build 16,
-CSV import: Build 17) and export them from `src/index.ts`. There are no deep imports.
+Later builds add modules beside the existing ones (rulebook: Build 9.5, engine: Build 16, CSV import: Build 17)
+and export them from `src/index.ts`. There are no deep imports.
+
+## Catalogue module (Build 9)
+
+`src/catalogue` holds the provider catalogue contracts. It is exported through `src/catalogue/index.ts` and
+`src/index.ts`. The model and its storage plan are in [`../data-model.md#provider-catalogue`](../data-model.md#provider-catalogue).
+
+| File | Contents |
+|---|---|
+| `fields.ts` (internal) | UUID IDs, slugs, verbatim provider labels, currency codes, canonical money text (`catalogueMoney`), half-open windows |
+| `provenance.ts` | `sourceReferenceSchema`, `fieldClaimSchema`, verification statuses and `canTransitionVerification` |
+| `providers.ts` | `providerSchema`, `programmeFamilySchema`, `programmeVariantSchema` |
+| `versions.ts` | `catalogueVersionSchema`, `programmePhaseSchema`, `phasePathSchema`, `effectiveRulebookVersionId` |
+| `offers.ts` | `commercialOfferSchema`, `promotionSchema`, `promotionOfferSchema` |
+| `lifecycle.ts` | `accountCatalogueLinkSchema`, `accountPhaseEventSchema`, `derivePhaseHistory` |
+| `integrity.ts` | `checkCatalogueGraph`, `checkAccountCatalogueLink`, `checkCatalogueVersionUpdate` (stable issue codes) |
+
+Rules for this module:
+
+- Catalogue DTOs are **new** wire shapes. No Tauri command sends them yet, and no existing IPC payload changed.
+  They use `z.strictObject`, so an unknown field is rejected. For example, a drawdown term on an offer fails to parse.
+- Catalogue money is canonical decimal text that must already be exact in micro-units (`"105.2"`, not
+  `"105.20"`), checked with `canonicalDecimal`/`toMicros`. Storage is `*_micros` like all other money. Minor
+  units (cents) are not used, so units are never mixed. `null` means unknown and `"0"` means an explicit known zero.
+- No rule values or formulas live here. Phases and paths hold nullable rulebook-version IDs, and Build 9.5 owns
+  the rulebook types and the tagged OFF/NONE/not-applicable claim states.
+- The integrity checks mirror the constraints that Build 10 adds in SQLite. Rust stays authoritative at write time.
 
 ## Money and time wire contract
 
@@ -94,6 +120,12 @@ run.
     must re-serialise it unchanged.
   - **Exact value equality** for primitives: `money.json`, compared as strings and bigints with no tolerance.
   - **Documented differences** carry a `tsDivergence` reason.
+
+`catalogue.json` is a **contract fixture**, not a parity fixture. It holds synthetic, human-written catalogue
+records: providers through promotions, account links and phase events. Vitest checks that they parse unchanged
+and form a consistent graph. No Rust catalogue code exists yet, so it has no Rust-generated outputs. Build 10
+adds a serde round trip over the file in `parity.rs` when the Rust structs land, after which Rust owns any
+outputs added to it.
 
 The pilot covers decimal ↔ micro-unit conversion (`money.json`) and the Account/Trade DTO contract
 (`trade-contract.json`). The trade cases cover ES/MES/MNQ root resolution, long/short, fees, open trades, the
