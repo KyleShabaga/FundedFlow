@@ -1,8 +1,10 @@
 # FundedFlow design system
 
 Status: tokens, fonts, 12 components and display formatting, in `apps/desktop/src/design-system`. No product
-screen uses them yet; the **Design system** button on the start screen opens a reference page
-(`DesignSystemGallery.tsx`) with every component on example data. That page never calls a Tauri command.
+feature screen uses them yet; the app root uses the tokens and surface styles. In development,
+`#/settings/developer` opens a reference page
+(`DesignSystemGallery.tsx`) with every component on example data. The gallery never calls feature commands;
+the shared app runtime provider still checks local runtime availability.
 
 The system is dark-first (traders keep the app open beside their charts) with a light theme. It follows the OS
 setting; `data-theme="dark"` or `data-theme="light"` on any element forces a theme for that subtree.
@@ -14,9 +16,8 @@ import { AccountCard, Pnl, PnlCalendar, TradeTable, formatMoney } from "../desig
 ```
 
 Importing the folder loads the bundled fonts, `tokens.css` and `design-system.css` once. Put screens inside an
-element with the `ds-surface` class (page ground, ink, body font). Classes use the `ds-` prefix, so they never meet
-the developer panel's `ff-` classes, and `design-system.css` overrides the element-level `button` rules in
-`App.css` that would otherwise leak in.
+element with the `ds-surface` class (page ground, ink, body font). Classes use the `ds-` prefix to stay separate
+from the developer panel's `ff-` classes. The product root does not define another token or primitive system.
 
 ## Files
 
@@ -26,6 +27,7 @@ the developer panel's `ff-` classes, and `design-system.css` overrides the eleme
 | `tokens.test.ts` | Fails if any text/background pair drops below 4.5:1, or control borders below 3:1, in either theme |
 | `format.ts` | Money, compact money, percentage and trading-day formatting; exact money sums |
 | `components/primitives.tsx` | `Button`, `Badge`, `Pnl`, `StatTile`, `Tabs` + `TabPanel` (Radix Tabs) |
+| `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots; Build 12 supplies navigation and routing |
 | `components/rules.tsx` | `RuleMeter`, `ruleState`, `AccountCard` |
 | `components/charts.tsx` | `WinGauge`, `Sparkline`, `EquityCurve` |
 | `components/journal.tsx` | `PnlCalendar`, `monthWeeks`, `DayCard`, `TradeTable`, `tradeResult` |

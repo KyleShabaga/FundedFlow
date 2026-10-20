@@ -1,19 +1,9 @@
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 
-import { type RuntimeFailure, type RuntimeStatus, runtimeGateway } from "../lib/data/runtime";
+import { SLOW_MS, useRuntime } from "../app/RuntimeProvider";
+import { Button } from "../design-system";
+import type { RuntimeFailure, RuntimeStatus } from "../lib/data/runtime";
 import "./RuntimeGate.css";
-
-/** How often to ask while the journal is being opened or upgraded. */
-export const POLL_MS = 500;
-/** After this long, say that an upgrade can take a while (it keeps running). */
-export const SLOW_MS = 10_000;
-
-type GateState =
-  | { kind: "starting"; status: RuntimeStatus | null; since: number }
-  | { kind: "ready" }
-  // `failure` is null when the runtime could not be reached at all (timeout,
-  // rejected or malformed response). Never treated as "no data".
-  | { kind: "unavailable"; status: RuntimeStatus | null; error?: string };
 
 const TITLES: Record<RuntimeFailure["category"], string> = {
   data_directory: "FundedFlow can't reach its data folder",
@@ -22,7 +12,13 @@ const TITLES: Record<RuntimeFailure["category"], string> = {
   migration_failed: "Your journal upgrade didn't finish",
   newer_schema: "This journal needs a newer FundedFlow",
 };
-
+const GUIDANCE: Record<RuntimeFailure["category"], string> = {
+  data_directory: "Check access to your user data folder, then retry. Keep existing files in place.",
+  open_failed: "Close other apps using your journal and check file permissions, then retry. Do not delete or replace your journal.",
+  backup_failed: "Check free disk space and folder permissions, then retry. Keep your journal and existing backups in place.",
+  migration_failed: "Keep your journal and pre-upgrade backup in place. Retry, or contact support if the upgrade still fails. Do not overwrite or restore files here.",
+  newer_schema: "Install a FundedFlow version that supports this journal. Keep the journal in place; do not downgrade or replace it.",
+};
 const STAGE_TEXT: Record<RuntimeStatus["stage"], string> = {
   data_directory: "Opening your journal…",
   open: "Opening your journal…",
@@ -30,95 +26,84 @@ const STAGE_TEXT: Record<RuntimeStatus["stage"], string> = {
   migrate: "Upgrading your journal…",
   ready: "Opening your journal…",
 };
-
-function versions(s: RuntimeStatus): string {
-  const known = s.schemaVersion === null ? "unknown" : String(s.schemaVersion);
-  return `Journal version ${known}; this app supports ${s.supportedSchemaVersion}. Stage: ${s.stage}.`;
+function versions(status: RuntimeStatus): string {
+  return `Journal version ${status.schemaVersion ?? "unknown"}; this app supports ${status.supportedSchemaVersion}. Stage: ${status.stage}.`;
 }
 
-/**
- * Renders `children` only once the local database is ready. While it is
- * being opened or upgraded (in the background) it shows progress and keeps
- * polling; on failure it shows a recovery screen whose Retry starts the real
- * initialization path again.
- */
-export function RuntimeGate({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<GateState>({ kind: "starting", status: null, since: Date.now() });
-  const [now, setNow] = useState(() => Date.now());
-  const busy = useRef(false);
-  const since = useRef(Date.now());
-
-  const run = useCallback(async (request: typeof runtimeGateway.status) => {
-    if (busy.current) return; // never overlap checks or retries
-    busy.current = true;
-    try {
-      const s = await request();
-      if (s.state === "ready") setState({ kind: "ready" });
-      else if (s.state === "initializing") setState({ kind: "starting", status: s, since: since.current });
-      else setState({ kind: "unavailable", status: s });
-    } catch (e) {
-      setState({ kind: "unavailable", status: null, error: e instanceof Error ? e.message : String(e) });
-    } finally {
-      busy.current = false;
+/** Shell-level status, outside gated data content so navigation and recovery remain usable. */
+export function RuntimeRecoveryNotice() {
+  const { state, now, retry, lastReadyAt } = useRuntime();
+  const titleId = useId();
+  const ready = state.kind === "ready";
+  const busy = state.kind === "checking" || state.kind === "recovering";
+  const pending = state.kind === "unavailable" && state.reason === "initialization-pending";
+  const commandPending = state.kind === "unavailable" && state.reason === "pending";
+  const failure = state.status?.failure;
+  const retryable = !busy && !ready && state.kind !== "unsupported-schema" && (failure?.retryable ?? true);
+  const error = "error" in state ? state.error : undefined;
+  const retryRequested = useRef(false);
+  const retryButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (busy || !retryRequested.current) return;
+    retryRequested.current = false;
+    // Do not steal focus if the user navigated elsewhere during recovery.
+    if (document.activeElement === document.body) {
+      (ready ? document.getElementById("main-content") : retryButton.current)?.focus();
     }
-  }, []);
-
-  useEffect(() => {
-    void run(runtimeGateway.status);
-  }, [run]);
-
-  // Poll while initializing; the backend reports progress through the stage.
-  const starting = state.kind === "starting";
-  useEffect(() => {
-    if (!starting) return;
-    const timer = setInterval(() => {
-      setNow(Date.now());
-      void run(runtimeGateway.status);
-    }, POLL_MS);
-    return () => clearInterval(timer);
-  }, [starting, run]);
-
-  const retry = () => {
-    since.current = Date.now();
-    setState({ kind: "starting", status: null, since: since.current });
-    void run(runtimeGateway.retry);
+  }, [busy, ready, state]);
+  const doRetry = () => {
+    retryRequested.current = true;
+    void retry();
   };
-
-  if (state.kind === "ready") return <>{children}</>;
-
-  if (state.kind === "starting") {
-    const slow = now - state.since >= SLOW_MS;
-    return (
-      <section className="ff-gate" role="status" aria-live="polite">
-        <p>{STAGE_TEXT[state.status?.stage ?? "open"]}</p>
-        {slow && (
-          <p className="ff-hint">
-            This is taking a while. Large journals can take a few minutes to upgrade; keep FundedFlow open.
-          </p>
-        )}
-      </section>
-    );
-  }
-
-  const { status, error } = state;
-  const failure = status?.failure ?? null;
-  const retryable = failure?.retryable ?? true;
   return (
-    <section className="ff-gate" role="alert">
-      <h2>{failure ? TITLES[failure.category] : "FundedFlow couldn't start its local data service"}</h2>
-      <p>{failure?.message ?? "The app didn't get a valid answer from its local data service. Your data has not been changed."}</p>
-      {retryable && (
-        <button type="button" onClick={retry} autoFocus>
-          Retry
-        </button>
-      )}
-      {(failure || error) && (
-        <details>
+    <section className={ready ? "ds-sr-only" : "ff-gate ds-card"}
+      role={busy || ready ? "status" : "alert"} aria-live={busy || ready ? "polite" : "assertive"}
+      aria-atomic="true" aria-labelledby={ready ? undefined : titleId}>
+      {ready ? <p>Local data is available.</p> : <>
+        <h2 id={titleId}>{busy
+          ? state.kind === "recovering" ? "Retrying local data" : "Checking local data"
+          : pending ? "Local data is still initializing"
+          : commandPending ? "A local data request is still pending"
+          : failure ? TITLES[failure.category] : "FundedFlow couldn't start its local data service"}</h2>
+        {busy ? <>
+          <p>{STAGE_TEXT[state.status?.stage ?? "open"]}</p>
+          {now - state.since >= SLOW_MS && <p>This is taking a while. Large journals can take a few minutes to upgrade; keep FundedFlow open.</p>}
+        </> : <>
+          <p>{pending
+            ? "Automatic checks have paused. Initialization may still be running. Keep FundedFlow open and retry to check its progress."
+            : commandPending ? "The previous command has not answered. Wait for any initialization to finish before reopening FundedFlow."
+            : failure?.message ?? "The app didn't get a valid answer from its local data service. This does not mean your journal is empty."}</p>
+          {!pending && <p>{failure ? GUIDANCE[failure.category]
+            : "Keep your journal and backups in place. Retry to check local data; no reset, replacement or restore is performed by this screen."}</p>}
+        </>}
+        {lastReadyAt !== null && <p className="ff-stale">Local data is unavailable. Previously shown data may be out of date. Unsaved changes remain on this screen; saving is disabled.</p>}
+        {retryable && <Button ref={retryButton} onClick={doRetry}>Retry</Button>}
+        {state.kind === "recovering" && <Button disabled>Retrying…</Button>}
+        {!busy && (failure || error || pending) && <details>
           <summary>Technical details</summary>
-          {status && <p>{versions(status)}</p>}
-          <code>{failure?.detail ?? error}</code>
-        </details>
-      )}
+          {state.status && <p>{versions(state.status)}</p>}
+          {(failure || error) && <code>{failure?.detail ?? error}</code>}
+        </details>}
+      </>}
     </section>
   );
+}
+
+/** Mount data content only after readiness; retain its local state through later runtime loss.
+ * The host shell renders one notice and passes showStatus=false to its data gates.
+ * Future feature queries must also use state.kind === "ready" as their enabled condition (Build 14).
+ */
+export function RuntimeGate({ children, showStatus = true }: { children: ReactNode; showStatus?: boolean }) {
+  const { state } = useRuntime();
+  const ready = state.kind === "ready";
+  const [hasBeenReady, setHasBeenReady] = useState(ready);
+  useEffect(() => { if (ready) setHasBeenReady(true); }, [ready]);
+  return <>
+    {showStatus && <RuntimeRecoveryNotice />}
+    {(ready || hasBeenReady) && <fieldset className="ff-runtime-content" disabled={!ready}
+      aria-label="Local data content" aria-busy={state.kind === "checking" || state.kind === "recovering"}
+      data-runtime-access={ready ? "ready" : "unavailable"}>
+      <div inert={!ready}>{children}</div>
+    </fieldset>}
+  </>;
 }

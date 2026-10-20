@@ -35,13 +35,12 @@ Build 13 also owns the async-state set: `LoadingState`, `EmptyState`, `ErrorStat
 Add each to the design system with a `README`-style comment, tests and a gallery section before a screen uses it.
 Names are suggestions.
 
-### AppShell, Sidebar
+### AppShell, Sidebar (Build 12)
 - Layout: sidebar + main column. Sidebar 248 px expanded, 72 px collapsed (icons only, `title` and `aria-label` on
   each link). Toggle button in the sidebar header; shortcut Ctrl+B. Remember the state in `settings` (or local
   storage until settings commands exist).
-- Groups: **Journal** (Home, Dashboard, Journal, Library, Trade log, Calendar, Reports), **Accounts** (Accounts,
-  Import trades), **Tools** (Economic calendar); Settings at the bottom with a "Saved on this computer" status.
-- Active item: `flow-soft` ground, `flow` text, `aria-current="page"`. Counts in mono, `ink-faint`.
+- Navigation: **Today** (default), **Journal**, **Insights**, **Accounts**, with **Settings** at the bottom and a "Saved on this computer" footer. No Import item or fabricated counts.
+- Active item: `flow-soft` ground, `flow` text, `aria-current="page"`.
 - Below ~760 px wide the sidebar collapses automatically.
 
 ### Header (Build 12)

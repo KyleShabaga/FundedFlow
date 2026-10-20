@@ -1,5 +1,5 @@
 import * as RadixTabs from "@radix-ui/react-tabs";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 
 import { formatMoney, formatMoneyCompact, formatPercent, moneySign } from "../format";
 import { cx } from "./cx";
@@ -7,6 +7,8 @@ import { cx } from "./cx";
 /* ---------- Button ---------- */
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  /** React 19 ref forwarding for recovery and dialog focus management. */
+  ref?: Ref<HTMLButtonElement>;
   /** primary: one per view. secondary (default): bordered. ghost: toolbar text. danger: destructive. */
   variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "md" | "sm";

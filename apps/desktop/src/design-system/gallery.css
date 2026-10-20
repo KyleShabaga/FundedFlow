@@ -11,3 +11,6 @@
 .dsg-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: var(--space-4); }
 .dsg-cal { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: var(--space-4); align-items: start; }
 @media (max-width: 900px) { .dsg-cal { grid-template-columns: minmax(0, 1fr); } .dsg { padding: var(--space-4); } }
+
+.dsg-frame-preview .ds-app-frame { min-height: 240px; }
+.dsg-frame-preview .ds-app-sidebar { position: static; height: auto; }
