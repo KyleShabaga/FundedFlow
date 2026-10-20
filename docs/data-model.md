@@ -7,6 +7,23 @@ Code: `src-tauri/src/db` (migrations, opening), `src-tauri/src/store` (accounts,
 
 Everything is local. There is no network access, account system, sync or secret in the data layer.
 
+## V1 source-of-truth policy
+
+- **Round-trip first.** The unit of record is a canonical `trades` row (one round trip: entry and optional exit).
+  Imported trades keep their immutable original CSV row (`import_rows`) and, for paired-fill exports, the
+  immutable source fill pair (`trade_round_trips`). There is no executions ledger; trades cannot be recomputed
+  from raw executions.
+- **Rust is authoritative for calculations.** Validation, trading day, instrument lookup and realized P&L are
+  computed in `src-tauri/src/domain.rs` and stored. The Zod schemas in `src/lib/data/schemas.ts` mirror the
+  input rules for early feedback but never compute stored values. A calculation moves to TypeScript (e.g. a
+  shared `packages/domain`) only together with parity tests that run the same cases against both
+  implementations and prove identical results.
+- **SQLite is authoritative for persistence.** Every write goes through a Tauri command and one SQLite transaction.
+
+Not supported by the round-trip pipeline (V1 limitations): partial fills and partial exits, scale-in/scale-out
+as one position, regrouping fills into trades, execution-based risk analysis (MAE/MFE, intraday drawdown from
+fills), and FX conversion.
+
 ## Entities
 
 ```mermaid
@@ -38,9 +55,21 @@ A trade is one **round trip** (entry and optional exit). An open trade has no ex
 (execution) import and trade grouping are out of scope for V1; they can be added later with a new migration
 that feeds the same `trades` table.
 
-The schema also contains tables for later features (rulebooks/rules, account ledger, trade reviews,
-strategies, checklists, attachments, risk snapshots, audit events, an inert sync outbox). They are created
-and constraint-tested but have no commands yet.
+`accounts` also has schema-only columns that no command reads or writes yet: `programme_id`,
+`parent_account_id` (evaluation → funded successor link), `account_size_micros` and `opened_on`.
+
+### Implementation status
+
+| Status | Tables |
+|---|---|
+| **Implemented** (commands, store code and tests) | `accounts`, `firms` (find-or-create by name), `account_status_events` (written on create and status change), `instruments` (seeded by 0002, read-only), `trades`, `trade_round_trips`, `import_batches`, `import_rows`, `journal_entries`, `tags`, `journal_entry_tags` |
+| **Reserved** (created and constraint-tested in 0001, no commands) | `app_meta` (journal_id etc. not yet written), `settings`, `programmes`, `account_ledger_entries`, `rulebook_versions`, `rules`, `csv_mapping_profiles`, `strategies`, `checklists`, `checklist_items`, `checklist_results`, `trade_reviews`, `trade_review_tags`, `attachments`, `attachment_links`, `account_snapshots`, `audit_events`, `sync_outbox` (inert) |
+| **Not in the schema** (future execution-first extension) | `executions`, `execution_fees`, `trade_executions`, `account_phase_events`, provider catalogue families/variants/phases, reusable rulebooks and `account_rulebook_assignments` |
+
+Reserved tables are a starting point, not a finished design. In particular `rulebook_versions` is
+account-owned (`account_id NOT NULL`, cascades on account delete), whereas Build 9.5 plans reusable, versioned
+rulebooks assigned to accounts. `firms`/`programmes` predate the Build 9 provider catalogue. Those builds add
+forward-only migrations (0004+) that map these tables; they must not edit 0001–0003.
 
 ## Conventions
 
@@ -93,8 +122,37 @@ Computed in Rust (`domain::realized_pnl`) when a trade is saved, and stored:
 - Open trades: `open`, no P&L.
 - Net = gross − fees. Fees are one positive total per trade. Values are rounded half away from zero to whole
   micro-units. The schema enforces `net = gross − fees`.
-- The trade's **trading day** is the exit time (or entry, while open) in the account's timezone; times at or
-  after the daily reset (default 17:00 America/New_York) count toward the next day. Reset `00:00` means calendar days.
+- The trade's **trading day** is derived from the exit time (or entry, while open); see below.
+
+## Trading day
+
+`domain::trading_day`, computed when a trade is saved and stored in `trades.trading_day` (`YYYY-MM-DD`):
+
+1. Convert the instant to the account's `timezone` (IANA; DST handled by the tz database).
+2. If the account's `trading_day_reset_time` is not `00:00` and the local time is **at or after** the reset,
+   the trade belongs to the **next** calendar date. Otherwise it belongs to the local date.
+3. If that date is a **Saturday or Sunday, it rolls forward to Monday**.
+
+**Allowed reset times: `00:00` (calendar days) or `12:00`–`23:59`.** An afternoon or evening reset opens the
+next day's session (the CME convention: the 17:00 New York reset opens the next day's Globex session), which is
+what step 2 assumes. Morning resets (`00:01`–`11:59`) are rejected by `domain::is_allowed_reset_time` (account
+create/update) and by the Zod schema, because with a 06:00 reset a Monday 07:00 trade would land on Tuesday.
+
+| Account reset | Fill (local time) | Trading day |
+|---|---|---|
+| 17:00 New York | Mon 16:59 | Mon |
+| 17:00 New York | Mon 17:00 | Tue |
+| 17:00 New York | Fri 17:30 | Mon (Sat → Mon) |
+| 17:00 New York | Sun 18:00 | Mon |
+| 00:00 | Sat 10:00 | Mon |
+
+Builds 9, 15.5 and 16 (phases, daily-loss and ledger checkpoints, rules engine) must group by this stored value
+rather than re-deriving days.
+
+Existing data: the database CHECK only enforces `HH:MM`, so an account saved with a morning reset before this
+rule keeps it (and the old "next day" result) until it is edited, when validation asks for an allowed time.
+Stored trading days of existing trades are re-derived only when the account's currency, timezone or reset
+changes, so weekend-dated trades saved before the Monday rollover keep their old day until then.
 
 ## CSV import
 

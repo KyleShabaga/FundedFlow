@@ -46,8 +46,8 @@ export const accountInputSchema = z.strictObject({
   startingBalance: nonNegativeDecimal,
   /** IANA zone, e.g. America/New_York. Checked against the tz database in Rust. */
   timezone: z.string().trim().min(1),
-  /** HH:MM in `timezone`; 00:00 for plain calendar days. */
-  tradingDayResetTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM"),
+  /** HH:MM in `timezone`: 00:00 for plain calendar days, otherwise 12:00–23:59 (opens the next day's session). */
+  tradingDayResetTime: z.string().regex(/^(00:00|(1[2-9]|2[0-3]):[0-5]\d)$/, "Use 00:00 or a time from 12:00 to 23:59"),
   notes: optionalText(20_000),
 });
 export type AccountInput = z.input<typeof accountInputSchema>;
