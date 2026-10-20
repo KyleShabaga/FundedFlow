@@ -194,3 +194,5 @@ mod tests;
 mod upgrade_tests;
 #[cfg(test)]
 mod catalogue_tests;
+#[cfg(test)]
+mod legacy_rulebook_tests;

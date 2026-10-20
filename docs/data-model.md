@@ -70,7 +70,8 @@ that feeds the same `trades` table.
 
 Reserved tables are a starting point, not a finished design. In particular `rulebook_versions` is
 account-owned (`account_id NOT NULL`, cascades on account delete), whereas Build 9.5 plans reusable, versioned
-rulebooks assigned to accounts. `firms`/`programmes` predate the Build 9 provider catalogue; migration 7 maps
+rulebooks assigned to accounts. The field-level conversion plan is
+[rulebook-migration.md](rulebook-migration.md). `firms`/`programmes` predate the Build 9 provider catalogue; migration 7 maps
 them into `providers`/`programme_families` and keeps them. Shipped migrations are never edited.
 
 ## Provider catalogue
