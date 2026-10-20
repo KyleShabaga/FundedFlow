@@ -1,9 +1,9 @@
 # FundedFlow local data model
 
-Status: V1, schema version 4 (`src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`).
-Code: `src-tauri/src/db` (migrations, opening), `src-tauri/src/store` (accounts, trades, journal),
-`src-tauri/src/csv_import`, `src-tauri/src/domain.rs` (validation, trading day, P&L),
-`src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `src/lib/data/`.
+Status: V1, schema version 4 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`).
+Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal),
+`apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
+`apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
 
 Everything is local. There is no network access, account system, sync or secret in the data layer.
 
@@ -106,6 +106,28 @@ forward-only migrations (0004+) that map these tables; they must not edit 0001�
 - Rule: never edit a migration that has shipped; add the next `000N_….sql` and a `Migration` entry. (0001 was revised
   before V1 shipped.)
 
+## Startup and recovery
+
+A database problem never stops the window from opening (`apps/desktop/src-tauri/src/runtime.rs`). Startup records the outcome,
+and the frontend's `RuntimeGate` shows a recovery screen until the runtime is ready. While it isn't, every data
+command returns `{ kind: "unavailable" }`; the UI never reads that as "no accounts".
+
+- `runtime_status()` (read-only) returns `{ state: "initializing" | "ready" | "failed", schemaVersion,
+  supportedSchemaVersion, created, failure }`. `created` is true only when this start created a new, empty journal.
+- `retry_runtime()` re-runs the real open → backup → migrate path. It is a no-op when ready; concurrent retries
+  run one at a time and all see the same result. Each attempt is bounded by SQLite's 5 s busy timeout.
+- Recovery never deletes, resets, downgrades or replaces the journal. A file that fails to open stays byte-for-byte unchanged.
+
+| `failure.category` | Meaning | Retryable |
+|---|---|---|
+| `data_directory` | The per-user data folder could not be resolved or created | yes |
+| `open_failed` | The file exists but can't be opened or read (locked, corrupt, not a database) | yes |
+| `backup_failed` | The pre-upgrade backup could not be written; no upgrade was attempted | yes |
+| `migration_failed` | A migration failed and rolled back; the journal stays at its previous version | yes |
+| `newer_schema` | Written by a newer FundedFlow; left untouched | no |
+
+`failure.message` is safe to show the user, and `failure.detail` is the technical error.
+
 ## Realized P&L
 
 Computed in Rust (`domain::realized_pnl`) when a trade is saved, and stored:
@@ -156,9 +178,9 @@ changes, so weekend-dated trades saved before the Monday rollover keep their old
 
 ## CSV import
 
-Code: `src-tauri/src/csv_import/` — `parse` (CSV reading, limits), `detect` (format and header mapping),
+Code: `apps/desktop/src-tauri/src/csv_import/` — `parse` (CSV reading, limits), `detect` (format and header mapping),
 `values` (strict value parsers), `normalize` (row → trade, errors and warnings), `dedup` (identity keys),
-`mod.rs` (preview, atomic commit, history). UI: `src/components/CsvImportSection.tsx`.
+`mod.rs` (preview, atomic commit, history). UI: `apps/desktop/src/components/CsvImportSection.tsx`.
 
 Flow: the UI reads the chosen file as text on this computer and calls `preview_csv_import` (writes nothing).
 The preview shows the detected format and mapping, every row's original line number, parsed values, warnings,
@@ -259,11 +281,12 @@ Limitations:
 
 | Area | Commands |
 |---|---|
+| Runtime | `runtime_status()`, `retry_runtime()` (see [Startup and recovery](#startup-and-recovery)) |
 | Accounts | `list_accounts`, `create_account(input)`, `update_account(id, input)`, `archive_account(id)` |
 | Trades | `list_trades(accountId)`, `create_trade(input)`, `update_trade(id, input)`, `delete_trade(id)` |
 | Journal | `list_journal_entries(accountId)`, `create_journal_entry(input)`, `update_journal_entry(id, input)`, `delete_journal_entry(id)` |
 | CSV | `preview_csv_import(request)`, `commit_csv_import(request)`, `list_csv_imports(accountId)`, `list_csv_import_problem_rows(batchId)` |
 
 Updates replace all editable fields. Inputs are validated in TypeScript (Zod) and again in Rust before any write.
-Errors are `{ kind: "validation" | "notFound" | "conflict" | "database", message, issues? }`, with `issues` naming
+Errors are `{ kind: "validation" | "notFound" | "conflict" | "database" | "unavailable", message, issues? }`, with `issues` naming
 each invalid field.
