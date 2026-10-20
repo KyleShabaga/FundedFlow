@@ -10,7 +10,8 @@
 //! mirror. `parity.rs` round-trips `packages/domain/test/fixtures/catalogue.json`
 //! through them, and `db/catalogue_tests.rs` through the database.
 
-// No command reads or writes the catalogue yet (Build 9.5 and later add them).
+// `store::catalogue` reads the catalogue and writes review transitions, account links and
+// phase history. Some wire structs are only built by tests and the importer.
 #![cfg_attr(not(test), allow(dead_code))]
 
 use std::collections::BTreeMap;

@@ -1,0 +1,296 @@
+//! Account snapshots: persisted risk figures for one account and trading day,
+//! written by the rule engine (Build 16) through this repository. This module
+//! stores and reads what it is given. It calculates nothing, so a snapshot is
+//! only as good as its `explanation` and `inputsHash`; the repository never
+//! fills a missing figure with zero.
+//!
+//! End-of-day rows are idempotent: saving the same (account, day, engine
+//! version, inputs hash) again returns the stored row. They form the
+//! high-water-mark history that eod_trailing drawdown needs.
+
+use rusqlite::{params, Connection, OptionalExtension};
+use serde::{Deserialize, Serialize};
+
+use super::{account_ctx, require_account};
+use crate::domain::{format_instant, micros_to_string, new_id, now, parse_decimal, parse_payload_time, to_micros};
+use crate::error::{AppError, AppResult, Issues};
+
+pub const DATA_SOURCES: &[&str] = &["csv_import", "manual", "mixed", "none"];
+pub const DRAWDOWN_MODES: &[&str] = &["static", "eod_trailing", "intraday_trailing"];
+pub const STATUSES: &[&str] = &["safe", "caution", "stop", "unknown", "needs_setup"];
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SnapshotInput {
+    pub account_id: String,
+    /// The rulebook version the figures were evaluated against, if any.
+    pub rulebook_version_id: Option<String>,
+    /// YYYY-MM-DD.
+    pub trading_day: String,
+    pub is_end_of_day: bool,
+    /// Newest trade or ledger entry included (ISO 8601 with offset).
+    pub data_as_of: Option<String>,
+    pub data_source: String,
+    pub engine_version: String,
+    pub inputs_hash: String,
+    pub fees_included: bool,
+    pub unrealized_included: bool,
+    pub balance: String,
+    pub realized_day_pnl: String,
+    pub unrealized_pnl: Option<String>,
+    pub daily_loss_limit: Option<String>,
+    pub daily_loss_remaining: Option<String>,
+    pub drawdown_mode: Option<String>,
+    pub high_water_mark: Option<String>,
+    pub drawdown_floor: Option<String>,
+    pub drawdown_headroom: Option<String>,
+    pub drawdown_locked: bool,
+    pub profit_target: Option<String>,
+    pub trading_days_completed: u32,
+    pub trading_days_required: Option<u32>,
+    pub status: String,
+    pub status_reasons: Vec<String>,
+    /// Inputs, formula steps, rule ids and contributing trade ids. Must be a non-empty object.
+    pub explanation: serde_json::Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Snapshot {
+    pub id: String,
+    pub account_id: String,
+    pub rulebook_version_id: Option<String>,
+    pub trading_day: String,
+    pub is_end_of_day: bool,
+    pub data_as_of: Option<String>,
+    pub data_source: String,
+    pub calculated_at: String,
+    pub engine_version: String,
+    pub inputs_hash: String,
+    pub fees_included: bool,
+    pub unrealized_included: bool,
+    pub balance: String,
+    pub realized_day_pnl: String,
+    pub unrealized_pnl: Option<String>,
+    pub daily_loss_limit: Option<String>,
+    pub daily_loss_remaining: Option<String>,
+    pub drawdown_mode: Option<String>,
+    pub high_water_mark: Option<String>,
+    pub drawdown_floor: Option<String>,
+    pub drawdown_headroom: Option<String>,
+    pub drawdown_locked: bool,
+    pub profit_target: Option<String>,
+    pub trading_days_completed: u32,
+    pub trading_days_required: Option<u32>,
+    pub status: String,
+    pub status_reasons: Vec<String>,
+    pub explanation: serde_json::Value,
+}
+
+fn is_day(s: &str) -> bool {
+    chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").is_ok_and(|d| d.format("%Y-%m-%d").to_string() == s)
+}
+
+fn money(issues: &mut Issues, field: &str, value: &str) -> i64 {
+    match parse_decimal(value).and_then(to_micros) {
+        Some(m) => m,
+        None => {
+            issues.add(field, "must be a number");
+            0
+        }
+    }
+}
+
+fn opt_money(issues: &mut Issues, field: &str, value: &Option<String>) -> Option<i64> {
+    value.as_deref().map(|v| money(issues, field, v))
+}
+
+const COLUMNS: &str = "id, account_id, rulebook_version_id, trading_day, is_end_of_day, data_as_of, data_source,
+    calculated_at, engine_version, inputs_hash, fees_included, unrealized_included, balance_micros,
+    realized_day_pnl_micros, unrealized_pnl_micros, daily_loss_limit_micros, daily_loss_remaining_micros,
+    drawdown_mode, high_water_mark_micros, drawdown_floor_micros, drawdown_headroom_micros, drawdown_locked,
+    profit_target_micros, trading_days_completed, trading_days_required, status, status_reasons_json,
+    explanation_json";
+
+fn from_row(r: &rusqlite::Row) -> rusqlite::Result<Snapshot> {
+    let m = |i: usize| -> rusqlite::Result<Option<String>> { Ok(r.get::<_, Option<i64>>(i)?.map(micros_to_string)) };
+    let json = |i: usize| -> rusqlite::Result<String> { r.get(i) };
+    let bad = |e: serde_json::Error| rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e));
+    Ok(Snapshot {
+        id: r.get(0)?,
+        account_id: r.get(1)?,
+        rulebook_version_id: r.get(2)?,
+        trading_day: r.get(3)?,
+        is_end_of_day: r.get(4)?,
+        data_as_of: r.get(5)?,
+        data_source: r.get(6)?,
+        calculated_at: r.get(7)?,
+        engine_version: r.get(8)?,
+        inputs_hash: r.get(9)?,
+        fees_included: r.get(10)?,
+        unrealized_included: r.get(11)?,
+        balance: micros_to_string(r.get(12)?),
+        realized_day_pnl: micros_to_string(r.get(13)?),
+        unrealized_pnl: m(14)?,
+        daily_loss_limit: m(15)?,
+        daily_loss_remaining: m(16)?,
+        drawdown_mode: r.get(17)?,
+        high_water_mark: m(18)?,
+        drawdown_floor: m(19)?,
+        drawdown_headroom: m(20)?,
+        drawdown_locked: r.get(21)?,
+        profit_target: m(22)?,
+        trading_days_completed: r.get(23)?,
+        trading_days_required: r.get(24)?,
+        status: r.get(25)?,
+        status_reasons: serde_json::from_str(&json(26)?).map_err(bad)?,
+        explanation: serde_json::from_str(&json(27)?).map_err(bad)?,
+    })
+}
+
+pub fn get(conn: &Connection, id: &str) -> AppResult<Snapshot> {
+    conn.query_row(&format!("SELECT {COLUMNS} FROM account_snapshots WHERE id = ?1"), [id], from_row)
+        .optional()?
+        .ok_or_else(|| AppError::not_found("snapshot", id))
+}
+
+/// Store a snapshot, or return the existing end-of-day row for the same inputs.
+/// Writes only to a non-archived account.
+pub fn save(conn: &mut Connection, input: SnapshotInput) -> AppResult<Snapshot> {
+    let mut issues = Issues::default();
+    if !is_day(&input.trading_day) {
+        issues.add("tradingDay", "use a trading day as YYYY-MM-DD");
+    }
+    if !DATA_SOURCES.contains(&input.data_source.as_str()) {
+        issues.add("dataSource", format!("must be one of {}", DATA_SOURCES.join(", ")));
+    }
+    if !STATUSES.contains(&input.status.as_str()) {
+        issues.add("status", format!("must be one of {}", STATUSES.join(", ")));
+    }
+    if input.drawdown_mode.as_deref().is_some_and(|m| !DRAWDOWN_MODES.contains(&m)) {
+        issues.add("drawdownMode", format!("must be one of {}", DRAWDOWN_MODES.join(", ")));
+    }
+    if input.engine_version.trim().is_empty() {
+        issues.add("engineVersion", "required");
+    }
+    if input.inputs_hash.trim().is_empty() {
+        issues.add("inputsHash", "required");
+    }
+    if !input.explanation.as_object().is_some_and(|o| !o.is_empty()) {
+        issues.add("explanation", "must be a non-empty object that explains the figures");
+    }
+    if input.status == "unknown" && input.status_reasons.is_empty() {
+        issues.add("statusReasons", "an unknown status must say why");
+    }
+    let data_as_of = match input.data_as_of.as_deref().map(parse_payload_time).transpose() {
+        Ok(t) => t.map(format_instant),
+        Err(m) => {
+            issues.add("dataAsOf", m);
+            None
+        }
+    };
+    let balance = money(&mut issues, "balance", &input.balance);
+    let realized = money(&mut issues, "realizedDayPnl", &input.realized_day_pnl);
+    let unrealized = opt_money(&mut issues, "unrealizedPnl", &input.unrealized_pnl);
+    let limit = opt_money(&mut issues, "dailyLossLimit", &input.daily_loss_limit);
+    let remaining = opt_money(&mut issues, "dailyLossRemaining", &input.daily_loss_remaining);
+    let hwm = opt_money(&mut issues, "highWaterMark", &input.high_water_mark);
+    let floor = opt_money(&mut issues, "drawdownFloor", &input.drawdown_floor);
+    let headroom = opt_money(&mut issues, "drawdownHeadroom", &input.drawdown_headroom);
+    let target = opt_money(&mut issues, "profitTarget", &input.profit_target);
+    issues.into_result()?;
+
+    let tx = conn.transaction()?;
+    account_ctx(&tx, &input.account_id)?;
+    if input.is_end_of_day {
+        let existing: Option<String> = tx
+            .query_row(
+                "SELECT id FROM account_snapshots WHERE account_id = ?1 AND trading_day = ?2 AND engine_version = ?3
+                   AND inputs_hash = ?4 AND is_end_of_day = 1",
+                params![input.account_id, input.trading_day, input.engine_version, input.inputs_hash],
+                |r| r.get(0),
+            )
+            .optional()?;
+        if let Some(id) = existing {
+            return get(&tx, &id);
+        }
+    }
+    let id = new_id();
+    tx.execute(
+        &format!(
+            "INSERT INTO account_snapshots ({COLUMNS})
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21,
+                     ?22, ?23, ?24, ?25, ?26, ?27, ?28)"
+        ),
+        params![
+            id,
+            input.account_id,
+            input.rulebook_version_id,
+            input.trading_day,
+            input.is_end_of_day,
+            data_as_of,
+            input.data_source,
+            now(),
+            input.engine_version,
+            input.inputs_hash,
+            input.fees_included,
+            input.unrealized_included,
+            balance,
+            realized,
+            unrealized,
+            limit,
+            remaining,
+            input.drawdown_mode,
+            hwm,
+            floor,
+            headroom,
+            input.drawdown_locked,
+            target,
+            input.trading_days_completed,
+            input.trading_days_required,
+            input.status,
+            serde_json::to_string(&input.status_reasons).map_err(|e| AppError::invalid("statusReasons", e.to_string()))?,
+            serde_json::to_string(&input.explanation).map_err(|e| AppError::invalid("explanation", e.to_string()))?,
+        ],
+    )?;
+    let saved = get(&tx, &id)?;
+    tx.commit()?;
+    Ok(saved)
+}
+
+/// Snapshots of an account, newest day first. `from` and `to` are inclusive trading days.
+/// Readable for archived accounts.
+pub fn list(
+    conn: &Connection,
+    account_id: &str,
+    from: Option<&str>,
+    to: Option<&str>,
+    end_of_day_only: bool,
+) -> AppResult<Vec<Snapshot>> {
+    require_account(conn, account_id)?;
+    for (field, v) in [("from", from), ("to", to)] {
+        if v.is_some_and(|d| !is_day(d)) {
+            return Err(AppError::invalid(field, "use a trading day as YYYY-MM-DD"));
+        }
+    }
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {COLUMNS} FROM account_snapshots
+         WHERE account_id = ?1 AND (?2 IS NULL OR trading_day >= ?2) AND (?3 IS NULL OR trading_day <= ?3)
+           AND (?4 = 0 OR is_end_of_day = 1)
+         ORDER BY trading_day DESC, calculated_at DESC, id"
+    ))?;
+    let rows = stmt.query_map(params![account_id, from, to, end_of_day_only], from_row)?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// The most recently calculated snapshot of the account, if any.
+pub fn latest(conn: &Connection, account_id: &str) -> AppResult<Option<Snapshot>> {
+    require_account(conn, account_id)?;
+    Ok(conn
+        .query_row(
+            &format!("SELECT {COLUMNS} FROM account_snapshots WHERE account_id = ?1 ORDER BY calculated_at DESC, id DESC LIMIT 1"),
+            [account_id],
+            from_row,
+        )
+        .optional()?)
+}

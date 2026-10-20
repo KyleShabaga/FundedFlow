@@ -11,6 +11,18 @@
 //   authoritative implementation (Rust in Stage 1), never by the caller.
 // - Failures reject with a RepositoryError carrying an AppError.
 
+import type { catalogueTransitionTargets } from "../catalogue/index.js";
+import type {
+  AccountCatalogueLink,
+  AccountLinkInput,
+  AccountPhaseEvent,
+  CatalogueSnapshot,
+  CatalogueVersion,
+  PhaseEventInput,
+} from "../catalogue/index.js";
+import type { LedgerEntry, LedgerEntryInput } from "../contracts/ledger.js";
+import type { Setting } from "../contracts/settings.js";
+import type { Snapshot, SnapshotInput, SnapshotQuery } from "../contracts/snapshots.js";
 import type { Account, AccountInput } from "../contracts/accounts.js";
 import type {
   AccountHistory,
@@ -127,13 +139,69 @@ export interface RulebookRepository {
   flagSourceConflict(input: SourceConflictInput): Promise<RuleClaim>;
 }
 
-/** The local journal. Account snapshots (Build 15.5) join when their persistence lands. */
+/** Non-trade money movements. Fees never change the balance the rules see; payouts, resets and corrections do. */
+export interface LedgerRepository {
+  /** Non-deleted entries, oldest first. Readable for archived accounts. */
+  list(accountId: string): Promise<LedgerEntry[]>;
+  create(input: LedgerEntryInput): Promise<LedgerEntry>;
+  /** Replaces the editable fields. An entry never moves to another account. */
+  update(id: string, input: LedgerEntryInput): Promise<LedgerEntry>;
+  /** Soft delete: the entry leaves lists and sums, the row is kept. */
+  remove(id: string): Promise<void>;
+  /** Exact decimal sum of the balance-affecting entries ("0" when there are none). */
+  balanceAdjustment(accountId: string): Promise<string>;
+}
+
+/** App settings: lower-case dotted keys to JSON values. Not a place for secrets. */
+export interface SettingsRepository {
+  get(key: string): Promise<Setting | null>;
+  list(): Promise<Setting[]>;
+  set(key: string, value: unknown): Promise<Setting>;
+  remove(key: string): Promise<void>;
+}
+
+/**
+ * Persisted risk figures. The rule engine computes them; the repository stores and reads them
+ * and never fills a missing figure with zero. An end-of-day save with the same account, day,
+ * engine version and inputs hash returns the stored row.
+ */
+export interface SnapshotRepository {
+  save(input: SnapshotInput): Promise<Snapshot>;
+  /** Newest trading day first. Readable for archived accounts. */
+  list(accountId: string, query?: SnapshotQuery): Promise<Snapshot[]>;
+  latest(accountId: string): Promise<Snapshot | null>;
+}
+
+/**
+ * The provider catalogue as the desktop uses it. Content (providers, versions, offers) arrives
+ * from importer tooling; the UI reads it, moves versions through review and links accounts.
+ */
+export interface CatalogueRepository {
+  load(): Promise<CatalogueSnapshot>;
+  /** One review step. `verified` needs a named reviewer; the schema refuses illegal moves. */
+  transitionVersion(id: string, to: CatalogueTransitionTarget, reviewer: string | null): Promise<CatalogueVersion>;
+  getAccountLink(accountId: string): Promise<AccountCatalogueLink>;
+  /** The provider follows the variant. Adding a catalogue version never changes a link on its own. */
+  setAccountLink(input: AccountLinkInput): Promise<AccountCatalogueLink>;
+  /** Recording order, which is the order the history applies in. */
+  listPhaseEvents(accountId: string): Promise<AccountPhaseEvent[]>;
+  /** Append-only: a correction is a new event naming the one it corrects. */
+  recordPhaseEvent(input: PhaseEventInput): Promise<AccountPhaseEvent>;
+}
+
+export type CatalogueTransitionTarget = (typeof catalogueTransitionTargets)[number];
+
+/** The local journal. */
 export interface JournalRepository {
   readonly accounts: AccountRepository;
   readonly trades: TradeRepository;
   readonly journal: JournalEntryRepository;
   readonly imports: ImportRepository;
   readonly rulebooks: RulebookRepository;
+  readonly ledger: LedgerRepository;
+  readonly settings: SettingsRepository;
+  readonly snapshots: SnapshotRepository;
+  readonly catalogue: CatalogueRepository;
 }
 
 /** The one error type a JournalRepository rejects with. */

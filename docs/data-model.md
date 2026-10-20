@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 11 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` and `0011_account_attempts.sql`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 12 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` and `0012_snapshot_rulebook_fk.sql`; see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -324,6 +324,31 @@ until a correction supersedes it.
 | Trade ↔ account | A trade never moves between accounts; account and import provenance are immutable (trigger). |
 | Account settings change | Changing currency, timezone or reset time re-derives every trade's trading day and P&L in the same transaction. |
 
+## Ledger, settings, snapshots and catalogue operations (Build 10)
+
+Repositories in `apps/desktop/src-tauri/src/store/` behind the `JournalRepository` port; contracts in
+`packages/domain/src/contracts/{ledger,settings,snapshots}.ts` and `catalogue/operations.ts`.
+
+- **Ledger** (`account_ledger_entries`): payouts, resets and corrections change the balance the rules see; evaluation,
+  activation and reset fees never do (they are kept for the V1.5 account-ROI report, which is not built). Amounts are
+  signed decimal text: payouts and fees are negative, zero is refused, and `other` must state whether it affects the
+  balance. The trading day is derived in Rust from the account's time zone and trading-day reset time. An entry never
+  moves to another account, deleting is soft, archived accounts are readable but not writable, and
+  `balanceAdjustment` sums only balance-affecting, non-deleted entries.
+- **Settings** (`settings`): lower-case dotted keys to JSON values up to 64 KiB, upserted. No secrets belong here.
+- **Snapshots** (`account_snapshots`): the rule engine (Build 16) computes figures; this repository stores and reads
+  them and calculates nothing. Unknown figures are null, never zero; an `unknown` status needs reasons; an
+  `explanation` object is required. An end-of-day save with the same account, day, engine version and inputs hash
+  returns the stored row. Not built: the "commit bundle" that writes a trade or import change and a snapshot in one
+  transaction, because no engine produces snapshots yet; the first engine slice owns that bundle.
+- **Catalogue** (`store::catalogue`): `load` reads the whole catalogue (the same loader the fixture round-trip test
+  uses); `transitionVersion` moves a version through review (`verified` needs a named reviewer, a stale version
+  re-verified keeps its original sign-off, and the migration 6/8 triggers refuse illegal moves); `setAccountLink`
+  links an account to a variant, version and path (the provider follows the variant; the triggers check each belongs to
+  the one above); phase history is append-only, recorded by the user, and corrections are new events. Catalogue
+  *content* (providers, families, versions, offers) is not written from the desktop: it arrives from importer tooling as
+  new draft versions.
+
 ## Account lifecycle: attempts, archive and history
 
 Implemented by migration 11 (`0011_account_attempts.sql`), `store/accounts.rs`, `store/attempts.rs` and the contracts in
@@ -411,6 +436,7 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 9 | `rulebooks` | SQL | Renames the 0001 rulebook tables to `legacy_account_*` and creates the [rulebook](#rulebooks) tables and triggers; phase and path rulebook IDs must now name a catalogue rulebook version |
 | 10 | `convert_legacy_rulebooks` | Rust | Converts legacy account-owned rulebooks into account-private rulebooks, keeping their IDs ([matrix](rulebook-migration.md)); the legacy rows stay |
 | 11 | `account_attempts` | SQL | `account_status_events.cause`; `account_attempt_links` (append-only) and `account_archive_events`; broker account numbers are unique only among active or paused, unarchived accounts. Existing archived accounts get an `archived` event from their `archived_at`. Changes no other rows |
+| 12 | `snapshot_rulebook_fk` | SQL | Rebuilds `account_snapshots` so `rulebook_version_id` references the reusable `rulebook_versions` (migration 9's rename had left it pointing at `legacy_account_rulebook_versions`, so no snapshot of an account on a reusable rulebook could be stored). Rows are kept; a reference to an id that was never converted becomes null; the key is `RESTRICT` instead of `CASCADE` |
 
 How an upgrade runs:
 
@@ -465,6 +491,10 @@ or SQLite types, so a Stage 2 adapter can implement the same interface.
 |---|---|
 | `accounts` | `list({ includeArchived? })`, `get`, `listActive`, `create`, `update`, `archive`, `restore`, `changeStatus`, `history`, `resetAttempt`, `lineage`, `previewDeletion` |
 | `trades` | `list`, `create`, `update`, `remove` |
+| `ledger` | `list`, `create`, `update`, `remove`, `balanceAdjustment` |
+| `settings` | `get`, `list`, `set`, `remove` |
+| `snapshots` | `save`, `list`, `latest` |
+| `catalogue` | `load`, `transitionVersion`, `getAccountLink`, `setAccountLink`, `listPhaseEvents`, `recordPhaseEvent` |
 | `journal` | `list`, `create`, `update`, `remove` |
 | `imports` | `preview`, `commit`, `list`, `problemRows` |
 | `rulebooks` | `list`, `listVersions`, `getVersion`, `getApplicable`, `createDraft`, `validateDraft`, `publish`, `assign`, `listAssignments`, `flagSourceConflict` |
@@ -689,6 +719,10 @@ Limitations:
 |---|---|
 | Runtime | `runtime_status()`, `retry_runtime()` (see [Startup and recovery](#startup-and-recovery)) |
 | Accounts | `list_accounts(includeArchived?)`, `list_active_accounts`, `get_account(id)`, `create_account(input)`, `update_account(id, input)`, `archive_account(id)`, `restore_account(id)`, `change_account_status(id, input)`, `get_account_history(id)`, `reset_account_attempt(input)`, `get_account_lineage(id)`, `preview_account_deletion(id)` |
+| Ledger | `list_ledger_entries(accountId)`, `create_ledger_entry(input)`, `update_ledger_entry(id, input)`, `delete_ledger_entry(id)`, `get_ledger_balance_adjustment(accountId)` |
+| Settings | `get_setting(key)`, `list_settings`, `set_setting(key, value)`, `remove_setting(key)` |
+| Snapshots | `save_account_snapshot(input)`, `list_account_snapshots(accountId, from?, to?, endOfDayOnly?)`, `get_latest_account_snapshot(accountId)` |
+| Catalogue | `get_catalogue`, `transition_catalogue_version(id, to, reviewer?)`, `get_account_catalogue_link(accountId)`, `set_account_catalogue_link(input)`, `list_account_phase_events(accountId)`, `record_account_phase_event(input)` |
 | Trades | `list_trades(accountId)`, `create_trade(input)`, `update_trade(id, input)`, `delete_trade(id)` |
 | Journal | `list_journal_entries(accountId)`, `create_journal_entry(input)`, `update_journal_entry(id, input)`, `delete_journal_entry(id)` |
 | CSV | `preview_csv_import(request)`, `commit_csv_import(request)`, `list_csv_imports(accountId)`, `list_csv_import_problem_rows(batchId)` |

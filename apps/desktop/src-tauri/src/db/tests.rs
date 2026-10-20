@@ -375,7 +375,7 @@ fn migration_11_upgrades_a_v10_journal_without_changing_its_rows() {
     );
     assert!(blocked.is_err());
 
-    assert_eq!(migrate_with(&mut conn, MIGRATIONS).unwrap(), 11);
+    assert_eq!(migrate_with(&mut conn, &MIGRATIONS[..11]).unwrap(), 11);
     let accounts: i64 = conn.query_row("SELECT COUNT(*) FROM accounts", [], |r| r.get(0)).unwrap();
     assert_eq!(accounts, 2);
     let archive_events: Vec<(String, String, String)> = conn

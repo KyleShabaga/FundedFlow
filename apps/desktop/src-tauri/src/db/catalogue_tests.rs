@@ -7,7 +7,7 @@ use serde::de::DeserializeOwned;
 
 use super::*;
 use crate::catalogue::*;
-use crate::domain::{micros_to_string, parse_decimal, to_micros};
+use crate::domain::{parse_decimal, to_micros};
 use crate::parity::{catalogue_fixture, CatalogueFixture};
 use crate::store::accounts;
 use crate::store::tests::account_input;
@@ -24,10 +24,6 @@ fn micros(amount: &Option<String>) -> Option<i64> {
     amount.as_deref().map(|a| parse_decimal(a).and_then(to_micros).expect("canonical amount"))
 }
 
-fn money(m: Option<i64>) -> Option<String> {
-    m.map(micros_to_string)
-}
-
 fn wire<T: DeserializeOwned>(text: String) -> T {
     serde_json::from_value(serde_json::Value::String(text)).unwrap()
 }
@@ -41,15 +37,6 @@ fn link_sources(conn: &Connection, table: &str, owner: &str, id: &str, sources: 
         conn.execute(&format!("INSERT INTO {table} ({owner}, source_id) VALUES (?1, ?2)"), params![id, source])
             .unwrap();
     }
-}
-
-fn source_ids(conn: &Connection, table: &str, owner: &str, id: &str) -> Vec<String> {
-    conn.prepare(&format!("SELECT source_id FROM {table} WHERE {owner} = ?1 ORDER BY source_id"))
-        .unwrap()
-        .query_map([id], |r| r.get(0))
-        .unwrap()
-        .collect::<rusqlite::Result<_>>()
-        .unwrap()
 }
 
 /// The rulebook and versions the catalogue fixture's phases and paths
@@ -250,178 +237,10 @@ fn all<T>(conn: &Connection, sql: &str, map: impl Fn(&Row) -> rusqlite::Result<T
     conn.prepare(sql).unwrap().query_map([], |r| map(r)).unwrap().collect::<rusqlite::Result<_>>().unwrap()
 }
 
-/// Reads every record back into the DTOs, ordered by id like the fixture.
+/// Reads every record back into the DTOs through the production loader
+/// (`store::catalogue::load`), ordered by id like the fixture.
 fn load(conn: &Connection, description: String) -> CatalogueFixture {
-    let providers = all(conn, "SELECT * FROM providers ORDER BY id", |r| {
-        Ok(Provider {
-            id: r.get("id")?,
-            slug: r.get("slug")?,
-            display_name: r.get("display_name")?,
-            aliases: serde_json::from_str(&r.get::<_, String>("aliases")?).unwrap(),
-            website_url: r.get("website_url")?,
-            jurisdiction: r.get("jurisdiction")?,
-            notes: r.get("notes")?,
-            record_status: wire(r.get("record_status")?),
-            created_at: r.get("created_at")?,
-            updated_at: r.get("updated_at")?,
-            archived_at: r.get("archived_at")?,
-        })
-    });
-    let programme_families = all(conn, "SELECT * FROM programme_families ORDER BY id", |r| {
-        Ok(ProgrammeFamily {
-            id: r.get("id")?,
-            provider_id: r.get("provider_id")?,
-            slug: r.get("slug")?,
-            display_name: r.get("display_name")?,
-            provider_label: r.get("provider_label")?,
-            description: r.get("description")?,
-            category: wire(r.get("category")?),
-            record_status: wire(r.get("record_status")?),
-            created_at: r.get("created_at")?,
-            updated_at: r.get("updated_at")?,
-        })
-    });
-    let programme_variants = all(conn, "SELECT * FROM programme_variants ORDER BY id", |r| {
-        Ok(ProgrammeVariant {
-            id: r.get("id")?,
-            provider_id: r.get("provider_id")?,
-            programme_family_id: r.get("programme_family_id")?,
-            slug: r.get("slug")?,
-            display_name: r.get("display_name")?,
-            provider_label: r.get("provider_label")?,
-            size_label: r.get("size_label")?,
-            size_amount: money(r.get("size_amount_micros")?),
-            size_currency: r.get("size_currency")?,
-            platforms: serde_json::from_str(&r.get::<_, String>("platforms")?).unwrap(),
-            metadata: serde_json::from_str(&r.get::<_, String>("metadata")?).unwrap(),
-            record_status: wire(r.get("record_status")?),
-            created_at: r.get("created_at")?,
-            updated_at: r.get("updated_at")?,
-        })
-    });
-    let catalogue_versions = all(conn, "SELECT * FROM catalogue_versions ORDER BY id", |r| {
-        let id: String = r.get("id")?;
-        Ok(CatalogueVersion {
-            source_ids: source_ids(conn, "catalogue_version_sources", "catalogue_version_id", &id),
-            claims: conn
-                .prepare(
-                    "SELECT field, origin, source_id, provider_text FROM catalogue_field_claims
-                     WHERE catalogue_version_id = ?1 ORDER BY position",
-                )?
-                .query_map([&id], |c| {
-                    Ok(FieldClaim {
-                        field: c.get(0)?,
-                        origin: wire(c.get(1)?),
-                        source_id: c.get(2)?,
-                        provider_text: c.get(3)?,
-                    })
-                })?
-                .collect::<rusqlite::Result<_>>()?,
-            id,
-            programme_variant_id: r.get("programme_variant_id")?,
-            version_number: r.get("version_number")?,
-            revision_label: r.get("revision_label")?,
-            verification_status: wire(r.get("verification_status")?),
-            captured_at: r.get("captured_at")?,
-            effective_from: r.get("effective_from")?,
-            effective_to: r.get("effective_to")?,
-            created_by: wire(r.get("created_by")?),
-            importer_version: r.get("importer_version")?,
-            verified_by: r.get("verified_by")?,
-            verified_at: r.get("verified_at")?,
-            supersedes_version_id: r.get("supersedes_version_id")?,
-            correction_reason: r.get("correction_reason")?,
-            content_hash: r.get("content_hash")?,
-        })
-    });
-    let programme_phases = all(conn, "SELECT * FROM programme_phases ORDER BY id", |r| {
-        Ok(ProgrammePhase {
-            id: r.get("id")?,
-            catalogue_version_id: r.get("catalogue_version_id")?,
-            phase_key: wire(r.get("phase_key")?),
-            provider_label: r.get("provider_label")?,
-            display_order: r.get("display_order")?,
-            default_rulebook_version_id: r.get("default_rulebook_version_id")?,
-        })
-    });
-    let phase_paths = all(conn, "SELECT * FROM phase_paths ORDER BY id", |r| {
-        Ok(PhasePath {
-            id: r.get("id")?,
-            programme_phase_id: r.get("programme_phase_id")?,
-            path_key: r.get("path_key")?,
-            provider_label: r.get("provider_label")?,
-            is_default: r.get("is_default")?,
-            display_order: r.get("display_order")?,
-            record_status: wire(r.get("record_status")?),
-            rulebook_version_id: r.get("rulebook_version_id")?,
-        })
-    });
-    let commercial_offers = all(conn, "SELECT * FROM commercial_offers ORDER BY id", |r| {
-        let id: String = r.get("id")?;
-        Ok(CommercialOffer {
-            source_ids: source_ids(conn, "commercial_offer_sources", "commercial_offer_id", &id),
-            id,
-            catalogue_version_id: r.get("catalogue_version_id")?,
-            programme_phase_id: r.get("programme_phase_id")?,
-            phase_path_id: r.get("phase_path_id")?,
-            billing_model: wire(r.get("billing_model")?),
-            currency: r.get("currency")?,
-            list_price: money(r.get("list_price_micros")?),
-            sale_price: money(r.get("sale_price_micros")?),
-            reset_fee: money(r.get("reset_fee_micros")?),
-            activation_fee: money(r.get("activation_fee_micros")?),
-            effective_from: r.get("effective_from")?,
-            effective_to: r.get("effective_to")?,
-        })
-    });
-    let promotions = all(conn, "SELECT * FROM promotions ORDER BY id", |r| {
-        let id: String = r.get("id")?;
-        let discount = match r.get::<_, String>("discount_kind")?.as_str() {
-            "amount" => PromotionDiscount::Amount {
-                amount: money(r.get("discount_amount_micros")?).unwrap(),
-                currency: r.get("discount_currency")?,
-            },
-            "percent" => PromotionDiscount::Percent { percent: money(r.get("discount_percent_micros")?).unwrap() },
-            _ => PromotionDiscount::Unknown,
-        };
-        Ok(Promotion {
-            source_ids: source_ids(conn, "promotion_sources", "promotion_id", &id),
-            id,
-            provider_id: r.get("provider_id")?,
-            code: r.get("code")?,
-            provider_label: r.get("provider_label")?,
-            discount,
-            valid_from: r.get("valid_from")?,
-            valid_to: r.get("valid_to")?,
-            verification_status: wire(r.get("verification_status")?),
-        })
-    });
-    let promotion_offers = all(conn, "SELECT * FROM promotion_offers ORDER BY promotion_id, commercial_offer_id", |r| {
-        Ok(PromotionOffer {
-            promotion_id: r.get("promotion_id")?,
-            commercial_offer_id: r.get("commercial_offer_id")?,
-            valid_from: r.get("valid_from")?,
-            valid_to: r.get("valid_to")?,
-        })
-    });
-    let sources = all(conn, "SELECT * FROM catalogue_sources ORDER BY id", |r| {
-        Ok(SourceReference {
-            id: r.get("id")?,
-            source_type: wire(r.get("source_type")?),
-            url: r.get("url")?,
-            descriptor: r.get("descriptor")?,
-            publisher: r.get("publisher")?,
-            captured_at: r.get("captured_at")?,
-            published_at: r.get("published_at")?,
-            effective_from: r.get("effective_from")?,
-            effective_to: r.get("effective_to")?,
-            content_hash: r.get("content_hash")?,
-            importer_version: r.get("importer_version")?,
-            verification_status: wire(r.get("verification_status")?),
-            reviewed_by: r.get("reviewed_by")?,
-            reviewed_at: r.get("reviewed_at")?,
-        })
-    });
+    let snapshot = crate::store::catalogue::load(conn).unwrap();
     let account_links = all(conn, "SELECT * FROM accounts ORDER BY id", |r| {
         Ok(AccountCatalogueLink {
             account_id: r.get("id")?,
@@ -453,18 +272,8 @@ fn load(conn: &Connection, description: String) -> CatalogueFixture {
     });
     CatalogueFixture {
         description,
-        graph: CatalogueGraph {
-            providers,
-            programme_families,
-            programme_variants,
-            catalogue_versions,
-            programme_phases,
-            phase_paths,
-            commercial_offers,
-            promotions,
-            promotion_offers,
-        },
-        sources,
+        graph: snapshot.graph,
+        sources: snapshot.sources,
         account_links,
         phase_events,
     }
