@@ -4,6 +4,7 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 
 import { DataError, repository } from "../lib/data/api";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { CsvImportSection } from "./CsvImportSection";
 import type { Account, ImportBatch, JournalEntry, Trade } from "../lib/data/schemas";
 import "./DataModelPanel.css";
@@ -14,6 +15,8 @@ const DEFAULT_TZ = "America/New_York";
 const toInstant = (local: string) => (local ? new Date(local).toISOString() : null);
 const blankToNull = (s: string) => (s.trim() ? s : null);
 const shortTime = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : "—");
+const tradeLabel = (t: Trade) => `${t.tradingDay} ${t.symbol} ${t.side} ${t.quantity} @ ${t.entryPrice}`;
+const excerpt = (s: string, n = 80) => (s.length > n ? `${s.slice(0, n).trimEnd()}…` : s);
 
 function ErrorBox({ error }: { error: unknown }) {
   if (!error) return null;
@@ -41,9 +44,14 @@ export function DataModelPanel() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [imports, setImports] = useState<ImportBatch[]>([]);
   const [error, setError] = useState<unknown>(null);
+  const [notice, setNotice] = useState("");
+  // The record a delete confirmation is open for.
+  const [deletingTrade, setDeletingTrade] = useState<Trade | null>(null);
+  const [deletingEntry, setDeletingEntry] = useState<JournalEntry | null>(null);
 
   const run = useCallback(async (action: () => Promise<unknown>) => {
     setError(null);
+    setNotice("");
     try {
       await action();
     } catch (e) {
@@ -136,6 +144,14 @@ export function DataModelPanel() {
     });
   };
 
+  // Deletion happens only from the confirmation dialog. A failed delete throws
+  // so the dialog reports it; refreshing afterwards is separate, so a refresh
+  // error is not mistaken for a failed delete.
+  const deleteTrade = async (t: Trade) => {
+    await repository.trades.remove(t.id);
+    void run(loadAccountData).then(() => setNotice(`Deleted trade ${tradeLabel(t)}.`));
+  };
+
   // --- journal --------------------------------------------------------------
   const [journalForm, setJournalForm] = useState({ title: "", body: "", tags: "", tradeId: "" });
   const createEntry = (e: FormEvent) => {
@@ -153,11 +169,16 @@ export function DataModelPanel() {
       await loadAccountData();
     });
   };
+  const deleteEntry = async (j: JournalEntry) => {
+    await repository.journal.remove(j.id);
+    void run(loadAccountData).then(() => setNotice(`Deleted journal entry "${j.title}".`));
+  };
 
   return (
     <section className="ff-panel">
       <h2>Local data (developer panel)</h2>
       <ErrorBox error={error} />
+      <div role="status" aria-live="polite" className="ff-status">{notice}</div>
 
       <fieldset>
         <legend>Accounts</legend>
@@ -219,7 +240,7 @@ export function DataModelPanel() {
                     <td title={t.pnlStatus}>{t.realizedPnl ?? t.pnlStatus}</td>
                     <td>{t.source}</td>
                     <td>
-                      <button type="button" onClick={() => void run(async () => { await repository.trades.remove(t.id); await loadAccountData(); })}>×</button>
+                      <button type="button" aria-label={`Delete trade ${tradeLabel(t)}`} onClick={() => setDeletingTrade(t)}>×</button>
                     </td>
                   </tr>
                 ))}
@@ -250,7 +271,7 @@ export function DataModelPanel() {
                   {j.tradeId && " · linked trade"}
                   {j.tags.length > 0 && ` · #${j.tags.join(" #")}`}
                   {j.body && <div>{j.body}</div>}
-                  <button type="button" onClick={() => void run(async () => { await repository.journal.remove(j.id); await loadAccountData(); })}>×</button>
+                  <button type="button" aria-label={`Delete journal entry ${j.title}`} onClick={() => setDeletingEntry(j)}>×</button>
                 </li>
               ))}
             </ul>
@@ -259,6 +280,47 @@ export function DataModelPanel() {
           <CsvImportSection accountId={accountId} imports={imports} onImported={loadAccountData} />
         </>
       )}
+
+      <ConfirmDialog
+        open={deletingTrade !== null}
+        title="Delete this trade?"
+        confirmLabel="Delete trade"
+        onConfirm={() => deleteTrade(deletingTrade!)}
+        onClose={() => setDeletingTrade(null)}
+      >
+        {deletingTrade && (
+          <>
+            <p>
+              <strong>{deletingTrade.symbol}</strong> {deletingTrade.side} {deletingTrade.quantity} on trading day{" "}
+              {deletingTrade.tradingDay}
+            </p>
+            <p className="ff-hint">
+              Entry {deletingTrade.entryPrice} at {shortTime(deletingTrade.entryAt)} · Exit {deletingTrade.exitPrice ?? "—"}{" "}
+              {deletingTrade.exitAt && `at ${shortTime(deletingTrade.exitAt)}`} · Net P&amp;L{" "}
+              {deletingTrade.realizedPnl ?? deletingTrade.pnlStatus} · {deletingTrade.source}
+            </p>
+            <p className="ff-hint">Journal entries linked to it are kept and unlinked.</p>
+          </>
+        )}
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={deletingEntry !== null}
+        title="Delete this journal entry?"
+        confirmLabel="Delete entry"
+        onConfirm={() => deleteEntry(deletingEntry!)}
+        onClose={() => setDeletingEntry(null)}
+      >
+        {deletingEntry && (
+          <>
+            <p>
+              <strong>{deletingEntry.title}</strong> · {shortTime(deletingEntry.entryAt)}
+            </p>
+            {deletingEntry.body && <p className="ff-hint">{excerpt(deletingEntry.body)}</p>}
+            <p className="ff-hint">Its notes and tags are deleted with it. This can't be undone.</p>
+          </>
+        )}
+      </ConfirmDialog>
     </section>
   );
 }

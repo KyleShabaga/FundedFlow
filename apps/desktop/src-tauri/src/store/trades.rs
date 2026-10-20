@@ -297,8 +297,9 @@ pub fn update(conn: &mut Connection, id: &str, input: TradeInput) -> AppResult<T
     get(conn, id)
 }
 
-/// Soft-delete a trade (it keeps its dedup key, so re-importing the same CSV
-/// does not bring it back) and unlink journal entries that referenced it.
+/// Soft-delete a trade and unlink journal entries that referenced it. An
+/// imported trade keeps its dedup key, so re-importing its CSV row restores it
+/// (`restore`) rather than creating a second trade.
 pub fn delete(conn: &mut Connection, id: &str) -> AppResult<()> {
     let now = now();
     let tx = conn.transaction()?;
@@ -314,6 +315,19 @@ pub fn delete(conn: &mut Connection, id: &str) -> AppResult<()> {
         params![id, now],
     )?;
     tx.commit()?;
+    Ok(())
+}
+
+/// Un-delete a trade as it was saved (a CSV re-import of its row). Journal
+/// links cleared by `delete` are not restored.
+pub(crate) fn restore(conn: &Connection, id: &str) -> AppResult<()> {
+    let n = conn.execute(
+        "UPDATE trades SET deleted_at = NULL, updated_at = ?2 WHERE id = ?1 AND deleted_at IS NOT NULL",
+        params![id, now()],
+    )?;
+    if n == 0 {
+        return Err(AppError::not_found("deleted trade", id));
+    }
     Ok(())
 }
 

@@ -76,6 +76,13 @@ export const duplicateSchema = z.object({
   tradeId: z.string().nullable(),
 });
 
+/** A deleted trade of the account that a "new" row brings back instead of inserting a second trade. */
+export const restoreSchema = z.object({
+  key: z.string(),
+  tradeId: z.string(),
+  reason: z.string(),
+});
+
 export const rowReportSchema = z.object({
   rowNumber: z.number().int(),
   /** Line in the file (the header is line 1). */
@@ -84,6 +91,7 @@ export const rowReportSchema = z.object({
   errors: z.array(fieldIssueSchema),
   warnings: z.array(fieldIssueSchema),
   duplicate: duplicateSchema.nullable(),
+  restores: restoreSchema.nullable(),
   raw: z.array(z.string()),
   trade: tradePreviewSchema.nullable(),
 });
@@ -103,6 +111,8 @@ export const csvPreviewSchema = z.object({
   filePreviouslyImported: z.boolean(),
   rowCount: z.number().int(),
   newCount: z.number().int(),
+  /** New rows that restore a deleted trade (included in newCount). */
+  restoreCount: z.number().int(),
   duplicateCount: z.number().int(),
   blankCount: z.number().int(),
   invalidCount: z.number().int(),

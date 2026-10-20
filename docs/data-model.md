@@ -222,7 +222,7 @@ erDiagram
 | Action | Effect |
 |---|---|
 | Archive account | Soft delete (`archived_at`, migration 0004). Hidden from lists and read-only: reading or writing its trades, journal entries and imports returns not-found. Nothing is removed, and an archived account's broker account number can be reused. The app never hard-deletes accounts; the schema's `ON DELETE CASCADE` remains for a future permanent-delete flow (Build 24). "Close" an account with `status = 'closed'` to keep it visible. |
-| Delete trade | Soft delete (`deleted_at`). Hidden from lists; any journal entry linking to it has `trade_id` cleared in the same transaction. The row keeps its `dedup_key`, so re-importing the CSV does not bring it back. |
+| Delete trade | Soft delete (`deleted_at`). Hidden from lists; any journal entry linking to it has `trade_id` cleared in the same transaction. The row keeps its `dedup_key`; re-importing its CSV row restores this same trade (see [Duplicate detection](#duplicate-detection)). |
 | Delete journal entry | Hard delete; tag links cascade. |
 | Journal ↔ trade | A journal entry may link only to a non-deleted trade **of the same account** (validated in Rust, enforced by triggers). |
 | Trade ↔ account | A trade never moves between accounts; account and import provenance are immutable (trigger). |
@@ -474,8 +474,14 @@ attempt. File-level problems (bad mapping, ambiguous dates, empty or oversized f
 ### Duplicate detection
 
 Each valid row gets an identity key; `trades.dedup_key` is unique per account. A row is a duplicate if an
-earlier line of the same file, or any trade of the account (including soft-deleted ones), has the same key. The
-preview explains which line or saved trade it matches.
+earlier line of the same file, or an active trade of the account, has the same key. The preview explains which
+line or saved trade it matches.
+
+If the key belongs to a soft-deleted trade, the row is `new` and restores that trade: commit clears its
+`deleted_at` instead of inserting a second row (the key is unique and immutable). The preview's `restores`
+names the trade and `restoreCount` counts these rows (included in `newCount`). The restored trade keeps its
+original values and import provenance. Its row record is `imported` with the restore noted in `issues_json`.
+Journal links cleared by the delete are not restored. Preview and commit use the same classification.
 
 | Row | Key |
 |---|---|
@@ -489,7 +495,7 @@ Limitations:
 - Fees and notes are not part of the key, so a re-export that only corrects fees is a duplicate (edit the trade).
 - The same trade exported in two different formats or with different timestamp precision produces different
   keys. Manual trades have no key. Duplicates are scoped per account.
-- Deleted imported trades keep their key, so re-importing the file does not bring them back.
+- Deleted imported trades keep their key, so re-importing the file restores them rather than importing copies.
 
 ## Commands
 

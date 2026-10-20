@@ -10,8 +10,10 @@
 //!   generic rows). Identical rows without IDs are therefore duplicates, even
 //!   within one file.
 //!
-//! A row is a duplicate if an earlier row in the same file, or any trade of
-//! the account (including deleted ones), already has its key.
+//! A row is a duplicate if an earlier row in the same file, or an active
+//! trade of the account, already has its key. A row whose key belongs to a
+//! deleted trade restores that trade (the key stays unique, so it cannot be
+//! inserted again).
 
 use std::collections::HashMap;
 
@@ -56,8 +58,27 @@ pub struct Duplicate {
     pub trade_id: Option<String>,
 }
 
-/// Duplicate status for each row (None = not a duplicate or not valid).
-pub fn classify(conn: &Connection, account_id: &str, rows: &[(&RawRow, &Outcome)]) -> AppResult<Vec<Option<Duplicate>>> {
+/// A deleted trade of the account that a row brings back.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Restore {
+    pub key: String,
+    pub trade_id: String,
+    pub reason: String,
+}
+
+/// What importing a row would do.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Match {
+    /// Insert a new trade (also used for rows that are not valid).
+    New,
+    /// Un-delete the account's deleted trade with this key.
+    Restore(Restore),
+    Duplicate(Duplicate),
+}
+
+/// Classify each row against the file and the account's trades.
+pub fn classify(conn: &Connection, account_id: &str, rows: &[(&RawRow, &Outcome)]) -> AppResult<Vec<Match>> {
     let mut first_seen: HashMap<String, u64> = HashMap::new();
     let mut lookup = conn.prepare(
         "SELECT t.id, t.created_at, t.deleted_at, b.file_name
@@ -67,13 +88,13 @@ pub fn classify(conn: &Connection, account_id: &str, rows: &[(&RawRow, &Outcome)
     let mut out = Vec::with_capacity(rows.len());
     for (raw, outcome) in rows {
         let Outcome::Valid { trade, .. } = outcome else {
-            out.push(None);
+            out.push(Match::New);
             continue;
         };
         let key = key(&trade.identity);
         let basis = basis(&trade.identity);
         if let Some(line) = first_seen.get(&key) {
-            out.push(Some(Duplicate {
+            out.push(Match::Duplicate(Duplicate {
                 of: "file",
                 reason: format!("Same {basis} as line {line} of this file."),
                 key,
@@ -93,17 +114,31 @@ pub fn classify(conn: &Connection, account_id: &str, rows: &[(&RawRow, &Outcome)
                 ))
             })
             .optional()?;
-        out.push(saved.map(|(id, created, deleted, file)| {
-            let day = &created[..10.min(created.len())];
-            let reason = match deleted {
-                Some(_) => format!("Same {basis} as a trade saved on {day} and later deleted; deleted trades are not re-imported."),
-                None => format!(
-                    "Same {basis} as a trade already saved on {day} from {}.",
-                    file.map(|f| format!("'{f}'")).unwrap_or_else(|| "manual entry".into())
-                ),
-            };
-            Duplicate { of: "saved", key, reason, line_number: None, trade_id: Some(id) }
-        }));
+        out.push(match saved {
+            None => Match::New,
+            Some((id, created, deleted, file)) => {
+                let day = |at: &str| at[..10.min(at.len())].to_string();
+                let from = file.map(|f| format!("'{f}'")).unwrap_or_else(|| "manual entry".into());
+                match deleted {
+                    Some(deleted) => Match::Restore(Restore {
+                        reason: format!(
+                            "Restores the trade saved on {} from {from} and deleted on {} (same {basis}).",
+                            day(&created),
+                            day(&deleted)
+                        ),
+                        key,
+                        trade_id: id,
+                    }),
+                    None => Match::Duplicate(Duplicate {
+                        of: "saved",
+                        reason: format!("Same {basis} as a trade already saved on {} from {from}.", day(&created)),
+                        key,
+                        line_number: None,
+                        trade_id: Some(id),
+                    }),
+                }
+            }
+        });
     }
     Ok(out)
 }
