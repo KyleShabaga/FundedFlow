@@ -14,7 +14,7 @@ export const previewViewModelSchema = z.object({
   phase: z.literal("preview"), accountId: recordId, fileName: z.string().min(1), currency,
   preview: csvPreviewSchema.extend({ rows: z.array(csvPreviewSchema.shape.rows.element.extend({ trade: previewTrade.nullable() })) }),
 });
-export const importRecordSchema = importBatchSchema.extend({ id: recordId, accountId: recordId, createdAt: instant, completedAt: instant });
+export const importRecordSchema = importBatchSchema.extend({ id: recordId, accountId: recordId, fileSha256: z.string().regex(/^[a-f0-9]{64}$/), fileSize: z.int().nonnegative(), createdAt: instant, completedAt: instant });
 /** Raw errorSummary may contain database diagnostics; expose a safe message instead. */
 export const importViewModelSchema = importRecordSchema.omit({ errorSummary: true }).extend({ failureMessage: z.string().nullable() });
 export type ImportViewModel = z.infer<typeof importViewModelSchema>;

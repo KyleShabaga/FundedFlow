@@ -18,6 +18,7 @@ it("preserves decimal precision, nulls, zero, stored timestamps and financial ba
   expect(toJournalViewModel(journal, account).entryAt).toBe(journal.entryAt);
   const risk = toSnapshotViewModel(snapshot, account);
   expect(risk.status).toBe("unknown"); expect(risk.dailyLossRemaining).toBeNull(); expect(risk.balance).toBe("0");
+  expect(risk.currency).toBeNull(); expect(risk.accountCurrency).toBe("USD");
   expect(risk.dataAsOf).toBeNull(); expect(risk.calculatedAt).toBe(snapshot.calculatedAt);
   expect(risk.provenance).toBe("persisted-snapshot-not-live");
 });

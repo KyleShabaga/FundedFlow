@@ -8,7 +8,7 @@ export const trade: Trade = { id: "t", accountId: "a", source: "manual", importB
   entryAt: T, entryPrice: "5000", exitAt: null, exitPrice: null, fees: "0", tradingDay: "2026-10-20", reportedPnl: null,
   grossPnl: null, realizedPnl: null, pnlStatus: "open", notes: null, roundTrip: null, createdAt: T, updatedAt: T };
 export const journal: JournalEntry = { id: "j", accountId: "a", tradeId: null, entryAt: T, title: "Test note", body: "", tags: [], createdAt: T, updatedAt: T };
-export const batch: ImportBatch = { id: "b", accountId: "a", fileName: "fixture.csv", fileSha256: "test-sha", fileSize: 100, sourceFormat: "generic", status: "committed",
+export const batch: ImportBatch = { id: "b", accountId: "a", fileName: "fixture.csv", fileSha256: "0".repeat(64), fileSize: 100, sourceFormat: "generic", status: "committed",
   rowCount: 1, importedCount: 1, skippedCount: 0, duplicateCount: 0, failedCount: 0, warningCount: 0, errorSummary: null, createdAt: T, completedAt: T };
 export const snapshot: Snapshot = { id: "s", accountId: "a", rulebookVersionId: null, tradingDay: "2026-10-20", isEndOfDay: true,
   dataAsOf: null, dataSource: "none", calculatedAt: T, engineVersion: "test-engine", inputsHash: "test-hash", feesIncluded: true, unrealizedIncluded: false,
