@@ -354,17 +354,21 @@ Repositories in `apps/desktop/src-tauri/src/store/` behind the `JournalRepositor
 - **Drafts.** `createDraft` writes the next version of a variant (number = highest + 1) with its source links,
   claims, phases, paths and offers in one transaction; any failure leaves the catalogue unchanged. An offer names its
   phase by (`phaseKey`, `providerLabel`) and path by `pathKey`, which are unique inside one version. Prices are
-  decimal text: absent is unknown, `"0"` is known free, and prices need a currency.
+  decimal text: absent is unknown, `"0"` is known free, and prices need a currency. An offer's `effectiveFrom` and
+  `effectiveTo` must be valid instants (absent is an open bound) with the end after the start.
 - **Only a draft is editable.** `replaceDraft` refuses a version in review or reviewed with a message pointing to a
   superseding version (the freeze triggers still protect reviewed content underneath). It recreates phases and paths,
   so a draft whose phase or path is already referenced (an applicability row, an account, a phase event) cannot be
-  replaced and nothing changes.
-- **Corrections.** A correction is a new draft naming `supersedesVersionId` (same variant) and a reason. It goes
+  replaced and nothing changes. It recreates offers too, so a draft whose offers a promotion already names is refused
+  rather than silently losing those promotion links.
+- **Corrections.** A correction is a new draft naming `supersedesVersionId` (another version of the same variant) and a
+  reason; `createDraft` and `replaceDraft` check this alike. It goes
   through the normal review path, and the original moves to `superseded` only once a *verified* version that names it
   exists (`transitionVersion`). The original's content, sign-off and terms never change.
 - **Sources** are created (`createSource`) and never edited, so a claim's provenance is fixed.
 - **Offer selections** (`account_offer_selections`, append-only): `selectOffer` needs the account's catalogue version;
-  the offer must belong to it (and to the account's selected path when it names one); a promotion must be the
+  the offer must belong to it (and to the account's selected path when it names one) and be in effect on the
+  selection date (`effectiveFrom` ≤ `selectedAt` < `effectiveTo`); a promotion must be the
   account's provider's, linked to that offer, and valid on the selection date. The row stores a frozen copy of the
   offer, promotion, sources with their verification state and the version's review state, so later edits to a draft
   offer or promotion, or a new catalogue version, cannot change what the account recorded. Commercial terms are never

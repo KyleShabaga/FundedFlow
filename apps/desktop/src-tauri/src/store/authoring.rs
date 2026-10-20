@@ -214,9 +214,15 @@ fn check(input: &DraftInput) -> AppResult<Checked> {
     }
     for (i, o) in input.offers.iter().enumerate() {
         let mut m = |f: &str, v: &Option<String>| money(&mut issues, &format!("offers[{i}].{f}"), v);
-        let prices = [m("listPrice", &o.list_price), m("salePrice", &o.sale_price), m("resetFee", &o.reset_fee), m("activationFee", &o.activation_fee)];
+        for (f, v) in [("listPrice", &o.list_price), ("salePrice", &o.sale_price), ("resetFee", &o.reset_fee), ("activationFee", &o.activation_fee)] {
+            m(f, v);
+        }
         let any_price = o.list_price.is_some() || o.sale_price.is_some() || o.reset_fee.is_some() || o.activation_fee.is_some();
-        let _ = prices;
+        let from = instant(&mut issues, &format!("offers[{i}].effectiveFrom"), &o.effective_from);
+        let to = instant(&mut issues, &format!("offers[{i}].effectiveTo"), &o.effective_to);
+        if matches!((&from, &to), (Some(f), Some(t)) if t <= f) {
+            issues.add(&format!("offers[{i}].effectiveTo"), "must be after effectiveFrom");
+        }
         if any_price && text(&o.currency).is_none() {
             issues.add(&format!("offers[{i}].currency"), "prices need a currency");
         }
@@ -285,7 +291,7 @@ fn write_children(tx: &Transaction, version_id: &str, input: &DraftInput) -> App
             }
         };
         let offer_id = new_id();
-        // Already validated by `check`.
+        // Prices and dates were already validated by `check`.
         let micros = |_: &str, v: &Option<String>| v.as_deref().and_then(|s| parse_decimal(s).and_then(to_micros));
         tx.execute(
             "INSERT INTO commercial_offers (id, catalogue_version_id, programme_phase_id, phase_path_id, billing_model, currency,
@@ -314,6 +320,20 @@ fn write_children(tx: &Transaction, version_id: &str, input: &DraftInput) -> App
     Ok(())
 }
 
+/// A correction supersedes another version of the same programme variant, never itself.
+fn check_supersedes(tx: &Transaction, version_id: Option<&str>, input: &DraftInput) -> AppResult<()> {
+    let Some(old) = &input.supersedes_version_id else { return Ok(()) };
+    let same: bool = tx.query_row(
+        "SELECT EXISTS (SELECT 1 FROM catalogue_versions WHERE id = ?1 AND programme_variant_id = ?2)",
+        params![old, input.programme_variant_id],
+        |r| r.get(0),
+    )?;
+    if !same || version_id == Some(old.as_str()) {
+        return Err(AppError::invalid("supersedesVersionId", "a correction supersedes another version of the same programme variant"));
+    }
+    Ok(())
+}
+
 fn version(conn: &Connection, id: &str) -> AppResult<CatalogueVersion> {
     catalogue::load(conn)?
         .graph
@@ -333,16 +353,7 @@ pub fn create_draft(conn: &mut Connection, input: DraftInput) -> AppResult<Catal
     if !exists {
         return Err(AppError::invalid("programmeVariantId", "unknown programme variant"));
     }
-    if let Some(old) = &input.supersedes_version_id {
-        let same: bool = tx.query_row(
-            "SELECT EXISTS (SELECT 1 FROM catalogue_versions WHERE id = ?1 AND programme_variant_id = ?2)",
-            params![old, input.programme_variant_id],
-            |r| r.get(0),
-        )?;
-        if !same {
-            return Err(AppError::invalid("supersedesVersionId", "a correction supersedes a version of the same programme variant"));
-        }
-    }
+    check_supersedes(&tx, None, &input)?;
     let number: i64 = tx.query_row(
         "SELECT COALESCE(MAX(version_number), 0) + 1 FROM catalogue_versions WHERE programme_variant_id = ?1",
         [&input.programme_variant_id],
@@ -361,7 +372,8 @@ pub fn create_draft(conn: &mut Connection, input: DraftInput) -> AppResult<Catal
 
 /// Replace a draft's contents. Only a draft can be edited: anything submitted for review or reviewed is
 /// corrected by a new superseding version. Phases and paths are recreated, so a draft whose phase or path is
-/// already referenced (an applicability row, an account, a phase event) cannot be replaced, and nothing changes.
+/// already referenced (an applicability row, an account, a phase event), or whose offers a promotion names,
+/// cannot be replaced, and nothing changes.
 pub fn replace_draft(conn: &mut Connection, version_id: &str, input: DraftInput) -> AppResult<CatalogueVersion> {
     let c = check(&input)?;
     let tx = conn.transaction()?;
@@ -377,6 +389,21 @@ pub fn replace_draft(conn: &mut Connection, version_id: &str, input: DraftInput)
     }
     if variant != input.programme_variant_id {
         return Err(AppError::invalid("programmeVariantId", "a version cannot move to another programme variant"));
+    }
+    check_supersedes(&tx, Some(version_id), &input)?;
+    // Recreating the offers would cascade-delete their promotion links, so a draft whose offers a
+    // promotion already names is refused rather than silently unlinked.
+    let promoted: bool = tx.query_row(
+        "SELECT EXISTS (SELECT 1 FROM promotion_offers po JOIN commercial_offers o ON o.id = po.commercial_offer_id
+                        WHERE o.catalogue_version_id = ?1)",
+        [version_id],
+        |r| r.get(0),
+    )?;
+    if promoted {
+        return Err(AppError::invalid(
+            "offers",
+            "a promotion is linked to this draft's offers; replacing them would remove those links",
+        ));
     }
     tx.execute("DELETE FROM commercial_offers WHERE catalogue_version_id = ?1", [version_id])?;
     tx.execute("DELETE FROM programme_phases WHERE catalogue_version_id = ?1", [version_id])?;

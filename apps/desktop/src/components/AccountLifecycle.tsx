@@ -10,7 +10,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 
-import { Badge, type Tone } from "../design-system";
+import { Badge, type Tone, formatMoney, zonedDay, zonedWallTime, zonedWallTimeToInstant } from "../design-system";
 import { DataError, repository } from "../lib/data/api";
 import {
   type Account,
@@ -30,13 +30,8 @@ import {
 import { ConfirmDialog } from "./ConfirmDialog";
 import "./AccountLifecycle.css";
 
-const toInstant = (local: string) => (local ? new Date(local).toISOString() : "");
-const localNow = () => {
-  const d = new Date();
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return d.toISOString().slice(0, 16);
-};
-const day = (iso: string) => iso.slice(0, 10);
+// Effective times are entered and shown in the account's time zone, not the computer's.
+const accountNow = (timeZone: string) => zonedWallTime(Date.now(), timeZone);
 const errorText = (e: unknown) => (e instanceof DataError || e instanceof Error ? e.message : String(e));
 
 const statusTone: Record<Account["status"], Tone> = {
@@ -129,7 +124,7 @@ export function ChangeStatusDialog({
   onDone: () => Promise<void>;
 }) {
   const [status, setStatus] = useState<Account["status"]>("failed");
-  const [effectiveAt, setEffectiveAt] = useState(localNow());
+  const [effectiveAt, setEffectiveAt] = useState(() => accountNow(account.timezone));
   const [cause, setCause] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -143,7 +138,7 @@ export function ChangeStatusDialog({
     try {
       await repository.accounts.changeStatus(account.id, {
         status,
-        effectiveAt: toInstant(effectiveAt) || null,
+        effectiveAt: zonedWallTimeToInstant(effectiveAt, account.timezone) || null,
         cause: cause.trim() || null,
         note: note.trim() || null,
       });
@@ -174,7 +169,7 @@ export function ChangeStatusDialog({
               ))}
           </select>
         </Field>
-        <Field label="Effective" hint="When it took effect, in this computer's time zone.">
+        <Field label="Effective" hint={`When it took effect, in the account's time zone (${account.timezone}).`}>
           <input type="datetime-local" required value={effectiveAt} onChange={(e) => setEffectiveAt(e.target.value)} />
         </Field>
         <Field label="Cause (optional)" hint="Your own words. Empty means unknown.">
@@ -242,7 +237,7 @@ export function ResetAttemptDialog({
   onDone: (successor: Account) => Promise<void>;
 }) {
   const [priorOutcome, setPriorOutcome] = useState<"" | (typeof priorOutcomes)[number]>("");
-  const [effectiveAt, setEffectiveAt] = useState(localNow());
+  const [effectiveAt, setEffectiveAt] = useState(() => accountNow(account.timezone));
   const [reason, setReason] = useState("");
   const [source, setSource] = useState<(typeof resetSources)[number]>("user_entered");
   const [name, setName] = useState("");
@@ -257,20 +252,20 @@ export function ResetAttemptDialog({
   const effectiveDay = effectiveAt.slice(0, 10);
   useEffect(() => {
     let live = true;
-    loadRulebookOptions(effectiveDay || localNow().slice(0, 10))
+    loadRulebookOptions(effectiveDay || accountNow(account.timezone).slice(0, 10))
       .then((o) => live && setOptions(o))
       .catch(() => live && setOptions([]));
     return () => {
       live = false;
     };
-  }, [effectiveDay]);
+  }, [effectiveDay, account.timezone]);
 
   const ready = priorOutcome !== "" && name.trim() !== "" && balance.trim() !== "" && rulebookKey !== "" && effectiveAt !== "";
 
   const input = (): ResetInput => ({
     predecessorAccountId: account.id,
     priorOutcome: priorOutcome as (typeof priorOutcomes)[number],
-    effectiveAt: toInstant(effectiveAt),
+    effectiveAt: zonedWallTimeToInstant(effectiveAt, account.timezone),
     reason: reason.trim() || null,
     source,
     name: name.trim(),
@@ -320,7 +315,7 @@ export function ResetAttemptDialog({
               ))}
             </select>
           </Field>
-          <Field label="Reset effective">
+          <Field label="Reset effective" hint={`In the account's time zone (${account.timezone}).`}>
             <input type="datetime-local" required value={effectiveAt} onChange={(e) => setEffectiveAt(e.target.value)} />
           </Field>
           <Field label="Reason (optional)">
@@ -374,7 +369,7 @@ export function ResetAttemptDialog({
           <ul>
             <li>
               record <strong>{account.name}</strong> as <strong>{priorOutcome && statusLabels[priorOutcome]}</strong> from{" "}
-              {day(toInstant(effectiveAt))} and keep all its trades, imports and journal;
+              {effectiveDay} and keep all its trades, imports and journal;
             </li>
             <li>
               create <strong>{name.trim()}</strong> (Attempt 2 after {account.name}) with a starting balance of{" "}
@@ -398,7 +393,16 @@ export function ResetAttemptDialog({
 }
 
 /** Attempt 1 → Attempt 2 → …, with plain per-attempt figures. Unknown results are shown as "—", never 0. */
-export function AttemptLineage({ attempts, currentId }: { attempts: AttemptSummary[]; currentId?: string }) {
+export function AttemptLineage({
+  attempts,
+  currentId,
+  timeZone,
+}: {
+  attempts: AttemptSummary[];
+  currentId?: string;
+  /** The account's IANA zone, for reset dates. Attempts in a chain share it. */
+  timeZone: string;
+}) {
   if (attempts.length < 2) return <p className="ff-hint">This account has no linked attempts.</p>;
   return (
     <table aria-label="Attempts">
@@ -423,7 +427,7 @@ export function AttemptLineage({ attempts, currentId }: { attempts: AttemptSumma
               {a.resetToNext && (
                 <small className="ff-hint">
                   {" "}
-                  · reset {day(a.resetToNext.effectiveAt)}
+                  · reset {zonedDay(a.resetToNext.effectiveAt, timeZone)}
                   {a.resetToNext.reason ? ` (${a.resetToNext.reason})` : ""}
                 </small>
               )}
@@ -434,7 +438,7 @@ export function AttemptLineage({ attempts, currentId }: { attempts: AttemptSumma
             <td>{a.tradeCount}</td>
             <td>{a.firstTradingDay ? `${a.firstTradingDay} – ${a.lastTradingDay}` : "—"}</td>
             <td>
-              {a.netPnl ?? "—"}
+              {formatMoney(a.netPnl, { symbol: "" })}
               {a.tradesWithUnknownPnl > 0 && <small className="ff-hint"> ({a.tradesWithUnknownPnl} without a result)</small>}
             </td>
             <td>{a.importCount}</td>
@@ -610,7 +614,7 @@ export function AccountLifecyclePanel({
                   Deletion preview
                 </button>
               </div>
-              {lineage?.accountId === a.id && <AttemptLineage attempts={lineage.attempts} currentId={a.id} />}
+              {lineage?.accountId === a.id && <AttemptLineage attempts={lineage.attempts} currentId={a.id} timeZone={a.timezone} />}
             </li>
           ))}
         </ul>
