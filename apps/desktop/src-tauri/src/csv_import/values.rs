@@ -114,7 +114,9 @@ pub fn parse_duration(s: &str) -> Result<u64, String> {
         if nums[1..].iter().any(|n| *n >= 60) || parts[1..].iter().any(|p| p.len() != 2) {
             return Err(invalid());
         }
-        return Ok(nums.iter().fold(0, |acc, n| acc * 60 + n));
+        return nums.iter().try_fold(0u64, |acc, n| {
+            acc.checked_mul(60).and_then(|v| v.checked_add(*n)).ok_or_else(invalid)
+        });
     }
 
     let mut total: u64 = 0;
