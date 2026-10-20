@@ -4,6 +4,7 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 
 import { DataError, repository } from "../lib/data/api";
+import { AccountLifecyclePanel } from "./AccountLifecycle";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { CsvImportSection } from "./CsvImportSection";
 import type { Account, ImportBatch, JournalEntry, Trade } from "../lib/data/schemas";
@@ -202,6 +203,13 @@ export function DataModelPanel() {
           <button type="submit">Add account</button>
         </form>
       </fieldset>
+
+      <AccountLifecyclePanel
+        onChanged={async (focus) => {
+          await loadAccounts();
+          if (focus && !focus.archivedAt) setAccountId(focus.id);
+        }}
+      />
 
       {account && (
         <>
