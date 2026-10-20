@@ -1,4 +1,4 @@
-import { microsToDecimal, toMicros } from "@fundedflow/domain";
+import { microsToDecimal, type PresenceState, type SupportStatus, toMicros } from "@fundedflow/domain";
 import type { ReactNode } from "react";
 
 import { formatMoney, formatPercent, moneySign } from "../format";
@@ -172,5 +172,93 @@ export function AccountCard({ name, firm, sizeLabel, phase, phaseTone = "flow", 
       )}
       {footer != null && <div className="ds-acct-foot">{footer}</div>}
     </div>
+  );
+}
+
+/* ---------- MiniMeter ---------- */
+
+export type MiniMeterProps = Omit<MoneyRule, "note"> & { kind?: "limit" | "target" };
+
+/**
+ * Compact rule bar for table cells: "$2,200 / $3,000" and "$800 left" over a
+ * 6 px track. Same thresholds as RuleMeter (ruleState).
+ */
+export function MiniMeter(props: MiniMeterProps) {
+  const state = ruleState(props);
+  const dp = props.dp ?? 0;
+  const used = toMicros(props.used) ?? 0n;
+  const limit = toMicros(props.limit) ?? 0n;
+  const fmt = (v: string) => formatMoney(v, { signed: false, dp });
+  const left = fmt(microsToDecimal(limit > used ? limit - used : 0n));
+  const note = props.kind === "target" ? (state === "done" ? "Target hit" : `${left} to go`) : state === "breach" ? "Breached" : `${left} left`;
+  const pct = Math.round(ratio(props) * 100);
+  return (
+    <div className={cx("ds-mini", `ds-mini-${state}`)}>
+      <div className="ds-mini-head">
+        <span className="ds-mono">
+          {fmt(props.used)} / {fmt(props.limit)}
+        </span>
+        <span className="ds-mini-note">{note}</span>
+      </div>
+      <div className="ds-mini-track" role="meter" aria-label={props.label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-valuetext={`${fmt(props.used)} of ${fmt(props.limit)}, ${note}`}>
+        <div className="ds-mini-fill" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/* ---------- RuleStateBadge ---------- */
+
+/**
+ * How a rule shows when it is not a plain meter, from the rulebook's tagged
+ * presence and support status (docs/design/components.md#rulestate). Unknown
+ * presence is "Needs setup", never a meter at zero.
+ */
+export interface RuleStateBadgeProps {
+  presence: PresenceState;
+  support: SupportStatus;
+  /** The RuleMeter (or MiniMeter) to show when the rule has a supported value. */
+  meter?: ReactNode;
+  /** Action that adds the missing value ("Add limit"), shown with Needs setup. */
+  setupAction?: ReactNode;
+  /** detail: show "Not applicable" instead of hiding it. */
+  context?: "summary" | "detail";
+}
+
+export function RuleStateBadge({ presence, support, meter, setupAction, context = "summary" }: RuleStateBadgeProps) {
+  if (presence === "not_applicable") return context === "detail" ? <Badge>Not applicable</Badge> : null;
+  if (presence === "explicit_none") return <Badge>None</Badge>;
+  if (presence === "disabled") return <Badge>Off</Badge>;
+  if (support === "unsupported") return <Badge>Not tracked</Badge>;
+  if (support === "manual_only") return <Badge tone="flow">Manual check</Badge>;
+  if (presence === "unknown" || support === "needs_setup" || meter == null) {
+    return (
+      <span className="ds-rule-setup">
+        <Badge tone="warn">Needs setup</Badge>
+        {setupAction}
+      </span>
+    );
+  }
+  return <>{meter}</>;
+}
+
+/* ---------- RulebookLine ---------- */
+
+export interface RulebookLineProps {
+  name: string;
+  version: number;
+  /** verified: checked against the firm's published rules. needs_review: not yet. private: the trader's own rules. */
+  verification: "verified" | "needs_review" | "private";
+}
+
+/** "Rulebook Apex 100K · v3" with its verification state. */
+export function RulebookLine({ name, version, verification }: RulebookLineProps) {
+  return (
+    <span className="ds-rulebook">
+      <span>
+        Rulebook {name} · v{version}
+      </span>
+      {verification === "verified" ? <Badge tone="profit">Verified</Badge> : verification === "needs_review" ? <Badge tone="warn">Needs review</Badge> : <Badge>Account rules (private)</Badge>}
+    </span>
   );
 }

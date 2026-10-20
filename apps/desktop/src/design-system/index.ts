@@ -13,6 +13,7 @@ import "./tokens.css";
 import "./design-system.css";
 import "./controls.css";
 import "./states.css";
+import "./data.css";
 
 export * from "./format";
 export * from "./components/primitives";
@@ -24,3 +25,4 @@ export * from "./components/forms";
 export * from "./components/overlays";
 export * from "./components/feedback";
 export * from "./components/async-states";
+export * from "./components/data";

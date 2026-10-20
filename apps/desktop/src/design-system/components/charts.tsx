@@ -1,7 +1,10 @@
 // Small SVG charts. Money comes in as decimal text and is converted to
 // floats only to place marks (moneyToNumberForDisplay).
 
-import { moneyToNumberForDisplay } from "../format";
+import { type ReactNode, useId } from "react";
+
+import { formatInstant, moneyToNumberForDisplay } from "../format";
+import { type AsyncState, type EmptyKind, hasData, LoadingState, StateBoundary } from "./async-states";
 import { cx } from "./cx";
 
 /* ---------- WinGauge ---------- */
@@ -114,5 +117,57 @@ export function EquityCurve({ points, floor, target, height = 200, step = true, 
         </span>
       )}
     </div>
+  );
+}
+
+/* ---------- ChartPanel ---------- */
+
+export interface ChartPanelProps<T> {
+  title: string;
+  subtitle?: ReactNode;
+  /** Controls beside the title (basis tabs, range). */
+  actions?: ReactNode;
+  /** The chart's data state; the chart renders only for data states. */
+  state: AsyncState<T>;
+  /** Draws the chart from data. Keep it to the design-system charts (no market data here). */
+  children: (data: T) => ReactNode;
+  /** Account zone for the "As of" line and stale notice. */
+  timeZone?: string;
+  /** Empty copy per kind ("No trades in this range"). */
+  empty?: Partial<Record<EmptyKind, ReactNode>>;
+  onRetry?: () => void;
+  /** Minimum body height so loading, empty and chart states keep the same size. Default 200. */
+  minHeight?: number;
+  className?: string;
+}
+
+/**
+ * Card around a chart: title, subtitle, data timestamp and the loading,
+ * empty, error and stale fallbacks of StateBoundary. Live charting
+ * (TradingView, market data) is a P2 card, not this wrapper.
+ */
+export function ChartPanel<T>({ title, subtitle, actions, state, children, timeZone, empty, onRetry, minHeight = 200, className }: ChartPanelProps<T>) {
+  const headingId = useId();
+  const asOf = hasData(state) ? (state.asOf ?? null) : undefined;
+  return (
+    <section className={cx("ds-card", "ds-chart-panel", className)} aria-labelledby={headingId}>
+      <header className="ds-chart-head">
+        <div>
+          <h3 id={headingId} className="ds-title ds-chart-title">
+            {title}
+          </h3>
+          {subtitle != null && <p className="ds-faint ds-chart-sub">{subtitle}</p>}
+        </div>
+        <div className="ds-chart-meta">
+          {asOf != null && state.status !== "stale" && <span className="ds-faint">As of {formatInstant(asOf, { timeZone })}</span>}
+          {actions}
+        </div>
+      </header>
+      <div className="ds-chart-body" style={{ minHeight }}>
+        <StateBoundary state={state} label={title.toLowerCase()} empty={empty} onRetry={onRetry} timeZone={timeZone} loading={<LoadingState label={`Loading ${title.toLowerCase()}`} layout="panel" />}>
+          {(data) => children(data)}
+        </StateBoundary>
+      </div>
+    </section>
   );
 }
