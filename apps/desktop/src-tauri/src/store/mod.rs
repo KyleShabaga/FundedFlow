@@ -4,6 +4,7 @@
 
 pub mod accounts;
 pub mod journal;
+pub mod rulebooks;
 pub mod trades;
 
 use std::str::FromStr;

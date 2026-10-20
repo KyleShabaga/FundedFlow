@@ -1,7 +1,7 @@
 # FundedFlow local data model
 
-Status: V1, schema version 8 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue` and `0008_freeze_ever_verified.sql`; see [Migrations](#database-location-and-migrations)).
-Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal),
+Status: V1, schema version 10 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` and the Rust data step 10 `convert_legacy_rulebooks`; see [Migrations](#database-location-and-migrations)).
+Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
 
@@ -63,15 +63,15 @@ that feeds the same `trades` table.
 
 | Status | Tables |
 |---|---|
-| **Implemented** (commands, store code and tests) | `accounts`, `firms` (find-or-create by name), `account_status_events` (written on create and status change), `instruments` (seeded by 0002, read-only), `trades`, `trade_round_trips`, `import_batches`, `import_rows`, `journal_entries`, `tags`, `journal_entry_tags` |
-| **Reserved** (created and constraint-tested in 0001, no commands) | `app_meta` (journal_id etc. not yet written), `settings`, `programmes`, `account_ledger_entries`, `rulebook_versions`, `rules`, `csv_mapping_profiles`, `strategies`, `checklists`, `checklist_items`, `checklist_results`, `trade_reviews`, `trade_review_tags`, `attachments`, `attachment_links`, `account_snapshots`, `audit_events`, `sync_outbox` (inert) |
+| **Implemented** (commands, store code and tests) | `accounts`, `firms` (find-or-create by name), `account_status_events` (written on create and status change), `instruments` (seeded by 0002, read-only), `trades`, `trade_round_trips`, `import_batches`, `import_rows`, `journal_entries`, `tags`, `journal_entry_tags`, and the [rulebooks](#rulebooks): `rulebooks`, `rulebook_versions`, `rule_definitions`, `rule_claims`, `rule_applicability`, `account_rulebook_assignments` |
+| **Reserved** (created and constraint-tested in 0001, no commands) | `app_meta` (journal_id etc. not yet written), `settings`, `programmes`, `account_ledger_entries`, `csv_mapping_profiles`, `strategies`, `checklists`, `checklist_items`, `checklist_results`, `trade_reviews`, `trade_review_tags`, `attachments`, `attachment_links`, `account_snapshots`, `audit_events`, `sync_outbox` (inert) |
 | **Schema only** (Zod DTOs in `packages/domain/src/catalogue`, tables in migration 6, Rust DTOs in `src/catalogue.rs`; no commands yet) | provider catalogue: `providers`, `programme_families`, `programme_variants`, `catalogue_versions`, `catalogue_version_sources`, `catalogue_field_claims`, `catalogue_sources`, `programme_phases`, `phase_paths`, `commercial_offers`, `commercial_offer_sources`, `promotions`, `promotion_sources`, `promotion_offers`, `account_phase_events`, and the `accounts` link columns; see [Provider catalogue](#provider-catalogue). The account store keeps `providers` in step with `firms` (`provider_for_firm`). |
-| **Not in the schema** (future extensions) | `executions`, `execution_fees`, `trade_executions` (execution-first), reusable rulebooks and `account_rulebook_assignments` (Build 9.5) |
+| **Legacy, kept unchanged** | `legacy_account_rulebook_versions`, `legacy_account_rules`: the 0001 account-owned rulebook tables, renamed by migration 9 and converted by step 10. No code writes them. |
+| **Not in the schema** (future extensions) | `executions`, `execution_fees`, `trade_executions` (execution-first) |
 
-Reserved tables are a starting point, not a finished design. In particular `rulebook_versions` is
-account-owned (`account_id NOT NULL`, cascades on account delete), whereas Build 9.5 plans reusable, versioned
-rulebooks assigned to accounts. The field-level conversion plan is
-[rulebook-migration.md](rulebook-migration.md). `firms`/`programmes` predate the Build 9 provider catalogue; migration 7 maps
+Reserved tables are a starting point, not a finished design. The 0001 rulebook tables were account-owned
+(`account_id NOT NULL`); migration 9 replaced them with reusable, versioned rulebooks, and step 10 converted
+their rows field by field as [rulebook-migration.md](rulebook-migration.md) specifies. `firms`/`programmes` predate the Build 9 provider catalogue; migration 7 maps
 them into `providers`/`programme_families` and keeps them. Shipped migrations are never edited.
 
 ## Provider catalogue
@@ -213,6 +213,91 @@ erDiagram
 - The step skips rows it has already mapped. The account store calls the same `provider_for_firm` whenever
   it finds or creates a firm, so later firms are mapped as well.
 
+## Rulebooks
+
+Status: **implemented** (Build 9.5). Contracts: `packages/domain/src/rulebook` (Zod, shared with the rules engine
+of Build 16, which must import rather than redefine them). Tables: `migrations/0009_rulebooks.sql`. Store:
+`src-tauri/src/store/rulebooks.rs`; parameter checks: `src-tauri/src/rulebook.rs`. Fixtures:
+`packages/domain/test/fixtures/rulebook.json` (synthetic 50K FLEX shapes) and
+`rulebook-legacy-conversion.json` (written by the Rust conversion test, parsed by the Zod tests).
+
+No rule is evaluated here. A rulebook records what the terms say; whether an account meets them is Build 16.
+
+**Two kinds of rulebook.**
+- A **catalogue rulebook** (`owner_account_id` NULL) belongs to a provider. Its versions apply to exact
+  catalogue phases and paths. A version can be assigned to an account only after a named reviewer verifies it.
+- An **account-private rulebook** holds one account's own rules: the legacy conversions and anything the user
+  writes. It is never provider-verified (trigger). Publishing puts it in use (`needs_review`), and
+  `user_confirmed_at` records the user's own check. It never applies to catalogue phases and cannot be
+  assigned to another account. Deleting the account deletes it.
+
+**Versions.**
+- Only a never-verified draft is editable. Afterwards the rules, applicability and claims are frozen with
+  the version; only its status, `record_status` and `updated_at` change.
+- A correction is a new version with `supersedes_version_id` and a reason. Verifying it marks the old one
+  `superseded`.
+- Status changes follow `canTransitionVerification`, without stale → needs_review.
+
+**Rules.** One `rule_definitions` row per rule, unique `rule_key` per version. `parameters_json` is the
+discriminated Zod shape for its `rule_type`, checked again in Rust (unknown fields rejected). Every value is a
+tagged presence:
+- `unknown`
+- `explicit_none` ("NONE")
+- `disabled` ("OFF")
+- `not_applicable`
+- `value`; an explicit zero is the value `"0"`, never a bare null
+
+`support_status` states what can be done with the rule:
+- `supported`: every needed value is known;
+- `needs_setup`: a needed value is unknown, so the risk status stays indeterminate;
+- `manual_only`: restrictions and manual checks, always confirmed by a person;
+- `unsupported`.
+
+A personal limit (`override_kind = 'personal_limit'`) is the user's own rule beside the provider's, with no
+provider wording.
+
+| Rule type | Covers |
+|---|---|
+| `profit_target`, `daily_loss_limit` (incl. conditional "below initial trail"), `max_drawdown` (static / EOD / intraday, lock) | Account risk limits |
+| `min_trading_days` | Trading days, or qualifying profit days when `minDayProfit` is a value |
+| `consistency` | Best-day share as a decimal in (0, 1] |
+| `max_position_size` | Mini/micro/any limits; how several combine stays `unknown` until confirmed |
+| `max_trades_per_day` | |
+| `payout_eligibility`, `payout_count_transition`, `scaling_plan` | Payout waiting days and caps, payouts to Live, scaling ("Yes" alone leaves the schedule unknown) |
+| `trading_restriction`, `manual_check`, `unknown` | Always `manual_only` or `unsupported` |
+
+**Applicability and resolution.** `rule_applicability` ties a catalogue version to one phase, or one path of
+it, of an exact catalogue version. The checks:
+- composite foreign keys keep the path in the phase and the phase in the catalogue version;
+- a trigger rejects another provider's catalogue version.
+
+`get_applicable_rulebook(phase, path)` resolves in this order:
+1. The explicit binding: the path's override, then the phase default.
+2. Otherwise, the verified applicability rows for exactly that phase and path.
+
+It answers `resolved`, `unverified` (bound but not verified), `ambiguous` (several verified) or `none`. Nothing
+is inferred from names or inherited from another size, phase or path.
+
+**Claims.** `rule_claims` link a rule to a `catalogue_sources` row with its exact wording. A claim's own status
+(candidate, verified, rejected, stale, conflicting) is reviewed independently. A conflicting claim can be
+added to a published version. `flag_rulebook_source_conflict` does that, and makes a verified version `stale`
+until a correction supersedes it.
+
+**Assignments.** `account_rulebook_assignments` say which version governs an account over half-open trading days
+`[effective_from, effective_to)`.
+- A trigger rejects an unassignable version and overlapping intervals.
+- Assigning a version ends the account's open assignment on that day.
+- Assignments are history: the only change allowed is closing an open one.
+- Nothing switches an account to a newer version by itself.
+- A phase or path given with an assignment must be one the version applies to.
+
+**Publication.** `publish_rulebook_version(id, reviewer)` moves one step at a time:
+- a draft goes to `needs_review`, without a reviewer;
+- a catalogue version in review goes to `verified`. That needs a reviewer, at least one applicability row and
+  no conflicting claim.
+
+`validate_rulebook_draft` returns what would stop the next step.
+
 ## Conventions
 
 | Concern | Decision |
@@ -259,6 +344,8 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 6 | `provider_catalogue` | SQL | [Provider catalogue](#catalogue-storage) tables and triggers, plus nullable catalogue link columns and `size_source` on `accounts` |
 | 7 | `map_legacy_catalogue` | Rust | Maps `firms` → `providers` and `programmes` → `programme_families`, and fills `accounts.provider_id` |
 | 8 | `freeze_ever_verified` | SQL | Replaces the catalogue freeze triggers: a version with `verified_at` set stays frozen, and `stale` → `needs_review` is removed. Changes no rows |
+| 9 | `rulebooks` | SQL | Renames the 0001 rulebook tables to `legacy_account_*` and creates the [rulebook](#rulebooks) tables and triggers; phase and path rulebook IDs must now name a catalogue rulebook version |
+| 10 | `convert_legacy_rulebooks` | Rust | Converts legacy account-owned rulebooks into account-private rulebooks, keeping their IDs ([matrix](rulebook-migration.md)); the legacy rows stay |
 
 How an upgrade runs:
 
@@ -291,6 +378,8 @@ The tests check:
 - only the expected trading days change;
 - each firm gets one provider (`Apex` → `apex`), accounts point at it, and nothing else is inferred;
 - the backup holds the old version;
+- restoring the backup over the journal gives back the old version exactly, and opening it upgrades it again
+  to the same data;
 - the store still lists, creates and dedups re-imports;
 - reopening is a no-op;
 - a failure in step 5 leaves the journal at version 4.
@@ -313,6 +402,7 @@ or SQLite types, so a Stage 2 adapter can implement the same interface.
 | `trades` | `list`, `create`, `update`, `remove` |
 | `journal` | `list`, `create`, `update`, `remove` |
 | `imports` | `preview`, `commit`, `list`, `problemRows` |
+| `rulebooks` | `list`, `listVersions`, `getVersion`, `getApplicable`, `createDraft`, `validateDraft`, `publish`, `assign`, `listAssignments`, `flagSourceConflict` |
 
 - The desktop adapter is `createTauriRepository(invoke)` in `apps/desktop/src/lib/data/tauri-repository.ts`.
   `api.ts` binds it to Tauri's `invoke` as `repository`. Components import `repository` and never call `invoke`.
@@ -325,8 +415,8 @@ or SQLite types, so a Stage 2 adapter can implement the same interface.
   round-trip sources are one bundle, and so is an account settings change together with its trade re-derive.
   If any part fails, nothing is kept. Tests in `store/tests.rs`, `csv_import/tests.rs` and `db/upgrade_tests.rs`
   inject failures part-way through.
-- Rulebooks (Build 9.5) and account snapshots (Build 15.5) join the port when their persistence exists. Provider
-  catalogue tables (Build 9 contracts) arrive as a later migration.
+- Account snapshots (Build 15.5) join the port when their persistence exists. The provider catalogue (Build 9)
+  has tables but no operations yet; rulebooks reference its phases and paths.
 
 ## Startup and recovery
 
@@ -514,6 +604,7 @@ Limitations:
 | Trades | `list_trades(accountId)`, `create_trade(input)`, `update_trade(id, input)`, `delete_trade(id)` |
 | Journal | `list_journal_entries(accountId)`, `create_journal_entry(input)`, `update_journal_entry(id, input)`, `delete_journal_entry(id)` |
 | CSV | `preview_csv_import(request)`, `commit_csv_import(request)`, `list_csv_imports(accountId)`, `list_csv_import_problem_rows(batchId)` |
+| Rulebooks | `list_rulebooks(accountId?)`, `list_rulebook_versions(rulebookId)`, `get_rulebook_version(id)`, `get_applicable_rulebook(query)`, `create_rulebook_draft(input)`, `validate_rulebook_draft(id)`, `publish_rulebook_version(id, reviewer?)`, `assign_rulebook_to_account(input)`, `list_account_rulebook_assignments(accountId)`, `flag_rulebook_source_conflict(input)` |
 
 Updates replace all editable fields. Inputs are validated in TypeScript (Zod) and again in Rust before any write.
 Errors are `{ kind: "validation" | "notFound" | "conflict" | "database" | "unavailable", message, issues? }`, with `issues` naming

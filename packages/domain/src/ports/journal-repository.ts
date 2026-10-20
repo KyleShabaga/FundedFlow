@@ -16,6 +16,18 @@ import type { CsvImportRequest, CsvPreview, ImportBatch, ImportRowRecord } from 
 import type { AppError } from "../contracts/errors.js";
 import type { JournalEntry, JournalEntryInput } from "../contracts/journal.js";
 import type { Trade, TradeInput } from "../contracts/trades.js";
+import type {
+  AccountRulebookAssignment,
+  ApplicableRulebook,
+  ApplicableRulebookQuery,
+  AssignmentInput,
+  DraftIssue,
+  RuleClaim,
+  Rulebook,
+  RulebookDraftInput,
+  RulebookVersionDetail,
+  SourceConflictInput,
+} from "../rulebook/versions.js";
 
 export interface AccountRepository {
   /** Active (not archived) accounts. */
@@ -32,7 +44,7 @@ export interface TradeRepository {
   list(accountId: string): Promise<Trade[]>;
   create(input: TradeInput): Promise<Trade>;
   update(id: string, input: TradeInput): Promise<Trade>;
-  /** Soft delete; unlinks journal entries. Re-importing the same CSV does not restore it. */
+  /** Soft delete; unlinks journal entries. Re-importing its CSV row restores the same trade. */
   remove(id: string): Promise<void>;
 }
 
@@ -54,14 +66,40 @@ export interface ImportRepository {
 }
 
 /**
- * The local journal. Rulebooks (Build 9.5) and account snapshots (Build 15.5)
- * join as further members when their persistence lands.
+ * Versioned rulebooks (Build 9.5). Publishing never rewrites an account's
+ * assignments, and nothing switches an account to newer rules on its own.
  */
+export interface RulebookRepository {
+  /** Catalogue rulebooks, plus `accountId`'s private ones when given. */
+  list(accountId: string | null): Promise<Rulebook[]>;
+  /** Every version of a rulebook, newest first. */
+  listVersions(rulebookId: string): Promise<RulebookVersionDetail[]>;
+  getVersion(id: string): Promise<RulebookVersionDetail>;
+  /** The verified version governing a phase or path; never guessed. */
+  getApplicable(query: ApplicableRulebookQuery): Promise<ApplicableRulebook>;
+  /** A new draft version, of an existing rulebook or a new one, with its rules and applicability. */
+  createDraft(input: RulebookDraftInput): Promise<RulebookVersionDetail>;
+  /** What stops the version from being published now; empty when nothing does. */
+  validateDraft(id: string): Promise<DraftIssue[]>;
+  /**
+   * One publication step: a draft goes to `needs_review` (a private rulebook
+   * is then in use); a catalogue version in review is verified by `reviewer`.
+   */
+  publish(id: string, reviewer: string | null): Promise<RulebookVersionDetail>;
+  /** From a trading day; the account's open assignment ends that day. */
+  assign(input: AssignmentInput): Promise<AccountRulebookAssignment>;
+  listAssignments(accountId: string): Promise<AccountRulebookAssignment[]>;
+  /** Records a contradicting source; a verified version it contradicts becomes stale. */
+  flagSourceConflict(input: SourceConflictInput): Promise<RuleClaim>;
+}
+
+/** The local journal. Account snapshots (Build 15.5) join when their persistence lands. */
 export interface JournalRepository {
   readonly accounts: AccountRepository;
   readonly trades: TradeRepository;
   readonly journal: JournalEntryRepository;
   readonly imports: ImportRepository;
+  readonly rulebooks: RulebookRepository;
 }
 
 /** The one error type a JournalRepository rejects with. */

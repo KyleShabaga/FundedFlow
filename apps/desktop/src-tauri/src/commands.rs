@@ -9,7 +9,13 @@ use tauri::State;
 use crate::csv_import::{self, CsvImportRequest, CsvPreview, ImportBatch, ImportRowRecord};
 use crate::error::AppResult;
 use crate::store::accounts::{self, Account, AccountInput};
+use crate::error::FieldIssue;
+use crate::rulebook::{
+    AccountRulebookAssignment, ApplicableRulebook, ApplicableRulebookQuery, AssignmentInput, RuleClaim, Rulebook,
+    RulebookDraftInput, RulebookVersionDetail, SourceConflictInput,
+};
 use crate::store::journal::{self, JournalEntry, JournalEntryInput};
+use crate::store::rulebooks;
 use crate::store::trades::{self, Trade, TradeInput};
 use crate::runtime::{Runtime, RuntimeStatus};
 
@@ -91,6 +97,63 @@ pub async fn list_csv_imports(db: State<'_, Runtime>, account_id: String) -> App
 #[tauri::command]
 pub async fn list_csv_import_problem_rows(db: State<'_, Runtime>, batch_id: String) -> AppResult<Vec<ImportRowRecord>> {
     db.with(|c| csv_import::list_problem_rows(c, &batch_id))
+}
+
+#[tauri::command]
+pub async fn list_rulebooks(db: State<'_, Runtime>, account_id: Option<String>) -> AppResult<Vec<Rulebook>> {
+    db.with(|c| rulebooks::list(c, account_id.as_deref()))
+}
+
+#[tauri::command]
+pub async fn list_rulebook_versions(db: State<'_, Runtime>, rulebook_id: String) -> AppResult<Vec<RulebookVersionDetail>> {
+    db.with(|c| rulebooks::list_versions(c, &rulebook_id))
+}
+
+#[tauri::command]
+pub async fn get_rulebook_version(db: State<'_, Runtime>, id: String) -> AppResult<RulebookVersionDetail> {
+    db.with(|c| rulebooks::get_version(c, &id))
+}
+
+#[tauri::command]
+pub async fn get_applicable_rulebook(db: State<'_, Runtime>, query: ApplicableRulebookQuery) -> AppResult<ApplicableRulebook> {
+    db.with(|c| rulebooks::applicable(c, &query))
+}
+
+#[tauri::command]
+pub async fn create_rulebook_draft(db: State<'_, Runtime>, input: RulebookDraftInput) -> AppResult<RulebookVersionDetail> {
+    db.with(|c| rulebooks::create_draft(c, input))
+}
+
+#[tauri::command]
+pub async fn validate_rulebook_draft(db: State<'_, Runtime>, id: String) -> AppResult<Vec<FieldIssue>> {
+    db.with(|c| rulebooks::validate(c, &id))
+}
+
+#[tauri::command]
+pub async fn publish_rulebook_version(
+    db: State<'_, Runtime>,
+    id: String,
+    reviewer: Option<String>,
+) -> AppResult<RulebookVersionDetail> {
+    db.with(|c| rulebooks::publish(c, &id, reviewer))
+}
+
+#[tauri::command]
+pub async fn assign_rulebook_to_account(db: State<'_, Runtime>, input: AssignmentInput) -> AppResult<AccountRulebookAssignment> {
+    db.with(|c| rulebooks::assign(c, input))
+}
+
+#[tauri::command]
+pub async fn list_account_rulebook_assignments(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<Vec<AccountRulebookAssignment>> {
+    db.with(|c| rulebooks::list_assignments(c, &account_id))
+}
+
+#[tauri::command]
+pub async fn flag_rulebook_source_conflict(db: State<'_, Runtime>, input: SourceConflictInput) -> AppResult<RuleClaim> {
+    db.with(|c| rulebooks::flag_conflict(c, input))
 }
 
 /// Read-only: whether the journal database is open, and why not if it isn't.

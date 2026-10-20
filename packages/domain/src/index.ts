@@ -12,5 +12,6 @@ export * from "./contracts/journal.js";
 export * from "./contracts/csv-import.js";
 
 export * from "./catalogue/index.js";
+export * from "./rulebook/index.js";
 
 export * from "./ports/journal-repository.js";

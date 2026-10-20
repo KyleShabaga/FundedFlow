@@ -91,10 +91,26 @@ pub(super) fn dump(conn: &Connection, skip: &[(&str, &str)]) -> Dump {
         .collect()
 }
 
+/// Tables migration 9 renamed: the legacy rulebook rows live on under these names.
+pub(super) fn renamed(table: &str) -> &str {
+    match table {
+        "rulebook_versions" => "legacy_account_rulebook_versions",
+        "rules" => "legacy_account_rules",
+        other => other,
+    }
+}
+
 /// The same tables and columns as `like`, read from `conn` (which may have
-/// gained tables and columns since).
+/// gained tables and columns since). A dump taken before migration 9 names
+/// the legacy rulebook tables by their old names.
 pub(super) fn dump_like(conn: &Connection, like: &Dump) -> Dump {
-    like.iter().map(|(table, (columns, _))| (table.clone(), (columns.clone(), rows(conn, table, columns)))).collect()
+    let renamed_already = version(conn) >= 9;
+    like.iter()
+        .map(|(table, (columns, _))| {
+            let source = if renamed_already { renamed(table) } else { table.as_str() };
+            (table.clone(), (columns.clone(), rows(conn, source, columns)))
+        })
+        .collect()
 }
 
 /// `(account name, trade notes or entry time, trading day)` for every trade, deleted ones included.
@@ -276,6 +292,55 @@ fn reopening_an_upgraded_journal_is_a_no_op() {
     assert_eq!(rederive_trading_days(&conn).unwrap(), 0, "the re-derive is idempotent");
     map_legacy_catalogue(&conn).unwrap();
     assert_eq!(dump(&conn, &[]), before, "the catalogue mapping is idempotent");
+}
+
+#[test]
+fn restoring_the_pre_upgrade_backup_gives_back_the_old_journal_and_upgrades_again() {
+    let db = Journal::copy_of(V3);
+    let original = dump(&read_only(&db.0), &[]);
+    let upgraded = {
+        let conn = open_file(&db.0).unwrap();
+        dump(&conn, &[])
+    };
+    let rows = |d: &Dump| d.iter().map(|(t, (_, r))| (t.clone(), r.len())).collect::<BTreeMap<_, _>>();
+
+    // Restore: the backup replaces the journal, as a user would copy it back.
+    std::fs::copy(db.backup(), &db.0).unwrap();
+    for side in ["db-wal", "db-shm"] {
+        let _ = std::fs::remove_file(db.0.with_extension(side));
+    }
+    let restored = read_only(&db.0);
+    assert_eq!(version(&restored), 3);
+    assert_eq!(dump(&restored, &[]), original, "the backup is the journal exactly as it was");
+    drop(restored);
+
+    // Opening the restored journal upgrades it to the same result as the first
+    // time: identical original data, and the same rows in the tables migrations
+    // add (whose new IDs and timestamps differ per run).
+    let conn = open_file(&db.0).unwrap();
+    assert_eq!(version(&conn), latest_version());
+    assert_healthy(&conn);
+    assert_eq!(dump_like(&conn, &original), dump_like_from(&upgraded, &original));
+    assert_eq!(rows(&dump(&conn, &[])), rows(&upgraded));
+}
+
+/// `like`'s tables and columns, taken from an existing dump.
+fn dump_like_from(from: &Dump, like: &Dump) -> Dump {
+    like.iter()
+        .map(|(table, (columns, _))| {
+            let (all, rows) = &from[renamed(table)];
+            let idx: Vec<usize> = columns.iter().map(|c| all.iter().position(|a| a == c).unwrap()).collect();
+            let mut rows: Vec<String> = rows
+                .iter()
+                .map(|r| {
+                    let v: Vec<serde_json::Value> = serde_json::from_str(r).unwrap();
+                    serde_json::to_string(&idx.iter().map(|&i| v[i].clone()).collect::<Vec<_>>()).unwrap()
+                })
+                .collect();
+            rows.sort();
+            (table.clone(), (columns.clone(), rows))
+        })
+        .collect()
 }
 
 #[test]
