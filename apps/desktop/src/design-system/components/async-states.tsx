@@ -38,12 +38,18 @@ export interface DisplayError {
 }
 
 export type StaleCause = "refresh-failed" | "offline" | "outdated";
+/**
+ * What `asOf` means: "data" when the backend says when the figures were
+ * calculated or stored; "loaded" when it is only when this screen last
+ * received them (a client receipt time).
+ */
+export type AsOfBasis = "data" | "loaded";
 
 export type AsyncState<T> =
   | { status: "loading" }
   | { status: "success"; data: T; asOf?: string | null }
   | { status: "refreshing"; data: T; asOf?: string | null }
-  | { status: "stale"; data: T; asOf: string | null; cause: StaleCause }
+  | { status: "stale"; data: T; asOf: string | null; cause: StaleCause; asOfBasis?: AsOfBasis }
   | { status: "empty"; kind: EmptyKind }
   | { status: "error"; error: DisplayError }
   | { status: "unavailable"; reason: string; title?: string };
@@ -260,6 +266,8 @@ export interface StaleDataNoticeProps {
   /** When the shown data was last confirmed (ISO instant). null: unknown, said so. */
   asOf: string | null;
   cause: StaleCause;
+  /** Whether `asOf` is when the data was calculated or only when it was last loaded. Default "data". */
+  asOfBasis?: AsOfBasis;
   /** Account zone for the timestamp. */
   timeZone?: string;
   onRetry?: () => void;
@@ -268,15 +276,26 @@ export interface StaleDataNoticeProps {
 }
 
 /** Bar above data that is still shown but not confirmed current. Never says "live" or "up to date". */
-export function StaleDataNotice({ asOf, cause, timeZone, onRetry, retrying, className }: StaleDataNoticeProps) {
+export function StaleDataNotice({ asOf, cause, asOfBasis = "data", timeZone, onRetry, retrying, className }: StaleDataNoticeProps) {
   const when = asOf ? formatInstant(asOf, { timeZone, zoneName: true }) : null;
-  const from = when ? `from ${when}` : "from an unknown time";
-  const text =
-    cause === "refresh-failed"
-      ? `Couldn't refresh. Showing figures ${from}; they may be out of date.`
-      : cause === "offline"
-        ? `Showing saved figures ${from}. Newer data can't be checked right now.`
-        : `These figures are ${from} and haven't been confirmed since.`;
+  let text: string;
+  if (asOfBasis === "loaded") {
+    const loaded = when ? `last loaded ${when}` : "last loaded at an unknown time";
+    text =
+      cause === "refresh-failed"
+        ? `Couldn't refresh. Showing figures ${loaded}; they may be out of date.`
+        : cause === "offline"
+          ? `Showing figures ${loaded}. Newer data can't be checked right now.`
+          : `Showing figures ${loaded}; they haven't been confirmed since.`;
+  } else {
+    const from = when ? `from ${when}` : "from an unknown time";
+    text =
+      cause === "refresh-failed"
+        ? `Couldn't refresh. Showing figures ${from}; they may be out of date.`
+        : cause === "offline"
+          ? `Showing saved figures ${from}. Newer data can't be checked right now.`
+          : `These figures are ${from} and haven't been confirmed since.`;
+  }
   return (
     <div role="status" className={cx("ds-stale", className)}>
       <StatusIndicator status="stale" label="Not current" />
@@ -340,6 +359,12 @@ export interface MutationFeedbackProps {
   onRetry?: () => void;
   /** For `uncertain`: look up whether the write landed (e.g. reload the record). Never a blind retry. */
   onCheck?: () => void;
+  /**
+   * Extra buttons for `uncertain` and `failed`, after the built-in one: for
+   * example "I've checked the records", which releases a write lock once the
+   * user has reviewed what was saved.
+   */
+  actions?: ReactNode;
   className?: string;
 }
 
@@ -347,7 +372,7 @@ export interface MutationFeedbackProps {
  * Status line for a save, import or delete. It shows the state it is given and
  * never resubmits: an uncertain outcome offers "Check result", not "Retry".
  */
-export function MutationFeedback({ state, onRetry, onCheck, className }: MutationFeedbackProps) {
+export function MutationFeedback({ state, onRetry, onCheck, actions, className }: MutationFeedbackProps) {
   switch (state.status) {
     case "idle":
       return null;
@@ -374,11 +399,14 @@ export function MutationFeedback({ state, onRetry, onCheck, className }: Mutatio
           <div className="ds-notice-body">
             <p className="ds-notice-title">Couldn't confirm it saved</p>
             <p className="ds-notice-text">{state.message ?? "The request was sent but no answer came back. It may have saved. Check before trying again."}</p>
-            {onCheck && (
+            {(onCheck || actions != null) && (
               <div className="ds-notice-actions">
-                <Button size="sm" onClick={onCheck}>
-                  Check result
-                </Button>
+                {onCheck && (
+                  <Button size="sm" onClick={onCheck}>
+                    Check result
+                  </Button>
+                )}
+                {actions}
               </div>
             )}
           </div>
@@ -393,18 +421,19 @@ export function MutationFeedback({ state, onRetry, onCheck, className }: Mutatio
             <p className="ds-notice-text">
               {state.message} {state.nothingChanged ? "Nothing was changed." : "Check what changed before trying again."}
             </p>
-            {state.nothingChanged && onRetry && (
+            {((state.nothingChanged && onRetry) || (!state.nothingChanged && onCheck) || actions != null) && (
               <div className="ds-notice-actions">
-                <Button size="sm" onClick={onRetry}>
-                  Try again
-                </Button>
-              </div>
-            )}
-            {!state.nothingChanged && onCheck && (
-              <div className="ds-notice-actions">
-                <Button size="sm" onClick={onCheck}>
-                  Check result
-                </Button>
+                {state.nothingChanged && onRetry && (
+                  <Button size="sm" onClick={onRetry}>
+                    Try again
+                  </Button>
+                )}
+                {!state.nothingChanged && onCheck && (
+                  <Button size="sm" onClick={onCheck}>
+                    Check result
+                  </Button>
+                )}
+                {actions}
               </div>
             )}
           </div>
@@ -476,7 +505,7 @@ export function StateBoundary<T>({ state, label, children, loading, empty, scope
     case "stale":
       body = (
         <>
-          <StaleDataNotice asOf={state.asOf} cause={state.cause} timeZone={timeZone} onRetry={onRetry} />
+          <StaleDataNotice asOf={state.asOf} cause={state.cause} asOfBasis={state.asOfBasis} timeZone={timeZone} onRetry={onRetry} />
           {children(state.data, { status: "stale", asOf: state.asOf })}
         </>
       );

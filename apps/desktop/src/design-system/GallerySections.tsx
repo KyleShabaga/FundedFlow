@@ -12,6 +12,7 @@ import {
   Button,
   ChartPanel,
   Checkbox,
+  compareMoney,
   ConfirmDialog,
   type DataColumn,
   DataTable,
@@ -340,14 +341,6 @@ const ACCOUNTS: AcctRow[] = [
   { id: "a4", name: "MFF $25K · Example", status: "Evaluation", balance: "23910", pnl: "-1090", ddUsed: "1090", ddLimit: "1250", trades: 22 },
 ];
 
-function compareMoney(a: string | null, b: string | null): number {
-  // Unknown sorts last in both directions.
-  const x = a == null ? null : toMicros(a);
-  const y = b == null ? null : toMicros(b);
-  if (x == null || y == null) return x == null && y == null ? 0 : x == null ? 1 : -1;
-  return x < y ? -1 : x > y ? 1 : 0;
-}
-
 export function DataSection() {
   const [sort, setSort] = useState<SortState | null>({ columnId: "balance", direction: "descending" });
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -362,7 +355,7 @@ export function DataSection() {
     const dir = sort.direction === "ascending" ? 1 : -1;
     return [...visible].sort((a, b) => {
       if (sort.columnId === "name") return a.name.localeCompare(b.name) * dir;
-      if (sort.columnId === "balance") return a.balance == null || b.balance == null ? compareMoney(a.balance, b.balance) : compareMoney(a.balance, b.balance) * dir;
+      if (sort.columnId === "balance") return compareMoney(a.balance, b.balance, sort.direction);
       return (a.trades - b.trades) * dir;
     });
   }, [sort, filter, q]);
@@ -414,6 +407,7 @@ export function DataSection() {
         <MetricCard label="Room left today" value={{ kind: "unavailable", reason: "No rulebook for this account" }} basis="Daily loss limit" />
         <MetricCard label="Balance" value={{ kind: "money", amount: "-1234567.89" }} sub="Large negative example" stale asOf="2026-10-17T20:12:00Z" timeZone="America/New_York" />
         <MetricCard label="Open P&L" value={{ kind: "money", amount: null }} sub="Unknown, not $0.00" />
+        <MetricCard label="Net P&L (EUR account)" value={{ kind: "money", amount: "-412.5", currency: "EUR" }} sub="Currency comes from the account" />
       </div>
       <div className="dsg-grid-2">
         <div className="ds-card dsg-stack">

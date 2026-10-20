@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   UNKNOWN,
+  compareMoney,
+  currencySymbol,
   formatInstant,
   formatMoney,
   formatMoneyCompact,
@@ -118,5 +120,29 @@ describe("formatInstant", () => {
   it("treats missing and malformed instants as unknown", () => {
     expect(formatInstant(null)).toBe("—");
     expect(formatInstant("yesterday")).toBe("—");
+  });
+});
+
+describe("currency", () => {
+  it("prefixes by currency code and never falls back to a dollar for other codes", () => {
+    expect(currencySymbol("USD")).toBe("$");
+    expect(currencySymbol(null)).toBe("$");
+    expect(currencySymbol("EUR")).toBe("€");
+    expect(currencySymbol("GBP")).toBe("£");
+    expect(currencySymbol("CAD")).toBe("CA$");
+    expect(currencySymbol("CHF")).toBe("CHF ");
+    expect(currencySymbol("XQQ")).not.toContain("$");
+    expect(formatMoney("-412.5", { currency: "EUR" })).toBe("−€412.50");
+    expect(formatMoney("1000", { currency: "CHF", signed: false })).toBe("CHF 1,000.00");
+    expect(formatMoney(null, { currency: "EUR" })).toBe(UNKNOWN);
+  });
+});
+
+describe("compareMoney", () => {
+  it("orders exactly and keeps unknown last in both directions", () => {
+    const values = ["10", null, "-2.5", "9007199254740.993", "0"];
+    expect([...values].sort((a, b) => compareMoney(a, b))).toEqual(["-2.5", "0", "10", "9007199254740.993", null]);
+    expect([...values].sort((a, b) => compareMoney(a, b, "descending"))).toEqual(["9007199254740.993", "10", "0", "-2.5", null]);
+    expect(compareMoney("9007199254740.993", "9007199254740.992")).toBe(1);
   });
 });

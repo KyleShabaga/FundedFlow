@@ -2,7 +2,7 @@ import * as RadixTabs from "@radix-ui/react-tabs";
 import { LoaderCircle } from "lucide-react";
 import { type ButtonHTMLAttributes, type ReactNode, type Ref, useId } from "react";
 
-import { formatMoney, formatMoneyCompact, formatPercent, moneySign } from "../format";
+import { currencySymbol, formatMoney, formatMoneyCompact, formatPercent, moneySign } from "../format";
 import { cx } from "./cx";
 
 /* ---------- Button ---------- */
@@ -169,11 +169,14 @@ export interface PnlProps {
   /** "+$14.3K" for calendar cells and axes. */
   compact?: boolean;
   symbol?: string;
+  /** ISO 4217 code of the account; sets the symbol. Prefer it over `symbol`. */
+  currency?: string | null;
   className?: string;
 }
 
-export function Pnl({ value, percent, size = "m", compact = false, symbol = "$", className }: PnlProps) {
+export function Pnl({ value, percent, size = "m", compact = false, symbol: symbolProp = "$", currency, className }: PnlProps) {
   const sign = moneySign(value);
+  const symbol = currency !== undefined ? currencySymbol(currency) : symbolProp;
   return (
     <span className={cx("ds-pnl", `ds-pnl-${sign}`, `ds-pnl-${size}`, value == null && "ds-pnl-unknown", className)}>
       {compact ? formatMoneyCompact(value, symbol) : formatMoney(value, { symbol })}

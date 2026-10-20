@@ -14,8 +14,10 @@ interface MoneyRule {
   used: string;
   limit: string;
   note?: string;
-  /** Fraction digits for the amounts. Default 0 (whole dollars). */
+  /** Fraction digits for the amounts. Default 0 (whole units). */
   dp?: number;
+  /** ISO 4217 code of the account. */
+  currency?: string | null;
 }
 /** count: minimum trading days, consistency days. */
 interface CountRule {
@@ -74,7 +76,7 @@ export function RuleMeter(props: RuleMeterProps) {
     const used = toMicros(props.used) ?? 0n;
     const limit = toMicros(props.limit) ?? 0n;
     const leftMicros = limit > used ? limit - used : 0n;
-    const fmt = (v: string) => formatMoney(v, { signed: false, dp });
+    const fmt = (v: string) => formatMoney(v, { signed: false, dp, currency: props.currency });
     const left = fmt(microsToDecimal(leftMicros));
     amount = (
       <>
@@ -131,10 +133,12 @@ export interface AccountCardProps {
   footer?: ReactNode;
   /** Tints the card in loss; a breached account stays visible. */
   breached?: boolean;
+  /** ISO 4217 code of the account; applies to the balance, change and money rules. */
+  currency?: string | null;
   className?: string;
 }
 
-export function AccountCard({ name, firm, sizeLabel, phase, phaseTone = "flow", balance, startingBalance, rules = [], footer, breached, className }: AccountCardProps) {
+export function AccountCard({ name, firm, sizeLabel, phase, phaseTone = "flow", balance, startingBalance, rules = [], footer, breached, currency, className }: AccountCardProps) {
   const bal = balance == null ? null : toMicros(balance);
   const start = toMicros(startingBalance);
   const change = bal != null && start != null ? bal - start : null;
@@ -159,14 +163,14 @@ export function AccountCard({ name, firm, sizeLabel, phase, phaseTone = "flow", 
         <Badge tone={phaseTone}>{phase}</Badge>
       </div>
       <div className="ds-acct-bal">
-        <span className="ds-num-xl">{formatMoney(balance, { signed: false })}</span>
-        <Pnl value={changeText} />
+        <span className="ds-num-xl">{formatMoney(balance, { signed: false, currency })}</span>
+        <Pnl value={changeText} currency={currency} />
         {pct != null && <span className={cx("ds-acct-pct", `ds-text-${moneySign(changeText)}`)}>{formatPercent(pct)}</span>}
       </div>
       {rules.length > 0 && (
         <div className="ds-acct-rules">
           {rules.map((r) => (
-            <RuleMeter key={r.label} {...r} />
+            <RuleMeter key={r.label} {...(r.kind === "count" ? r : { currency, ...r })} />
           ))}
         </div>
       )}
@@ -188,7 +192,7 @@ export function MiniMeter(props: MiniMeterProps) {
   const dp = props.dp ?? 0;
   const used = toMicros(props.used) ?? 0n;
   const limit = toMicros(props.limit) ?? 0n;
-  const fmt = (v: string) => formatMoney(v, { signed: false, dp });
+  const fmt = (v: string) => formatMoney(v, { signed: false, dp, currency: props.currency });
   const left = fmt(microsToDecimal(limit > used ? limit - used : 0n));
   const note = props.kind === "target" ? (state === "done" ? "Target hit" : `${left} to go`) : state === "breach" ? "Breached" : `${left} left`;
   const pct = Math.round(ratio(props) * 100);

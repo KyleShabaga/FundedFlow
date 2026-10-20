@@ -29,7 +29,7 @@ export function UnknownValue({ label = "Unknown" }: { label?: string }) {
 
 /** What a metric shows. Each kind formats its own type; there is no implicit conversion to zero. */
 export type MetricValue =
-  | { kind: "money"; amount: string | null; signed?: boolean; dp?: number; symbol?: string }
+  | { kind: "money"; amount: string | null; signed?: boolean; dp?: number; symbol?: string; /** ISO 4217 code; sets the symbol. */ currency?: string | null }
   | { kind: "percent"; value: number | null; dp?: number }
   | { kind: "count"; value: number | null; unit?: string }
   | { kind: "text"; text: string | null }
@@ -43,7 +43,7 @@ export function MetricValueView({ value }: { value: MetricValue }) {
       const signed = value.signed ?? true;
       return (
         <span className={cx("ds-mono", signed && `ds-text-${moneySign(value.amount)}`)}>
-          {formatMoney(value.amount, { signed, dp: value.dp, symbol: value.symbol })}
+          {formatMoney(value.amount, { signed, dp: value.dp, symbol: value.symbol, currency: value.currency })}
         </span>
       );
     }
@@ -534,6 +534,8 @@ export interface MonthYearPickerProps {
   yearPnl?: Readonly<Record<number, string | null>>;
   /** Earliest pickable year. Default: today's year minus 10. */
   minYear?: number;
+  /** ISO 4217 code of the account. */
+  currency?: string | null;
   className?: string;
 }
 
@@ -552,7 +554,7 @@ const shift = (v: YearMonth, by: number): YearMonth => {
  * is ringed, future months are disabled, months without trades are dimmed.
  * Arrow keys move between months.
  */
-export function MonthYearPicker({ value, onChange, today, months, yearPnl, minYear, className }: MonthYearPickerProps) {
+export function MonthYearPicker({ value, onChange, today, months, yearPnl, minYear, currency, className }: MonthYearPickerProps) {
   const lowest = minYear ?? today.year - 10;
   const grid = useRef<HTMLDivElement>(null);
   const atMax = cmp(value, today) >= 0;
@@ -570,7 +572,7 @@ export function MonthYearPicker({ value, onChange, today, months, yearPnl, minYe
           </button>
         }
       >
-        <YearGrid value={value} onChange={onChange} today={today} months={months} yearPnl={yearPnl} lowest={lowest} grid={grid} />
+        <YearGrid value={value} onChange={onChange} today={today} months={months} yearPnl={yearPnl} lowest={lowest} grid={grid} currency={currency} />
       </Popover>
       <IconButton label="Next month" icon={<ChevronRight size={16} aria-hidden="true" />} disabled={atMax} onClick={() => onChange(shift(value, 1))} />
       <Button size="sm" onClick={() => onChange(today)} disabled={cmp(value, today) === 0}>
@@ -580,7 +582,7 @@ export function MonthYearPicker({ value, onChange, today, months, yearPnl, minYe
   );
 }
 
-function YearGrid({ value, onChange, today, months, yearPnl, lowest, grid }: Omit<MonthYearPickerProps, "minYear" | "className"> & { lowest: number; grid: RefObject<HTMLDivElement | null> }) {
+function YearGrid({ value, onChange, today, months, yearPnl, lowest, grid, currency }: Omit<MonthYearPickerProps, "minYear" | "className"> & { lowest: number; grid: RefObject<HTMLDivElement | null> }) {
   // The shown year is local to the popover; it starts at the picked month's year each time it opens.
   const [year, setYear] = useState(value.year);
   const ytd = yearPnl && year in yearPnl ? yearPnl[year] : sumYear(months, year);
@@ -605,7 +607,7 @@ function YearGrid({ value, onChange, today, months, yearPnl, lowest, grid }: Omi
         <div className="ds-myp-yearval" aria-live="polite">
           <span className="ds-myp-yearnum">{year}</span>
           <span className="ds-mono ds-myp-ytd">
-            {ytd == null ? <UnknownValue /> : <span className={`ds-text-${moneySign(ytd)}`}>{formatMoney(ytd, { dp: 0 })}</span>} <span className="ds-faint">YTD</span>
+            {ytd == null ? <UnknownValue /> : <span className={`ds-text-${moneySign(ytd)}`}>{formatMoney(ytd, { dp: 0, currency })}</span>} <span className="ds-faint">YTD</span>
           </span>
         </div>
         <IconButton label="Next year" icon={<ChevronRight size={16} aria-hidden="true" />} disabled={year >= today.year} onClick={() => setYear(year + 1)} />
@@ -617,7 +619,7 @@ function YearGrid({ value, onChange, today, months, yearPnl, lowest, grid }: Omi
           const future = cmp({ year, month: m }, today) > 0;
           const on = value.year === year && value.month === m;
           const sign = info?.pnl != null ? moneySign(info.pnl) : null;
-          const amount = info ? (info.pnl == null ? "unknown P&L" : formatMoney(info.pnl, { dp: 0 })) : "no trades";
+          const amount = info ? (info.pnl == null ? "unknown P&L" : formatMoney(info.pnl, { dp: 0, currency })) : "no trades";
           return (
             <OverlayClose asChild key={name}>
               <button
@@ -629,7 +631,7 @@ function YearGrid({ value, onChange, today, months, yearPnl, lowest, grid }: Omi
                 onClick={() => onChange({ year, month: m })}
               >
                 <span className="ds-myp-mname">{name}</span>
-                <span className="ds-mono ds-myp-mpnl">{info ? info.pnl == null ? UNKNOWN : formatMoney(info.pnl, { dp: 0 }) : UNKNOWN}</span>
+                <span className="ds-mono ds-myp-mpnl">{info ? info.pnl == null ? UNKNOWN : formatMoney(info.pnl, { dp: 0, currency }) : UNKNOWN}</span>
               </button>
             </OverlayClose>
           );
@@ -649,6 +651,6 @@ function sumYear(months: Readonly<Record<string, MonthSummary>>, year: number): 
 /* ---------- formatting helpers re-exported for cells ---------- */
 
 /** Money cell for DataTable: signed, toned, unknown as "—". */
-export function MoneyCell({ value, signed = true }: { value: string | null; signed?: boolean }) {
-  return <MetricValueView value={{ kind: "money", amount: value, signed }} />;
+export function MoneyCell({ value, signed = true, currency }: { value: string | null; signed?: boolean; /** ISO 4217 code of the row's account. */ currency?: string | null }) {
+  return <MetricValueView value={{ kind: "money", amount: value, signed, currency }} />;
 }

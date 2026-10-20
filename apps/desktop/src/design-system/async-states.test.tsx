@@ -182,3 +182,26 @@ describe("MutationFeedback", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 });
+
+describe("Build 13 review follow-ups", () => {
+  it("says 'last loaded' when the time is only a client receipt time", () => {
+    render(<StaleDataNotice asOf="2026-10-19T20:12:00Z" cause="refresh-failed" asOfBasis="loaded" timeZone="America/New_York" />);
+    expect(screen.getByText("Couldn't refresh. Showing figures last loaded Oct 19, 16:12 EDT; they may be out of date.")).toBeTruthy();
+  });
+  it("passes the stale basis through StateBoundary", () => {
+    render(
+      <StateBoundary<number> state={{ status: "stale", data: 1, asOf: null, cause: "offline", asOfBasis: "loaded" }} label="accounts">
+        {() => null}
+      </StateBoundary>,
+    );
+    expect(screen.getByText(/last loaded at an unknown time/)).toBeTruthy();
+  });
+  it("adds caller actions to an uncertain outcome without a retry", async () => {
+    const acknowledge = vi.fn();
+    render(<MutationFeedback state={{ status: "uncertain" }} onCheck={() => {}} actions={<Button onClick={acknowledge}>I've checked the records</Button>} />);
+    await userEvent.click(screen.getByRole("button", { name: "I've checked the records" }));
+    expect(acknowledge).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Check result" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+});

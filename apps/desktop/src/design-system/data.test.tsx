@@ -14,6 +14,7 @@ import {
   LabeledValue,
   MetricCard,
   MiniMeter,
+  MoneyCell,
   MonthYearPicker,
   RulebookLine,
   RuleStateBadge,
@@ -291,5 +292,21 @@ describe("ChartPanel", () => {
     rerender(<ChartPanel title="Balance" timeZone="America/New_York" state={{ status: "success", data: [1, 2], asOf: "2026-10-19T20:12:00Z" }}>{draw}</ChartPanel>);
     expect(screen.getByRole("img", { name: "Balance chart" })).toBeTruthy();
     expect(screen.getByText("As of Oct 19, 16:12")).toBeTruthy();
+  });
+});
+
+describe("currency", () => {
+  it("formats money cells, metrics and meters in the account's currency", () => {
+    render(
+      <>
+        <MoneyCell value="-412.5" currency="EUR" />
+        <MetricCard label="Net P&L" value={{ kind: "money", amount: "1000", currency: "GBP" }} />
+        <MiniMeter label="Drawdown" used="200" limit="1000" currency="EUR" />
+      </>,
+    );
+    expect(screen.getByText("−€412.50")).toBeTruthy();
+    expect(screen.getByText("+£1,000.00")).toBeTruthy();
+    expect(screen.getByText("€200 / €1,000")).toBeTruthy();
+    expect(screen.queryByText(/\$/)).toBeNull();
   });
 });
