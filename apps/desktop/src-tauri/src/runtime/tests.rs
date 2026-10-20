@@ -180,3 +180,127 @@ fn concurrent_retries_run_one_at_a_time() {
     assert_eq!(results.iter().filter(|s| s.created).count(), 4, "all see the one successful open");
     assert_eq!(count_accounts(&rt).unwrap(), 0);
 }
+
+/// A version-1 journal whose contents make migration `fails_at` fail: `0001`
+/// applied, plus an object that collides with what that migration creates.
+fn v1_journal_failing_at(dir: &TempDir, collide: &str) {
+    std::fs::create_dir_all(&dir.0).unwrap();
+    let conn = Connection::open(dir.db()).unwrap();
+    let Step::Sql(core_schema) = MIGRATIONS[0].step else { unreachable!() };
+    conn.execute_batch(core_schema).unwrap();
+    conn.pragma_update(None, "user_version", 1).unwrap();
+    conn.execute_batch(collide).unwrap();
+}
+
+#[test]
+fn a_new_runtime_is_initializing_and_never_makes_callers_wait() {
+    let dir = TempDir::new();
+    let rt = Runtime::new(Ok(dir.db()));
+    assert_eq!(rt.status().state, RuntimeState::Initializing);
+    assert!(!dir.db().exists(), "creating the runtime touches no file");
+    assert!(!rt.begin_initialize(), "the startup attempt is already claimed");
+
+    // While an initialization holds the connection (a slow upgrade), status
+    // reads and data commands answer at once.
+    std::thread::scope(|s| {
+        let guard = lock(&rt.conn);
+        let started = std::time::Instant::now();
+        s.spawn(|| {
+            assert_eq!(rt.status().state, RuntimeState::Initializing);
+            assert!(matches!(count_accounts(&rt), Err(AppError::Unavailable { .. })));
+        })
+        .join()
+        .unwrap();
+        assert!(started.elapsed() < std::time::Duration::from_secs(1));
+        drop(guard);
+    });
+
+    assert_eq!(rt.initialize().state, RuntimeState::Ready);
+    assert_eq!(rt.status().stage, RuntimeStage::Ready);
+    assert!(!rt.begin_initialize(), "nothing to retry once ready");
+}
+
+#[test]
+fn a_retry_is_claimed_once_while_it_runs() {
+    let dir = TempDir::new();
+    std::fs::create_dir_all(&dir.0).unwrap();
+    std::fs::write(dir.db(), b"not a database".repeat(100)).unwrap();
+    let rt = Runtime::start(Ok(dir.db()));
+    assert_eq!(rt.status().state, RuntimeState::Failed);
+
+    assert!(rt.begin_initialize());
+    let s = rt.status();
+    assert_eq!((s.state, s.failure), (RuntimeState::Initializing, None));
+    assert!(!rt.begin_initialize(), "a second retry while one runs only reports status");
+    assert_eq!(rt.initialize().state, RuntimeState::Failed);
+    assert!(rt.begin_initialize(), "after the attempt ends, retry is available again");
+}
+
+#[test]
+fn a_newer_journal_reports_its_version_and_is_not_switched_to_wal() {
+    let dir = TempDir::new();
+    std::fs::create_dir_all(&dir.0).unwrap();
+    Connection::open(dir.db()).unwrap().pragma_update(None, "user_version", 99).unwrap();
+
+    let rt = Runtime::start(Ok(dir.db()));
+    let s = rt.status();
+    assert_eq!((s.state, s.stage, s.schema_version), (RuntimeState::Failed, RuntimeStage::Open, Some(99)));
+    drop(rt);
+    let mode: String = Connection::open(dir.db()).unwrap().pragma_query_value(None, "journal_mode", |r| r.get(0)).unwrap();
+    assert_eq!(mode, "delete", "the file's journal mode is unchanged");
+}
+
+#[test]
+fn a_failure_on_the_first_upgrade_step_reports_nothing_changed() {
+    let dir = TempDir::new();
+    v1_journal_failing_at(
+        &dir,
+        "INSERT INTO instruments (id, symbol_root, asset_class, point_value, created_at, updated_at)
+         VALUES ('builtin:instrument:ES', 'XES', 'future', '1', 'x', 'x')",
+    );
+    let rt = Runtime::start(Ok(dir.db()));
+    let s = rt.status();
+    assert_eq!((s.stage, s.schema_version), (RuntimeStage::Migrate, Some(1)));
+    let f = s.failure.unwrap();
+    let m = f.failed_migration.unwrap();
+    assert_eq!((m.version, m.name.as_str(), m.from_version, m.reached_version), (2, "seed_instruments", 1, 1));
+    assert!(f.message.contains("has not been changed"), "{}", f.message);
+    assert!(f.message.contains(".bak"), "{}", f.message);
+}
+
+#[test]
+fn a_failure_after_earlier_steps_were_saved_says_so() {
+    let dir = TempDir::new();
+    // Migration 2 succeeds; migration 3 collides with this table.
+    v1_journal_failing_at(&dir, "CREATE TABLE trade_round_trips (x INTEGER)");
+    let rt = Runtime::start(Ok(dir.db()));
+    let s = rt.status();
+    assert_eq!((s.state, s.stage, s.schema_version), (RuntimeState::Failed, RuntimeStage::Migrate, Some(2)));
+    let f = s.failure.unwrap();
+    let m = f.failed_migration.as_ref().unwrap();
+    assert_eq!((m.version, m.from_version, m.reached_version), (3, 1, 2));
+    assert!(!f.message.contains("has not been changed"), "{}", f.message);
+    assert!(f.message.contains("now at version 2 (it was 1)"), "{}", f.message);
+    assert!(f.detail.contains("the journal is at version 2"), "{}", f.detail);
+    assert_eq!(user_version(&dir.db()), 2);
+    assert_eq!(user_version(&db::backup_path(&dir.db())), 1, "the backup is the journal before the upgrade");
+
+    // Fixing the cause and retrying finishes the upgrade from version 2.
+    Connection::open(dir.db()).unwrap().execute_batch("DROP TABLE trade_round_trips").unwrap();
+    assert!(rt.begin_initialize());
+    let s = rt.initialize();
+    assert_eq!((s.state, s.schema_version), (RuntimeState::Ready, Some(db::latest_version())));
+}
+
+#[test]
+fn a_failed_backup_keeps_the_known_version() {
+    let dir = TempDir::new();
+    v1_journal_failing_at(&dir, "SELECT 1");
+    // A directory where the backup file should go cannot be replaced.
+    std::fs::create_dir_all(db::backup_path(&dir.db())).unwrap();
+    let rt = Runtime::start(Ok(dir.db()));
+    let s = rt.status();
+    assert_eq!(s.failure.as_ref().unwrap().category, FailureCategory::BackupFailed);
+    assert_eq!((s.stage, s.schema_version), (RuntimeStage::Backup, Some(1)));
+    assert_eq!(user_version(&dir.db()), 1, "no upgrade without a backup");
+}

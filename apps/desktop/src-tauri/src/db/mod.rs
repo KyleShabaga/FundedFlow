@@ -95,11 +95,13 @@ pub fn configure(conn: &Connection) -> rusqlite::Result<()> {
 pub enum MigrateError {
     /// The journal was written by a newer FundedFlow build.
     NewerSchema { found: u32, supported: u32 },
-    /// A migration failed; the database stays at the previous version.
-    Migration { name: &'static str, source: rusqlite::Error },
+    /// Migration `version` failed and was rolled back. Each migration commits
+    /// on its own, so the journal is at `reached`: `from` if this was the
+    /// first step of the upgrade, later if earlier steps were already saved.
+    Migration { name: &'static str, version: u32, from: u32, reached: u32, source: rusqlite::Error },
     /// The pre-upgrade backup could not be written (e.g. disk full); the
-    /// upgrade was not attempted.
-    Backup(String),
+    /// upgrade was not attempted and the journal is still at `current`.
+    Backup { current: u32, message: String },
     Sqlite(rusqlite::Error),
     Io(std::io::Error),
 }
@@ -117,11 +119,15 @@ impl std::fmt::Display for MigrateError {
                 f,
                 "journal schema version {found} is newer than this app supports ({supported})"
             ),
-            MigrateError::Migration { name, source } => {
-                write!(f, "migration '{name}' failed: {source}")
-            }
+            MigrateError::Migration { name, version, from, reached, source } => write!(
+                f,
+                "migration {version} '{name}' failed and was rolled back: {source} \
+                 (upgrade started at version {from}; the journal is at version {reached})"
+            ),
             MigrateError::Sqlite(e) => write!(f, "database error: {e}"),
-            MigrateError::Backup(e) => write!(f, "could not write the pre-upgrade backup: {e}"),
+            MigrateError::Backup { current, message } => {
+                write!(f, "could not write the pre-upgrade backup of version {current}: {message}")
+            }
             MigrateError::Io(e) => write!(f, "could not prepare the data directory: {e}"),
         }
     }
@@ -147,6 +153,7 @@ fn migrate_with(conn: &mut Connection, migrations: &[Migration]) -> Result<u32, 
     if current > supported {
         return Err(MigrateError::NewerSchema { found: current, supported });
     }
+    let mut reached = current;
     for m in migrations.iter().filter(|m| m.version > current) {
         let mut apply = || -> rusqlite::Result<()> {
             let tx: Transaction = conn.transaction()?;
@@ -157,9 +164,21 @@ fn migrate_with(conn: &mut Connection, migrations: &[Migration]) -> Result<u32, 
             tx.pragma_update(None, "user_version", m.version)?;
             tx.commit()
         };
-        apply().map_err(|source| MigrateError::Migration { name: m.name, source })?;
+        apply().map_err(|source| MigrateError::Migration {
+            name: m.name,
+            version: m.version,
+            from: current,
+            reached,
+            source,
+        })?;
+        reached = m.version;
     }
     Ok(supported)
+}
+
+/// Where `open_file` writes the pre-upgrade copy of the journal at `path`.
+pub fn backup_path(path: &Path) -> std::path::PathBuf {
+    path.with_extension(format!("db.before-v{}.bak", latest_version()))
 }
 
 /// Open (creating if needed) the journal database at `path`, take a backup
@@ -170,19 +189,24 @@ pub fn open_file(path: &Path) -> Result<Connection, MigrateError> {
     }
     let mut conn = Connection::open(path)?;
     configure(&conn)?;
+    // Refuse a newer journal before anything persistent is set on the file
+    // (WAL mode is stored in the database header).
+    let current = current_version(&conn)?;
+    if current > latest_version() {
+        return Err(MigrateError::NewerSchema { found: current, supported: latest_version() });
+    }
     conn.pragma_update_and_check(None, "journal_mode", "WAL", |r| r.get::<_, String>(0))?;
     conn.pragma_update(None, "synchronous", "NORMAL")?;
 
-    let current = current_version(&conn)?;
     if current > 0 && current < latest_version() {
         // A consistent copy (includes WAL content) the user can restore if an
         // upgrade goes wrong. Overwrites the backup of the previous upgrade.
-        let backup = path.with_extension(format!("db.before-v{}.bak", latest_version()));
+        let backup_error = |e: &dyn std::fmt::Display| MigrateError::Backup { current, message: e.to_string() };
+        let backup = backup_path(path);
         if backup.exists() {
-            std::fs::remove_file(&backup).map_err(|e| MigrateError::Backup(e.to_string()))?;
+            std::fs::remove_file(&backup).map_err(|e| backup_error(&e))?;
         }
-        conn.execute("VACUUM INTO ?1", [backup.to_string_lossy()])
-            .map_err(|e| MigrateError::Backup(e.to_string()))?;
+        conn.execute("VACUUM INTO ?1", [backup.to_string_lossy()]).map_err(|e| backup_error(&e))?;
     }
     migrate(&mut conn)?;
     Ok(conn)

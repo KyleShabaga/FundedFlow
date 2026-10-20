@@ -4,7 +4,7 @@
 //!
 //! Commands are `async` so database work runs off the main (UI) thread.
 
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 
 use crate::csv_import::{self, CsvImportRequest, CsvPreview, ImportBatch, ImportRowRecord};
 use crate::error::AppResult;
@@ -99,8 +99,20 @@ pub fn runtime_status(rt: State<'_, Runtime>) -> RuntimeStatus {
     rt.status()
 }
 
-/// Re-run the real open/backup/migrate path. A no-op when already ready.
+/// Re-run the real open/backup/migrate path in the background and return at
+/// once (`initializing`); the frontend polls `runtime_status`. A no-op when
+/// ready or when an attempt is already running.
 #[tauri::command]
-pub async fn retry_runtime(rt: State<'_, Runtime>) -> Result<RuntimeStatus, ()> {
-    Ok(rt.initialize())
+pub fn retry_runtime(app: AppHandle, rt: State<'_, Runtime>) -> RuntimeStatus {
+    if rt.begin_initialize() {
+        initialize_in_background(app);
+    }
+    rt.status()
+}
+
+/// Run `Runtime::initialize` on its own thread, off Tauri's setup and command threads.
+pub fn initialize_in_background(app: AppHandle) {
+    std::thread::spawn(move || {
+        app.state::<Runtime>().initialize();
+    });
 }

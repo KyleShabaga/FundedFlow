@@ -330,25 +330,48 @@ or SQLite types, so a Stage 2 adapter can implement the same interface.
 
 ## Startup and recovery
 
-A database problem never stops the window from opening (`apps/desktop/src-tauri/src/runtime.rs`). Startup records the outcome,
-and the frontend's `RuntimeGate` shows a recovery screen until the runtime is ready. While it isn't, every data
-command returns `{ kind: "unavailable" }`; the UI never reads that as "no accounts".
+A database problem never stops the window from opening, and neither does a slow upgrade
+(`apps/desktop/src-tauri/src/runtime.rs`).
+- **Startup:** Tauri's setup creates the runtime in the `initializing` state and runs the open → backup → migrate
+  path on a background thread, so the window and command bridge come up at once.
+- **Gate:** the frontend's `RuntimeGate` polls `runtime_status` every 500 ms while initializing. It shows the
+  current step, and after 10 s says that an upgrade can take a while. It never gives up on a running upgrade, and
+  shows the recovery screen once the runtime has failed.
+- **Data commands:** until the runtime is ready they return `{ kind: "unavailable" }` at once, without waiting
+  for initialization. The UI never reads that as "no accounts".
 
-- `runtime_status()` (read-only) returns `{ state: "initializing" | "ready" | "failed", schemaVersion,
-  supportedSchemaVersion, created, failure }`. `created` is true only when this start created a new, empty journal.
-- `retry_runtime()` re-runs the real open → backup → migrate path. It is a no-op when ready; concurrent retries
-  run one at a time and all see the same result. Each attempt is bounded by SQLite's 5 s busy timeout.
-- Recovery never deletes, resets, downgrades or replaces the journal. A file that fails to open stays byte-for-byte unchanged.
+`runtime_status()` (read-only) returns `{ state, stage, schemaVersion, supportedSchemaVersion, created, failure }`:
+
+| Field | Meaning |
+|---|---|
+| `state` | `initializing`, `ready` or `failed` |
+| `stage` | What initialization is doing, reached or failed at: `data_directory`, `open`, `backup`, `migrate`, `ready` |
+| `schemaVersion` | The journal's version whenever known, also on failure: a newer journal's version, the version a failed upgrade left, or the version before a failed backup. `null` only when the file could not be read |
+| `created` | True only when this start created a new, empty journal |
+| `failure` | `{ category, retryable, message, detail, failedMigration }`; `failedMigration` is `{ version, name, fromVersion, reachedVersion }` for `migration_failed` |
+
+- `retry_runtime()` starts the real open → backup → migrate path again in the background and returns at once
+  (`initializing`). It is a no-op when ready, and while an attempt is already running it only reports the status.
+  Attempts never overlap: one holds the connection for its whole run.
+- Each SQLite lock wait is bounded by the 5 s busy timeout. The total time of an upgrade is not bounded, so the
+  UI shows progress rather than timing out. Its two commands each have a 10 s answer timeout, which only fires
+  if the bridge itself is unavailable.
+- Recovery never deletes, resets, downgrades or replaces the journal. A file that fails to open stays
+  byte-for-byte unchanged. A newer journal is refused before anything is written to it, including the WAL
+  journal mode.
 
 | `failure.category` | Meaning | Retryable |
 |---|---|---|
 | `data_directory` | The per-user data folder could not be resolved or created | yes |
 | `open_failed` | The file exists but can't be opened or read (locked, corrupt, not a database) | yes |
 | `backup_failed` | The pre-upgrade backup could not be written; no upgrade was attempted | yes |
-| `migration_failed` | A migration failed and rolled back; the journal stays at its previous version | yes |
+| `migration_failed` | A migration failed and was rolled back. Each migration commits on its own, so earlier steps of the same upgrade may already be saved (`reachedVersion` > `fromVersion`) | yes |
 | `newer_schema` | Written by a newer FundedFlow; left untouched | no |
 
-`failure.message` is safe to show the user, and `failure.detail` is the technical error.
+`failure.message` is safe to show the user, and `failure.detail` is the technical error. For `migration_failed`
+the message says "your data has not been changed" only when the failed step was the first of the upgrade.
+Otherwise it says which version the journal is now at. Either way it names the pre-upgrade backup
+`fundedflow.db.before-v<N>.bak`. Retrying continues the upgrade from where it stopped.
 
 ## Realized P&L
 
