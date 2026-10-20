@@ -1,0 +1,13 @@
+/* Layout of the design-system reference page only. */
+.dsg { min-height: 100vh; padding: var(--space-8); display: grid; gap: var(--space-8); align-content: start; text-align: left; }
+.dsg-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; }
+.dsg-title { margin: 0; font: 600 28px/34px var(--font-display); letter-spacing: -0.3px; text-align: left; }
+.dsg-section { display: grid; gap: var(--space-4); }
+.dsg-section header { display: grid; gap: 2px; }
+.dsg-section h2, .dsg-section p { margin: 0; }
+.dsg-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.dsg-stack { display: grid; gap: var(--space-3); align-content: start; }
+.dsg-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); }
+.dsg-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: var(--space-4); }
+.dsg-cal { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: var(--space-4); align-items: start; }
+@media (max-width: 900px) { .dsg-cal { grid-template-columns: minmax(0, 1fr); } .dsg { padding: var(--space-4); } }

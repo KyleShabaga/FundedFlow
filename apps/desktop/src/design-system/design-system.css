@@ -1,0 +1,205 @@
+/*
+ * FundedFlow design-system components. Every colour, space and radius comes
+ * from tokens.css. Classes use the ds- prefix so they never meet the ff-
+ * classes of the developer panel. Components reset the global input/button
+ * rules in App.css that would otherwise leak in (shadow, padding, colour).
+ */
+.ds-root, .ds-card, .ds-btn, .ds-tabs, .ds-day, .ds-gauge { font-family: var(--font-sans); color: var(--ink); box-sizing: border-box; }
+.ds-root *, .ds-card *, .ds-day * { box-sizing: border-box; }
+.ds-root { background: var(--bg-000); padding: var(--space-4); }
+.ds-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.ds-stack { display: grid; gap: var(--space-3); }
+
+.ds-label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-muted); }
+.ds-title { font-family: var(--font-display); font-size: 16px; line-height: 22px; font-weight: 600; color: var(--ink); }
+.ds-faint { color: var(--ink-faint); font-size: 12px; }
+.ds-num-xl { font-family: var(--font-mono); font-size: 30px; line-height: 36px; font-weight: 600; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+.ds-text-profit { color: var(--profit); }
+.ds-text-loss { color: var(--loss); }
+.ds-text-warn { color: var(--warn); }
+.ds-text-flow { color: var(--flow); }
+.ds-text-flat { color: var(--ink-muted); }
+
+.ds-card { background: var(--bg-100); border: 1px solid var(--line-100); border-radius: var(--radius-lg); padding: var(--space-4); }
+
+/* Button */
+.ds-btn, .ds-tab, .ds-day, .ds-cal-day { box-shadow: none; font-family: var(--font-sans); }
+.ds-btn { display: inline-flex; align-items: center; gap: var(--space-2); border-radius: var(--radius-md); font-weight: 600; font-size: 13px; line-height: 18px; cursor: pointer; border: 1px solid transparent; white-space: nowrap; }
+.ds-btn-md { height: 36px; padding: 0 var(--space-4); }
+.ds-btn-sm { height: 28px; padding: 0 var(--space-3); font-size: 12px; }
+.ds-btn-primary { background: var(--flow-fill); color: var(--on-flow); }
+.ds-btn-primary:hover { filter: brightness(1.08); }
+.ds-btn-secondary { background: var(--bg-200); color: var(--ink); border-color: var(--line-200); }
+.ds-btn-secondary:hover { background: var(--bg-300); }
+.ds-btn-ghost { background: transparent; color: var(--flow); }
+.ds-btn-ghost:hover { background: var(--flow-soft); }
+.ds-btn-danger { background: var(--loss-soft); color: var(--loss); border-color: var(--loss); }
+.ds-btn:focus-visible, .ds-tab:focus-visible, .ds-day:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.ds-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Badge */
+.ds-badge { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--radius-sm); font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; white-space: nowrap; border: 1px solid transparent; margin-right: 4px; }
+.ds-badge-neutral { background: var(--bg-300); color: var(--ink-muted); }
+.ds-badge-flow { background: var(--flow-soft); color: var(--flow); }
+.ds-badge-profit { background: var(--profit-soft); color: var(--profit); }
+.ds-badge-loss { background: var(--loss-soft); color: var(--loss); }
+.ds-badge-warn { background: var(--warn-soft); color: var(--warn); }
+.ds-badge-outline { background: transparent; }
+.ds-badge-outline.ds-badge-profit { border-color: var(--profit); }
+.ds-badge-outline.ds-badge-loss { border-color: var(--loss); }
+.ds-badge-outline.ds-badge-flow { border-color: var(--flow); }
+.ds-badge-outline.ds-badge-neutral { border-color: var(--line-200); }
+
+/* Pnl */
+.ds-pnl { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 500; white-space: nowrap; display: inline-flex; align-items: baseline; gap: 6px; }
+.ds-pnl-profit { color: var(--profit); }
+.ds-pnl-loss { color: var(--loss); }
+.ds-pnl-flat { color: var(--ink-muted); }
+.ds-pnl-s { font-size: 12.5px; line-height: 18px; }
+.ds-pnl-m { font-size: 16px; line-height: 22px; }
+.ds-pnl-xl { font-size: 30px; line-height: 36px; font-weight: 600; letter-spacing: -0.5px; }
+.ds-pnl-pct { font-size: .78em; font-weight: 500; }
+
+/* StatTile */
+.ds-tile { display: grid; gap: var(--space-2); min-width: 0; }
+.ds-tile-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.ds-tile-aside { font-size: 12px; color: var(--ink-faint); }
+.ds-tile-body { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-3); }
+.ds-tile-value { font-family: var(--font-mono); font-size: 22px; line-height: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ds-tile-sub { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+.ds-tile-viz { flex: 0 1 50%; min-width: 0; }
+
+/* Tabs */
+.ds-tabs { display: inline-flex; gap: 2px; padding: 3px; background: var(--bg-200); border: 1px solid var(--line-100); border-radius: var(--radius-pill); }
+.ds-tab { border: 0; background: transparent; color: var(--ink-muted); font: 500 13px/18px var(--font-sans); padding: 6px var(--space-4); border-radius: var(--radius-pill); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.ds-tab:hover { color: var(--ink); }
+.ds-tab[data-state="active"] { background: var(--bg-300); color: var(--flow); }
+.ds-tab-count { font: 500 11px/14px var(--font-mono); color: var(--ink-faint); }
+
+/* RuleMeter */
+.ds-rule { display: grid; gap: 6px; }
+.ds-rule-head, .ds-rule-foot { display: flex; justify-content: space-between; gap: var(--space-2); align-items: baseline; }
+.ds-rule-amt { font: 500 12.5px/18px var(--font-mono); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.ds-rule-amt b { color: var(--ink); font-weight: 600; }
+.ds-rule-track { position: relative; height: 8px; background: var(--bg-200); border-radius: var(--radius-sm); overflow: hidden; }
+.ds-rule-fill { height: 100%; border-radius: var(--radius-sm); background: var(--flow); }
+.ds-rule-tick { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--line-200); }
+.ds-rule-foot { font-size: 12px; color: var(--ink-muted); }
+.ds-rule-note { color: var(--ink-faint); }
+.ds-rule-ok .ds-rule-fill { background: var(--flow); }
+.ds-rule-warn .ds-rule-fill { background: var(--warn); }
+.ds-rule-warn .ds-rule-foot > span:first-child { color: var(--warn); font-weight: 600; }
+.ds-rule-breach .ds-rule-fill { background: var(--loss); }
+.ds-rule-breach .ds-rule-foot > span:first-child { color: var(--loss); font-weight: 600; }
+.ds-rule-progress .ds-rule-fill { background: var(--profit); }
+.ds-rule-done .ds-rule-fill { background: var(--profit); }
+.ds-rule-done .ds-rule-foot > span:first-child { color: var(--profit); font-weight: 600; }
+
+/* AccountCard */
+.ds-acct { display: grid; gap: var(--space-4); }
+.ds-acct.is-breached { background: var(--loss-soft); border-color: var(--loss); }
+.ds-acct-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); }
+.ds-acct-id { display: flex; gap: var(--space-3); align-items: center; }
+.ds-acct-mark { width: 36px; height: 36px; border-radius: var(--radius-md); background: var(--flow-soft); color: var(--flow); display: grid; place-items: center; font: 600 16px/1 var(--font-display); }
+.ds-acct-firm { font: 600 15px/20px var(--font-display); }
+.ds-acct-size { color: var(--ink-muted); font-weight: 500; }
+.ds-acct-name { font-size: 12px; color: var(--ink-faint); }
+.ds-acct-bal { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+.ds-acct-rules { display: grid; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line-100); }
+.ds-acct-foot { display: flex; justify-content: space-between; gap: var(--space-2); font-size: 12px; color: var(--ink-muted); padding-top: var(--space-3); border-top: 1px solid var(--line-100); }
+
+/* WinGauge */
+.ds-gauge { display: inline-grid; justify-items: center; gap: 2px; position: relative; }
+.ds-gauge svg path { fill: none; stroke-width: 9; stroke-linecap: round; }
+.ds-gauge-win { stroke: var(--profit); }
+.ds-gauge-loss { stroke: var(--loss); }
+.ds-gauge-val { font: 600 18px/22px var(--font-mono); margin-top: -26px; }
+.ds-gauge-legend { display: flex; gap: var(--space-3); font: 500 11px/14px var(--font-mono); color: var(--ink-muted); }
+
+/* EquityCurve */
+.ds-eq svg { display: block; overflow: visible; }
+.ds-eq-line { fill: none; stroke: var(--chart-1); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.ds-eq-area { fill: var(--flow-soft); }
+.ds-eq-floor { fill: none; stroke: var(--loss); stroke-width: 1.5; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
+.ds-eq-target { stroke: var(--profit); stroke-width: 1.5; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
+.ds-eq-dot { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: var(--chart-1); border: 2px solid var(--bg-100); transform: translate(-50%, -50%); }
+.ds-eq { position: relative; }
+.ds-eq-lbl { position: absolute; right: 0; width: calc(64 / 640 * 100% - 6px); transform: translateY(-50%); font: 600 11px/14px var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ds-eq-lbl-loss { color: var(--loss); }
+.ds-eq-lbl-profit { color: var(--profit); }
+
+/* PnlCalendar */
+.ds-cal { display: grid; gap: var(--space-2); }
+.ds-cal-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-1); }
+.ds-cal-sum { display: inline-flex; align-items: baseline; gap: 4px; }
+.ds-cal-row { display: grid; grid-template-columns: repeat(var(--ds-cal-cols, 7), minmax(0, 1fr)) minmax(0, 1.15fr); gap: var(--space-2); }
+.ds-cal-dow span { font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--ink-faint); text-align: center; }
+.ds-cal-day, .ds-cal-week { min-height: 64px; border-radius: var(--radius-md); background: var(--bg-200); border: 1px solid transparent; padding: 6px var(--space-2); display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ds-cal-day.is-out { background: transparent; border-color: var(--line-100); }
+.ds-cal-day.is-today { border-color: var(--flow); }
+.ds-cal-date { font-size: 11px; color: var(--ink-faint); font-weight: 500; }
+.ds-cal-pnl { font: 600 13px/18px var(--font-mono); margin-top: auto; overflow: hidden; text-overflow: ellipsis; }
+.ds-cal-trades { font-size: 11px; color: var(--ink-muted); }
+.ds-cal-profit { background: var(--profit-soft); border-color: var(--profit); }
+.ds-cal-profit .ds-cal-pnl { color: var(--profit); }
+.ds-cal-loss { background: var(--loss-soft); border-color: var(--loss); }
+.ds-cal-loss .ds-cal-pnl { color: var(--loss); }
+.ds-cal-week { background: var(--bg-100); border-color: var(--line-200); }
+.ds-cal-week-profit .ds-cal-pnl { color: var(--profit); }
+.ds-cal-week-loss .ds-cal-pnl { color: var(--loss); }
+
+/* DayCard */
+.ds-day { display: grid; gap: 4px; width: 100%; text-align: left; background: var(--bg-100); border: 1px solid var(--line-100); border-radius: var(--radius-md); padding: var(--space-3); cursor: pointer; }
+.ds-day:hover { background: var(--bg-200); }
+.ds-day.is-on, .ds-day[aria-pressed="true"] { border-color: var(--flow); background: var(--flow-soft); }
+.ds-day-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
+.ds-day-date { font-weight: 600; font-size: 13px; }
+.ds-spark path { fill: none; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.ds-spark-profit path, .ds-spark-flat path { stroke: var(--profit); }
+.ds-spark-loss path { stroke: var(--loss); }
+
+/* TradeTable */
+.ds-table-card { padding: 0; overflow: auto; }
+.ds-table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 18px; }
+.ds-table th { position: sticky; top: 0; background: var(--bg-200); color: var(--ink-muted); font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; text-align: left; padding: 10px var(--space-3); white-space: nowrap; border-bottom: 1px solid var(--line-100); }
+.ds-table td { padding: 10px var(--space-3); border-bottom: 1px solid var(--line-100); white-space: nowrap; }
+.ds-table .num { text-align: right; font-family: var(--font-mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.ds-table tbody tr { cursor: pointer; }
+.ds-table tbody tr:hover, .ds-table tbody tr.is-on { background: var(--bg-300); }
+.ds-table tr:last-child td { border-bottom: 0; }
+.ds-sym { font-family: var(--font-mono); font-weight: 600; color: var(--flow); }
+
+/* Additions for the desktop app */
+.ds-surface { background: var(--bg-000); color: var(--ink); font-family: var(--font-sans); font-size: 14px; line-height: 20px; }
+.ds-acct-pct { font: 500 12.5px/18px var(--font-mono); }
+.ds-rule-state { font-weight: 400; }
+.ds-pnl-unknown { color: var(--ink-faint); }
+.ds-tab-panel { padding-top: var(--space-4); }
+.ds-tab-panel:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.ds-cal-day { color: var(--ink); text-align: left; font: inherit; }
+.ds-cal-day.is-clickable { cursor: pointer; }
+.ds-cal-day.is-clickable:hover { border-color: var(--line-200); }
+.ds-cal-day:focus-visible, .ds-table tr:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.ds-day { color: var(--ink); font: inherit; }
+.ds-table tbody tr { cursor: default; }
+.ds-table tbody tr.is-clickable { cursor: pointer; }
+.ds-badge { text-transform: uppercase; }
+@media (prefers-reduced-motion: reduce) { .ds-btn, .ds-tab, .ds-day { transition: none; } }
+
+/*
+ * App.css styles every button with element selectors, including :hover and
+ * :active (specificity 0,1,1). These state rules (0,2,0) keep the design
+ * system's own colours on hover and press.
+ */
+.ds-btn-primary:hover, .ds-btn-primary:active { border-color: transparent; background: var(--flow-fill); }
+.ds-btn-primary:active { filter: brightness(0.94); }
+.ds-btn-secondary:hover, .ds-btn-secondary:active { border-color: var(--line-200); background: var(--bg-300); }
+.ds-btn-ghost:hover, .ds-btn-ghost:active { border-color: transparent; background: var(--flow-soft); }
+.ds-btn-danger:hover, .ds-btn-danger:active { border-color: var(--loss); background: var(--loss-soft); }
+.ds-tab:hover, .ds-tab:active { border-color: transparent; background: transparent; }
+.ds-tab[data-state="active"]:hover, .ds-tab[data-state="active"]:active { background: var(--bg-300); }
+.ds-day:hover, .ds-day:active { border-color: var(--line-100); background: var(--bg-200); }
+.ds-day[aria-pressed="true"]:hover, .ds-day[aria-pressed="true"]:active { border-color: var(--flow); background: var(--flow-soft); }
+.ds-cal-day.is-clickable:active { background: var(--bg-300); }
+.ds-cal-profit.is-clickable:hover, .ds-cal-profit.is-clickable:active { border-color: var(--profit); background: var(--profit-soft); }
+.ds-cal-loss.is-clickable:hover, .ds-cal-loss.is-clickable:active { border-color: var(--loss); background: var(--loss-soft); }
