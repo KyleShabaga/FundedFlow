@@ -4,7 +4,7 @@
 
 use std::str::FromStr;
 
-use chrono::{DateTime, Datelike, NaiveDate, NaiveTime, SecondsFormat, Utc};
+use chrono::{DateTime, Datelike, Days, NaiveDate, NaiveTime, SecondsFormat, Timelike, Utc, Weekday};
 use chrono_tz::Tz;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::{Decimal, RoundingStrategy};
@@ -49,18 +49,31 @@ pub fn format_reset_time(t: NaiveTime) -> String {
     t.format("%H:%M").to_string()
 }
 
+/// Reset times an account may use: `00:00` (calendar days) or `12:00`–`23:59`.
+/// An afternoon or evening reset opens the *next* day's session, which is what
+/// [`trading_day`] assumes; a morning reset would date that morning's trades a
+/// day late, so it is rejected.
+pub fn is_allowed_reset_time(t: NaiveTime) -> bool {
+    t == NaiveTime::MIN || t.hour() >= 12
+}
+
 /// The trading day an instant belongs to. Times at or after the account's
 /// daily reset (in its timezone) count toward the next calendar day, so with a
 /// 17:00 America/New_York reset a Sunday 18:00 fill is Monday's. A 00:00 reset
-/// means plain calendar days.
+/// means plain calendar days. A day that falls on a Saturday or Sunday rolls
+/// forward to Monday, so a Friday fill after the reset is Monday's.
 pub fn trading_day(at: DateTime<Utc>, tz: Tz, reset: NaiveTime) -> NaiveDate {
     let local = at.with_timezone(&tz);
-    let date = local.date_naive();
-    if reset != NaiveTime::default() && local.time() >= reset {
-        date.succ_opt().unwrap_or(date)
-    } else {
-        date
+    let mut date = local.date_naive();
+    if reset != NaiveTime::MIN && local.time() >= reset {
+        date = date.succ_opt().unwrap_or(date);
     }
+    let weekend_days = match date.weekday() {
+        Weekday::Sat => 2,
+        Weekday::Sun => 1,
+        _ => 0,
+    };
+    date.checked_add_days(Days::new(weekend_days)).unwrap_or(date)
 }
 
 // ---------------------------------------------------------------------------
@@ -403,6 +416,38 @@ mod tests {
         assert_eq!(trading_day(at("2026-10-19T21:00:00Z"), ny, reset).to_string(), "2026-10-20");
         let midnight = parse_reset_time("00:00").unwrap();
         assert_eq!(trading_day(at("2026-10-19T23:30:00Z"), ny, midnight).to_string(), "2026-10-19");
+    }
+
+    #[test]
+    fn weekend_trading_days_roll_to_monday() {
+        let ny: Tz = "America/New_York".parse().unwrap();
+        let reset = parse_reset_time("17:00").unwrap();
+        let midnight = parse_reset_time("00:00").unwrap();
+        let day = |s: &str, r| trading_day(parse_instant(s).unwrap(), ny, r).to_string();
+        // Fri 23 Oct 2026: 16:59 is Friday's; 17:30 (after the reset) is Monday's, not Saturday's.
+        assert_eq!(day("2026-10-23T20:59:00Z", reset), "2026-10-23");
+        assert_eq!(day("2026-10-23T21:30:00Z", reset), "2026-10-26");
+        // Saturday and Sunday before the Globex open count toward Monday; Sunday 18:00 is Monday's.
+        assert_eq!(day("2026-10-24T15:00:00Z", reset), "2026-10-26");
+        assert_eq!(day("2026-10-25T22:00:00Z", reset), "2026-10-26");
+        // Calendar-day accounts roll weekends forward too.
+        assert_eq!(day("2026-10-24T15:00:00Z", midnight), "2026-10-26");
+        assert_eq!(day("2026-10-25T15:00:00Z", midnight), "2026-10-26");
+        // DST end (1 Nov 2026, New York UTC-4 → UTC-5): Mon 2 Nov 16:59 local is 21:59Z.
+        assert_eq!(day("2026-11-02T21:59:00Z", reset), "2026-11-02");
+        assert_eq!(day("2026-11-02T22:00:00Z", reset), "2026-11-03");
+    }
+
+    #[test]
+    fn only_midnight_or_afternoon_resets_are_allowed() {
+        let ok = |s: &str| is_allowed_reset_time(parse_reset_time(s).unwrap());
+        assert!(ok("00:00"));
+        assert!(ok("12:00"));
+        assert!(ok("17:00"));
+        assert!(ok("23:59"));
+        assert!(!ok("00:01"));
+        assert!(!ok("06:00"));
+        assert!(!ok("11:59"));
     }
 
     fn draft() -> TradeDraft<'static> {

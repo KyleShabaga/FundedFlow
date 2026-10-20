@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{opt_text, trades};
 use crate::domain::{
-    format_reset_time, micros_to_string, new_id, now, parse_decimal, parse_reset_time, parse_tz, to_micros,
-    MAX_NOTES_CHARS,
+    format_reset_time, is_allowed_reset_time, micros_to_string, new_id, now, parse_decimal, parse_reset_time,
+    parse_tz, to_micros, MAX_NOTES_CHARS,
 };
 use crate::error::{AppError, AppResult, Issues};
 
@@ -111,9 +111,9 @@ fn validate(input: AccountInput) -> AppResult<Valid> {
     if timezone.is_none() {
         issues.add("timezone", "must be an IANA time zone such as America/New_York");
     }
-    let reset = parse_reset_time(&input.trading_day_reset_time);
+    let reset = parse_reset_time(&input.trading_day_reset_time).filter(|t| is_allowed_reset_time(*t));
     if reset.is_none() {
-        issues.add("tradingDayResetTime", "must be HH:MM (24-hour)");
+        issues.add("tradingDayResetTime", "must be 00:00 or a time from 12:00 to 23:59 (HH:MM, 24-hour)");
     }
     issues.into_result()?;
 
