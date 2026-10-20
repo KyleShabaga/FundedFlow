@@ -227,7 +227,7 @@ function stableJson(value: unknown): string {
 
 /**
  * Checks an update to a catalogue version. Once reviewed (verified, stale,
- * superseded or rejected) a version is immutable apart from its status, and a
+ * superseded or rejected) or ever verified, a version is immutable apart from its status, and a
  * status change must follow `canTransitionVerification`. A correction is a new
  * version with `supersedesVersionId`, never an edit.
  */
@@ -236,7 +236,9 @@ export function checkCatalogueVersionUpdate(before: CatalogueVersion, after: Cat
   if (before.verificationStatus !== after.verificationStatus && !canTransitionVerification(before.verificationStatus, after.verificationStatus)) {
     issues.push({ code: "invalid_verification_transition", recordId: after.id });
   }
-  if (FROZEN_STATUSES.has(before.verificationStatus)) {
+  // A version that was ever verified keeps verifiedAt, so it stays frozen even in a status a migration-6
+  // database could have reopened it to.
+  if (FROZEN_STATUSES.has(before.verificationStatus) || before.verifiedAt !== null) {
     const content = (v: CatalogueVersion) => stableJson({ ...v, verificationStatus: null });
     if (content(before) !== content(after)) issues.push({ code: "verified_version_changed", recordId: after.id });
   }

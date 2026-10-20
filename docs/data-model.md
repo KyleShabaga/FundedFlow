@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 7 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` and the Rust data step 7 `map_legacy_catalogue`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 8 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue` and `0008_freeze_ever_verified.sql`; see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -135,9 +135,11 @@ erDiagram
   claims.
 - **Verification.**
   - Records start as `draft` or `needs_review`. Only `needs_review` (or `stale`) becomes `verified`, and only
-    with a reviewer and a timestamp.
+    with a reviewer and a timestamp. A `stale` version is never reopened to `needs_review`; a re-review is a new
+    superseding version.
   - `superseded` and `rejected` are final.
-  - A reviewed version (`verified`, `stale`, `superseded`, `rejected`) is immutable apart from its status.
+  - A reviewed version (`verified`, `stale`, `superseded`, `rejected`), or any version that was ever verified
+    (`verifiedAt` set), is immutable apart from its status.
   - A correction is a new version with `supersedesVersionId` and a reason
     (`checkCatalogueVersionUpdate`, `canTransitionVerification`).
 - **Phase vs status.** Phase (`unknown`/`evaluation`/`simulated_funded`/`live_funded`/`other`) and account
@@ -184,7 +186,11 @@ erDiagram
   overlapping link, promotion and offer windows. ALTER TABLE cannot add composite keys to `accounts`, so
   triggers check its link (variant in provider, version in variant, path in version).
 - **Frozen versions.** One trigger enforces `canTransitionVerification` on every status change. Another rejects
-  any other change to a reviewed version (`verified`, `stale`, `superseded`, `rejected`) and its deletion.
+  any other change to a reviewed version (`verified`, `stale`, `superseded`, `rejected`) or to one that was ever
+  verified (`verified_at` set), and its deletion. Migration 8 added the `verified_at` test and removed
+  `stale` → `needs_review`: under 0006 that path unfroze a verified version, which could then be edited and moved
+  back to `verified` with its original `verified_by` and `verified_at`. A version reopened that way before
+  migration 8 stays frozen and can only be `rejected`.
   The version's phases, paths, offers, offer sources, version sources and claims are frozen with it.
   This is stricter than `checkCatalogueVersionUpdate`, which sees only the version DTO. Write the contents
   first, then move the version to `verified`. Deleting a draft version cascades through its contents.
@@ -251,6 +257,7 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 5 | `rederive_trading_days` | Rust | Re-derives every stored `trades.trading_day` under the current [rules](#trading-day) |
 | 6 | `provider_catalogue` | SQL | [Provider catalogue](#catalogue-storage) tables and triggers, plus nullable catalogue link columns and `size_source` on `accounts` |
 | 7 | `map_legacy_catalogue` | Rust | Maps `firms` → `providers` and `programmes` → `programme_families`, and fills `accounts.provider_id` |
+| 8 | `freeze_ever_verified` | SQL | Replaces the catalogue freeze triggers: a version with `verified_at` set stays frozen, and `stale` → `needs_review` is removed. Changes no rows |
 
 How an upgrade runs:
 

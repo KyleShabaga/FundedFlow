@@ -897,3 +897,134 @@ fn slug_rules() {
     assert_eq!(super::steps::slug("!!!", "provider"), "provider");
     assert_eq!(super::steps::slug(&"a-".repeat(80), "x").len(), 89);
 }
+
+fn at_v7() -> Connection {
+    let mut conn = Connection::open_in_memory().unwrap();
+    migrate_with(&mut conn, &MIGRATIONS[..7]).unwrap();
+    let (_, fixture) = catalogue_fixture();
+    save(&conn, &fixture);
+    conn
+}
+
+fn set_status(conn: &Connection, v: &str, status: &str) -> rusqlite::Result<usize> {
+    conn.execute("UPDATE catalogue_versions SET verification_status = ?2 WHERE id = ?1", params![v, status])
+}
+
+fn verify(conn: &Connection, v: &str) {
+    conn.execute(
+        "UPDATE catalogue_versions SET verification_status = 'verified', verified_by = 'kyle', verified_at = ?2
+         WHERE id = ?1",
+        params![v, T],
+    )
+    .unwrap();
+}
+
+#[test]
+fn migration_6_let_a_verified_version_be_edited_and_re_verified() {
+    // The defect migration 8 fixes, reproduced on the shipped 0006 triggers.
+    let conn = at_v7();
+    let v = id(0x31);
+    verify(&conn, &v);
+    set_status(&conn, &v, "stale").unwrap();
+    set_status(&conn, &v, "needs_review").unwrap();
+    conn.execute_batch(&format!(
+        "UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{v}';
+         UPDATE commercial_offers SET sale_price_micros = 1 WHERE id = '{}';",
+        id(0x61)
+    ))
+    .unwrap();
+    set_status(&conn, &v, "verified").unwrap();
+    let signed: (String, String) = conn
+        .query_row("SELECT verified_by, verified_at FROM catalogue_versions WHERE id = ?1", [&v], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .unwrap();
+    assert_eq!(signed, ("kyle".into(), T.into()), "edited content keeps the original sign-off");
+}
+
+#[test]
+fn a_version_that_was_ever_verified_stays_frozen() {
+    let conn = db();
+    let (_, fixture) = catalogue_fixture();
+    save(&conn, &fixture);
+    let v = id(0x31);
+    verify(&conn, &v);
+    set_status(&conn, &v, "stale").unwrap();
+    // A re-review is a new superseding version, never a reopened one.
+    rejects(&conn, &format!("UPDATE catalogue_versions SET verification_status = 'needs_review' WHERE id = '{v}'"), "invalid");
+    rejects(&conn, &format!("UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{v}'"), "frozen");
+    set_status(&conn, &v, "verified").unwrap();
+    set_status(&conn, &v, "superseded").unwrap();
+}
+
+#[test]
+fn migration_8_freezes_versions_reopened_under_migration_6() {
+    let mut conn = at_v7();
+    let v = id(0x31);
+    verify(&conn, &v);
+    set_status(&conn, &v, "stale").unwrap();
+    set_status(&conn, &v, "needs_review").unwrap();
+    migrate(&mut conn).unwrap();
+
+    let frozen = "catalogue version is frozen";
+    rejects(&conn, &format!("UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{v}'"), frozen);
+    rejects(&conn, &format!("UPDATE catalogue_versions SET verified_by = NULL, verified_at = NULL WHERE id = '{v}'"), frozen);
+    rejects(&conn, &format!("DELETE FROM catalogue_versions WHERE id = '{v}'"), frozen);
+    rejects(&conn, &format!("UPDATE programme_phases SET display_order = 5 WHERE id = '{}'", id(0x41)), frozen);
+    rejects(&conn, &format!("UPDATE phase_paths SET provider_label = 'Daily+' WHERE id = '{}'", id(0x51)), frozen);
+    rejects(&conn, &format!("UPDATE commercial_offers SET sale_price_micros = 1 WHERE id = '{}'", id(0x61)), frozen);
+    rejects(&conn, &format!("DELETE FROM commercial_offer_sources WHERE commercial_offer_id = '{}'", id(0x61)), frozen);
+    rejects(&conn, &format!("DELETE FROM catalogue_version_sources WHERE catalogue_version_id = '{v}'"), frozen);
+    rejects(&conn, &format!("UPDATE catalogue_field_claims SET provider_text = '$1' WHERE catalogue_version_id = '{v}'"), frozen);
+    rejects(
+        &conn,
+        &format!("INSERT INTO programme_phases (id, catalogue_version_id, phase_key, provider_label, display_order)
+                  VALUES ('ph', '{v}', 'live_funded', 'Live', 2)"),
+        frozen,
+    );
+    // It can only be rejected; verifying it again would reuse the old sign-off.
+    for status in ["verified", "draft"] {
+        rejects(&conn, &format!("UPDATE catalogue_versions SET verification_status = '{status}' WHERE id = '{v}'"), "invalid");
+    }
+    set_status(&conn, &v, "rejected").unwrap();
+
+    // A version that was never verified is unaffected.
+    let draft = id(0x32);
+    conn.execute_batch(&format!("UPDATE catalogue_versions SET revision_label = 'r2' WHERE id = '{draft}'")).unwrap();
+    set_status(&conn, &draft, "needs_review").unwrap();
+    set_status(&conn, &draft, "draft").unwrap();
+}
+
+#[test]
+fn a_v7_journal_with_reviewed_versions_upgrades_without_changes() {
+    use super::upgrade_tests::{dump, dump_like, read_only, version, Journal};
+
+    let db = Journal::copy_of(&[]);
+    {
+        let mut conn = Connection::open(&db.0).unwrap();
+        migrate_with(&mut conn, &MIGRATIONS[..7]).unwrap();
+        let (_, fixture) = catalogue_fixture();
+        save(&conn, &fixture);
+        verify(&conn, &id(0x31));
+        set_status(&conn, &id(0x31), "stale").unwrap();
+        set_status(&conn, &id(0x32), "needs_review").unwrap();
+        verify(&conn, &id(0x32));
+    }
+    let before = {
+        let conn = read_only(&db.0);
+        assert_eq!(version(&conn), 7);
+        dump(&conn, &[])
+    };
+
+    let conn = open_file(&db.0).unwrap();
+    assert_eq!(version(&conn), 8);
+    assert_eq!(version(&read_only(&db.backup())), 7, "the backup is the journal as it was");
+    assert_eq!(dump_like(&conn, &before), before);
+    let fk_problems: i64 = conn.query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| r.get(0)).unwrap();
+    assert_eq!(fk_problems, 0);
+
+    for v in [id(0x31), id(0x32)] {
+        rejects(&conn, &format!("UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{v}'"), "frozen");
+    }
+    rejects(&conn, &format!("UPDATE catalogue_versions SET verification_status = 'needs_review' WHERE id = '{}'", id(0x31)), "invalid");
+}

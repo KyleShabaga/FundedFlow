@@ -11,12 +11,16 @@ import { catalogueId, catalogueInstant, windowIsOrdered } from "./fields.js";
 export const verificationStatuses = ["draft", "needs_review", "verified", "stale", "superseded", "rejected"] as const;
 export type VerificationStatus = (typeof verificationStatuses)[number];
 
-/** Allowed verification transitions. `superseded` and `rejected` are final. */
+/**
+ * Allowed verification transitions. `superseded` and `rejected` are final. A
+ * stale version can be re-verified as is or superseded, never reopened for
+ * review: a re-review is a new version that supersedes it.
+ */
 const VERIFICATION_TRANSITIONS: Record<VerificationStatus, readonly VerificationStatus[]> = {
   draft: ["needs_review", "rejected"],
   needs_review: ["draft", "verified", "rejected"],
   verified: ["stale", "superseded"],
-  stale: ["needs_review", "verified", "superseded"],
+  stale: ["verified", "superseded"],
   superseded: [],
   rejected: [],
 };

@@ -192,6 +192,8 @@ describe("provenance and verification", () => {
     expect(canTransitionVerification("draft", "verified")).toBe(false);
     expect(canTransitionVerification("needs_review", "verified")).toBe(true);
     expect(canTransitionVerification("superseded", "needs_review")).toBe(false);
+    expect(canTransitionVerification("stale", "needs_review")).toBe(false);
+    expect(canTransitionVerification("stale", "verified")).toBe(true);
     expect(canTransitionVerification("rejected", "verified")).toBe(false);
   });
 
@@ -247,6 +249,18 @@ describe("provenance and verification", () => {
         "verified_version_changed",
       ]);
       expect(codes(checkCatalogueVersionUpdate(verified, { ...verified, claims: [] }))).toEqual(["verified_version_changed"]);
+    });
+
+    it("never reopens a verified version for review", () => {
+      const stale = { ...verified, verificationStatus: "stale" as const };
+      expect(codes(checkCatalogueVersionUpdate(stale, { ...stale, verificationStatus: "needs_review" }))).toEqual([
+        "invalid_verification_transition",
+      ]);
+      // A version reopened under migration 6 still carries verifiedAt and stays frozen.
+      const reopened = { ...verified, verificationStatus: "needs_review" as const };
+      expect(codes(checkCatalogueVersionUpdate(reopened, { ...reopened, revisionLabel: "edited" }))).toEqual([
+        "verified_version_changed",
+      ]);
     });
 
     it("allows a verified version to go stale or be superseded", () => {
