@@ -30,3 +30,8 @@ reads expose stored calculation timestamps/version/basis, never live health. Acc
 individual IDs; the view model preserves account identity and explicitly says event IDs are not exposed,
 rather than inventing IDs from array positions. Preview rows have no persisted trade IDs. Native invoke
 cancellation, correlation IDs and write idempotency/outcome lookup are not available in the current port.
+
+Snapshot currency is not persisted; the feature model explicitly returns `currency: null` and labels the
+current `accountCurrency` separately. Joining it as historical snapshot currency would invent provenance.
+A final remote refresh still showed main at the base above and no published Build 13 branch/open PR.
+See [handoff](build-14-handoff.md) for state mapping, hook signatures and deferred integration.

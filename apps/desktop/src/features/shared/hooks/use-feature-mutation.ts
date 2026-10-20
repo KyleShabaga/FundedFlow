@@ -1,0 +1,64 @@
+import { useMutation, useQueryClient, type QueryKey } from "@tanstack/react-query";
+import { useRef, useSyncExternalStore } from "react";
+import { useRuntime } from "../../../app/RuntimeProvider";
+import { FeatureDataError } from "../errors";
+import { submissionsFor } from "../submissions";
+
+interface WriteSpec<Input, Output> {
+  scope: string;
+  run: (input: Input, assertReady: () => void) => Promise<Output>;
+  invalidate: (result?: Output) => readonly QueryKey[];
+  confirmedFailure?: (result: Output) => boolean;
+}
+export function useFeatureMutation<Input, Output>(spec: WriteSpec<Input, Output>) {
+  const client = useQueryClient();
+  const { state, check } = useRuntime();
+  const current = useRef({ state, spec, check });
+  current.current = { state, spec, check };
+  const submissions = submissionsFor(client);
+  useSyncExternalStore(submissions.subscribe, submissions.snapshot, submissions.snapshot);
+  const invalidate = async (snapshot: WriteSpec<Input, Output>, result?: Output) => {
+    // A confirmed write remains successful if a later read refresh fails.
+    await Promise.allSettled(snapshot.invalidate(result).map(queryKey => client.invalidateQueries({ queryKey })));
+  };
+  const mutation = useMutation<Output, FeatureDataError, { operation: Promise<Output>; snapshot: WriteSpec<Input, Output> }>({
+    retry: false, networkMode: "always",
+    mutationFn: ({ operation }) => operation,
+    onSuccess: (result, { snapshot }) => invalidate(snapshot, result),
+    onError: error => { if (error.category === "unavailable" && current.current.state.kind === "ready") void current.current.check(); },
+  });
+  const scopeStatus = submissions.status(spec.scope);
+  const submit = (input: Input): Promise<Output> => {
+    if (current.current.state.kind !== "ready") return Promise.reject(new FeatureDataError(current.current.state.kind === "unsupported-schema" ? "unsupported-schema" : "unavailable"));
+    const locked = submissions.status(current.current.spec.scope);
+    if (locked !== "idle") return Promise.reject(new FeatureDataError(locked === "pending" ? "duplicate-submission" : "uncertain-outcome"));
+    const snapshot = current.current.spec;
+    // Reserve synchronously, before TanStack starts its async mutation lifecycle, including across hook instances.
+    const operation = submissions.execute(snapshot.scope, () => {
+      if (current.current.state.kind !== "ready") throw new FeatureDataError(current.current.state.kind === "unsupported-schema" ? "unsupported-schema" : "unavailable");
+      return snapshot.run(input, () => {
+        if (current.current.state.kind !== "ready") throw new FeatureDataError(current.current.state.kind === "unsupported-schema" ? "unsupported-schema" : "unavailable");
+      });
+    });
+    return mutation.mutateAsync({ operation, snapshot });
+  };
+  const acknowledgeUncertainOutcome = async (confirmation: { recordsReviewed: true }) => {
+    if (current.current.state.kind !== "ready") throw new FeatureDataError("unavailable");
+    // Call only after the UI/user has checked persisted records. This is acknowledgement, not proof of rollback.
+    submissions.acknowledge(spec.scope, confirmation);
+    await invalidate(spec);
+    mutation.reset();
+  };
+  const currentScope = !mutation.variables || mutation.variables.snapshot.scope === spec.scope;
+  const failedResult = currentScope && mutation.isSuccess && spec.confirmedFailure?.(mutation.data);
+  return {
+    submit, data: currentScope ? mutation.data : undefined, error: currentScope ? mutation.error : null,
+    isPending: (currentScope && mutation.isPending) || scopeStatus === "pending",
+    canSubmit: state.kind === "ready" && !(currentScope && mutation.isPending) && scopeStatus === "idle",
+    outcome: scopeStatus === "uncertain" ? "uncertain-outcome" as const : currentScope && mutation.isPending ? "submitting" as const : currentScope && mutation.isError ? "failed" as const
+      : failedResult ? "confirmed-failure" as const : currentScope && mutation.isSuccess ? "confirmed-success" as const : "idle" as const,
+    canAcknowledgeUncertainOutcome: submissions.canAcknowledge(spec.scope),
+    acknowledgeUncertainOutcome,
+    reset: mutation.reset, // Resetting feedback never clears an uncertain write lock.
+  };
+}
