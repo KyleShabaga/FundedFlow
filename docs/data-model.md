@@ -64,12 +64,123 @@ that feeds the same `trades` table.
 |---|---|
 | **Implemented** (commands, store code and tests) | `accounts`, `firms` (find-or-create by name), `account_status_events` (written on create and status change), `instruments` (seeded by 0002, read-only), `trades`, `trade_round_trips`, `import_batches`, `import_rows`, `journal_entries`, `tags`, `journal_entry_tags` |
 | **Reserved** (created and constraint-tested in 0001, no commands) | `app_meta` (journal_id etc. not yet written), `settings`, `programmes`, `account_ledger_entries`, `rulebook_versions`, `rules`, `csv_mapping_profiles`, `strategies`, `checklists`, `checklist_items`, `checklist_results`, `trade_reviews`, `trade_review_tags`, `attachments`, `attachment_links`, `account_snapshots`, `audit_events`, `sync_outbox` (inert) |
-| **Not in the schema** (future execution-first extension) | `executions`, `execution_fees`, `trade_executions`, `account_phase_events`, provider catalogue families/variants/phases, reusable rulebooks and `account_rulebook_assignments` |
+| **Contract only** (Zod DTOs in `packages/domain/src/catalogue`; tables come in Build 10) | provider catalogue: `providers`, `programme_families`, `programme_variants`, `catalogue_versions`, `programme_phases`, `phase_paths`, `commercial_offers`, `promotions`, `promotion_offers`, `catalogue_sources`, `account_phase_events`; see [Provider catalogue](#provider-catalogue) |
+| **Not in the schema** (future extensions) | `executions`, `execution_fees`, `trade_executions` (execution-first), reusable rulebooks and `account_rulebook_assignments` (Build 9.5) |
 
 Reserved tables are a starting point, not a finished design. In particular `rulebook_versions` is
 account-owned (`account_id NOT NULL`, cascades on account delete), whereas Build 9.5 plans reusable, versioned
 rulebooks assigned to accounts. `firms`/`programmes` predate the Build 9 provider catalogue. Those builds add
-forward-only migrations (0004+) that map these tables; they must not edit 0001–0003.
+forward-only migrations (0005+) that map these tables; they must not edit 0001–0004.
+
+## Provider catalogue
+
+Status: **contract only** (Build 9). The Zod DTOs, integrity checks and phase-history derivation are in
+`packages/domain/src/catalogue`, and the synthetic fixture is `packages/domain/test/fixtures/catalogue.json`.
+No table, migration or command exists yet. Build 10 adds them (see [Storage plan](#catalogue-storage-plan-build-10)).
+
+The model keeps six layers apart:
+
+1. **Provider**: identity only.
+2. **Programme catalogue**: families, variants and dated versions.
+3. **Phases and paths**: what each version offers.
+4. **Commercial offers and promotions**: prices.
+5. **The user's account**: its catalogue links.
+6. **The account's phase history**.
+
+Rule values and formulas belong to the rulebook (Build 9.5). A phase or path holds only a rulebook-version ID.
+
+```mermaid
+erDiagram
+    PROVIDERS ||--o{ PROGRAMME_FAMILIES : publishes
+    PROGRAMME_FAMILIES ||--o{ PROGRAMME_VARIANTS : "sizes / account types"
+    PROGRAMME_VARIANTS ||--o{ CATALOGUE_VERSIONS : "dated revisions"
+    CATALOGUE_VERSIONS ||--o{ PROGRAMME_PHASES : "Evaluation, Funded"
+    PROGRAMME_PHASES ||--o{ PHASE_PATHS : "Daily, Flex"
+    PROGRAMME_PHASES }o--o| RULEBOOK_VERSIONS : "default rules (9.5)"
+    PHASE_PATHS }o--o| RULEBOOK_VERSIONS : "override (9.5)"
+    CATALOGUE_VERSIONS ||--o{ COMMERCIAL_OFFERS : prices
+    COMMERCIAL_OFFERS }o--o| PROGRAMME_PHASES : "phase offer"
+    COMMERCIAL_OFFERS }o--o| PHASE_PATHS : "path offer"
+    PROVIDERS ||--o{ PROMOTIONS : owns
+    PROMOTIONS ||--o{ PROMOTION_OFFERS : ""
+    COMMERCIAL_OFFERS ||--o{ PROMOTION_OFFERS : ""
+    CATALOGUE_SOURCES }o--o{ CATALOGUE_VERSIONS : provenance
+    ACCOUNTS }o--o| CATALOGUE_VERSIONS : "selected version"
+    ACCOUNTS }o--o| PHASE_PATHS : "selected path"
+    ACCOUNTS ||--o{ ACCOUNT_PHASE_EVENTS : "phase history"
+```
+
+| Entity (DTO) | Owns | Does not own |
+|---|---|---|
+| `Provider` | slug, display name, aliases, website, record status (`active`/`inactive`/`archived`/`unknown`) | legitimacy judgements, credentials, payment data |
+| `ProgrammeFamily` | provider wording plus normalized `category` (`evaluation_to_funded`, `instant_funding`, `other`, `unknown`) | anything purchasable |
+| `ProgrammeVariant` | the stable "50K" identity: `sizeLabel` (verbatim), `sizeAmount`+`sizeCurrency` only when a source states them, descriptive platforms, namespaced metadata | rule terms, prices, inherited parent fields |
+| `CatalogueVersion` | `versionNumber`, `capturedAt` (retrieval) vs `effectiveFrom`/`effectiveTo` (half-open, null = unknown), verification state, reviewer, `supersedesVersionId` + `correctionReason`, `sourceIds`, per-field `claims` | the rulebook's completeness |
+| `ProgrammePhase` | `phaseKey` (`evaluation`, `simulated_funded`, `live_funded`, `other`, `unknown`), exact `providerLabel`, order, `defaultRulebookVersionId` | account record status |
+| `PhasePath` | provider-defined `pathKey` slug (data, never an app enum), label, `isDefault`, `rulebookVersionId` override | |
+| `CommercialOffer` | `billingModel` (`one_time`/`recurring`/`unknown`), `listPrice`, `salePrice`, `resetFee`, `activationFee`, currency, effective window | drawdown, loss limits, consistency, payouts (the strict schema rejects them) |
+| `Promotion` + `PromotionOffer` | provider-scoped reusable code/label, discount (`amount`, `percent` or `unknown`), validity; many-to-many link to offers with its own window | a discount inferred from a strike-through price |
+| `SourceReference` / `FieldClaim` | URL or manual descriptor, source type (`official`/`secondary`/`user_manual`/`unknown`), captured vs published vs effective dates, content hash (change detection only), importer version, reviewer; claim origin (`observed`, `provider_stated`, `user_entered`, `extracted_candidate`, `verified_catalogue`, `unknown`) | |
+| `AccountCatalogueLink` | `providerId`, `programmeVariantId`, exact `catalogueVersionId`, `selectedPhasePathId`, `parentAccountId`, `sizeSource`, all nullable | |
+| `AccountPhaseEvent` | `fromPhase` (nullable), `toPhase`, provider label, `occurredAt` (nullable) vs `recordedAt`, source, actor, note, `correctionOfEventId`, catalogue/phase/path snapshot | |
+
+### Catalogue rules
+
+- **Money.** Prices, fees, size and amount discounts are canonical decimal text, for example `"105.2"`. They
+  are stored as `*_micros` like all other money, never as floats or minor units. `null` means unknown. `"0"`
+  means an explicit known zero, so a "FREE" activation fee is `"0"`. It is still only a candidate until its
+  catalogue version is verified. Build 9.5 represents OFF, NONE, not-applicable and an ambiguous dash on rule
+  claims.
+- **Verification.**
+  - Records start as `draft` or `needs_review`. Only `needs_review` (or `stale`) becomes `verified`, and only
+    with a reviewer and a timestamp.
+  - `superseded` and `rejected` are final.
+  - A reviewed version (`verified`, `stale`, `superseded`, `rejected`) is immutable apart from its status.
+  - A correction is a new version with `supersedesVersionId` and a reason
+    (`checkCatalogueVersionUpdate`, `canTransitionVerification`).
+- **Phase vs status.** Phase (`unknown`/`evaluation`/`simulated_funded`/`live_funded`/`other`) and account
+  record status (`active`, `paused`, `passed`, `failed`, `closed`, plus the archive soft delete) are independent.
+  `paused`, `failed` and `closed` are never phases. The legacy `accounts.account_type` stays as compatibility
+  metadata, and no catalogue version or phase history is inferred from it.
+- **Phase history.**
+  - Events are append-only and apply in `recordedAt` order, with ties broken by ID.
+  - A correction names the event it corrects. That event drops out of the effective sequence but stays stored.
+  - The current phase is the last effective event's `toPhase`, or `unknown` when there are no events.
+  - Contradictory `fromPhase` values, backwards `occurredAt` times, bad correction targets and foreign events
+    are reported for review, not normalized away (`derivePhaseHistory`).
+- **Accounts.**
+  - An account may have no catalogue link at all (legacy, manual or unknown programme). No placeholder
+    provider is ever created.
+  - A link's variant must belong to its provider, its version to its variant, and its selected path to its
+    version (`checkAccountCatalogueLink`).
+  - Adding a newer catalogue version never changes an account's selected version.
+  - Funded successors with a new broker number link to their origin through `parent_account_id`.
+- **Integrity** (`checkCatalogueGraph`):
+  - Unique keys: provider slug; family slug per provider; variant slug per family; version number per variant;
+    `(version, phaseKey, providerLabel)` per phase; path key per phase; at most one default path per phase.
+  - Ownership: a variant's provider must match its family's; an offer's phase must belong to its version, and
+    its path to its phase. A promotion may link only to offers of its own provider, with overlapping windows.
+  - A version may supersede only a version of the same variant.
+
+### Catalogue storage plan (Build 10)
+
+Build 10 owns the migration (the next unused number after `0004`), the Rust repository and the commands. The
+planned tables mirror the DTOs one to one:
+
+- `STRICT` tables with UUIDv7 `TEXT` IDs, and UTC ms instants enforced by CHECK.
+- `*_micros INTEGER` for money, `CHECK` for each enum, and the UNIQUE keys listed above.
+- Composite foreign keys for the ownership rules, for example `(programme_family_id, provider_id)` and
+  `(programme_phase_id, catalogue_version_id)`.
+- `ON DELETE RESTRICT` from user history to the catalogue.
+- Triggers that freeze reviewed versions and make `account_phase_events` append-only.
+
+Mapping from the current schema:
+
+- `firms` becomes `providers`, and `programmes` becomes `programme_families`, both with deterministic backfills.
+- `accounts` gains nullable `programme_variant_id`, `catalogue_version_id` and `selected_phase_path_id`.
+- No existing account is matched to a verified catalogue version.
+
+The handover note for Build 10 lists the column-level needs.
 
 ## Conventions
 
