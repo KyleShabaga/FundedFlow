@@ -1,5 +1,6 @@
 import * as RadixTabs from "@radix-ui/react-tabs";
-import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
+import { LoaderCircle } from "lucide-react";
+import { type ButtonHTMLAttributes, type ReactNode, type Ref, useId } from "react";
 
 import { formatMoney, formatMoneyCompact, formatPercent, moneySign } from "../format";
 import { cx } from "./cx";
@@ -14,14 +15,130 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: "md" | "sm";
   /** Leading icon, 16px, supplied by the caller (lucide-react). */
   icon?: ReactNode;
+  /**
+   * Busy: shows a spinner, sets aria-busy and ignores clicks so a submit
+   * cannot run twice. The button keeps focus (it is aria-disabled, not
+   * disabled), so keyboard users do not lose their place.
+   */
+  loading?: boolean;
+  /**
+   * Why the action is unavailable. With `disabled`, the button stays
+   * focusable (aria-disabled) and the reason is its description.
+   */
+  disabledReason?: string;
 }
 
-export function Button({ variant = "secondary", size = "md", icon, className, children, type = "button", ...rest }: ButtonProps) {
+export function Button({
+  variant = "secondary",
+  size = "md",
+  icon,
+  loading = false,
+  disabledReason,
+  disabled,
+  className,
+  children,
+  type = "button",
+  onClick,
+  "aria-describedby": describedBy,
+  ...rest
+}: ButtonProps) {
+  const reasonId = useId();
+  const softDisabled = loading || (disabled && disabledReason != null);
+  const inert = softDisabled || disabled;
   return (
-    <button {...rest} type={type} className={cx("ds-btn", `ds-btn-${variant}`, `ds-btn-${size}`, className)}>
+    <>
+      <button
+        {...rest}
+        type={type}
+        disabled={disabled && !softDisabled}
+        aria-disabled={softDisabled || undefined}
+        aria-busy={loading || undefined}
+        aria-describedby={cx(describedBy, disabled && disabledReason != null && reasonId) || undefined}
+        title={disabled && disabledReason ? disabledReason : rest.title}
+        onClick={(e) => {
+          if (inert) {
+            e.preventDefault();
+            return;
+          }
+          onClick?.(e);
+        }}
+        className={cx("ds-btn", `ds-btn-${variant}`, `ds-btn-${size}`, softDisabled && "is-inert", loading && "is-loading", className)}
+      >
+        {loading ? <LoaderCircle size={16} className="ds-spin" aria-hidden="true" /> : icon}
+        {children}
+      </button>
+      {disabled && disabledReason != null && (
+        <span id={reasonId} className="ds-sr-only">
+          {disabledReason}
+        </span>
+      )}
+    </>
+  );
+}
+
+/* ---------- IconButton ---------- */
+
+export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "aria-label"> {
+  ref?: Ref<HTMLButtonElement>;
+  /** Accessible name; also the hover title. Required: the button has no text. */
+  label: string;
+  /** 16px lucide icon, marked aria-hidden by the caller. */
+  icon: ReactNode;
+  variant?: "secondary" | "ghost";
+  size?: "md" | "sm";
+}
+
+/** Square icon-only button (32 px, 28 px small): previous/next, row menus, close. */
+export function IconButton({ label, icon, variant = "secondary", size = "md", className, type = "button", title, ...rest }: IconButtonProps) {
+  return (
+    <button {...rest} type={type} aria-label={label} title={title ?? label} className={cx("ds-icon-btn", `ds-icon-btn-${variant}`, `ds-icon-btn-${size}`, className)}>
       {icon}
-      {children}
     </button>
+  );
+}
+
+/* ---------- SegmentedControl ---------- */
+
+export interface SegmentOption<V extends string = string> {
+  value: V;
+  label: string;
+  /** Shown in mono beside the label ("Errors 1"); null hides it. */
+  count?: number | null;
+  disabled?: boolean;
+}
+
+export interface SegmentedControlProps<V extends string = string> {
+  /** Accessible name for the group ("Status", "Show"). */
+  label: string;
+  options: readonly SegmentOption<V>[];
+  value: V;
+  onValueChange: (value: V) => void;
+  className?: string;
+}
+
+/**
+ * A filter or view switch inside one screen (Table/Cards, All/Errors). Buttons
+ * with aria-pressed, unlike Tabs, because they change the content in place
+ * rather than switching panels.
+ */
+export function SegmentedControl<V extends string>({ label, options, value, onValueChange, className }: SegmentedControlProps<V>) {
+  return (
+    <div role="group" aria-label={label} className={cx("ds-tabs", "ds-seg", className)}>
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          className="ds-tab"
+          data-state={o.value === value ? "active" : "inactive"}
+          aria-pressed={o.value === value}
+          disabled={o.disabled}
+          onClick={() => onValueChange(o.value)}
+        >
+          {o.label}
+          {o.count != null && <> <span className="ds-tab-count">{o.count}</span></>}
+        </button>
+      ))}
+    </div>
   );
 }
 
