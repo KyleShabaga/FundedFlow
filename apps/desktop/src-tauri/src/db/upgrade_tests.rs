@@ -24,17 +24,17 @@ MNQZ6,-2,0,0.25,900000000001,900000000002,1,29774.25,29787.25,$26.00,10/19/2026 
 MNQZ6,-2,0,0.25,900000000007,900000000008,1,abc,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,33sec
 ";
 
-struct Journal(PathBuf);
+pub(super) struct Journal(pub(super) PathBuf);
 
 impl Journal {
-    fn copy_of(bytes: &[u8]) -> Self {
+    pub(super) fn copy_of(bytes: &[u8]) -> Self {
         let dir = std::env::temp_dir().join(format!("fundedflow-upgrade-{}", uuid::Uuid::now_v7()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join(DB_FILE_NAME);
         std::fs::write(&path, bytes).unwrap();
         Journal(path)
     }
-    fn backup(&self) -> PathBuf {
+    pub(super) fn backup(&self) -> PathBuf {
         self.0.with_extension(format!("db.before-v{}.bak", latest_version()))
     }
 }
@@ -45,16 +45,16 @@ impl Drop for Journal {
     }
 }
 
-fn read_only(path: &Path) -> Connection {
+pub(super) fn read_only(path: &Path) -> Connection {
     Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap()
 }
 
-fn version(conn: &Connection) -> u32 {
+pub(super) fn version(conn: &Connection) -> u32 {
     conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap()
 }
 
 /// Table → (columns, every row as sorted JSON text).
-type Dump = BTreeMap<String, (Vec<String>, Vec<String>)>;
+pub(super) type Dump = BTreeMap<String, (Vec<String>, Vec<String>)>;
 
 fn rows(conn: &Connection, table: &str, columns: &[String]) -> Vec<String> {
     let quoted: Vec<String> = columns.iter().map(|c| format!("\"{c}\"")).collect();
@@ -66,7 +66,7 @@ fn rows(conn: &Connection, table: &str, columns: &[String]) -> Vec<String> {
 }
 
 /// Every row of every table, leaving out the `skip` columns.
-fn dump(conn: &Connection, skip: &[(&str, &str)]) -> Dump {
+pub(super) fn dump(conn: &Connection, skip: &[(&str, &str)]) -> Dump {
     let tables: Vec<String> = conn
         .prepare("SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
         .unwrap()
@@ -93,7 +93,7 @@ fn dump(conn: &Connection, skip: &[(&str, &str)]) -> Dump {
 
 /// The same tables and columns as `like`, read from `conn` (which may have
 /// gained tables and columns since).
-fn dump_like(conn: &Connection, like: &Dump) -> Dump {
+pub(super) fn dump_like(conn: &Connection, like: &Dump) -> Dump {
     like.iter().map(|(table, (columns, _))| (table.clone(), (columns.clone(), rows(conn, table, columns)))).collect()
 }
 

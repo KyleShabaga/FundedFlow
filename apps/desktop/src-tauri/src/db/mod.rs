@@ -71,6 +71,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "map_legacy_catalogue",
         step: Step::Rust(|tx| map_legacy_catalogue(tx)),
     },
+    Migration {
+        version: 8,
+        name: "freeze_ever_verified",
+        step: Step::Sql(include_str!("../../migrations/0008_freeze_ever_verified.sql")),
+    },
 ];
 
 /// Latest schema version this build understands.
