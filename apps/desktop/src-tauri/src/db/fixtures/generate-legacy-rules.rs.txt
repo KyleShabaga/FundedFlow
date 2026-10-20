@@ -1,0 +1,161 @@
+//! TEMPORARY: writes a journal with legacy account-owned rulebooks, rules and
+//! account snapshots, for the Build 9.5 conversion (docs/rulebook-migration.md).
+//! Run: add as `#[cfg(test)] mod fixture_gen_rules;` in lib.rs, then
+//! FIXTURE_OUT=<path> cargo test --lib fixture_gen_rules -- --ignored
+//!
+//! No release has a command that writes rulebook_versions, rules or
+//! account_snapshots (they are reserved tables), so those rows are inserted
+//! with SQL against the shipped schema, through its CHECKs and triggers.
+//! Accounts, trades and the archive use the real store code.
+
+use rusqlite::Connection;
+use serde_json::{from_value, json, Value};
+
+use crate::db;
+use crate::store::{accounts, trades};
+
+fn account(conn: &mut Connection, v: Value) -> String {
+    accounts::create(conn, from_value(v).unwrap()).unwrap().id
+}
+
+/// Fixed IDs so the tests and the matrix can name each version.
+fn rv(n: u32) -> String {
+    format!("01900000-0000-7000-8000-0000000a{n:04x}")
+}
+
+const T: &str = "2026-10-20T12:00:00.000Z";
+
+fn version(conn: &Connection, id: &str, account: &str, number: u32, from: &str, source: &str, reference: Option<&str>,
+           verified_at: Option<&str>, notes: Option<&str>) {
+    conn.execute(
+        "INSERT INTO rulebook_versions (id, account_id, version_number, effective_from, source, source_reference,
+                                        verified_at, notes_md, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)",
+        rusqlite::params![id, account, number, from, source, reference, verified_at, notes, T],
+    )
+    .unwrap();
+}
+
+fn rule(conn: &Connection, version: &str, n: u32, rule_type: &str, origin: &str, evaluation: &str, value_state: &str,
+        params: Value, label: Option<&str>) {
+    conn.execute(
+        "INSERT INTO rules (id, rulebook_version_id, rule_type, origin, evaluation, value_state, params_json, label,
+                            sort_order, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)",
+        rusqlite::params![format!("{version}-r{n}"), version, rule_type, origin, evaluation, value_state,
+                          params.to_string(), label, n, T],
+    )
+    .unwrap();
+}
+
+fn activate(conn: &Connection, id: &str, at: &str) {
+    conn.execute("UPDATE rulebook_versions SET status = 'active', activated_at = ?2 WHERE id = ?1", [id, at]).unwrap();
+}
+
+fn snapshot(conn: &Connection, id: &str, account: &str, version: Option<&str>, day: &str, status: &str) {
+    conn.execute(
+        "INSERT INTO account_snapshots (id, account_id, rulebook_version_id, trading_day, is_end_of_day, data_source,
+                                        calculated_at, engine_version, inputs_hash, balance_micros,
+                                        realized_day_pnl_micros, status, explanation_json)
+         VALUES (?1, ?2, ?3, ?4, 1, 'manual', ?5, 'engine-0', ?6, 50000000000, 0, ?7, '{\"ruleIds\":[]}')",
+        rusqlite::params![id, account, version, day, T, format!("sha256:{id}"), status],
+    )
+    .unwrap();
+}
+
+#[test]
+#[ignore]
+fn fixture_gen_rules() {
+    let out = std::env::var("FIXTURE_OUT").expect("FIXTURE_OUT");
+    let _ = std::fs::remove_file(&out);
+    let mut conn = db::open_file(std::path::Path::new(&out)).unwrap();
+
+    let base = |name: &str, kind: &str, r: &str| {
+        json!({"name": name, "broker": "Tradovate", "propFirm": "Apex", "externalRef": r,
+               "accountType": kind, "status": "active", "currency": "USD",
+               "startingBalance": "50000", "timezone": "America/New_York", "tradingDayResetTime": "17:00", "notes": null})
+    };
+    let eval = account(&mut conn, base("Eval 50K", "evaluation", "APEX-10"));
+    let funded = account(&mut conn, base("Funded 50K", "sim_funded", "APEX-11"));
+    let personal = account(&mut conn, base("Personal limits", "personal", "APEX-12"));
+    account(&mut conn, base("No rules", "evaluation", "APEX-13"));
+    // The successor link has no command yet.
+    conn.execute("UPDATE accounts SET parent_account_id = ?2 WHERE id = ?1", [&funded, &eval]).unwrap();
+    trades::create(
+        &mut conn,
+        from_value(json!({"accountId": eval, "symbol": "MESZ6", "side": "long", "quantity": "1",
+                          "entryAt": "2026-10-19T14:00:00Z", "entryPrice": "6000.25",
+                          "exitAt": "2026-10-19T14:30:00Z", "exitPrice": "6004.5",
+                          "fees": "1.24", "realizedPnl": null, "notes": "eval trade"}))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let m = |amount: i64| amount * 1_000_000;
+
+    // Eval v1: manual, user-confirmed, every calculated rule type; later retired.
+    let a1 = rv(1);
+    version(&conn, &a1, &eval, 1, "2026-09-01", "manual", Some("https://help.example/apex-50k read 2026-08-30"),
+            Some("2026-08-31T09:00:00.000Z"), Some("Copied from the help centre."));
+    rule(&conn, &a1, 0, "profit_target", "firm", "calculated", "known", json!({"amount_micros": m(3000)}), Some("Profit target"));
+    rule(&conn, &a1, 1, "daily_loss_limit", "firm", "calculated", "known",
+         json!({"amount_micros": m(1000), "basis": "realized"}), None);
+    rule(&conn, &a1, 2, "max_drawdown", "firm", "calculated", "known",
+         json!({"mode": "eod_trailing", "amount_micros": m(2000), "includes_unrealized": false,
+                "lock": {"trigger_balance_micros": m(52100), "locked_floor_micros": m(50100)}}), Some("Trailing drawdown"));
+    rule(&conn, &a1, 3, "min_trading_days", "firm", "calculated", "known",
+         json!({"days": 5, "min_day_profit_micros": m(150)}), None);
+    rule(&conn, &a1, 4, "consistency", "firm", "calculated", "known", json!({"max_best_day_share_bps": 5000}), None);
+    rule(&conn, &a1, 5, "max_position_size", "firm", "calculated", "known", json!({"max_contracts": 4, "symbol_root": "ES"}), Some("4 minis"));
+    rule(&conn, &a1, 6, "max_position_size", "firm", "calculated", "known", json!({"max_contracts": 40, "symbol_root": "MES"}), Some("40 micros"));
+    rule(&conn, &a1, 7, "max_trades_per_day", "personal", "calculated", "known", json!({"count": 6}), Some("My limit"));
+    rule(&conn, &a1, 8, "manual_check", "firm", "manual_confirmation", "known",
+         json!({"description": "No trading during tier-1 news"}), Some("News"));
+    rule(&conn, &a1, 9, "manual_check", "personal", "manual_confirmation", "known",
+         json!({"description": "Stop after two losses"}), None);
+    activate(&conn, &a1, "2026-08-31T09:05:00.000Z");
+
+    // Eval v2: from a template, not confirmed, drawdown still unknown; active.
+    let a2 = rv(2);
+    version(&conn, &a2, &eval, 2, "2026-10-01", "template", None, None, None);
+    rule(&conn, &a2, 0, "profit_target", "firm", "calculated", "known", json!({"amount_micros": m(3000)}), None);
+    rule(&conn, &a2, 1, "max_drawdown", "firm", "calculated", "unknown", json!({}), Some("Drawdown (to confirm)"));
+    rule(&conn, &a2, 2, "daily_loss_limit", "firm", "calculated", "unknown", json!({}), None);
+    activate(&conn, &a2, "2026-09-30T20:00:00.000Z");
+    conn.execute("UPDATE rulebook_versions SET status = 'retired', updated_at = ?2 WHERE id = ?1", [&a1, T]).unwrap();
+
+    // Eval v3: a draft for the future; Eval v4: a draft that was deleted.
+    let a3 = rv(3);
+    version(&conn, &a3, &eval, 3, "2026-11-01", "copied", Some("copied from v2"), None, None);
+    rule(&conn, &a3, 0, "profit_target", "firm", "calculated", "known", json!({"amount_micros": m(2500)}), None);
+    let a4 = rv(4);
+    version(&conn, &a4, &eval, 4, "2026-12-01", "manual", None, None, Some("abandoned"));
+    conn.execute("UPDATE rulebook_versions SET deleted_at = ?2 WHERE id = ?1", [&a4, T]).unwrap();
+
+    // Funded v1: copied from the evaluation account's v2; active.
+    let b1 = rv(0x11);
+    version(&conn, &b1, &funded, 1, "2026-10-15", "copied", Some("copied from Eval 50K v2"),
+            Some("2026-10-14T18:00:00.000Z"), None);
+    rule(&conn, &b1, 0, "daily_loss_limit", "firm", "calculated", "known",
+         json!({"amount_micros": m(1000), "basis": "realized_and_unrealized"}), None);
+    rule(&conn, &b1, 1, "max_drawdown", "firm", "calculated", "known",
+         json!({"mode": "static", "amount_micros": m(2000), "includes_unrealized": true, "lock": null}), None);
+    activate(&conn, &b1, "2026-10-14T18:05:00.000Z");
+
+    // Personal-only rules on an account that is then archived.
+    let c1 = rv(0x21);
+    version(&conn, &c1, &personal, 1, "2026-10-01", "manual", None, None, None);
+    rule(&conn, &c1, 0, "max_trades_per_day", "personal", "calculated", "known", json!({"count": 3}), None);
+    rule(&conn, &c1, 1, "daily_loss_limit", "personal", "calculated", "known",
+         json!({"amount_micros": m(300), "basis": "realized"}), Some("My stop"));
+    activate(&conn, &c1, "2026-10-01T08:00:00.000Z");
+    accounts::archive(&conn, &personal).unwrap();
+
+    // Snapshots pinned to the version in force, and one with no rulebook.
+    snapshot(&conn, "snap-eval-0915", &eval, Some(&a1), "2026-09-15", "safe");
+    snapshot(&conn, "snap-eval-1002", &eval, Some(&a2), "2026-10-02", "unknown");
+    snapshot(&conn, "snap-eval-norules", &eval, None, "2026-08-20", "needs_setup");
+    snapshot(&conn, "snap-funded-1016", &funded, Some(&b1), "2026-10-16", "caution");
+
+    drop(conn);
+}
