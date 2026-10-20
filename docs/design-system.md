@@ -52,6 +52,10 @@ from the developer panel's `ff-` classes. The product root does not define anoth
   `@fundedflow/domain` (`toMicros`, `microsToDecimal`), so `sumMoney(["0.1", "0.2"])` is `"0.3"`. Floats appear
   only for drawing (`moneyToNumberForDisplay`: chart coordinates, bar widths) and for ratios (win rate,
   percent change). Display sums do not replace values Rust computes and stores.
+- **Money shows the account's currency.** Every money component (`Pnl`, `MetricValue` money, `MoneyCell`,
+  `RuleMeter`, `MiniMeter`, `AccountCard`, `PnlCalendar`, `DayCard`, `TradeTable`, `MonthYearPicker`) takes
+  `currency` (ISO 4217). `currencySymbol` turns it into "$", "€", "CA$" or "CHF "; an unrecognised code shows
+  itself, never "$". Omitting `currency` means USD, so feature screens always pass the account's currency.
 - **Unknown is not zero.** `null` money renders as "—" in ink-faint; a sum with an unknown part is unknown.
 - **Every P&L is signed**: `+$1,792.68`, `−$275.73` (U+2212), `$0.00`. In light theme profit and loss sit at
   similar lightness, so the sign is what tells them apart for colour-blind readers.
@@ -136,18 +140,23 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
   (offer Clear filters) and `not-configured` (offer setup). `unavailable` is a known missing dependency with a
   resolution, such as an account without a rulebook.
 - Loading shows skeletons only: no example values and no `$0.00`. A background refresh keeps data on screen with a
-  silent "Updating" mark; stale data says when it is from (in the account zone) and never says live.
+  silent "Updating" mark; stale data says when it is from (in the account zone) and never says live. Set
+  `asOfBasis: "loaded"` when the time is only when the screen last received the data (a client receipt time),
+  so the notice says "last loaded" instead of implying the figures were calculated then.
 - `StateBoundary` announces a finished first load once, lets errors announce themselves and moves focus to the
   error heading when a load the user was waiting for fails.
 - `MutationState` covers `idle`, `validating`, `submitting`, `success`, `validation-error`, `uncertain` and
   `failed`. An uncertain outcome offers "Check result", never "Retry"; `failed` offers Retry only when
-  `nothingChanged` is true. Nothing in the design system retries or replays a write on its own.
+  `nothingChanged` is true. `actions` adds the screen's own buttons, such as "I've checked the records" to
+  release a write lock. Nothing in the design system retries or replays a write on its own.
 
 ### Data display
 - `DataTable` is controlled: the screen sorts, filters and pages; the table renders `aria-sort` (one sort at a
   time), selection with a mixed select-all, a bulk-action toolbar, a `rowHeader` column, right-aligned mono numbers,
   sideways scrolling inside the card and a pager. Pass a `LoadingState`, `EmptyState` or `ErrorState` as `fallback`
   to keep the toolbar and headers in place. Put it in a grid or flex child with `min-width: 0`.
+- Sort money columns with `compareMoney(a, b, direction)`: exact micro-unit comparison, unknown last in both
+  directions.
 - `MetricCard`, `LabeledValue` and `StatList` take a `MetricValue` (`money`, `percent`, `count`, `text`,
   `unavailable`). `null` renders as "—", read as "Unknown"; zero renders as zero.
 - `MonthYearPicker` follows [screens/04-calendar.md](design/screens/04-calendar.md#monthyearpicker). Year totals
