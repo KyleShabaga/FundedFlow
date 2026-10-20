@@ -17,9 +17,14 @@ import type {
   AccountLinkInput,
   AccountPhaseEvent,
   CatalogueSnapshot,
+  CatalogueDraftInput,
   CatalogueVersion,
+  OfferSelection,
+  OfferSelectionInput,
   PhaseEventInput,
+  SourceInput,
 } from "../catalogue/index.js";
+import type { SourceReference } from "../catalogue/index.js";
 import type { LedgerEntry, LedgerEntryInput } from "../contracts/ledger.js";
 import type { Setting } from "../contracts/settings.js";
 import type { Snapshot, SnapshotInput, SnapshotQuery } from "../contracts/snapshots.js";
@@ -187,6 +192,24 @@ export interface CatalogueRepository {
   listPhaseEvents(accountId: string): Promise<AccountPhaseEvent[]>;
   /** Append-only: a correction is a new event naming the one it corrects. */
   recordPhaseEvent(input: PhaseEventInput): Promise<AccountPhaseEvent>;
+  /** A source is created once and never edited, so a claim's provenance cannot change afterwards. */
+  createSource(input: SourceInput): Promise<SourceReference>;
+  /**
+   * The next draft version of a variant with its sources, claims, phases, paths and offers, atomically.
+   * A correction names the version it supersedes and why.
+   */
+  createDraft(input: CatalogueDraftInput): Promise<CatalogueVersion>;
+  /**
+   * Replaces a draft's contents. Only a draft is editable: a version in review or reviewed is corrected by a
+   * new superseding version, and a version is superseded only once its verified correction exists.
+   */
+  replaceDraft(id: string, input: CatalogueDraftInput): Promise<CatalogueVersion>;
+  /**
+   * Records the offer (and promotion) an account was bought under, with a frozen copy of the terms and
+   * provenance. Later catalogue edits cannot change it. Needs the account's catalogue version.
+   */
+  selectOffer(input: OfferSelectionInput): Promise<OfferSelection>;
+  listOfferSelections(accountId: string): Promise<OfferSelection[]>;
 }
 
 export type CatalogueTransitionTarget = (typeof catalogueTransitionTargets)[number];

@@ -71,6 +71,10 @@ fn seed_rulebook_versions(conn: &Connection) {
 }
 
 /// Stores every fixture record, in dependency order.
+pub(super) fn save_fixture(conn: &Connection, f: &CatalogueFixture) {
+    save(conn, f)
+}
+
 fn save(conn: &Connection, f: &CatalogueFixture) {
     let g = &f.graph;
     for p in &g.providers {

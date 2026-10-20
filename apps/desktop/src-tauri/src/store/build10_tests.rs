@@ -184,7 +184,7 @@ fn migration_12_keeps_existing_snapshots_and_nulls_a_dangling_rulebook_reference
     insert(&conn, "dangling", Some("not-converted")).unwrap();
     conn.execute_batch("PRAGMA foreign_keys = ON").unwrap();
 
-    assert_eq!(migrate_with(&mut conn, MIGRATIONS).unwrap(), 12);
+    assert_eq!(migrate_with(&mut conn, &MIGRATIONS[..12]).unwrap(), 12);
     let refs: Vec<(String, Option<String>)> = conn
         .prepare("SELECT id, rulebook_version_id FROM account_snapshots ORDER BY id")
         .unwrap()

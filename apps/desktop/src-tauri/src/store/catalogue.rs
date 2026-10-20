@@ -275,6 +275,17 @@ pub fn transition_version(
     if from == to {
         return Err(AppError::invalid("to", format!("the version is already {to}")));
     }
+    if to == "superseded" {
+        // The replacement must already be verified, so a version is never retired without one.
+        let replaced: bool = tx.query_row(
+            "SELECT EXISTS (SELECT 1 FROM catalogue_versions WHERE supersedes_version_id = ?1 AND verification_status = 'verified')",
+            [version_id],
+            |r| r.get(0),
+        )?;
+        if !replaced {
+            return Err(AppError::invalid("to", "a version is superseded only by a verified correction that names it"));
+        }
+    }
     let changed = if to == "verified" {
         // First verification signs it; a stale version being re-verified keeps its original sign-off.
         tx.execute(

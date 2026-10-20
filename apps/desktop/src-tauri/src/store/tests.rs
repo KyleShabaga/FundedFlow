@@ -29,7 +29,7 @@ pub(crate) fn account_input(name: &str) -> AccountInput {
     }
 }
 
-fn trade_input(account_id: &str) -> TradeInput {
+pub(crate) fn trade_input(account_id: &str) -> TradeInput {
     TradeInput {
         account_id: account_id.into(),
         symbol: "esz6".into(),

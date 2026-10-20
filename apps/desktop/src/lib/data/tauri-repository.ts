@@ -11,6 +11,11 @@ import {
   RepositoryError,
   accountHistorySchema,
   accountLinkInputSchema,
+  catalogueDraftInputSchema,
+  offerSelectionInputSchema,
+  offerSelectionSchema,
+  sourceInputSchema,
+  sourceReferenceSchema,
   accountCatalogueLinkSchema,
   accountPhaseEventSchema,
   catalogueSnapshotSchema,
@@ -153,6 +158,16 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
         call("list_account_phase_events", { accountId }, z.array(accountPhaseEventSchema)),
       recordPhaseEvent: (input) =>
         call("record_account_phase_event", { input: validate(phaseEventInputSchema, input) }, accountPhaseEventSchema),
+      createSource: (input) =>
+        call("create_catalogue_source", { input: validate(sourceInputSchema, input) }, sourceReferenceSchema),
+      createDraft: (input) =>
+        call("create_catalogue_draft", { input: validate(catalogueDraftInputSchema, input) }, catalogueVersionSchema),
+      replaceDraft: (id, input) =>
+        call("replace_catalogue_draft", { id, input: validate(catalogueDraftInputSchema, input) }, catalogueVersionSchema),
+      selectOffer: (input) =>
+        call("select_account_offer", { input: validate(offerSelectionInputSchema, input) }, offerSelectionSchema),
+      listOfferSelections: (accountId) =>
+        call("list_account_offer_selections", { accountId }, z.array(offerSelectionSchema)),
     },
     rulebooks: {
       list: (accountId) => call("list_rulebooks", { accountId }, z.array(rulebookSchema)),
