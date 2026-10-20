@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { cx } from "./cx";
 
@@ -116,19 +117,23 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <section className="ds-toasts" aria-label="Notifications">
-        {/* Polite and assertive regions exist before any toast so screen readers announce additions. */}
-        <div role="status" aria-live="polite" className="ds-toast-stack">
-          {toasts.filter((t) => (t.tone ?? "info") !== "error").map((t) => (
-            <ToastView key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
-          ))}
-        </div>
-        <div role="alert" aria-live="assertive" className="ds-toast-stack">
-          {toasts.filter((t) => t.tone === "error").map((t) => (
-            <ToastView key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
-          ))}
-        </div>
-      </section>
+      {/* Portalled to the body so no transformed or contained ancestor can move the fixed stack. */}
+      {createPortal(
+        <section className="ds-toasts" aria-label="Notifications">
+          {/* Polite and assertive regions exist before any toast so screen readers announce additions. */}
+          <div role="status" aria-live="polite" className="ds-toast-stack">
+            {toasts.filter((t) => (t.tone ?? "info") !== "error").map((t) => (
+              <ToastView key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
+            ))}
+          </div>
+          <div role="alert" aria-live="assertive" className="ds-toast-stack">
+            {toasts.filter((t) => t.tone === "error").map((t) => (
+              <ToastView key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
+            ))}
+          </div>
+        </section>,
+        document.body,
+      )}
     </ToastContext.Provider>
   );
 }

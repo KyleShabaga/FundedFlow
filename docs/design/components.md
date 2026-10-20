@@ -20,6 +20,22 @@
 | `DayCard` | Journal recent days, Home |
 | `TradeTable` | Simple trade lists; the Journal uses `DataTable` with trade columns |
 
+Build 13 added the patterns below; props and usage are in [`../design-system.md`](../design-system.md#build-13-forms-feedback-async-states-and-data-display).
+
+| Component | Used on |
+|---|---|
+| `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select`, `FieldGroup`, `FormSection`, `ValidationSummary` | Accounts, rulebook editor, trade editor, Import options, Settings |
+| `IconButton`, `SegmentedControl` | Pagers, row menus, Table/Cards and filter switches |
+| `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `DropdownMenu`, `Tooltip` | Editors, destructive confirmations, calculation breakdowns, column chooser, row menus |
+| `InlineNotice`, `ToastProvider`/`useToast`, `StatusIndicator` | Every screen |
+| `StateBoundary` and the async-state set | Every data view |
+| `DataTable`, `MiniMeter` | Accounts, Journal trade log, Import review, Insights |
+| `MetricCard`, `LabeledValue`, `StatList` | Today, Insights, selected-day panel, Trade detail |
+| `Stepper`, `FileDropzone` | Import |
+| `MonthYearPicker` | Insights calendar |
+| `RuleStateBadge`, `RulebookLine` | Accounts, Today rules |
+| `ChartPanel` | Today, Insights, Trade detail |
+
 ## Build 6 component plan (owned by feature cards)
 
 `AccountContextBar`, `GlobalFreshnessIndicator` (12/21), `AccountHealthCard`, `RiskStatusBadge` (Safe / Caution /
@@ -32,8 +48,9 @@ Build 13 also owns the async-state set: `LoadingState`, `EmptyState`, `ErrorStat
 
 ## New patterns from the canvas (Build 13 unless noted)
 
-Add each to the design system with a `README`-style comment, tests and a gallery section before a screen uses it.
-Names are suggestions.
+The Build 13 patterns below are in the design system: DataTable, MiniMeter, RuleState (as `RuleStateBadge` and
+`RulebookLine`), MonthYearPicker, StatList, Stepper and Popover. These specs stay the reference for their look and
+behaviour. Build 12, Triage and P2 patterns remain with their cards.
 
 ### AppShell, Sidebar (Build 12)
 - Layout: sidebar + main column. Sidebar 248 px expanded, 72 px collapsed (icons only, `title` and `aria-label` on

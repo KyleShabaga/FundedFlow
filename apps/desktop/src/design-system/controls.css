@@ -29,7 +29,9 @@
 .ds-icon-btn:disabled { opacity: .45; cursor: not-allowed; }
 .ds-icon-btn:disabled:hover { background: transparent; color: var(--ink-muted); }
 
-/* SegmentedControl reuses the Tabs track */
+/* SegmentedControl reuses the Tabs track; long sets scroll sideways inside their container instead of overflowing it */
+.ds-seg { max-width: 100%; overflow-x: auto; scrollbar-width: thin; }
+.ds-seg .ds-tab { flex: none; white-space: nowrap; }
 .ds-seg .ds-tab:disabled { opacity: .45; cursor: not-allowed; }
 .ds-seg .ds-tab:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
 

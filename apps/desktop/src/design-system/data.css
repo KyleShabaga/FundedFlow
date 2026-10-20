@@ -4,7 +4,7 @@
  * screen mockups (Accounts table, Import stepper, Calendar picker).
  */
 .ds-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.ds-unknown { color: var(--ink-faint); font-family: var(--font-mono); }
+.ds-unknown { position: relative; color: var(--ink-faint); font-family: var(--font-mono); }
 
 /* DataTable */
 .ds-dt-card { background: var(--bg-100); border: 1px solid var(--line-100); border-radius: var(--radius-lg); overflow: hidden; min-width: 0; color: var(--ink); font-family: var(--font-sans); }
@@ -13,7 +13,8 @@
 .ds-dt-tools { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; min-width: 0; }
 .ds-dt-tools .ds-search { width: min(260px, 100%); }
 .ds-dt-selcount { font-size: 13px; color: var(--ink-faint); }
-.ds-dt-scroll { overflow: auto; max-height: var(--ds-dt-max-h, none); }
+/* Positioned so visually hidden labels in cells stay inside the scroll area instead of widening the page. */
+.ds-dt-scroll { position: relative; overflow: auto; max-height: var(--ds-dt-max-h, none); }
 .ds-dt-scroll:focus-visible { outline: 2px solid var(--flow); outline-offset: -2px; }
 .ds-dt { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; line-height: 18px; }
 .ds-dt th { position: sticky; top: 0; z-index: 1; background: var(--bg-200); color: var(--ink-muted); font: 600 11px/14px var(--font-sans); letter-spacing: .6px; text-transform: uppercase; text-align: left; padding: 0; white-space: nowrap; border-bottom: 1px solid var(--line-100); }
