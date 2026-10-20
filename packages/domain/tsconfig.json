@@ -1,0 +1,23 @@
+{
+  // Type-checks sources and tests. Emitting is done by tsconfig.build.json.
+  "compilerOptions": {
+    "target": "ES2022",
+    // No DOM and no Node typings: browser or Node globals in src/ fail to compile.
+    "lib": ["ES2022"],
+    "types": [],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src", "test"]
+}
