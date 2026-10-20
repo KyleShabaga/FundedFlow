@@ -1,0 +1,356 @@
+// Overlays on Radix: Dialog, ConfirmDialog, Drawer, Popover, DropdownMenu and
+// Tooltip. Radix supplies focus trapping (modal), Escape and outside-click
+// dismissal, and focus return to the trigger. Surfaces use bg-100, a line-200
+// border, radius-lg and shadow-pop, per docs/design/components.md (Popover).
+
+import * as RadixDialog from "@radix-ui/react-dialog";
+import * as RadixMenu from "@radix-ui/react-dropdown-menu";
+import * as RadixTooltip from "@radix-ui/react-tooltip";
+import { X } from "lucide-react";
+import { type ReactElement, type ReactNode, useRef, useState } from "react";
+
+import { cx } from "./cx";
+import { Button } from "./primitives";
+
+/* ---------- Focus return ---------- */
+
+/**
+ * Radix returns focus to its own Trigger. Dialogs opened from elsewhere (a
+ * menu item, a controlled `open`) would drop focus on the body, so remember
+ * what had focus on open and put it back on close.
+ */
+function useFocusReturn() {
+  const returnTo = useRef<HTMLElement | null>(null);
+  return {
+    capture: () => {
+      returnTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    },
+    restore: (e: Event) => {
+      const el = returnTo.current;
+      if (el && el.isConnected && el !== document.body) {
+        e.preventDefault();
+        el.focus();
+      }
+    },
+  };
+}
+
+/* ---------- Dialog ---------- */
+
+export interface DialogProps {
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Element that opens the dialog (a Button). Omit when `open` is controlled from elsewhere. */
+  trigger?: ReactElement;
+  title: string;
+  /** One sentence under the title; also the dialog's accessible description. */
+  description?: ReactNode;
+  children?: ReactNode;
+  /** Buttons at the bottom right. Put Cancel first, the action last. */
+  footer?: ReactNode;
+  /** sm 400 px (confirmations), md 560 px (forms), lg 760 px. All shrink to the window. */
+  size?: "sm" | "md" | "lg";
+  /** Hide the close (×) button, e.g. while a write is in progress. */
+  hideClose?: boolean;
+  /** Blocks Escape and outside clicks, e.g. while a write is in progress. */
+  dismissible?: boolean;
+  className?: string;
+}
+
+/** Modal dialog. Focus moves in on open, is trapped, and returns to the trigger on close. */
+export function Dialog({ open, defaultOpen, onOpenChange, trigger, title, description, children, footer, size = "md", hideClose, dismissible = true, className }: DialogProps) {
+  const focus = useFocusReturn();
+  return (
+    <RadixDialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
+      {trigger && <RadixDialog.Trigger asChild>{trigger}</RadixDialog.Trigger>}
+      <RadixDialog.Portal>
+        <RadixDialog.Overlay className="ds-overlay" />
+        <RadixDialog.Content
+          className={cx("ds-dialog", `ds-dialog-${size}`, className)}
+          onOpenAutoFocus={focus.capture}
+          onCloseAutoFocus={focus.restore}
+          onEscapeKeyDown={(e) => !dismissible && e.preventDefault()}
+          onPointerDownOutside={(e) => !dismissible && e.preventDefault()}
+          onInteractOutside={(e) => !dismissible && e.preventDefault()}
+          {...(description == null ? { "aria-describedby": undefined } : {})}
+        >
+          <OverlayHead title={title} description={description} hideClose={hideClose || !dismissible} />
+          {children != null && <div className="ds-dialog-body">{children}</div>}
+          {footer != null && <div className="ds-dialog-foot">{footer}</div>}
+        </RadixDialog.Content>
+      </RadixDialog.Portal>
+    </RadixDialog.Root>
+  );
+}
+
+function OverlayHead({ title, description, hideClose }: { title: string; description?: ReactNode; hideClose?: boolean }) {
+  return (
+    <div className="ds-dialog-head">
+      <div className="ds-dialog-titles">
+        <RadixDialog.Title className="ds-dialog-title">{title}</RadixDialog.Title>
+        {description != null && <RadixDialog.Description className="ds-dialog-desc">{description}</RadixDialog.Description>}
+      </div>
+      {!hideClose && (
+        <RadixDialog.Close asChild>
+          <button type="button" className="ds-icon-btn ds-icon-btn-ghost ds-icon-btn-sm" aria-label="Close">
+            <X size={16} aria-hidden="true" />
+          </button>
+        </RadixDialog.Close>
+      )}
+    </div>
+  );
+}
+
+/* ---------- ConfirmDialog ---------- */
+
+export interface ConfirmDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  /** Names exactly what will be affected ("Apex $100K · PA-48213 and its 67 trades"). */
+  children: ReactNode;
+  confirmLabel: string;
+  /** Shown on the button while the action runs ("Deleting…"). */
+  busyLabel?: string;
+  /** danger: destructive (red button). neutral: reversible (archive, restore). */
+  tone?: "danger" | "neutral";
+  /**
+   * Runs the action. Resolve to close; reject to stay open with the error.
+   * It runs once per click and is never retried automatically.
+   */
+  onConfirm: () => Promise<void>;
+  /**
+   * Turns a rejection into safe text. The default never shows raw errors and
+   * does not claim nothing changed, because the outcome may be unknown.
+   */
+  describeError?: (error: unknown) => string;
+}
+
+const DEFAULT_CONFIRM_ERROR = "It didn't finish. Check whether anything changed before trying again.";
+
+/**
+ * Confirmation before a consequential action. Cancel has focus first, so Enter
+ * never confirms by accident. While the action runs the dialog cannot be
+ * dismissed and the button cannot be pressed twice. The action itself
+ * (backup, delete) belongs to the feature card.
+ */
+export function ConfirmDialog({ open, onOpenChange, title, children, confirmLabel, busyLabel = "Working…", tone = "danger", onConfirm, describeError }: ConfirmDialogProps) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const focus = useFocusReturn();
+  const change = (next: boolean) => {
+    if (busy) return;
+    if (!next) setError(null);
+    onOpenChange(next);
+  };
+  const confirm = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onConfirm();
+      setBusy(false);
+      onOpenChange(false);
+    } catch (e) {
+      setBusy(false);
+      setError(describeError ? describeError(e) : DEFAULT_CONFIRM_ERROR);
+    }
+  };
+  return (
+    <RadixDialog.Root open={open} onOpenChange={change}>
+      <RadixDialog.Portal>
+        <RadixDialog.Overlay className="ds-overlay" />
+        <RadixDialog.Content
+          role="alertdialog"
+          className="ds-dialog ds-dialog-sm"
+          onEscapeKeyDown={(e) => busy && e.preventDefault()}
+          onInteractOutside={(e) => busy && e.preventDefault()}
+          onCloseAutoFocus={focus.restore}
+          onOpenAutoFocus={(e) => {
+            focus.capture();
+            e.preventDefault();
+            (e.currentTarget as HTMLElement | null)?.querySelector<HTMLElement>("[data-cancel]")?.focus();
+          }}
+        >
+          <OverlayHead title={title} hideClose />
+          <RadixDialog.Description asChild>
+            <div className="ds-dialog-body">{children}</div>
+          </RadixDialog.Description>
+          {error && (
+            <p role="alert" className="ds-notice ds-notice-error ds-dialog-error">
+              {error}
+            </p>
+          )}
+          <div className="ds-dialog-foot">
+            <RadixDialog.Close asChild>
+              <Button data-cancel disabled={busy}>
+                Cancel
+              </Button>
+            </RadixDialog.Close>
+            <Button variant={tone === "danger" ? "danger" : "primary"} loading={busy} onClick={() => void confirm()}>
+              {busy ? busyLabel : confirmLabel}
+            </Button>
+          </div>
+        </RadixDialog.Content>
+      </RadixDialog.Portal>
+    </RadixDialog.Root>
+  );
+}
+
+/* ---------- Drawer ---------- */
+
+export interface DrawerProps extends Omit<DialogProps, "size"> {
+  /** Width on wide windows. The drawer takes the full width below 560 px. */
+  width?: number;
+  side?: "right" | "left";
+}
+
+/**
+ * Side panel for detail that keeps the page in view: calculation breakdowns,
+ * contributing trades. Modal (focus is trapped); the body scrolls on its own.
+ */
+export function Drawer({ open, defaultOpen, onOpenChange, trigger, title, description, children, footer, width = 480, side = "right", hideClose, dismissible = true, className }: DrawerProps) {
+  const focus = useFocusReturn();
+  return (
+    <RadixDialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
+      {trigger && <RadixDialog.Trigger asChild>{trigger}</RadixDialog.Trigger>}
+      <RadixDialog.Portal>
+        <RadixDialog.Overlay className="ds-overlay" />
+        <RadixDialog.Content
+          className={cx("ds-drawer", `ds-drawer-${side}`, className)}
+          style={{ ["--ds-drawer-w" as string]: `${width}px` }}
+          onOpenAutoFocus={focus.capture}
+          onCloseAutoFocus={focus.restore}
+          onEscapeKeyDown={(e) => !dismissible && e.preventDefault()}
+          onInteractOutside={(e) => !dismissible && e.preventDefault()}
+          {...(description == null ? { "aria-describedby": undefined } : {})}
+        >
+          <OverlayHead title={title} description={description} hideClose={hideClose || !dismissible} />
+          <div className="ds-drawer-body">{children}</div>
+          {footer != null && <div className="ds-dialog-foot ds-drawer-foot">{footer}</div>}
+        </RadixDialog.Content>
+      </RadixDialog.Portal>
+    </RadixDialog.Root>
+  );
+}
+
+/* ---------- Popover ---------- */
+
+export interface PopoverProps {
+  /** The button that opens it. Gets aria-haspopup="dialog" and aria-expanded. */
+  trigger: ReactElement;
+  /** Accessible name of the popover ("Choose month and year"). */
+  label: string;
+  children: ReactNode;
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Edge of the trigger the popover lines up with. */
+  align?: "start" | "end";
+  /** Fixed width in px; shrinks to the window. */
+  width?: number;
+  className?: string;
+}
+
+/**
+ * Non-modal surface anchored under its trigger: month picker, column chooser,
+ * timer resets. Escape and clicks outside close it and focus returns to the
+ * trigger. Built on non-modal Radix Dialog without a portal, so it is
+ * positioned by CSS against the wrapper and stays inside scroll containers.
+ */
+export function Popover({ trigger, label, children, open, defaultOpen, onOpenChange, align = "start", width, className }: PopoverProps) {
+  return (
+    <RadixDialog.Root modal={false} open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
+      <span className="ds-popover-anchor">
+        <RadixDialog.Trigger asChild>{trigger}</RadixDialog.Trigger>
+        <RadixDialog.Content
+          aria-label={label}
+          aria-describedby={undefined}
+          className={cx("ds-pop", "ds-popover", `ds-popover-${align}`, className)}
+          style={width ? { width } : undefined}
+        >
+          <RadixDialog.Title className="ds-sr-only">{label}</RadixDialog.Title>
+          {children}
+        </RadixDialog.Content>
+      </span>
+    </RadixDialog.Root>
+  );
+}
+
+/** Closes the nearest Popover, Dialog or Drawer: wrap a button inside one. */
+export const OverlayClose = RadixDialog.Close;
+
+/* ---------- DropdownMenu ---------- */
+
+export type MenuEntry =
+  | { type?: "item"; label: string; onSelect: () => void; icon?: ReactNode; disabled?: boolean; tone?: "danger"; shortcut?: string }
+  | { type: "separator" }
+  | { type: "label"; label: string };
+
+export interface DropdownMenuProps {
+  /** The button that opens the menu (an IconButton for row menus, a Button "Columns"). */
+  trigger: ReactElement;
+  items: readonly MenuEntry[];
+  align?: "start" | "end";
+  /** Accessible name of the menu when the trigger's text does not describe it. */
+  label?: string;
+}
+
+/**
+ * Actions on one object (row menu, overflow). Arrow keys move, typing jumps,
+ * Enter selects, Escape closes and returns focus to the trigger. Disabled
+ * items are skipped by the keyboard and announced as unavailable.
+ */
+export function DropdownMenu({ trigger, items, align = "end", label }: DropdownMenuProps) {
+  return (
+    <RadixMenu.Root>
+      <RadixMenu.Trigger asChild>{trigger}</RadixMenu.Trigger>
+      <RadixMenu.Portal>
+        <RadixMenu.Content className="ds-pop ds-menu" align={align} sideOffset={4} collisionPadding={8} aria-label={label}>
+          {items.map((it, i) =>
+            it.type === "separator" ? (
+              <RadixMenu.Separator key={i} className="ds-menu-sep" />
+            ) : it.type === "label" ? (
+              <RadixMenu.Label key={i} className="ds-menu-label">
+                {it.label}
+              </RadixMenu.Label>
+            ) : (
+              <RadixMenu.Item key={i} className={cx("ds-menu-item", it.tone === "danger" && "is-danger")} disabled={it.disabled} onSelect={it.onSelect}>
+                {it.icon}
+                <span className="ds-menu-text">{it.label}</span>
+                {it.shortcut && <span className="ds-menu-shortcut">{it.shortcut}</span>}
+              </RadixMenu.Item>
+            ),
+          )}
+        </RadixMenu.Content>
+      </RadixMenu.Portal>
+    </RadixMenu.Root>
+  );
+}
+
+/* ---------- Tooltip ---------- */
+
+export interface TooltipProps {
+  /** Short text that names or explains the trigger. Never the only place for essential information. */
+  content: ReactNode;
+  /** A focusable element: it shows on hover and on keyboard focus. */
+  children: ReactElement;
+  side?: "top" | "bottom" | "left" | "right";
+  delayMs?: number;
+}
+
+export function Tooltip({ content, children, side = "top", delayMs = 400 }: TooltipProps) {
+  return (
+    <RadixTooltip.Provider delayDuration={delayMs}>
+      <RadixTooltip.Root>
+        <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
+        <RadixTooltip.Portal>
+          <RadixTooltip.Content side={side} sideOffset={6} collisionPadding={8} className="ds-tooltip">
+            {content}
+          </RadixTooltip.Content>
+        </RadixTooltip.Portal>
+      </RadixTooltip.Root>
+    </RadixTooltip.Provider>
+  );
+}

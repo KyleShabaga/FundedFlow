@@ -1,6 +1,6 @@
 import type { Trade } from "@fundedflow/domain";
 
-import { formatMoney, formatMoneyCompact, formatTradingDay, moneySign, sumMoney, UNKNOWN } from "../format";
+import { currencySymbol, formatMoney, formatMoneyCompact, formatTradingDay, moneySign, sumMoney, UNKNOWN } from "../format";
 import { Sparkline } from "./charts";
 import { cx } from "./cx";
 import { Badge, Pnl, type Tone } from "./primitives";
@@ -28,6 +28,8 @@ export interface PnlCalendarProps {
    * docs/data-model.md#trading-day), so weekends are hidden by default.
    */
   showWeekends?: boolean;
+  /** ISO 4217 code of the account. */
+  currency?: string | null;
 }
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -46,7 +48,8 @@ export function monthWeeks(year: number, month: number): (string | null)[][] {
   return weeks;
 }
 
-export function PnlCalendar({ year, month, days, today, onSelectDay, showWeekends = false }: PnlCalendarProps) {
+export function PnlCalendar({ year, month, days, today, onSelectDay, showWeekends = false, currency }: PnlCalendarProps) {
+  const symbol = currencySymbol(currency);
   const cols = showWeekends ? 7 : 5;
   const dow = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].slice(0, cols);
   const weeks = monthWeeks(year, month)
@@ -62,7 +65,7 @@ export function PnlCalendar({ year, month, days, today, onSelectDay, showWeekend
           {MONTH_NAMES[month - 1]} {year}
         </span>
         <span className="ds-cal-sum">
-          <Pnl value={inMonth.length ? monthTotal : "0"} />
+          <Pnl value={inMonth.length ? monthTotal : "0"} currency={currency} />
           <span className="ds-faint"> · {monthTrades} trades</span>
         </span>
       </div>
@@ -81,12 +84,12 @@ export function PnlCalendar({ year, month, days, today, onSelectDay, showWeekend
               if (!d) return <div key={ci} className="ds-cal-day is-out" />;
               const info = days[d];
               const sign = info ? moneySign(info.pnl) : null;
-              const label = `${formatTradingDay(d)}: ${info ? `${formatMoneyCompact(info.pnl)}, ${info.trades} ${info.trades === 1 ? "trade" : "trades"}` : "no trades"}`;
+              const label = `${formatTradingDay(d)}: ${info ? `${formatMoneyCompact(info.pnl, symbol)}, ${info.trades} ${info.trades === 1 ? "trade" : "trades"}` : "no trades"}`;
               const cls = cx("ds-cal-day", info && sign && `ds-cal-${sign}`, today === d && "is-today", onSelectDay && "is-clickable");
               const body = (
                 <>
                   <span className="ds-cal-date">{Number(d.slice(8))}</span>
-                  {info && <span className="ds-cal-pnl">{formatMoneyCompact(info.pnl)}</span>}
+                  {info && <span className="ds-cal-pnl">{formatMoneyCompact(info.pnl, symbol)}</span>}
                   {info && <span className="ds-cal-trades">{info.trades === 1 ? "1 trade" : `${info.trades} trades`}</span>}
                 </>
               );
@@ -102,7 +105,7 @@ export function PnlCalendar({ year, month, days, today, onSelectDay, showWeekend
             })}
             <div className={cx("ds-cal-week", traded.length > 0 && `ds-cal-week-${moneySign(wkTotal)}`)}>
               <span className="ds-cal-date">Week {wi + 1}</span>
-              <span className="ds-cal-pnl">{traded.length ? formatMoneyCompact(wkTotal) : UNKNOWN}</span>
+              <span className="ds-cal-pnl">{traded.length ? formatMoneyCompact(wkTotal, symbol) : UNKNOWN}</span>
               {traded.length > 0 && <span className="ds-cal-trades">{wkTrades} trades</span>}
             </div>
           </div>
@@ -125,9 +128,11 @@ export interface DayCardProps {
   spark?: (string | null)[];
   active?: boolean;
   onClick?: () => void;
+  /** ISO 4217 code of the account. */
+  currency?: string | null;
 }
 
-export function DayCard({ day, trades, pnl, winRate, spark = [], active, onClick }: DayCardProps) {
+export function DayCard({ day, trades, pnl, winRate, spark = [], active, onClick, currency }: DayCardProps) {
   return (
     <button type="button" className={cx("ds-day", active && "is-on")} aria-pressed={active} onClick={onClick}>
       <span className="ds-day-row">
@@ -135,7 +140,7 @@ export function DayCard({ day, trades, pnl, winRate, spark = [], active, onClick
         <span className="ds-faint">{trades === 1 ? "1 trade" : `${trades} trades`}</span>
       </span>
       <span className="ds-day-row">
-        <Pnl value={pnl} />
+        <Pnl value={pnl} currency={currency} />
         {winRate != null && <span className="ds-faint">{Math.round(winRate)}% win</span>}
       </span>
       <Sparkline values={spark} />
@@ -154,6 +159,8 @@ export interface TradeTableProps {
   selectedId?: string | null;
   /** Accessible name for the table. */
   label: string;
+  /** ISO 4217 code of the trades' account. */
+  currency?: string | null;
 }
 
 const STATUS_TEXT: Record<Trade["pnlStatus"], string | null> = {
@@ -172,7 +179,7 @@ export function tradeResult(t: Trade): { text: string; tone: Tone } {
   return s === "profit" ? { text: "Win", tone: "profit" } : s === "loss" ? { text: "Loss", tone: "loss" } : { text: "BE", tone: "neutral" };
 }
 
-export function TradeTable({ trades, timeZone, onRowClick, selectedId, label }: TradeTableProps) {
+export function TradeTable({ trades, timeZone, onRowClick, selectedId, label, currency }: TradeTableProps) {
   const time = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone });
   return (
     <div className="ds-card ds-table-card">
@@ -219,9 +226,9 @@ export function TradeTable({ trades, timeZone, onRowClick, selectedId, label }: 
                 <td className="num">{t.quantity}</td>
                 <td className="num">{t.entryPrice}</td>
                 <td className="num">{t.exitPrice ?? UNKNOWN}</td>
-                <td className="num">{formatMoney(t.fees, { signed: false })}</td>
+                <td className="num">{formatMoney(t.fees, { signed: false, currency })}</td>
                 <td className="num">
-                  <Pnl value={t.realizedPnl} size="s" />
+                  <Pnl value={t.realizedPnl} size="s" currency={currency} />
                 </td>
                 <td>{status && <Badge tone={t.pnlStatus === "reported" ? "flow" : "warn"}>{status}</Badge>}</td>
               </tr>
