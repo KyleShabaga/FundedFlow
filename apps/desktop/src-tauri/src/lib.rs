@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Kyle Shabaga. All rights reserved.
+// Proprietary and source-available, not open source. See LICENSE in the repository root.
+
 mod catalogue;
 mod commands;
 mod csv_import;

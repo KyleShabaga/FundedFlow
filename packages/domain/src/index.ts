@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Kyle Shabaga. All rights reserved.
+// Proprietary and source-available, not open source. See LICENSE in the repository root.
+
 // Public entry point of @fundedflow/domain. Everything a host may use is
 // re-exported here; there are no deep imports. Later builds add their own
 // modules beside these (catalogue, rulebook, engine, import) and export them
