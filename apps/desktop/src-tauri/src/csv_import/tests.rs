@@ -345,13 +345,56 @@ fn file_level_problems_block_the_import_and_are_recorded() {
 }
 
 #[test]
-fn deleted_imported_trades_are_not_resurrected() {
+fn reimporting_restores_deleted_trades_once_and_keeps_active_ones_duplicate() {
     let (mut conn, account) = setup();
     commit(&mut conn, &request(&account, PERFORMANCE)).unwrap();
+    let deleted: Vec<_> = trade_store::list(&conn, &account).unwrap().into_iter().take(2).collect();
+    for t in &deleted {
+        trade_store::delete(&mut conn, &t.id).unwrap();
+    }
+
+    // Preview and commit agree: the two deleted trades come back, the rest are duplicates.
+    let p = preview(&conn, &request(&account, PERFORMANCE)).unwrap();
+    assert_eq!((p.new_count, p.restore_count, p.duplicate_count), (2, 2, 65));
+    for t in &deleted {
+        let r = p.rows.iter().find(|r| r.restores.as_ref().is_some_and(|x| x.trade_id == t.id)).unwrap();
+        assert_eq!(r.status, "new");
+        assert!(r.duplicate.is_none());
+        assert!(r.restores.as_ref().unwrap().reason.contains("deleted on"), "{:?}", r.restores);
+    }
+
+    let b = commit(&mut conn, &request(&account, PERFORMANCE)).unwrap();
+    assert_eq!((b.imported_count, b.duplicate_count), (2, 65));
+    let ids: Vec<String> = trade_store::list(&conn, &account).unwrap().into_iter().map(|t| t.id).collect();
+    assert_eq!(ids.len(), 67);
+    assert!(deleted.iter().all(|t| ids.contains(&t.id)), "the same trades are restored, not copied");
+    assert_eq!(count(&conn, "SELECT count(*) FROM trades"), 67, "no second row per trade");
+
+    // Without deletions, a repeat import is all duplicates.
+    let again = commit(&mut conn, &request(&account, PERFORMANCE)).unwrap();
+    assert_eq!((again.imported_count, again.duplicate_count), (0, 67));
+    assert_eq!(count(&conn, "SELECT count(*) FROM trades WHERE deleted_at IS NULL"), 67);
+}
+
+#[test]
+fn a_restored_trade_is_restored_once_per_file() {
+    let (mut conn, account) = setup();
+    let line = PERFORMANCE.lines().nth(1).unwrap();
+    let header = PERFORMANCE.lines().next().unwrap();
+    let csv = format!("{header}\n{line}\n");
+    commit(&mut conn, &request(&account, &csv)).unwrap();
     let t = trade_store::list(&conn, &account).unwrap().remove(0);
     trade_store::delete(&mut conn, &t.id).unwrap();
-    let p = preview(&conn, &request(&account, PERFORMANCE)).unwrap();
-    assert_eq!(p.new_count, 0);
-    let dup = p.rows.iter().find_map(|r| r.duplicate.as_ref().filter(|d| d.trade_id.as_deref() == Some(&t.id))).unwrap();
-    assert!(dup.reason.contains("deleted"), "{}", dup.reason);
+
+    // The second copy of the row is an in-file duplicate of the restore.
+    let twice = format!("{header}\n{line}\n{line}\n");
+    let p = preview(&conn, &request(&account, &twice)).unwrap();
+    assert_eq!((p.new_count, p.restore_count, p.duplicate_count), (1, 1, 1));
+    let b = commit(&mut conn, &request(&account, &twice)).unwrap();
+    assert_eq!((b.imported_count, b.duplicate_count), (1, 1));
+    let dup_of: Option<String> = conn
+        .query_row("SELECT duplicate_of_trade_id FROM import_rows WHERE batch_id = ?1 AND status = 'duplicate'", [&b.id], |r| r.get(0))
+        .unwrap();
+    assert_eq!(dup_of.as_deref(), Some(t.id.as_str()));
+    assert_eq!(trade_store::list(&conn, &account).unwrap().len(), 1);
 }

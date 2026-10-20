@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::domain::{canonical, format_instant, micros_to_string, new_id, now, parse_tz};
 use crate::error::{AppError, AppResult, FieldIssue};
 use crate::store::{account_ctx, load_instruments, trades};
-use dedup::Duplicate;
+use dedup::{Duplicate, Match, Restore};
 pub use detect::{ColumnMapping, Format};
 use detect::{Detection, MappedField};
 use normalize::{NormalizedTrade, Outcome};
@@ -103,6 +103,8 @@ pub struct RowReport {
     pub errors: Vec<FieldIssue>,
     pub warnings: Vec<FieldIssue>,
     pub duplicate: Option<Duplicate>,
+    /// For a "new" row: the deleted trade it brings back instead of inserting one.
+    pub restores: Option<Restore>,
     pub raw: Vec<String>,
     pub trade: Option<TradePreview>,
 }
@@ -131,6 +133,8 @@ pub struct CsvPreview {
     pub file_previously_imported: bool,
     pub row_count: u32,
     pub new_count: u32,
+    /// New rows that restore a deleted trade (included in `new_count`).
+    pub restore_count: u32,
     pub duplicate_count: u32,
     pub blank_count: u32,
     pub invalid_count: u32,
@@ -337,7 +341,7 @@ pub fn preview(conn: &Connection, req: &CsvImportRequest) -> AppResult<CsvPrevie
         |r| r.get(0),
     )?;
     let rows = pairs(&a);
-    let duplicates = dedup::classify(conn, &req.account_id, &rows)?;
+    let matches = dedup::classify(conn, &req.account_id, &rows)?;
     let d = a.detection.as_ref();
     let mut p = CsvPreview {
         format: a.format(),
@@ -352,6 +356,7 @@ pub fn preview(conn: &Connection, req: &CsvImportRequest) -> AppResult<CsvPrevie
         file_previously_imported,
         row_count: a.parsed.rows.len() as u32,
         new_count: 0,
+        restore_count: 0,
         duplicate_count: 0,
         blank_count: 0,
         invalid_count: 0,
@@ -360,7 +365,12 @@ pub fn preview(conn: &Connection, req: &CsvImportRequest) -> AppResult<CsvPrevie
         rows_omitted: 0,
         limits: Limits { max_bytes: MAX_CSV_BYTES, max_rows: MAX_CSV_ROWS },
     };
-    for (i, ((raw, outcome), duplicate)) in rows.into_iter().zip(duplicates).enumerate() {
+    for (i, ((raw, outcome), m)) in rows.into_iter().zip(matches).enumerate() {
+        let (duplicate, restores) = match m {
+            Match::New => (None, None),
+            Match::Restore(r) => (None, Some(r)),
+            Match::Duplicate(d) => (Some(d), None),
+        };
         let warnings = warnings_of(outcome).to_vec();
         p.warning_count += u32::from(!warnings.is_empty());
         let (status, errors, trade) = match outcome {
@@ -374,9 +384,12 @@ pub fn preview(conn: &Connection, req: &CsvImportRequest) -> AppResult<CsvPrevie
             "blank" => p.blank_count += 1,
             "invalid" => p.invalid_count += 1,
             "duplicate" => p.duplicate_count += 1,
-            _ => p.new_count += 1,
+            _ => {
+                p.new_count += 1;
+                p.restore_count += u32::from(restores.is_some());
+            }
         }
-        if i >= PREVIEW_ROW_LIMIT && status == "new" && warnings.is_empty() {
+        if i >= PREVIEW_ROW_LIMIT && status == "new" && warnings.is_empty() && restores.is_none() {
             p.rows_omitted += 1;
             continue;
         }
@@ -387,6 +400,7 @@ pub fn preview(conn: &Connection, req: &CsvImportRequest) -> AppResult<CsvPrevie
             errors,
             warnings,
             duplicate,
+            restores,
             raw: raw.cells.clone(),
             trade,
         });
@@ -464,23 +478,25 @@ fn write_batch(conn: &mut Connection, req: &CsvImportRequest, a: &Analysis, star
     )?;
 
     let rows = pairs(a);
-    let duplicates = dedup::classify(&tx, &req.account_id, &rows)?;
+    let matches = dedup::classify(&tx, &req.account_id, &rows)?;
     let (mut imported, mut duplicate, mut blank, mut failed, mut warned) = (0i64, 0i64, 0i64, 0i64, 0i64);
-    // Trades inserted by this batch, so in-file duplicates can point at them.
+    // Trades inserted or restored by this batch, so in-file duplicates can point at them.
     let mut inserted: std::collections::HashMap<String, String> = std::collections::HashMap::new();
-    for ((raw, outcome), dup) in rows.into_iter().zip(duplicates) {
+    for ((raw, outcome), m) in rows.into_iter().zip(matches) {
         let row_id = new_id();
         let warnings = warnings_of(outcome);
         warned += i64::from(!warnings.is_empty());
-        let (status, errors, duplicate_of): (&str, Vec<FieldIssue>, Option<String>) = match (outcome, &dup) {
+        let (status, errors, duplicate_of): (&str, Vec<FieldIssue>, Option<String>) = match (outcome, &m) {
             (Outcome::Blank, _) => ("skipped", vec![FieldIssue::new("row", "blank row")], None),
             (Outcome::Invalid { errors, .. }, _) => ("invalid", errors.clone(), None),
-            (Outcome::Valid { .. }, Some(d)) => (
+            (Outcome::Valid { .. }, Match::Duplicate(d)) => (
                 "duplicate",
                 vec![FieldIssue::new("row", d.reason.clone())],
                 d.trade_id.clone().or_else(|| inserted.get(&d.key).cloned()),
             ),
-            (Outcome::Valid { .. }, None) => ("imported", Vec::new(), None),
+            // The row record keeps why it wrote no new trade.
+            (Outcome::Valid { .. }, Match::Restore(r)) => ("imported", vec![FieldIssue::new("row", r.reason.clone())], None),
+            (Outcome::Valid { .. }, Match::New) => ("imported", Vec::new(), None),
         };
         match status {
             "skipped" => blank += 1,
@@ -504,7 +520,11 @@ fn write_batch(conn: &mut Connection, req: &CsvImportRequest, a: &Analysis, star
                 duplicate_of
             ],
         )?;
-        if let (Outcome::Valid { trade, .. }, None) = (outcome, &dup) {
+        if let (Outcome::Valid { .. }, Match::Restore(r)) = (outcome, &m) {
+            trades::restore(&tx, &r.trade_id)?;
+            inserted.insert(r.key.clone(), r.trade_id.clone());
+        }
+        if let (Outcome::Valid { trade, .. }, Match::New) = (outcome, &m) {
             let key = dedup::key(&trade.identity);
             let prov = trades::Provenance {
                 batch_id: &batch_id,

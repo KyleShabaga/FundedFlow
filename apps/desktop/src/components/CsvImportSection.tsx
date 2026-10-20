@@ -1,5 +1,6 @@
 // CSV import flow: choose a file → inspect format and mapping → preview every
 // row (parsed values, warnings, errors, duplicate status) → confirm → summary.
+// Cancel at any point before confirming discards everything and saves nothing.
 // The file is read locally and passed to the Rust backend over Tauri IPC; it is
 // never uploaded. All file content is rendered as text (no HTML injection).
 
@@ -47,7 +48,9 @@ function errorText(e: unknown) {
 
 function summary(p: CsvPreview) {
   return (
-    `${p.rowCount} rows: ${p.newCount} ready to import, ${p.duplicateCount} duplicate, ` +
+    `${p.rowCount} rows: ${p.newCount} ready to import` +
+    (p.restoreCount ? ` (${p.restoreCount} restore deleted trades)` : "") +
+    `, ${p.duplicateCount} duplicate, ` +
     `${p.invalidCount} invalid, ${p.blankCount} blank; ${p.warningCount} with warnings.`
   );
 }
@@ -61,6 +64,7 @@ function Details({ r }: { r: RowReport }) {
         </li>
       ))}
       {r.duplicate && <li className="ff-finding-dup">Duplicate: {r.duplicate.reason}</li>}
+      {r.restores && <li className="ff-finding-restore">{r.restores.reason}</li>}
       {r.warnings.map((i, k) => (
         <li key={`w${k}`} className="ff-finding-warn">
           Warning · {i.field}: {i.message}
@@ -91,6 +95,8 @@ export function CsvImportSection({
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  // Remounts the file input on cancel so the same file can be chosen again.
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   // Any change to the inputs makes an earlier preview stale.
   const reset = (message = "") => {
@@ -134,6 +140,15 @@ export function CsvImportSection({
       setFile({ name: f.name, content: await f.text() });
       setStatus(`${f.name} loaded (${(f.size / 1024).toFixed(1)} KB). Choose Preview to check it before saving.`);
     });
+  };
+
+  // Abandon the pending import: nothing has been written, so only local state goes.
+  const cancel = () => {
+    setFile(null);
+    setMapping(null);
+    setFilter("all");
+    setFileInputKey((k) => k + 1);
+    reset("Import cancelled. Nothing was saved; choose another file to start again.");
   };
 
   const runPreview = () =>
@@ -186,7 +201,7 @@ export function CsvImportSection({
       <div className="ff-row">
         <label>
           CSV file
-          <input type="file" accept=".csv,text/csv" disabled={busy} onChange={(e) => pickFile(e.target.files?.[0])} />
+          <input key={fileInputKey} type="file" accept=".csv,text/csv" disabled={busy} onChange={(e) => pickFile(e.target.files?.[0])} />
         </label>
         <label>
           Format
@@ -207,6 +222,11 @@ export function CsvImportSection({
         <button type="button" onClick={() => void runPreview()} disabled={!file || busy}>
           Preview
         </button>
+        {file && (
+          <button type="button" onClick={cancel} disabled={busy}>
+            Cancel import
+          </button>
+        )}
       </div>
 
       <div role="status" aria-live="polite" className="ff-status">{status}</div>
