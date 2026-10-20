@@ -5,7 +5,7 @@
 
 import { useId, useMemo, useState } from "react";
 
-import { DataError, csvImportApi } from "../lib/data/api";
+import { DataError, repository } from "../lib/data/api";
 import {
   type ColumnMapping,
   type CsvPreview,
@@ -138,7 +138,7 @@ export function CsvImportSection({
 
   const runPreview = () =>
     run(async () => {
-      const p = await csvImportApi.preview(request());
+      const p = await repository.imports.preview(request());
       setPreview(p);
       setFilter("all");
       setStatus(p.fileIssues.length ? `Cannot import yet: ${p.fileIssues.length} file problem(s).` : `Preview: ${summary(p)}`);
@@ -147,7 +147,7 @@ export function CsvImportSection({
   const runImport = () =>
     run(async () => {
       try {
-        const b = await csvImportApi.commit(request());
+        const b = await repository.imports.commit(request());
         reset(
           `Imported ${b.importedCount} of ${b.rowCount} rows from ${b.fileName}: ` +
             `${b.duplicateCount} duplicate and ${b.skippedCount - b.duplicateCount} blank skipped, ` +

@@ -4,8 +4,8 @@ FundedFlow is one npm workspace (`apps/*`, `packages/*`, one root `package-lock.
 
 | Package | Path | Owns | May import |
 |---|---|---|---|
-| `@fundedflow/desktop` | `apps/desktop` | React UI, Tauri host (`src-tauri`), the IPC gateway (`src/lib/data/api.ts`, `runtime.ts`), command names, desktop error mapping | `@fundedflow/domain` (entry point only), React, Tauri, Zod |
-| `@fundedflow/domain` | `packages/domain` | Portable contracts (Zod DTO schemas in `src/contracts`), primitives (`src/primitives`) and the provider catalogue (`src/catalogue`) | `zod` only |
+| `@fundedflow/desktop` | `apps/desktop` | React UI, Tauri host (`src-tauri`), the Tauri/SQLite repository adapter (`src/lib/data/tauri-repository.ts`, bound in `api.ts`), `runtime.ts`, command names, desktop error mapping | `@fundedflow/domain` (entry point only), React, Tauri, Zod |
+| `@fundedflow/domain` | `packages/domain` | Portable contracts (Zod DTO schemas in `src/contracts`), primitives (`src/primitives`), the provider catalogue (`src/catalogue`) and ports (`src/ports`: the `JournalRepository` interface) | `zod` only |
 
 Dependencies point one way: desktop → domain. The domain package never imports `apps/desktop`, React, Tauri,
 Node built-ins (`fs`, `net`, `process`, …), browser globals, network calls, clock reads or randomness. Results
@@ -60,6 +60,10 @@ Rules for this module:
 - No rule values or formulas live here. Phases and paths hold nullable rulebook-version IDs, and Build 9.5 owns
   the rulebook types and the tagged OFF/NONE/not-applicable claim states.
 - The integrity checks mirror the constraints that Build 10 adds in SQLite. Rust stays authoritative at write time.
+
+`src/ports/journal-repository.ts` holds the `JournalRepository` port and `RepositoryError`, which are types and one
+error class, with no I/O. Each host supplies an adapter: the desktop's adapter calls Tauri, and a Stage 2 adapter
+would call its own backend. See [`../data-model.md#repository-port`](../data-model.md#repository-port).
 
 ## Money and time wire contract
 
@@ -133,7 +137,7 @@ reported-P&L fallback, missing instrument, currency mismatch, the weekend roll a
 
 **Still Rust-only**, each moving later under its owning card with its own fixtures: trade validation, instrument
 resolution, realized P&L, trading-day derivation (Build 16), CSV parsing/date detection/row warnings and dedup
-keys (Build 17), persistence (Build 10).
+keys (Build 17), and persistence (SQLite behind the `JournalRepository` port; see Build 10 in `data-model.md`).
 
 **When parity fails:**
 

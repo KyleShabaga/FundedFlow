@@ -210,6 +210,29 @@ fn changing_account_session_settings_rederives_trades() {
 }
 
 #[test]
+fn a_settings_change_that_fails_part_way_through_its_rederive_changes_nothing() {
+    let mut conn = db();
+    let a = accounts::create(&mut conn, account_input("Eval")).unwrap();
+    let first = trades::create(&mut conn, trade_input(&a.id)).unwrap();
+    let late = TradeInput { exit_at: Some("2026-10-19T21:30:00Z".into()), ..trade_input(&a.id) };
+    let second = trades::create(&mut conn, late).unwrap();
+    // The bundle updates the account, then each trade; fail on the second trade.
+    conn.execute_batch(&format!(
+        "CREATE TEMP TRIGGER boom BEFORE UPDATE OF trading_day ON trades WHEN OLD.id = '{}'
+         BEGIN SELECT RAISE(ABORT, 'disk full (simulated)'); END;",
+        second.id
+    ))
+    .unwrap();
+
+    let calendar = AccountInput { trading_day_reset_time: "00:00".into(), ..account_input("Eval") };
+    let err = accounts::update(&mut conn, &a.id, calendar).unwrap_err();
+    assert!(err.to_string().contains("disk full"), "{err}");
+    assert_eq!(accounts::get(&conn, &a.id).unwrap(), a);
+    assert_eq!(trades::get(&conn, &first.id).unwrap(), first);
+    assert_eq!(trades::get(&conn, &second.id).unwrap(), second);
+}
+
+#[test]
 fn journal_crud_with_tags_and_trade_link() {
     let mut conn = db();
     let a = accounts::create(&mut conn, account_input("A")).unwrap();

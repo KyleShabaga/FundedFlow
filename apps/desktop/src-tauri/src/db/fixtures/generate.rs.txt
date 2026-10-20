@@ -1,0 +1,88 @@
+//! TEMPORARY: writes a populated sample journal with this build's real code.
+//! Run: FIXTURE_OUT=<path> cargo test --lib fixture_gen -- --ignored
+
+use serde_json::{from_value, json, Value};
+
+use crate::csv_import;
+use crate::db;
+use crate::store::{accounts, journal, trades};
+
+fn account(conn: &mut rusqlite::Connection, v: Value) -> String {
+    accounts::create(conn, from_value(v).unwrap()).unwrap().id
+}
+
+fn trade(conn: &mut rusqlite::Connection, v: Value) -> String {
+    trades::create(conn, from_value(v).unwrap()).unwrap().id
+}
+
+const CSV: &str = "symbol,_priceFormat,_priceFormatType,_tickSize,buyFillId,sellFillId,qty,buyPrice,sellPrice,pnl,boughtTimestamp,soldTimestamp,duration
+MNQZ6,-2,0,0.25,900000000001,900000000002,1,29774.25,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,33sec
+MNQZ6,-2,0,0.25,900000000003,900000000004,2,29800.00,29790.50,$(38.00),10/16/2026 17:10:00,10/16/2026 17:20:00,10min
+MESZ6,-2,0,0.25,900000000005,900000000006,1,6010.25,6000.00,$(51.25),10/18/2026 18:05:00,10/18/2026 18:01:00,4min
+MNQZ6,-2,0,0.25,900000000001,900000000002,1,29774.25,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,33sec
+MNQZ6,-2,0,0.25,900000000007,900000000008,1,abc,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,33sec
+";
+
+#[test]
+#[ignore]
+fn fixture_gen() {
+    let out = std::env::var("FIXTURE_OUT").expect("FIXTURE_OUT");
+    let _ = std::fs::remove_file(&out);
+    let mut conn = db::open_file(std::path::Path::new(&out)).unwrap();
+
+    let base = |name: &str, tz: &str, reset: &str, r: &str| {
+        json!({"name": name, "broker": "Tradovate", "propFirm": "Apex", "externalRef": r,
+               "accountType": "evaluation", "status": "active", "currency": "USD",
+               "startingBalance": "50000", "timezone": tz, "tradingDayResetTime": reset, "notes": null})
+    };
+    let ny = account(&mut conn, base("NY 17:00 eval", "America/New_York", "17:00", "APEX-1"));
+    let utc = account(&mut conn, base("UTC calendar", "Etc/UTC", "00:00", "APEX-2"));
+
+    let t = |acc: &str, sym: &str, side: &str, entry: &str, exit: Option<&str>, notes: &str| {
+        json!({"accountId": acc, "symbol": sym, "side": side, "quantity": "1",
+               "entryAt": entry, "entryPrice": "6000.25",
+               "exitAt": exit, "exitPrice": exit.map(|_| "6004.5"),
+               "fees": "1.24", "realizedPnl": null, "notes": notes})
+    };
+    // Mon 10:30 New York: Monday under every rule.
+    let mon = trade(&mut conn, t(&ny, "MESZ6", "long", "2026-10-19T14:00:00Z", Some("2026-10-19T14:30:00Z"), "mon"));
+    // Fri 17:30 New York (after the 17:00 reset): Saturday before the weekend roll, Monday after.
+    trade(&mut conn, t(&ny, "MESZ6", "short", "2026-10-16T21:00:00Z", Some("2026-10-16T21:30:00Z"), "fri after reset"));
+    // Sun 18:00 New York: next day = Monday under every rule.
+    trade(&mut conn, t(&ny, "ESZ6", "long", "2026-10-18T22:00:00Z", Some("2026-10-18T22:10:00Z"), "sun evening"));
+    // Open trade entered Sat 10:00 New York.
+    trade(&mut conn, t(&ny, "MNQZ6", "long", "2026-10-17T14:00:00Z", None, "open sat"));
+    // Soft-deleted Fri 18:00 New York.
+    let del = trade(&mut conn, t(&ny, "MESZ6", "long", "2026-10-16T22:00:00Z", Some("2026-10-16T22:05:00Z"), "deleted"));
+    trades::delete(&mut conn, &del).unwrap();
+    // Reported-P&L fallback for an unknown symbol, Sat 10:00 UTC.
+    let mut unknown = t(&utc, "XYZ", "long", "2026-10-17T09:00:00Z", Some("2026-10-17T10:00:00Z"), "unknown sat");
+    unknown["realizedPnl"] = json!("12.5");
+    trade(&mut conn, unknown);
+    // Thursday, calendar day.
+    trade(&mut conn, t(&utc, "MESZ6", "long", "2026-10-15T09:00:00Z", Some("2026-10-15T10:00:00Z"), "thu"));
+
+    
+
+    csv_import::commit(
+        &mut conn,
+        &from_value(json!({"accountId": ny, "fileName": "Performance.csv", "content": CSV,
+                           "timezone": "America/New_York"}))
+        .unwrap(),
+    )
+    .unwrap();
+
+    journal::create(
+        &mut conn,
+        from_value(json!({"accountId": ny, "tradeId": mon, "entryAt": "2026-10-19T15:00:00Z",
+                          "title": "Monday review", "body": "Waited for the open.", "tags": ["patience", "es"]}))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let arch = account(&mut conn, base("Archived", "America/New_York", "17:00", "APEX-3"));
+    trade(&mut conn, t(&arch, "MESZ6", "long", "2026-10-16T21:00:00Z", Some("2026-10-16T21:30:00Z"), "archived fri"));
+    accounts::archive(&conn, &arch).unwrap();
+
+    drop(conn);
+}
