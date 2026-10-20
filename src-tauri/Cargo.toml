@@ -1,8 +1,8 @@
 [package]
 name = "fundedflow"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "FundedFlow: a local-first trading journal for funded-account traders"
+authors = ["Kyle Shabaga"]
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -36,5 +36,6 @@ uuid = { version = "1", features = ["v7"] }
 codegen-units = 1
 lto = true
 opt-level = 3
-panic = "abort"
+# No `panic = "abort"`: a panic inside a command should unwind and fail that
+# command, not take the whole app (and any unsaved UI state) down with it.
 strip = true

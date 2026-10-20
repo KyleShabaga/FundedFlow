@@ -102,10 +102,10 @@ export function DataModelPanel() {
       await loadAccounts();
     });
   };
-  const deleteAccount = () => {
-    if (!account || !window.confirm(`Delete "${account.name}" and all of its trades, journal entries and imports?`)) return;
+  const archiveAccount = () => {
+    if (!account || !window.confirm(`Archive "${account.name}"? It will be hidden; its trades and journal are kept.`)) return;
     void run(async () => {
-      await accountsApi.remove(account.id);
+      await accountsApi.archive(account.id);
       await loadAccounts();
     });
   };
@@ -170,8 +170,8 @@ export function DataModelPanel() {
               </option>
             ))}
           </select>
-          <button type="button" onClick={deleteAccount} disabled={!account}>
-            Delete
+          <button type="button" onClick={archiveAccount} disabled={!account}>
+            Archive
           </button>
         </div>
         <form className="ff-row" onSubmit={createAccount}>

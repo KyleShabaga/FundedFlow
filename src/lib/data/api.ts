@@ -68,8 +68,8 @@ export const accountsApi = {
   create: (input: AccountInput) => call("create_account", { input: validate(accountInputSchema, input) }, accountSchema),
   update: (id: string, input: AccountInput) =>
     call("update_account", { id, input: validate(accountInputSchema, input) }, accountSchema),
-  /** Permanently deletes the account with its trades, journal entries and imports. */
-  remove: (id: string) => call("delete_account", { id }, done),
+  /** Archives the account: hidden and read-only; its trades, journal entries and imports are kept. */
+  archive: (id: string) => call("archive_account", { id }, done),
 };
 
 export const tradesApi = {

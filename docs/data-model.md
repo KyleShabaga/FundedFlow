@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 3 (`src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`).
+Status: V1, schema version 4 (`src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`).
 Code: `src-tauri/src/db` (migrations, opening), `src-tauri/src/store` (accounts, trades, journal),
 `src-tauri/src/csv_import`, `src-tauri/src/domain.rs` (validation, trading day, P&L),
 `src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `src/lib/data/`.
@@ -86,7 +86,7 @@ forward-only migrations (0004+) that map these tables; they must not edit 0001â€
 
 | Action | Effect |
 |---|---|
-| Delete account | Hard delete. Cascades to its trades, journal entries (and their tag links), import batches and rows, status history and rulebooks. Shared tags and firms remain. "Close" an account with `status = 'closed'` instead. |
+| Archive account | Soft delete (`archived_at`, migration 0004). Hidden from lists and read-only: reading or writing its trades, journal entries and imports returns not-found. Nothing is removed, and an archived account's broker account number can be reused. The app never hard-deletes accounts; the schema's `ON DELETE CASCADE` remains for a future permanent-delete flow (Build 24). "Close" an account with `status = 'closed'` to keep it visible. |
 | Delete trade | Soft delete (`deleted_at`). Hidden from lists; any journal entry linking to it has `trade_id` cleared in the same transaction. The row keeps its `dedup_key`, so re-importing the CSV does not bring it back. |
 | Delete journal entry | Hard delete; tag links cascade. |
 | Journal â†” trade | A journal entry may link only to a non-deleted trade **of the same account** (validated in Rust, enforced by triggers). |
@@ -103,7 +103,7 @@ forward-only migrations (0004+) that map these tables; they must not edit 0001â€
 - Before upgrading an existing journal, `open_file` writes a consistent copy with `VACUUM INTO` to
   `fundedflow.db.before-v<N>.bak` next to the database.
 - A database from a newer app version is refused (`NewerSchema`) rather than modified.
-- Rule: never edit a migration that has shipped; add `0003_â€¦.sql` and a `Migration` entry. (0001 was revised
+- Rule: never edit a migration that has shipped; add the next `000N_â€¦.sql` and a `Migration` entry. (0001 was revised
   before V1 shipped.)
 
 ## Realized P&L
@@ -259,7 +259,7 @@ Limitations:
 
 | Area | Commands |
 |---|---|
-| Accounts | `list_accounts`, `create_account(input)`, `update_account(id, input)`, `delete_account(id)` |
+| Accounts | `list_accounts`, `create_account(input)`, `update_account(id, input)`, `archive_account(id)` |
 | Trades | `list_trades(accountId)`, `create_trade(input)`, `update_trade(id, input)`, `delete_trade(id)` |
 | Journal | `list_journal_entries(accountId)`, `create_journal_entry(input)`, `update_journal_entry(id, input)`, `delete_journal_entry(id)` |
 | CSV | `preview_csv_import(request)`, `commit_csv_import(request)`, `list_csv_imports(accountId)`, `list_csv_import_problem_rows(batchId)` |

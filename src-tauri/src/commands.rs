@@ -29,8 +29,8 @@ pub async fn update_account(db: State<'_, Db>, id: String, input: AccountInput) 
 }
 
 #[tauri::command]
-pub async fn delete_account(db: State<'_, Db>, id: String) -> AppResult<()> {
-    db.with(|c| accounts::delete(c, &id))
+pub async fn archive_account(db: State<'_, Db>, id: String) -> AppResult<()> {
+    db.with(|c| accounts::archive(c, &id))
 }
 
 #[tauri::command]
