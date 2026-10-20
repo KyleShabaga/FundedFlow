@@ -173,3 +173,31 @@ export function zonedWallTimeToInstant(local: string, timeZone: string): string 
   const instant = zonedWallTime(second, timeZone) === local ? second : Math.max(first, second);
   return new Date(instant).toISOString();
 }
+
+export interface InstantOptions {
+  /** IANA zone to show the time in: the account's zone. Default: the computer's. */
+  timeZone?: string;
+  /** Adds the year ("Oct 19, 2026, 16:12"). */
+  year?: boolean;
+  /** Adds the zone's short name ("EDT") so a time cannot be read in the wrong zone. */
+  zoneName?: boolean;
+}
+
+/**
+ * "Oct 19, 16:12" from an ISO instant, in 24-hour time. Unknown or malformed
+ * instants are "—", never the current time or the epoch.
+ */
+export function formatInstant(instant: string | null | undefined, options: InstantOptions = {}): string {
+  const ms = instant == null ? NaN : Date.parse(instant);
+  if (Number.isNaN(ms)) return UNKNOWN;
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: options.timeZone,
+    month: "short",
+    day: "numeric",
+    year: options.year ? "numeric" : undefined,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZoneName: options.zoneName ? "short" : undefined,
+  }).format(new Date(ms));
+}

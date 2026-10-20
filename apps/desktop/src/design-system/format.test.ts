@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   UNKNOWN,
+  formatInstant,
   formatMoney,
   formatMoneyCompact,
   formatPercent,
@@ -106,5 +107,16 @@ describe("account time zone helpers", () => {
     expect(zonedWallTimeToInstant("2026-11-01T12:00", "America/New_York")).toBe("2026-11-01T17:00:00.000Z");
     expect(zonedWallTimeToInstant("", "UTC")).toBe("");
     expect(zonedWallTimeToInstant("2026-10-20", "UTC")).toBe("");
+  });
+});
+
+describe("formatInstant", () => {
+  it("shows the time in the given zone", () => {
+    expect(formatInstant("2026-10-19T20:12:00Z", { timeZone: "America/New_York" })).toBe("Oct 19, 16:12");
+    expect(formatInstant("2026-10-19T20:12:00Z", { timeZone: "America/New_York", year: true, zoneName: true })).toBe("Oct 19, 2026, 16:12 EDT");
+  });
+  it("treats missing and malformed instants as unknown", () => {
+    expect(formatInstant(null)).toBe("—");
+    expect(formatInstant("yesterday")).toBe("—");
   });
 });
