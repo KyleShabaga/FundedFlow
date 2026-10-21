@@ -94,3 +94,6 @@ pub mod reconciliation;
 
 #[cfg(test)]
 mod evidence_tests;
+
+#[cfg(test)]
+mod engine_snapshot_tests;

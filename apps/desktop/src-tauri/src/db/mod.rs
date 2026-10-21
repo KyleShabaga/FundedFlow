@@ -11,7 +11,7 @@ use std::path::Path;
 
 use rusqlite::{Connection, Transaction};
 
-pub(crate) use steps::{convert_legacy_rulebooks, map_legacy_catalogue, provider_for_firm, rederive_trading_days};
+pub(crate) use steps::{convert_legacy_rulebooks, map_legacy_catalogue, provider_for_firm, rederive_trading_days, rulebook_events};
 
 /// File name of the journal database inside the app data directory
 /// (`%APPDATA%\com.fundedflow.desktop\` on Windows).
@@ -108,8 +108,13 @@ pub const MIGRATIONS: &[Migration] = &[
     },
     Migration {
         version: 15,
+        name: "nullable_engine_snapshots",
+        step: Step::Sql(include_str!("../../migrations/0015_nullable_engine_snapshots.sql")),
+    },
+    Migration {
+        version: 16,
         name: "rulebook_events",
-        step: Step::Sql(include_str!("../../migrations/0015_rulebook_events.sql")),
+        step: Step::Rust(|tx| rulebook_events(tx)),
     },
 ];
 

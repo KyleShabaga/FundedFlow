@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 15 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql` and `0015_rulebook_events.sql`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 16 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` and the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`); see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -301,7 +301,7 @@ until a correction supersedes it.
 
 ### Editing, guarded writes and the audit log (Build 19)
 
-Store: `store/rulebooks.rs`; tests: `db/rulebook_editor_tests.rs`; table: `migrations/0015_rulebook_events.sql`.
+Store: `store/rulebooks.rs`; tests: `db/rulebook_editor_tests.rs`; table: `migrations/0016_rulebook_events.sql` (migration 16).
 
 - **Revision.** A version's `updated_at` is its revision. Every write that changes a version sets it to now, but
   always at least one millisecond later than before, so two saves in one millisecond still differ.
@@ -323,7 +323,7 @@ Store: `store/rulebooks.rs`; tests: `db/rulebook_editor_tests.rs`; table: `migra
   source conflict, with the actor label and reason. Resets that assign a rulebook log it too. Actor labels are
   local and unauthenticated (`local_user`). `list_rulebook_events({ rulebookId } | { accountId })` reads them
   oldest first; the account query also returns the events of the account's private rulebooks. Nothing was
-  backfilled: versions and assignments from before v15 keep only their own timestamps.
+  backfilled: versions and assignments from before v16 keep only their own timestamps.
 
 ## Conventions
 
@@ -494,7 +494,8 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 12 | `snapshot_rulebook_fk` | SQL | Rebuilds `account_snapshots` so `rulebook_version_id` references the reusable `rulebook_versions` (migration 9's rename had left it pointing at `legacy_account_rulebook_versions`, so no snapshot of an account on a reusable rulebook could be stored). Rows are kept; a reference to an id that was never converted becomes null; the key is `RESTRICT` instead of `CASCADE` |
 | 13 | `account_offer_selections` | SQL | Append-only `account_offer_selections`: the offer and promotion an account was bought under, with a frozen JSON copy of the terms and provenance. Offer, promotion and version keys are `RESTRICT`. Changes no other rows |
 | 14 | `financial_evidence` | SQL | Dedicated immutable financial observations, ledger revisions (including migration-time current-state baseline), frozen reconciliations and append-only review resolutions. No inferred financial history or calculated snapshot changes |
-| 15 | `rulebook_events` | SQL | Append-only [rulebook audit log](#editing-guarded-writes-and-the-audit-log-build-19): who created, saved, discarded, published, verified or assigned a version, and why. Nothing backfilled; changes no other rows |
+| 15 | `nullable_engine_snapshots` | SQL | Build 16: rebuilds `account_snapshots` keeping every row, id, key and index, so `balance`, `realized_day_pnl`, `trading_days_completed` and `drawdown_locked` can be NULL (unknown); calculated rows become immutable |
+| 16 | `rulebook_events` | Rust | Build 19: the append-only [rulebook audit log](#editing-guarded-writes-and-the-audit-log-build-19) (`0016_rulebook_events.sql`, idempotent). Builds 16 and 19 were built in parallel and both numbered their migration 15; neither shipped. A journal that reached 15 on the Build 19 branch has the audit log but not the nullable snapshots, so this step first applies the migration 15 rebuild when `account_snapshots.balance_micros` is still NOT NULL, then creates the log if missing. Nothing backfilled |
 
 How an upgrade runs:
 

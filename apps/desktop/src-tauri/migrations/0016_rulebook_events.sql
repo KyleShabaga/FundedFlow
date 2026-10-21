@@ -1,4 +1,7 @@
--- Rulebook audit log (Build 19).
+-- Rulebook audit log (Build 19). Schema version 16, applied by the Rust step
+-- `db::steps::rulebook_events`, which first reconciles a journal that reached
+-- version 15 on the unmerged Build 19 branch (see that function). The
+-- statements are idempotent for that reason.
 --
 -- Who did what to a rulebook version, and why: a draft created, saved or
 -- discarded, a version published or verified, a version assigned to an
@@ -6,12 +9,12 @@
 -- published, so their edit history lives here and nowhere else. Rows are
 -- append-only. Actor labels are local, unauthenticated names ("local_user").
 --
--- Nothing is backfilled: versions and assignments written before v15 keep
+-- Nothing is backfilled: versions and assignments written before v16 keep
 -- their own timestamps (created_at, verified_at, assigned_at), which the UI
 -- shows as such. The version and account ids are plain text so the log
 -- outlives a discarded draft; the rulebook id cascades with its rulebook.
 
-CREATE TABLE rulebook_events (
+CREATE TABLE IF NOT EXISTS rulebook_events (
     id                  TEXT PRIMARY KEY,
     rulebook_id         TEXT NOT NULL REFERENCES rulebooks (id) ON DELETE CASCADE,
     rulebook_version_id TEXT NOT NULL,
@@ -26,12 +29,12 @@ CREATE TABLE rulebook_events (
     CHECK (action <> 'assigned' OR account_id IS NOT NULL)
 ) STRICT;
 
-CREATE INDEX ix_rulebook_events_rulebook ON rulebook_events (rulebook_id, occurred_at);
-CREATE INDEX ix_rulebook_events_account ON rulebook_events (account_id, occurred_at);
+CREATE INDEX IF NOT EXISTS ix_rulebook_events_rulebook ON rulebook_events (rulebook_id, occurred_at);
+CREATE INDEX IF NOT EXISTS ix_rulebook_events_account ON rulebook_events (account_id, occurred_at);
 
-CREATE TRIGGER trg_rulebook_events_no_update BEFORE UPDATE ON rulebook_events
+CREATE TRIGGER IF NOT EXISTS trg_rulebook_events_no_update BEFORE UPDATE ON rulebook_events
 BEGIN SELECT RAISE(ABORT, 'rulebook events are append-only'); END;
 
-CREATE TRIGGER trg_rulebook_events_no_delete BEFORE DELETE ON rulebook_events
+CREATE TRIGGER IF NOT EXISTS trg_rulebook_events_no_delete BEFORE DELETE ON rulebook_events
 WHEN (SELECT 1 FROM rulebooks WHERE id = OLD.rulebook_id) IS NOT NULL
 BEGIN SELECT RAISE(ABORT, 'rulebook events are append-only'); END;

@@ -51,7 +51,7 @@ reads the engine's typed explanation instead of the generic JSON view.
 | G UX and tests | Done, with limits | Keyboard/focus via design-system controls, tested for the assign dialog; no visual check in a running app (see below) |
 | H Gap audit | Done | Above |
 | I Draft persistence | Done | Revision checks, append-only assignments, isolation, provenance |
-| J Migration | Done | v15 is additive (one new table, no row changes); failure rollback, idempotency, populated v14 upgrade and restart tested |
+| J Migration | Done | Migration 16 (after Build 16's 15) is additive (one new table, no row changes), with an explicit repair for a journal that reached 15 on the pre-integration branch; failure rollback, idempotency, populated v14 → v15 → v16 upgrade and restart tested |
 | K Engine integration | **Blocked on Build 16** | Contracts named above |
 | L Wire and failure tests | Done | See evidence |
 | M Delivery | This PR | Draft; not merged; card not moved |
@@ -97,7 +97,7 @@ journal reopened twice), wire compatibility, keyboard (assign dialog: Enter open
 ## Not verified
 
 - **No native Tauri run.** The app always opens the journal in the per-user data directory and has no override,
-  so `tauri dev` on this machine would migrate the real journal to v15 (a build at v14 would then refuse it).
+  so `tauri dev` on this machine would migrate the real journal to v16 (an older build would then refuse it).
   Native behaviour is covered by the Rust store/command tests and the wire fixture, not by a packaged window.
 - No visual check in a running app (layout, wrapping at narrow widths, dark theme). Behaviour is tested in
   jsdom, which does no layout.

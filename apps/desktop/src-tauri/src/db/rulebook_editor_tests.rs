@@ -1,6 +1,6 @@
 //! Build 19 rulebook editor operations against the catalogue fixture: saving
 //! drafts with optimistic concurrency, discarding them, stale drafts, guarded
-//! assignments, the append-only audit log, migration 15, restart persistence,
+//! assignments, the append-only audit log, migrations 15 and 16, restart persistence,
 //! and that reading risk inputs for a preview writes nothing.
 
 use rusqlite::Connection;
@@ -314,24 +314,87 @@ fn reading_risk_inputs_for_a_preview_writes_nothing() {
     assert_eq!(after, before);
 }
 
+/// A calculated snapshot written straight into the v14 table (nothing nullable yet).
+fn legacy_snapshot(conn: &Connection, account: &str) {
+    conn.execute(
+        "INSERT INTO account_snapshots (id, account_id, trading_day, is_end_of_day, data_source, calculated_at,
+                                        engine_version, inputs_hash, fees_included, unrealized_included, balance_micros,
+                                        realized_day_pnl_micros, drawdown_locked, trading_days_completed, status,
+                                        status_reasons_json, explanation_json)
+         VALUES ('legacy-snap', ?1, '2026-10-19', 1, 'manual', '2026-10-19T21:00:00.000Z', 'legacy/1', 'h', 1, 0,
+                 50000000000, 0, 0, 0, 'unknown', '[\"no engine\"]', '{\"note\":\"legacy\"}')",
+        [account],
+    )
+    .unwrap();
+}
+
+fn version(conn: &Connection) -> u32 {
+    conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap()
+}
+
+fn balance_nullable(conn: &Connection) -> bool {
+    conn.query_row("SELECT \"notnull\" = 0 FROM pragma_table_info('account_snapshots') WHERE name = 'balance_micros'", [], |r| r.get(0))
+        .unwrap()
+}
+
 #[test]
-fn migration_15_upgrades_a_populated_v14_journal_and_rolls_back_on_failure() {
+fn migrations_15_and_16_upgrade_a_populated_v14_journal_in_order_and_roll_back_on_failure() {
     let mut conn = Connection::open_in_memory().unwrap();
     super::configure(&conn).unwrap();
     super::migrate_with(&mut conn, &super::MIGRATIONS[..14]).unwrap();
     let acc = crate::store::accounts::create(&mut conn, crate::store::tests::account_input("Keep")).unwrap();
-    // The block for v15 makes the migration fail; the journal stays at v14 with its rows.
+    legacy_snapshot(&conn, &acc.id);
+    // v14 → v15: nullable engine snapshots, rows kept.
+    assert_eq!(super::migrate_with(&mut conn, &super::MIGRATIONS[..15]).unwrap(), 15);
+    assert!(balance_nullable(&conn));
+    // A blocker for v16 makes it fail; the journal stays at v15 with its rows.
     conn.execute_batch("CREATE TABLE rulebook_events (blocker INTEGER);").unwrap();
     assert!(super::migrate(&mut conn).is_err());
-    let version: u32 = conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
-    assert_eq!(version, 14);
+    assert_eq!(version(&conn), 15);
     assert_eq!(crate::store::accounts::get(&conn, &acc.id).unwrap(), acc);
     conn.execute_batch("DROP TABLE rulebook_events").unwrap();
-    assert_eq!(super::migrate(&mut conn).unwrap(), 15);
+    assert_eq!(super::migrate(&mut conn).unwrap(), 16);
     assert_eq!(count(&conn, "rulebook_events"), 0, "nothing is backfilled");
+    assert_eq!(count(&conn, "account_snapshots"), 1);
+    let kept = crate::store::snapshots::get(&conn, "legacy-snap").unwrap();
+    assert_eq!((kept.balance.as_deref(), kept.trading_days_completed), (Some("50000"), Some(0)));
     assert_eq!(crate::store::accounts::get(&conn, &acc.id).unwrap(), acc);
     // Idempotent: a second run does nothing.
-    assert_eq!(super::migrate(&mut conn).unwrap(), 15);
+    assert_eq!(super::migrate(&mut conn).unwrap(), 16);
+}
+
+/// The unmerged Build 19 branch numbered the audit log 15. A journal it opened is at version 15
+/// without nullable snapshots; migration 16 must repair that explicitly, keeping its events.
+#[test]
+fn migration_16_repairs_a_journal_that_reached_15_on_the_build_19_branch() {
+    let mut conn = Connection::open_in_memory().unwrap();
+    super::configure(&conn).unwrap();
+    super::migrate_with(&mut conn, &super::MIGRATIONS[..14]).unwrap();
+    let acc = crate::store::accounts::create(&mut conn, crate::store::tests::account_input("Branch")).unwrap();
+    legacy_snapshot(&conn, &acc.id);
+    // What the branch's migration 15 did: the audit log only.
+    conn.execute_batch(include_str!("../../migrations/0016_rulebook_events.sql")).unwrap();
+    conn.pragma_update(None, "user_version", 15).unwrap();
+    let rb: String = conn.query_row("SELECT id FROM rulebooks LIMIT 1", [], |r| r.get(0)).unwrap_or_default();
+    if !rb.is_empty() {
+        conn.execute(
+            "INSERT INTO rulebook_events (id, rulebook_id, rulebook_version_id, action, actor, occurred_at)
+             VALUES ('e1', ?1, 'v', 'draft_created', 'local_user', '2026-10-20T00:00:00.000Z')",
+            [&rb],
+        )
+        .unwrap();
+    }
+    let events_before = count(&conn, "rulebook_events");
+    assert!(!balance_nullable(&conn));
+    assert_eq!(super::migrate(&mut conn).unwrap(), 16);
+    assert!(balance_nullable(&conn), "the skipped nullable snapshot rebuild was applied");
+    assert_eq!(count(&conn, "rulebook_events"), events_before, "existing audit rows kept");
+    assert_eq!(crate::store::snapshots::get(&conn, "legacy-snap").unwrap().balance.as_deref(), Some("50000"));
+    rejects(&conn, "UPDATE account_snapshots SET status = 'safe'", "immutable");
+    let triggers: i64 = conn
+        .query_row("SELECT count(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'trg_rulebook_events_%'", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(triggers, 2, "append-only triggers in place");
 }
 
 #[test]
