@@ -1,5 +1,6 @@
-import type { AssignmentGuard, AssignmentInput, RiskInputsQuery, RulebookDraftInput, RulebookDraftUpdate } from "@fundedflow/domain";
+import type { AssignmentGuard, AssignmentInput, EnginePolicy, RiskInputsQuery, RulebookDraftInput, RulebookDraftUpdate } from "@fundedflow/domain";
 import * as api from "../api/rulebooks";
+import * as risk from "../api/risk";
 import { featureKeys as keys } from "../../shared/query-keys";
 import { useFeatureQuery } from "../../shared/hooks/use-feature-query";
 import { useFeatureMutation } from "../../shared/hooks/use-feature-mutation";
@@ -9,18 +10,37 @@ type CoverageAssertion = RiskInputsQuery["coverage"];
 export const useRulebookEvents = (accountId: string | null) =>
   useFeatureQuery({ key: keys.rulebookEvents(accountId), enabled: accountId !== null, read: signal => api.readRulebookEvents(accountId!, signal) });
 
-/** Read-only Build 15.5 inputs for an explicit cutoff, for the evidence check beside a preview. */
-export const useRiskInputs = (accountId: string | null, asOf: string | null, coverage: CoverageAssertion) =>
+/**
+ * Canonical inputs (and review history) for an explicit cutoff, read-only, for a preview or a
+ * calculation. Keyed under the account's snapshots, which trade, import, ledger and rulebook writes
+ * already invalidate, so a preview never outlives the evidence it was made from.
+ */
+export const useCalculationInputs = (accountId: string | null, asOf: string | null, coverage: CoverageAssertion, policy: EnginePolicy) =>
   useFeatureQuery({
-    key: [...keys.riskInputs(accountId, asOf), coverage],
+    key: [...keys.snapshotsRoot(accountId), "calculation-inputs", asOf, coverage, policy],
     enabled: accountId !== null && asOf !== null,
-    read: signal => api.readRiskInputs({ accountId: accountId!, asOf: asOf!, coverage }, signal),
+    read: signal => risk.readCalculationInputs({ accountId: accountId!, asOf: asOf!, coverage }, policy, signal),
     isEmpty: () => false,
   });
 
+/** Whether a stored engine calculation still matches its sources for its cutoff (re-read, never assumed). */
+export const useCalculationFreshness = (accountId: string | null, snapshot: { id: string; explanation: Record<string, unknown> } | null) =>
+  useFeatureQuery({
+    key: [...keys.snapshotsRoot(accountId), "freshness", snapshot?.id ?? null],
+    enabled: accountId !== null && snapshot !== null,
+    read: signal => risk.readFreshness(accountId!, snapshot!.explanation, signal),
+    isEmpty: () => false,
+  });
+
+export const useCalculateRisk = (accountId: string) => useFeatureMutation({
+  scope: JSON.stringify(["risk-calculation", accountId]),
+  run: ({ query, policy }: { query: RiskInputsQuery; policy: EnginePolicy }) => risk.calculateNow(query, policy),
+  invalidate: () => [keys.snapshotsRoot(accountId)],
+});
+
 // One write at a time per account's rulebook: a second click or window gets duplicate-submission.
 const scope = (accountId: string) => JSON.stringify(["rulebook", accountId]);
-const affected = (accountId: string) => [...keys.rulebookRoots, keys.assignments(accountId), keys.rulebookEvents(accountId), keys.detail(accountId)];
+const affected = (accountId: string) => [...keys.rulebookRoots, keys.assignments(accountId), keys.rulebookEvents(accountId), keys.detail(accountId), keys.snapshotsRoot(accountId)];
 
 export const useCreateRulebookDraft = (accountId: string) => useFeatureMutation({
   scope: scope(accountId),
@@ -47,7 +67,7 @@ export const usePublishRulebookVersion = (accountId: string) => useFeatureMutati
 export const useAssignRulebookVersion = (accountId: string) => useFeatureMutation({
   scope: scope(accountId),
   run: ({ input, guard }: { input: AssignmentInput; guard: AssignmentGuard }) => api.assignVersion(input, guard),
-  invalidate: () => [...affected(accountId), keys.latestSnapshot(accountId)],
+  invalidate: () => affected(accountId),
 });
 
 /** Server-side publish checks for the stored revision (keyed by it, so a save re-checks). */

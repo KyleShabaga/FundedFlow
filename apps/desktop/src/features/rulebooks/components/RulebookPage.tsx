@@ -222,7 +222,7 @@ export function RulebookPage() {
               <TabPanel value="assignments"><AssignmentHistory ctx={ctx} /></TabPanel>
               <TabPanel value="activity"><AuditLog accountId={account.id} timeZone={account.timezone} /></TabPanel>
               <TabPanel value="calculation">
-                <CalculationExplanation accountId={account.id} current={ctx.currentVersion.data ?? null} timeZone={account.timezone} />
+                <CalculationExplanation accountId={account.id} current={ctx.currentVersion.data ?? null} timeZone={account.timezone} currency={account.currency} canCalculate={account.archivedAt === null} />
                 <p className="ds-faint rb-footnote">
                   <StatusIndicator status="unknown" variant="inline" label="Estimates only" /> Verify with your firm's dashboard. Changing a version never rewrites a stored calculation.
                 </p>

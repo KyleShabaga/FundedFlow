@@ -110,6 +110,9 @@ fn a_draft_is_saved_only_against_the_revision_it_was_read_at() {
     ));
     let published = store::publish_with(&mut conn, &v, None, Some(&again.version.updated_at), me("Use it")).unwrap();
     assert_eq!(published.version.verification_status, "needs_review");
+    // Publishing your own rules records your confirmation, once, and it is frozen with the version.
+    assert_eq!(published.version.user_confirmed_at.as_deref(), Some(published.version.updated_at.as_str()));
+    rejects(&conn, &format!("UPDATE rulebook_versions SET user_confirmed_at = NULL WHERE id = '{v}'"), "frozen");
 
     // Published content is frozen: neither the operation nor SQL can change it.
     assert!(matches!(
@@ -439,7 +442,7 @@ fn normalize(v: &mut Value, key: Option<&str>, ids: &mut std::collections::BTree
         Value::Object(o) => o.iter_mut().for_each(|(k, value)| normalize(value, Some(k), ids)),
         Value::Array(a) => a.iter_mut().for_each(|value| normalize(value, None, ids)),
         Value::String(s) => {
-            if matches!(key, Some("createdAt" | "updatedAt" | "occurredAt" | "assignedAt" | "verifiedAt" | "expectedUpdatedAt")) {
+            if matches!(key, Some("createdAt" | "updatedAt" | "occurredAt" | "assignedAt" | "verifiedAt" | "userConfirmedAt" | "expectedUpdatedAt")) {
                 *s = "2026-10-21T00:00:00.000Z".into();
             } else if uuid::Uuid::parse_str(s).is_ok() {
                 let n = ids.len() + 1;

@@ -1,5 +1,5 @@
 // One rulebook version for one account (Build 19 blocks B–E): its rules, and for a draft the editor,
-// a comparison with the version in use, the evidence check and review/publish. Published versions
+// a comparison with the version in use, a simulated calculation preview (Build 16 engine) and review/publish. Published versions
 // are read-only; starting a draft copies them. Every write names the revision it was made from.
 import { ruleTypes, type RulebookVersionDetail, type RuleType } from "@fundedflow/domain";
 import { ArrowLeft, Plus } from "lucide-react";
@@ -19,7 +19,7 @@ import { RULE_TYPE_LABELS } from "../view-models/rule-fields";
 import { applicabilityText, assignableVersions, isEditable, versionState } from "../view-models/versions";
 import { AssignDialog } from "./AssignDialog";
 import { useAccountRulebookContext, type AccountRulebookContext } from "./context";
-import { EvidencePreview } from "./EvidencePreview";
+import { CalculationPreview } from "./CalculationPreview";
 import { RuleCard } from "./RuleCard";
 import { fieldIdFor } from "./RuleParameterFields";
 import { StartDraftDialog } from "./StartDraftDialog";
@@ -234,7 +234,8 @@ function PublishPanel({ d, ctx, dirty, onPublished }: { d: RulebookVersionDetail
             ? "Publishing freezes these rules as your account rules. They can then be assigned to this account from a trading day you choose. They are never shown as the firm's verified terms."
             : "Publishing freezes this version and sends it for review. It can't be assigned until a named reviewer verifies it against the source."}</p>
           <Textarea label="Note for the history" optional rows={2} value={reason} onChange={e => setReason(e.target.value)} />
-          <Checkbox label="I understand this version can't be edited after it is published" checked={understood} onChange={e => setUnderstood(e.target.checked)} />
+          <Checkbox label={privateBook ? "These are my rules for this account, and I understand this version can't be edited after it is published" : "I understand this version can't be edited after it is published"}
+            checked={understood} onChange={e => setUnderstood(e.target.checked)} />
           <div className="rb-actions">
             <Button variant="danger" onClick={() => setConfirm("discard")} disabled={!discard.canSubmit}>Discard draft…</Button>
             <Button variant="primary" disabled={dirty || !understood || !publish.canSubmit || (issues.data?.some(i => i.field !== "reviewer") ?? true)} onClick={() => setConfirm("publish")}>Publish…</Button>
@@ -256,7 +257,7 @@ function PublishPanel({ d, ctx, dirty, onPublished }: { d: RulebookVersionDetail
       <MutationFeedback state={toMutationState(publish, { success: "Published." })} />
       <ConfirmDialog open={confirm === "publish"} onOpenChange={o => !o && setConfirm(null)} tone="neutral" title={`Publish ${d.rulebook.displayName} v${d.version.versionNumber}?`}
         confirmLabel="Publish" busyLabel="Publishing…" describeError={describe} onConfirm={() => run(null)}>
-        {privateBook ? "It becomes your account rules and can be assigned to this account. " : "It goes to review and can't be assigned yet. "}
+        {privateBook ? "It becomes your account rules, confirmed by you, and can be assigned to this account. Calculations with it are your own estimates. " : "It goes to review and can't be assigned yet. "}
         It can't be edited afterwards; the version it replaces stays in the history.
       </ConfirmDialog>
       <ConfirmDialog open={confirm === "verify"} onOpenChange={o => !o && setConfirm(null)} tone="neutral" title={`Mark v${d.version.versionNumber} verified by ${reviewer.trim()}?`}
@@ -315,7 +316,7 @@ function VersionView({ d, ctx }: { d: RulebookVersionDetail; ctx: AccountRuleboo
       <Tabs label="Version sections" value={tab} onValueChange={setTab} items={[
         { value: "rules", label: editable ? "Edit rules" : "Rules" },
         { value: "compare", label: "Compare" },
-        { value: "evidence", label: "Inputs check" },
+        { value: "preview", label: "Preview" },
         { value: "publish", label: editable ? "Review and publish" : "Status" },
         { value: "details", label: "Details" },
       ]}>
@@ -327,8 +328,8 @@ function VersionView({ d, ctx }: { d: RulebookVersionDetail; ctx: AccountRuleboo
             ))}{d.rules.length === 0 && <p className="ds-faint">This version has no rules.</p>}</div>}
         </TabPanel>
         <TabPanel value="compare"><ComparePanel d={d} form={editable ? form : null} ctx={ctx} /></TabPanel>
-        <TabPanel value="evidence">
-          <EvidencePreview accountId={account.id} rules={editable && form ? form.rules : d.rules} timeZone={account.timezone} versionLabel={`v${d.version.versionNumber}`} />
+        <TabPanel value="preview">
+          <CalculationPreview accountId={account.id} currency={account.currency} timeZone={account.timezone} version={d} form={editable ? form : null} />
         </TabPanel>
         <TabPanel value="publish">
           <PublishPanel d={d} ctx={ctx} dirty={dirty} onPublished={result => {

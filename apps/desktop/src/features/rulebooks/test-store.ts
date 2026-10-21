@@ -19,8 +19,11 @@ import {
   type RulebookEvent,
   type RulebookEventQuery,
   type RulebookVersionDetail,
+  type Snapshot,
+  type SnapshotInput,
+  type Trade,
+  snapshotSchema,
 } from "@fundedflow/domain";
-import evidenceWire from "../../test/fixtures/evidence-wire.json";
 import { createTestStore } from "../accounts/test-store";
 
 const conflict = (message: string) => new RepositoryError({ kind: "conflict", message });
@@ -157,7 +160,7 @@ export function createRulebookStore(seed: Account[]) {
         if (newer) throw conflict(`version ${newer.version.versionNumber} was published after this draft was started; start a new draft from it`);
       }
       const at = now();
-      if (d.version.verificationStatus === "draft") Object.assign(d.version, { verificationStatus: "needs_review", updatedAt: at });
+      if (d.version.verificationStatus === "draft") Object.assign(d.version, { verificationStatus: "needs_review", updatedAt: at, userConfirmedAt: d.rulebook.ownerAccountId ? at : d.version.userConfirmedAt });
       else Object.assign(d.version, { verificationStatus: "verified", verifiedBy: reviewer!.trim(), verifiedAt: at, updatedAt: at });
       writes.push("publish");
       record(vid, d.version.verificationStatus === "verified" ? "verified" : "published", options?.context ?? { actor: "local_user", reason: null });
@@ -182,21 +185,67 @@ export function createRulebookStore(seed: Account[]) {
     listEvents: async (q: RulebookEventQuery) => events.filter(e => e.accountId === q.accountId || rulebooks.get(e.rulebookId)?.ownerAccountId === q.accountId).map(e => structuredClone(e)),
   };
 
-  const riskInputs = (accountId: string, asOf: string, coverage: unknown) => {
-    const raw = evidenceWire.find(f => f.command === "get_account_risk_inputs")!.output as Record<string, unknown>;
-    const text = JSON.stringify(raw).split("00000000-0000-4000-8000-000000000001").join(accountId);
-    const value = JSON.parse(text) as Record<string, unknown>;
+  /** Closed trades per account, for the engine (synthetic; the trade screens are not under test here). */
+  const trades = new Map<string, Trade[]>();
+  const snapshots: Snapshot[] = [];
+  // Canonical inputs assembled the way get_account_risk_inputs does: this account's assignments, the
+  // versions they name, the one in force on the cutoff's day, and a confirmed opening checkpoint.
+  const riskInputs = (accountId: string, asOf: string, coverage: Record<string, unknown>) => {
     const account = base.accounts.get(accountId);
     if (!account) throw notFound("account");
-    return { ...value, account: { ...value.account as object, ...account }, asOf, coverage: { ...(coverage as object), openPositions: "unsupported", intradayHistory: "unsupported" } };
+    const day = asOf.slice(0, 10);
+    const mine = assignments.filter(a => a.accountId === accountId);
+    const inForce = mine.filter(a => a.effectiveFrom <= day && (a.effectiveTo === null || a.effectiveTo > day));
+    const opening = {
+      id: `${accountId}-opening`, accountId, kind: "opening_balance", value: account.startingBalance, currency: account.currency, basis: "balance",
+      observedAt: "2026-10-01T00:00:00.000Z", recordedAt: "2026-10-01T00:00:00.000Z", effectiveTradingDay: "2026-10-01",
+      sourceCategory: "firm_dashboard", sourceReference: "Synthetic opening checkpoint", confirmation: "user_confirmed", confidence: "user_reported",
+      validUntil: null, actor: "local_user", note: null, timezone: account.timezone, tradingDayResetTime: account.tradingDayResetTime,
+      supersedesId: null, correctionReason: null,
+    };
+    const baseline = coverage.baseline === "available" ? "available" : coverage.baseline;
+    return {
+      schemaVersion: 1, account: structuredClone(account), asOf, effectiveTradingDay: day,
+      observations: [opening], trades: structuredClone(trades.get(accountId) ?? []), ledger: [], ledgerHistory: [], phaseHistory: [],
+      catalogueLink: { accountId, providerId: null, programmeVariantId: null, catalogueVersionId: null, selectedPhasePathId: null, parentAccountId: null, sizeSource: "unknown" },
+      assignments: structuredClone(mine),
+      rulebookVersions: [...new Set(mine.map(a => a.rulebookVersionId))].map(get),
+      applicableAssignment: inForce.length === 1 ? structuredClone(inForce[0]) : null,
+      applicableRulebook: null,
+      coverage: { ...coverage, baseline, openPositions: "unsupported", intradayHistory: "unsupported" },
+      missingInputs: [],
+    };
   };
   const evidenceCalls: string[] = [];
   const repository = {
     ...base.repository,
     rulebooks: rulebookRepo,
-    evidence: { inputs: async (q: { accountId: string; asOf: string; coverage: unknown }) => { evidenceCalls.push(q.accountId); return riskInputs(q.accountId, q.asOf, q.coverage); } },
-    snapshots: { latest: async () => null, list: async () => [] },
+    evidence: {
+      inputs: async (q: { accountId: string; asOf: string; coverage: Record<string, unknown> }) => { evidenceCalls.push(q.accountId); return riskInputs(q.accountId, q.asOf, q.coverage); },
+      reconciliations: async () => [],
+      resolutions: async () => [],
+    },
+    snapshots: {
+      latest: async (accountId: string) => structuredClone(snapshots.filter(x => x.accountId === accountId).slice(-1)[0] ?? null),
+      list: async (accountId: string) => structuredClone(snapshots.filter(x => x.accountId === accountId)),
+      save: async (input: SnapshotInput) => {
+        const row = snapshotSchema.parse({ ...input, rulebookVersionId: input.rulebookVersionId ?? null, dataAsOf: input.dataAsOf ?? null, id: id(), calculatedAt: now() });
+        snapshots.push(row);
+        writes.push("saveSnapshot");
+        return structuredClone(row);
+      },
+    },
     catalogue: { load: async () => { throw notFound("no catalogue"); } },
   };
-  return { ...base, repository, versions, rulebooks, assignments, events, writes, evidenceCalls, verifiedVersionId: verified.version.id };
+  return { ...base, repository, versions, rulebooks, assignments, events, writes, evidenceCalls, trades, snapshots, verifiedVersionId: verified.version.id };
+}
+
+/** A closed synthetic trade with net realized P&L (Rust-normalized in the real app). */
+export function closedTrade(accountId: string, n: number, realizedPnl: string, day = "2026-10-20"): Trade {
+  return {
+    id: `${accountId}-t${n}`, accountId, source: "manual", importBatchId: null, brokerTradeId: null, symbol: "ES", side: "long", quantity: "1",
+    entryAt: `${day}T14:00:00.000Z`, exitAt: `${day}T15:${String(n).padStart(2, "0")}:00.000Z`, entryPrice: "5000", exitPrice: "5001", fees: "0",
+    tradingDay: day, reportedPnl: realizedPnl, grossPnl: realizedPnl, realizedPnl, pnlStatus: "reported", notes: null, roundTrip: null,
+    createdAt: "2026-10-20T15:00:00.000Z", updatedAt: "2026-10-20T15:00:00.000Z",
+  };
 }

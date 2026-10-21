@@ -488,7 +488,7 @@ fn publish_issues(d: &RulebookVersionDetail, reviewer: Option<&str>) -> Vec<Fiel
 }
 
 /// Publish one step: a draft becomes `needs_review` (for a private rulebook
-/// that puts it in use); a catalogue version in review becomes `verified`
+/// that puts it in use and records the user's confirmation, `user_confirmed_at`); a catalogue version in review becomes `verified`
 /// with the named reviewer, and the version it supersedes is marked superseded.
 ///
 /// Test convenience: the same with the default `local_user` audit context.
@@ -563,9 +563,14 @@ pub fn publish_with(
     let at = next_revision(&detail.version.updated_at);
     if detail.version.verification_status == "draft" {
         check_base_current(&tx, &detail)?;
+        // Publishing the account's own rules is the user's confirmation of them (the engine needs
+        // it); it can only be recorded now, while the version is still a draft.
+        let private = detail.rulebook.owner_account_id.is_some();
         tx.execute(
-            "UPDATE rulebook_versions SET verification_status = 'needs_review', updated_at = ?2 WHERE id = ?1",
-            params![id, at],
+            "UPDATE rulebook_versions SET verification_status = 'needs_review', updated_at = ?2,
+                                          user_confirmed_at = CASE WHEN ?3 THEN ?2 ELSE user_confirmed_at END
+             WHERE id = ?1",
+            params![id, at, private],
         )?;
         record_event(&tx, id, "published", &context, None)?;
     } else {

@@ -12,8 +12,7 @@ import { ToastProvider } from "../../design-system";
 import { makeAccount } from "../accounts/test-store";
 import { RulebookPage } from "./components/RulebookPage";
 import { RulebookVersionPage } from "./components/RulebookVersionPage";
-import { ENGINE_UNAVAILABLE_TITLE } from "./components/EvidencePreview";
-import { createRulebookStore } from "./test-store";
+import { closedTrade, createRulebookStore } from "./test-store";
 
 const runtime = vi.hoisted(() => ({ state: { kind: "ready" } as unknown as RuntimeState, check: vi.fn() }));
 const holder = vi.hoisted(() => ({ store: null as unknown as ReturnType<typeof createRulebookStore> }));
@@ -194,14 +193,14 @@ describe("draft, compare, preview, publish and assign", () => {
     expect(within(row).getByText("$2,500.00")).toBeTruthy();
     expect(within(row).getByText("Changed")).toBeTruthy();
 
-    // Inputs check: explicit unavailable engine, no write.
+    // Preview: a labelled simulation of the unsaved edit through the engine, with no write.
     const writesBefore = [...holder.store.writes];
-    await user.click(screen.getByRole("tab", { name: "Inputs check" }));
-    expect(await screen.findByText(ENGINE_UNAVAILABLE_TITLE)).toBeTruthy();
-    expect(await screen.findByRole("table", { name: "Evidence each rule needs" })).toBeTruthy();
-    expect(screen.getAllByText("Not calculated").length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("tab", { name: "Preview" }));
+    expect(await screen.findByText("Simulation: not this account's status")).toBeTruthy();
+    expect(await screen.findByText(/^Simulated: /)).toBeTruthy();
     expect(holder.store.evidenceCalls).toEqual([A]);
     expect(holder.store.writes).toEqual(writesBefore);
+    expect(holder.store.snapshots).toHaveLength(0);
 
     // The edit survived the tab switches; save it.
     await user.click(screen.getByRole("tab", { name: "Edit rules" }));
@@ -374,6 +373,8 @@ describe("calculation explanation", () => {
     renderAt(`/accounts/${A}/rulebook`);
     await user.click(await screen.findByRole("tab", { name: "Calculation" }));
     expect(await screen.findByText("Calculated with a different rulebook version")).toBeTruthy();
+    expect(screen.getByText("Recorded before the rules engine")).toBeTruthy();
+    expect(screen.getByText(/Calculated for 2026-10-20, not today/)).toBeTruthy();
     expect(screen.getByText("Drawdown method not verified")).toBeTruthy();
     expect(screen.getByText("engine-test-1")).toBeTruthy();
     expect(screen.getByText("recorded by the engine")).toBeTruthy();
@@ -382,5 +383,138 @@ describe("calculation explanation", () => {
     expect(screen.getByText("Data as of")).toBeTruthy();
     expect(screen.getByText("Calculated at")).toBeTruthy();
     expect(screen.queryByText(/Safe/)).toBeNull();
+  });
+});
+
+/** Opens the preview settings and states complete history, USD amounts and touch-is-breach. */
+async function stateEverything(user: ReturnType<typeof userEvent.setup>, scope: HTMLElement) {
+  for (const label of [/All closed trades are imported/, /Fees are complete/, /Payouts, resets and corrections/]) await chooseOption(user, label, "Yes, complete", scope);
+  await chooseOption(user, /Rule amounts are in/, /USD/, scope);
+  await chooseOption(user, /A limit is breached when the balance/, "touches the limit", scope);
+}
+
+describe("engine integration", () => {
+  it("previews unsaved edits with the engine's exact figures, labelled as a simulation, and writes nothing", async () => {
+    await assignCatalogue();
+    holder.store.trades.set(A, [closedTrade(A, 1, "-500")]);
+    const user = userEvent.setup();
+    renderAt(`/accounts/${A}/rulebook`);
+    await startOwnDraft(user);
+    // Make the drawdown calculable: static, realized, no lock.
+    const dd = screen.getByRole("region", { name: "Max Drawdown" });
+    await chooseOption(user, "Method", "Static", dd);
+    await chooseOption(user, "Counts", "Realized P&L", dd);
+    await chooseOption(user, /Trail lock: what the source says/, /None/, dd);
+    await chooseOption(user, /^Support/, "Can be calculated", dd);
+    const writes = [...holder.store.writes];
+    await user.click(screen.getByRole("tab", { name: "Preview" }));
+    const panel = screen.getByRole("tabpanel", { name: "Preview" });
+    await stateEverything(user, panel);
+    const outcome = await within(panel).findByRole("region", { name: "Max Drawdown" });
+    // Opening 50,000 − 2,000 = floor 48,000; balance 49,500 → headroom 1,500 (engine figures, formatted).
+    await waitFor(() => expect(within(outcome).getByText("Within limit")).toBeTruthy());
+    expect(within(outcome).getAllByText("$48,000.00").length).toBeGreaterThan(0);
+    expect(within(outcome).getByText("$1,500.00")).toBeTruthy();
+    expect(within(outcome).getByText(/not confirmed or in use/)).toBeTruthy();
+    // The manual rule keeps the whole result Unknown: never a false Safe.
+    expect(within(panel).getByText("Simulated: Unknown")).toBeTruthy();
+    expect(within(panel).getByText("Estimate from your own account rules, not the firm's verified terms.")).toBeTruthy();
+    expect(holder.store.writes).toEqual(writes);
+    expect(holder.store.snapshots).toHaveLength(0);
+    expect(holder.store.assignments).toHaveLength(1);
+  });
+
+  it("an unstated currency leaves financial rules Unknown rather than assumed", async () => {
+    await assignCatalogue();
+    const user = userEvent.setup();
+    renderAt(`/accounts/${A}/rulebook`);
+    await startOwnDraft(user);
+    await user.click(screen.getByRole("tab", { name: "Preview" }));
+    const panel = screen.getByRole("tabpanel", { name: "Preview" });
+    const target = await within(panel).findByRole("region", { name: "Profit Target" });
+    expect(within(target).getByText("Unknown")).toBeTruthy();
+    expect(within(target).getByText(/currency of the rule amounts isn't stated/)).toBeTruthy();
+    expect(within(panel).getByText("Simulated: Unknown")).toBeTruthy();
+  });
+
+  it("does not borrow a catalogue phase: catalogue terms with no recorded phase stay Unknown", async () => {
+    await assignCatalogue();
+    const user = userEvent.setup();
+    renderAt(`/accounts/${A}/rulebook/versions/${holder.store.verifiedVersionId}`);
+    await user.click(await screen.findByRole("tab", { name: "Preview" }));
+    const panel = screen.getByRole("tabpanel", { name: "Preview" });
+    expect(await within(panel).findByText("Simulated: Unknown")).toBeTruthy();
+    expect(within(panel).getAllByText(/programme phase or path isn't recorded/).length).toBeGreaterThan(0);
+    expect(within(panel).getByText("The rules are not verified, so this is not a compliance result.")).toBeTruthy();
+  });
+
+  it("saves a calculation on request, shows it typed, and stops calling it current when its sources change", async () => {
+    await assignCatalogue();
+    holder.store.trades.set(A, [closedTrade(A, 1, "-500")]);
+    const user = userEvent.setup();
+    renderAt(`/accounts/${A}/rulebook`);
+    await user.click(await screen.findByRole("tab", { name: "Calculation" }));
+    const panel = screen.getByRole("tabpanel", { name: "Calculation" });
+    expect(await within(panel).findByText("No calculation recorded")).toBeTruthy();
+    const calc = within(panel).getByRole("region", { name: "Calculate now" });
+    await stateEverything(user, calc);
+    await user.click(within(calc).getByRole("button", { name: "Calculate and save" }));
+    await waitFor(() => expect(holder.store.snapshots).toHaveLength(1));
+    const saved = holder.store.snapshots[0]!;
+    expect(saved.engineVersion).toBe("fundedflow-risk/1");
+    // The catalogue terms aren't backed by verified currency claims in this store, so the engine says Unknown.
+    expect(saved.status).toBe("unknown");
+    expect(await within(panel).findByText("Sources unchanged for its cutoff")).toBeTruthy();
+    expect(panel.querySelector('[aria-label="Calculation basis"]')).not.toBeNull();
+    expect(within(panel).getAllByText("fundedflow-risk/1").length).toBeGreaterThan(0);
+    // A trade correction (trade hooks invalidate the account's snapshot keys): the stored result is no longer current.
+    holder.store.trades.set(A, [closedTrade(A, 1, "-700")]);
+    await act(async () => { await client.invalidateQueries({ queryKey: ["fundedflow", "features", "account", A, "snapshots"] }); });
+    expect(await within(panel).findByText("Sources changed since it was calculated")).toBeTruthy();
+    // History is kept: recalculating adds a row.
+    await user.click(within(calc).getByRole("button", { name: "Calculate and save" }));
+    await waitFor(() => expect(holder.store.snapshots).toHaveLength(2));
+    expect(holder.store.snapshots[0]).toEqual(saved);
+    expect(holder.store.snapshots[1]!.inputsHash).not.toBe(saved.inputsHash);
+  });
+
+  it("your published account rules are confirmed by you and evaluate for real once assigned", async () => {
+    await assignCatalogue();
+    holder.store.trades.set(A, [closedTrade(A, 1, "-500")]);
+    const user = userEvent.setup();
+    renderAt(`/accounts/${A}/rulebook`);
+    await startOwnDraft(user);
+    const dd = screen.getByRole("region", { name: "Max Drawdown" });
+    await chooseOption(user, "Method", "Static", dd);
+    await chooseOption(user, "Counts", "Realized P&L", dd);
+    await chooseOption(user, /Trail lock: what the source says/, /None/, dd);
+    await chooseOption(user, /^Support/, "Can be calculated", dd);
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
+    await screen.findByText("All changes saved");
+    await user.click(screen.getByRole("tab", { name: "Review and publish" }));
+    await user.click(await screen.findByRole("checkbox", { name: /These are my rules for this account/ }));
+    await user.click(screen.getByRole("button", { name: "Publish…" }));
+    await user.click(within(await screen.findByRole("alertdialog", { name: /Publish/ })).getByRole("button", { name: "Publish" }));
+    const assign = await screen.findByRole("dialog", { name: "Assign a rulebook version" });
+    const day = within(assign).getByLabelText(/First trading day/);
+    await user.clear(day);
+    await user.type(day, "2026-10-20");
+    await user.click(within(assign).getByRole("button", { name: /Assign from 2026-10-20/ }));
+    await waitFor(() => expect(location).toBe(`/accounts/${A}/rulebook`));
+    const mine = [...holder.store.versions.values()].find(v => v.rulebook.ownerAccountId === A)!;
+    expect(mine.version.userConfirmedAt).not.toBeNull();
+    await user.click(await screen.findByRole("tab", { name: "Calculation" }));
+    const panel = screen.getByRole("tabpanel", { name: "Calculation" });
+    await stateEverything(user, within(panel).getByRole("region", { name: "Calculate now" }));
+    await user.click(within(panel).getByRole("button", { name: "Calculate and save" }));
+    await waitFor(() => expect(holder.store.snapshots).toHaveLength(1));
+    const outcome = await within(panel).findByRole("region", { name: "Max Drawdown" });
+    expect(within(outcome).getByText("Within limit")).toBeTruthy();
+    expect(within(outcome).getByText("$1,500.00")).toBeTruthy();
+    expect(within(panel).queryByText(/haven't been confirmed/)).toBeNull();
+    // Recorded, not simulated; the manual rule keeps the overall status Unknown (never a false Safe).
+    expect(within(panel).queryByText(/^Simulated/)).toBeNull();
+    expect(holder.store.snapshots[0]!.status).toBe("unknown");
+    expect(within(panel).getByText("Estimate from your own account rules, not the firm's verified terms.")).toBeTruthy();
   });
 });

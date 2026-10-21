@@ -5,7 +5,7 @@ import { currency, instant, moneyText, recordId, tradingDay } from "../../shared
 
 export const snapshotViewModelSchema = snapshotSchema.extend({
   id: recordId, accountId: recordId, currency: currency.nullable(), accountCurrency: currency, currencyBasis: z.literal("not-stored-in-snapshot"), tradingDay, calculatedAt: instant, dataAsOf: instant.nullable(),
-  engineVersion: z.string().min(1), inputsHash: z.string().min(1), balance: moneyText, realizedDayPnl: moneyText,
+  engineVersion: z.string().min(1), inputsHash: z.string().min(1), balance: moneyText.nullable(), realizedDayPnl: moneyText.nullable(),
   unrealizedPnl: moneyText.nullable(), dailyLossLimit: moneyText.nullable(), dailyLossRemaining: moneyText.nullable(),
   highWaterMark: moneyText.nullable(), drawdownFloor: moneyText.nullable(), drawdownHeadroom: moneyText.nullable(), profitTarget: moneyText.nullable(),
   provenance: z.literal("persisted-snapshot-not-live"),

@@ -1,8 +1,7 @@
 // Rulebook editor operations (Build 19) over the existing JournalRepository. Reads of rulebooks,
 // versions and assignments stay in features/references; this module adds the editor's writes,
-// the audit log and the read-only risk-input read used by the preview.
+// and the audit log. Calculation reads and saves are in ./risk.ts.
 import {
-  accountRiskInputsSchema,
   accountRulebookAssignmentSchema,
   assignmentGuardSchema,
   assignmentInputSchema,
@@ -12,11 +11,9 @@ import {
   rulebookDraftUpdateSchema,
   rulebookEventSchema,
   rulebookVersionDetailSchema,
-  riskInputsQuerySchema,
   type AssignmentGuard,
   type AssignmentInput,
   type ChangeContext,
-  type RiskInputsQuery,
   type RulebookDraftInput,
   type RulebookDraftUpdate,
 } from "@fundedflow/domain";
@@ -32,20 +29,6 @@ export const context = (reason: string | null): ChangeContext => ({ actor: LOCAL
 export async function readRulebookEvents(accountId: string, signal?: AbortSignal) {
   validateInput(recordId, accountId);
   return readOperation(() => repository.rulebooks.listEvents({ rulebookId: null, accountId }), values => values.map(v => rulebookEventSchema.parse(v)), signal);
-}
-
-/**
- * Build 15.5 risk inputs for an explicit cutoff. The native read runs in a transaction it never
- * commits and writes nothing (tested in rulebook_editor_tests.rs); the preview only reports what
- * evidence exists.
- */
-export async function readRiskInputs(query: RiskInputsQuery, signal?: AbortSignal) {
-  const parsed = validateInput(riskInputsQuerySchema, query);
-  return readOperation(() => repository.evidence.inputs(parsed), value => {
-    const inputs = accountRiskInputsSchema.parse(value);
-    requireAccount(inputs.account.id, parsed.accountId);
-    return inputs;
-  }, signal);
 }
 
 export async function createDraft(input: RulebookDraftInput, reason: string | null) {
