@@ -11,6 +11,7 @@ pub mod detect;
 pub mod normalize;
 pub mod parse;
 pub mod values;
+mod target;
 
 use rusqlite::{params, Connection, OptionalExtension, Row};
 use serde::{Deserialize, Serialize};
@@ -29,7 +30,7 @@ use values::{detect_date_format, DateFormat};
 /// attention (invalid, duplicate, blank or with warnings) are listed.
 const PREVIEW_ROW_LIMIT: usize = 2_000;
 
-#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FormatChoice {
     #[default]
@@ -38,7 +39,7 @@ pub enum FormatChoice {
     Performance,
 }
 
-#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum DateFormatChoice {
     #[default]
@@ -64,6 +65,9 @@ pub struct CsvImportRequest {
     /// Explicit header per field for generic files; omitted = match by name.
     #[serde(default)]
     pub columns: Option<ColumnMapping>,
+    /// Required at commit, ignored by preview; never part of its own digest.
+    #[serde(default)]
+    pub target_acknowledgement: Option<target::Acknowledgement>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -119,6 +123,7 @@ pub struct Limits {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CsvPreview {
+    pub target_assessment: target::Assessment,
     pub format: Format,
     pub format_reason: String,
     pub date_format: Option<DateFormat>,
@@ -344,6 +349,7 @@ pub fn preview(conn: &Connection, req: &CsvImportRequest) -> AppResult<CsvPrevie
     let matches = dedup::classify(conn, &req.account_id, &rows)?;
     let d = a.detection.as_ref();
     let mut p = CsvPreview {
+        target_assessment: target::assess(conn, req, &a, &matches)?,
         format: a.format(),
         format_reason: d.map(|d| d.reason.clone()).unwrap_or_default(),
         date_format: a.date_format,
@@ -425,6 +431,8 @@ fn snapshot(req: &CsvImportRequest, a: &Analysis) -> String {
         "headers": a.parsed.headers,
         "mapping": d.map(|d| &d.mapping),
         "columns": req.columns,
+        "attemptAssessmentContract": 1,
+        "targetAcknowledgement": req.target_acknowledgement,
     })
     .to_string()
 }
@@ -456,9 +464,19 @@ fn insert_round_trip(conn: &Connection, trade_id: &str, rt: &normalize::RoundTri
     Ok(())
 }
 
-fn write_batch(conn: &mut Connection, req: &CsvImportRequest, a: &Analysis, started: &str) -> AppResult<String> {
+fn write_batch(conn: &mut Connection, req: &CsvImportRequest, started: &str) -> AppResult<String> {
     let batch_id = new_id();
-    let tx = conn.transaction()?;
+    let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+    // Read current settings, lineage and classification under the same write
+    // reservation as the import. Other connections cannot reset between them.
+    let current = analyze(&tx, req)?;
+    let a = &current;
+    if !a.file_issues.is_empty() {
+        return Err(AppError::validation(a.file_issues.clone()));
+    }
+    let rows = pairs(a);
+    let matches = dedup::classify(&tx, &req.account_id, &rows)?;
+    target::verify(req, &target::assess(&tx, req, a, &matches)?)?;
     // Counts start at zero and are filled in once every row is written.
     tx.execute(
         "INSERT INTO import_batches (id, account_id, file_name, file_sha256, file_size, mapping_snapshot_json,
@@ -477,8 +495,6 @@ fn write_batch(conn: &mut Connection, req: &CsvImportRequest, a: &Analysis, star
         ],
     )?;
 
-    let rows = pairs(a);
-    let matches = dedup::classify(&tx, &req.account_id, &rows)?;
     let (mut imported, mut duplicate, mut blank, mut failed, mut warned) = (0i64, 0i64, 0i64, 0i64, 0i64);
     // Trades inserted or restored by this batch, so in-file duplicates can point at them.
     let mut inserted: std::collections::HashMap<String, String> = std::collections::HashMap::new();
@@ -558,7 +574,8 @@ fn record_failed(conn: &Connection, req: &CsvImportRequest, a: &Analysis, starte
         "INSERT INTO import_batches (id, account_id, file_name, file_sha256, file_size, mapping_snapshot_json,
                                      source_timezone, source_format, status, row_count, failed_count,
                                      error_summary, created_at, completed_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'failed', ?9, ?9, ?10, ?11, ?12)",
+         SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'failed', ?9, ?9, ?10, ?11, ?12
+         WHERE EXISTS (SELECT 1 FROM accounts WHERE id = ?2 AND archived_at IS NULL)",
         params![
             new_id(),
             req.account_id,
@@ -585,7 +602,7 @@ pub fn commit(conn: &mut Connection, req: &CsvImportRequest) -> AppResult<Import
     let started = now();
     let a = analyze(conn, req)?;
     let result = if a.file_issues.is_empty() {
-        write_batch(conn, req, &a, &started)
+        write_batch(conn, req, &started)
     } else {
         Err(AppError::validation(a.file_issues.clone()))
     };
@@ -597,6 +614,19 @@ pub fn commit(conn: &mut Connection, req: &CsvImportRequest) -> AppResult<Import
             Err(err)
         }
     }
+}
+
+/// Test callers outside the acknowledgement regression suite model the complete
+/// preview/review flow. Production callers must send their actual reviewed token.
+#[cfg(test)]
+pub(crate) fn commit_reviewed(conn: &mut Connection, req: &CsvImportRequest) -> AppResult<ImportBatch> {
+    let p = preview(conn, req)?;
+    let mut reviewed = req.clone();
+    reviewed.target_acknowledgement = Some(target::Acknowledgement {
+        preview_token: p.target_assessment.preview_token,
+        historical_confirmed: true,
+    });
+    commit(conn, &reviewed)
 }
 
 const BATCH_SELECT: &str = "SELECT id, account_id, file_name, file_sha256, file_size, source_format, status,

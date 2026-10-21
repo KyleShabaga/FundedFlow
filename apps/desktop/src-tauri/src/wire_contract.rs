@@ -156,7 +156,7 @@ fn fresh() -> Value {
     .unwrap();
     for content in [CSV, "not,a,known,format\n1,2,3,4\n"] {
         // The second file fails as a whole: a persisted failed batch.
-        let _ = csv_import::commit(
+        let _ = csv_import::commit_reviewed(
             &mut conn,
             &from_value(json!({ "accountId": usd.id, "fileName": "Performance.csv", "content": content, "timezone": "America/New_York" })).unwrap(),
         );

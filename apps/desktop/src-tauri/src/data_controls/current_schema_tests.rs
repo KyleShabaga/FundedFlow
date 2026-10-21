@@ -1,4 +1,4 @@
-//! Build 24 integration against accepted Builds 16/19/20/22 (introduced at schema 18; runs at the current schema).
+//! Build 24 integration against the current journal schema.
 use super::{
     tests::{account, journal},
     *,
@@ -138,7 +138,7 @@ fn approved(p: &deletion::DeletionPreview) -> deletion::DeleteRequest {
     }
 }
 #[test]
-fn schema18_archive_restores_reviews_daily_history_corrections_screenshots_and_null_snapshots() {
+fn current_schema_archive_restores_reviews_daily_history_corrections_screenshots_and_null_snapshots() {
     let source = tempfile::tempdir().unwrap();
     let p = populate(source.path());
     let before = archive::dump(&p.c).unwrap();
@@ -158,8 +158,6 @@ fn schema18_archive_restores_reviews_daily_history_corrections_screenshots_and_n
     let out = source.path().join("complete.zip");
     archive::export(&p.c, &source.path().join("attachments"), &out, true).unwrap();
     let inspected = archive::inspect_to(&out, source.path()).unwrap();
-    // The source journal is created at the current schema; the manifest records that, whatever the latest
-    // migration is (18 when this test was written, 20 after Build 10.5's trigger-only migrations).
     assert_eq!(inspected.manifest.schema_version, crate::db::latest_version());
     let target = tempfile::tempdir().unwrap();
     let live = target.path().join(crate::db::DB_FILE_NAME);

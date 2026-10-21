@@ -6,7 +6,7 @@
 import { MAX_CSV_ROWS, type ColumnMapping, type RowReport } from "@fundedflow/domain";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileText, History, ShieldCheck } from "lucide-react";
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
@@ -161,6 +161,7 @@ export function ImportWizardPage() {
   const [state, dispatch] = useReducer(wizardReducer, null, () => initialWizardState(requested, localZone()));
   const [zoneTouched, setZoneTouched] = useState(false);
   const [previewFor, setPreviewFor] = useState<string | null>(null);
+  const [previewContext, setPreviewContext] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const fileVersion = useRef(0);
   const preview = useCsvPreview();
@@ -181,12 +182,22 @@ export function ImportWizardPage() {
   }, [account, zoneTouched]);
 
   const key = requestKey(state);
-  const fresh = preview.data !== undefined && previewFor !== null && previewFor === key;
+  // Session settings and lineage changes also invalidate the preview/confirmation.
+  const context = JSON.stringify([account, lineage.data?.map(a => [a.accountId, a.resetToNext])]);
+  const previousContext = useRef(context);
+  useEffect(() => {
+    if (previousContext.current !== context) {
+      previousContext.current = context;
+      setPreviewFor(null);
+      dispatch({ type: "confirm-target", key: null });
+    }
+  }, [context]);
+  const fresh = preview.data !== undefined && previewFor !== null && previewFor === key && previewContext === context;
   const current = fresh ? preview.data : undefined;
   const p = current?.preview;
-  const tradingDays = useMemo(() => [...new Set((p?.rows ?? []).filter(r => r.status === "new" && r.trade).map(r => r.trade!.tradingDay))], [p]);
-  const assessment = assessTarget(account, lineage.data, tradingDays);
-  const confirmed = state.confirmedTargetFor !== null && state.confirmedTargetFor === key;
+  const assessment = assessTarget(account, p?.targetAssessment);
+  const confirmationKey = p ? JSON.stringify([key, p.targetAssessment.previewToken]) : null;
+  const confirmed = confirmationKey !== null && state.confirmedTargetFor === confirmationKey;
   const targetReady = !assessment.blocked && (assessment.confirmations.length === 0 || confirmed);
   const columns: ColumnMapping | null = p && p.format === "generic" ? (state.columns ?? mappingFromPreview(p.mapping)) : null;
   const mapping = columns ? checkMapping(columns) : { errors: {}, warnings: {} };
@@ -200,10 +211,12 @@ export function ImportWizardPage() {
     const request = buildRequest(state);
     const k = requestKey(state);
     if (!request || !k) return;
+    dispatch({ type: "confirm-target", key: null });
     preview
       .preview(request)
       .then(() => {
         setPreviewFor(k);
+        setPreviewContext(context);
         then?.();
       })
       .catch(() => {});
@@ -228,7 +241,7 @@ export function ImportWizardPage() {
 
   const doImport = async () => {
     const request = buildRequest(state);
-    if (!request || !fresh || !account) return;
+    if (!request || !fresh || !account || !p || !targetReady) return;
     // Check the destination again: it may have been archived or changed since the preview.
     try {
       await accountQuery.refresh();
@@ -237,18 +250,21 @@ export function ImportWizardPage() {
       return;
     }
     const latest = client.getQueryData<{ value: AccountViewModel }>(featureKeys.detail(account.id))?.value;
-    const recheck = assessTarget(latest, lineage.data, tradingDays);
+    const recheck = assessTarget(latest, p?.targetAssessment);
     if (!latest || recheck.blocked || latest.status !== account.status) {
       toast.show({ tone: "error", title: "The account changed", description: "Nothing was imported. Check the destination and review again." });
       dispatch({ type: "step", step: 0 });
       return;
     }
     commit
-      .submit(request)
+      .submit({ ...request, targetAcknowledgement: { previewToken: p.targetAssessment.previewToken, historicalConfirmed: confirmed } })
       .then(batch => {
         if (batch.status === "committed") toast.show({ tone: "success", title: `Imported ${batch.importedCount} ${batch.importedCount === 1 ? "trade" : "trades"}`, description: `Into ${account.name}` });
       })
-      .catch(() => {});
+      .catch(() => {
+        setPreviewFor(null);
+        dispatch({ type: "confirm-target", key: null });
+      });
   };
 
   /* Runtime and accounts gate */
@@ -297,7 +313,7 @@ export function ImportWizardPage() {
       <section className="ds-card imp-panel" aria-labelledby="imp-acct-h">
         <h2 id="imp-acct-h" className="ds-title">Account</h2>
         <ImportTargetPicker accounts={all} value={state.accountId} onChange={id => { dispatch({ type: "account", accountId: id }); setZoneTouched(false); setPreviewFor(null); }}
-          lineage={lineage.data} assessment={assessment} confirmed={confirmed} onConfirmedChange={c => dispatch({ type: "confirm-target", key: c ? key : null })} showConfirm={false} />
+          lineage={lineage.data} assessment={assessment} confirmed={confirmed} onConfirmedChange={c => dispatch({ type: "confirm-target", key: c ? confirmationKey : null })} showConfirm={false} />
       </section>
     </div>
   );
@@ -393,7 +409,7 @@ export function ImportWizardPage() {
       <section className="ds-card imp-panel" aria-labelledby="imp-dest-h">
         <h2 id="imp-dest-h" className="ds-title">Destination</h2>
         <ImportTargetPicker accounts={all} value={state.accountId} onChange={() => {}} disabled lineage={lineage.data} assessment={assessment}
-          confirmed={confirmed} onConfirmedChange={c => dispatch({ type: "confirm-target", key: c ? key : null })} showConfirm />
+          confirmed={confirmed} onConfirmedChange={c => dispatch({ type: "confirm-target", key: c ? confirmationKey : null })} showConfirm />
       </section>
     </div>
   );
