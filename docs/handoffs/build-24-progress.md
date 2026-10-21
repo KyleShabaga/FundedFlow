@@ -18,8 +18,30 @@ A line-by-line review of both builds against their Notion cards and the Build 24
 - **Card wording.** Account deletion from the Accounts menu names the attempt number; Settings shows the journal
   version.
 
-Next steps: Windows CI on the new head; packaged-app check of native dialogs, export, restore/restart and deletion
-with a scratch journal; review of the deletion policy blockers; then acceptance on both cards. No merge or Done.
+Accepted main `cb156b7` (Build 23 Insights) is merged in `3d92147`; `07f779d` drops the then-unused
+`RoutePlaceholder` import that failed CI typecheck on the PR merge ref. After the merge: npm test 495 domain + 563
+desktop, build, `npm run check`, full `cargo test` 279 passed / 2 ignored, Clippy.
+Windows CI [39605412982](https://github.com/KyleShabaga/FundedFlow/actions/runs/39605412982) on `07f779d`: **success** after one
+rerun. The first attempt timed out an unrelated rulebook journey test at 5045 ms (3.0 s on main, 1.7 s locally, 2.3 s on
+rerun).
+
+### Real-app acceptance checklist (owner, Windows)
+
+The dev and packaged app always use the real `%APPDATA%\com.fundedflow.desktop` journal, so an agent can't run
+these against a scratch copy. Before starting, close FundedFlow and copy that folder somewhere safe.
+
+1. Settings → Export → Full backup: save dialog opens, file appears, "Last export" updates (no path shown).
+2. Export → Trade CSV for one account: opens in a spreadsheet; formula-like text starts with `'`.
+3. Restore → pick a damaged copy of the backup (e.g. truncated): rejected, nothing replaced.
+4. Restore → pick the good backup, type the phrase: app reinstalls and shows "Journal restored"; accounts,
+   trades, screenshots and failed/archived attempts match.
+5. Accounts → a reset-linked attempt → Delete permanently…: blocked, "Archive instead" offered.
+6. Accounts → an unlinked test account → Delete permanently…: counts shown, typed ID phrase deletes it.
+7. Erase entire journal (only on a disposable journal): empty journal opens; the saved backup still restores.
+8. Restore the folder copied in the first step if anything looks wrong.
+
+Next steps: the owner runs the real-app checklist above; review of the deletion policy blockers; then acceptance on
+both cards. No merge or Done.
 
 ## Verification checkpoint (Windows desktop, 2026-10-21)
 
