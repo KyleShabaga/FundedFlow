@@ -443,6 +443,7 @@ pub fn delete_with(conn: &mut Connection, id: &str, why: Option<String>) -> AppR
     let why = reason(why)?;
     let tx = conn.transaction()?;
     let before = get(&tx, id)?;
+    account_ctx(&tx, &before.account_id)?;
     let at = later_than(&before.updated_at);
     tx.execute("UPDATE trades SET deleted_at = ?2, updated_at = ?2 WHERE id = ?1 AND deleted_at IS NULL", params![id, at])?;
     tx.execute("UPDATE journal_entries SET trade_id = NULL, updated_at = ?2 WHERE trade_id = ?1", params![id, at])?;

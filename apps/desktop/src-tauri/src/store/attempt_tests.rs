@@ -329,6 +329,60 @@ fn archived_accounts_are_browsable_read_only_and_restorable() {
 }
 
 #[test]
+fn archived_account_edits_leave_identity_status_and_history_unchanged() {
+    let mut conn = db();
+    let a = accounts::create(&mut conn, account_input("Archived")).unwrap();
+    let t = trades::create(&mut conn, trade(&a.id)).unwrap();
+    accounts::archive(&mut conn, &a.id).unwrap();
+    let before = accounts::get_any(&conn, &a.id).unwrap();
+    let history = accounts::history(&conn, &a.id).unwrap();
+    let result = accounts::update(&mut conn, &a.id, AccountInput {
+        status: "closed".into(), prop_firm: Some("Must not be created".into()),
+        ..account_input("Edited")
+    });
+    assert!(result.is_err());
+    assert_eq!(accounts::get_any(&conn, &a.id).unwrap(), before);
+    assert_eq!(accounts::history(&conn, &a.id).unwrap(), history);
+    assert_eq!(trades::get(&conn, &t.id).unwrap(), t);
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM firms WHERE name = 'Must not be created'"), 0);
+}
+
+#[test]
+fn archived_trade_deletion_preserves_the_trade_journal_link_and_correction_history() {
+    let mut conn = db();
+    let a = accounts::create(&mut conn, account_input("Archived")).unwrap();
+    let t = trades::create(&mut conn, trade(&a.id)).unwrap();
+    let entry = super::journal::create(&mut conn, super::journal::JournalEntryInput {
+        account_id: a.id.clone(), trade_id: Some(t.id.clone()), entry_at: t.entry_at.clone(),
+        title: "History".into(), body: "Keep this".into(), tags: vec!["original".into()],
+    }).unwrap();
+    accounts::archive(&mut conn, &a.id).unwrap();
+    let corrections = trades::corrections(&conn, &t.id).unwrap();
+    assert!(trades::delete(&mut conn, &t.id).is_err());
+    assert_eq!(trades::get(&conn, &t.id).unwrap(), t);
+    assert_eq!(super::journal::get(&conn, &entry.id).unwrap(), entry);
+    assert_eq!(trades::corrections(&conn, &t.id).unwrap().len(), corrections.len());
+    accounts::restore(&mut conn, &a.id).unwrap();
+    trades::delete(&mut conn, &t.id).unwrap();
+}
+
+#[test]
+fn archived_journal_deletion_preserves_the_entry_and_tags_until_restore() {
+    let mut conn = db();
+    let a = accounts::create(&mut conn, account_input("Archived")).unwrap();
+    let entry = super::journal::create(&mut conn, super::journal::JournalEntryInput {
+        account_id: a.id.clone(), trade_id: None, entry_at: "2026-10-19T13:30:00Z".into(),
+        title: "History".into(), body: "Keep this".into(), tags: vec!["original".into()],
+    }).unwrap();
+    accounts::archive(&mut conn, &a.id).unwrap();
+    assert!(super::journal::delete(&conn, &entry.id).is_err());
+    assert_eq!(super::journal::get(&conn, &entry.id).unwrap(), entry);
+    accounts::restore(&mut conn, &a.id).unwrap();
+    super::journal::delete(&conn, &entry.id).unwrap();
+    assert!(super::journal::get(&conn, &entry.id).is_err());
+}
+
+#[test]
 fn restore_checks_the_broker_number_for_accounts_that_could_trade() {
     let mut conn = db();
     let a = accounts::create(&mut conn, with_ref("Old", "555")).unwrap();

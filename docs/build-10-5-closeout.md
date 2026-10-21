@@ -12,9 +12,12 @@ Baseline CI run [39552757973](https://github.com/KyleShabaga/FundedFlow/actions/
 
 Implemented paths include migrations/legacy conversion, catalogue authoring and immutable offer selections, reusable rulebooks/applicability, ledger/settings/snapshots, and reset/archive/restore with independent account IDs. Relevant production commands and adapters must be checked alongside tests; presence alone is not full acceptance.
 
-## Findings under investigation
+## Findings and remediation
 
-- P1: `store/accounts.rs::update` appears to mutate an archived account before returning NotFound. Reproduce with a regression test, then guard before any writes.
+- P1 confirmed and fixed: `store/accounts.rs::update` committed archived identity/status edits and then returned NotFound. Its account lookup now excludes archived rows before any related writes.
+- P1 confirmed and fixed: `store/trades.rs::delete_with` soft-deleted archived trades, unlinked journal entries and recorded a correction. It now checks the owner account before mutation.
+- P1 confirmed and fixed: `store/journal.rs::delete` hard-deleted archived notes and tags. It now checks the owner account before deletion. Existing public signatures are preserved; no migration is needed.
+- Regression evidence: all three new tests failed before the fixes; the entire lifecycle suite then passed **17/17** on Windows. Baseline lifecycle suite passed 14/14. Regression names are in `store/attempt_tests.rs`: `archived_account_edits_leave_identity_status_and_history_unchanged`, `archived_trade_deletion_preserves_the_trade_journal_link_and_correction_history`, `archived_journal_deletion_preserves_the_entry_and_tags_until_restore`.
 - P3: `docs/data-model.md` and `docs/architecture/packages.md` retain schema-only/no-command catalogue statements despite production implementation.
 - Requirements needing further evidence: complete source-card matrix; same-day/DST reset boundaries; read-only archived writes; supported populated upgrades and rollback; command/serde/Zod parity; packaged Windows smoke.
 
@@ -28,3 +31,8 @@ Implemented paths include migrations/legacy conversion, catalogue authoring and 
 
 No real user journal has been opened or migrated. Real-journal-copy migration requires explicit authorization. Human review/sign-off remains required. Do not mark source cards Done from automated checks alone.
 
+## Environment evidence
+
+Windows Rust stable/MSVC is available. Local `npm ci` failed with OS `EPERM` creating workspace symlinks; bundled Node also reproduces this. An elevated retry was rejected because sandbox escalation is disabled. npm checks/package build are not yet locally executed. Git credential-helper startup is also blocked by the sandbox, so remote commits are preserved through the GitHub connector and may have different SHAs from equivalent local commits. Draft PR: https://github.com/KyleShabaga/FundedFlow/pull/50.
+
+`cargo fmt --check` fails across existing baseline files (first difference `src/catalogue.rs`). Broad reformatting is outside this audit; compare changed lines and record the failure rather than claiming a pass.

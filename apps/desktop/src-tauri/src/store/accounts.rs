@@ -296,7 +296,7 @@ pub fn update(conn: &mut Connection, id: &str, input: AccountInput) -> AppResult
     let tx = conn.transaction()?;
     let old = tx
         .query_row(
-            "SELECT status, currency, timezone, trading_day_reset_time FROM accounts WHERE id = ?1",
+            "SELECT status, currency, timezone, trading_day_reset_time FROM accounts WHERE id = ?1 AND archived_at IS NULL",
             [id],
             |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, String>(3)?)),
         )
