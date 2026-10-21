@@ -1,73 +1,51 @@
-# Build 24 backend progress
+# Build 24 backend progress / session recovery
 
 Spec: https://app.notion.com/p/3fe1bd4b6bde81aaa955ded001bcf18d
+Draft PR: https://github.com/KyleShabaga/FundedFlow/pull/43
 Branch: `feat/build-24-data-controls-backend`
-PR: https://github.com/KyleShabaga/FundedFlow/pull/43
-Base: accepted main `9d49d71`; schema 14. Build 16 PR #42 is unmerged and is not a dependency.
+Worktree: `/workspace/FundedFlow-build24`
+Base: accepted main `9d49d71`, schema 14 (rechecked after implementation).
+Last verified implementation: **`234d278`**, Blocks A–D plus managed staging cleanup and Windows-compatible file flushes. This document is a subsequent documentation checkpoint; inspect git log for the latest pushed head.
 
-## Audit and dependencies
+## Completed implementation
 
-- Existing SQLite `VACUUM INTO` pre-migration backups include WAL; reuse SQLite-supported snapshotting rather than copying an open database.
-- Runtime owns one mutex-protected connection; normal commands use Runtime.with. Restore needs an exclusive runtime boundary plus crash recovery before opening the database. Cross-process ownership must be enforced.
-- Existing account lifecycle preserves failed/archived/reset attempts. Preview exists but permanent deletion does not. Append-only phase/attempt/evidence constraints must remain intact. Linked attempts will be blocked by default; no detach policy is invented.
-- Schema includes attachments with opaque storage_key, size/hash and relationship tables; no accepted attachment write service or Build 20 review API exists. Export must include actual referenced bytes or fail clearly. Build 20 future formats are an integration gate.
-- All populated tables, including rulebooks/catalogue, raw imports, paired-fill metadata, financial evidence and lifecycle history, must survive portable round-trip. SQLite image plus lossless typed table JSON will be reconciled during validation. Unknown columns are preserved, newer unsupported schemas rejected.
-- Builds 10, 15, 15.5 and 18 are accepted; future Build 20 and Claude's Build 25 UI remain separate. No UI, hooks, navigation or design work is included.
-- Privacy choice: plaintext user-selected ZIP with explicit acknowledgement; no encryption or upload. Saved external backups are outside deletion scope.
+- A: plaintext, versioned Stored ZIP with manifest/checksums, consistent SQLite online-backup image, typed lossless table JSON/rowids, reconciled human trade CSV and actual attachment inventory/bytes. Unknown values/provenance/stable IDs survive. New-destination publication and explicit plaintext acknowledgement; no upload/encryption/cloud service.
+- B: staged read-only inspection, known-schema/hash/count/ID/JSON/CSV/reference checks, safe paths/link rejection and resource/disk limits; replace-only preview binding to current data and source hash; safety copies, exclusive process ownership, immediate connection shutdown and restart/retry recovery before reopening SQLite. Durable phase markers roll back an interrupted install.
+- C: authoritative cloned constrained-cascade previews, exact native phrases, normal transactional independent-account deletion, shared catalogue/tag/attachment preservation, separate whole-journal erasure and persistent post-commit cleanup with retry. Whole erasure includes managed recovery/inspection remnants; previously user-exported archives remain outside scope. FULL synchronous deletion commits precede file removal.
+- D: native security/corruption/legacy/evidence/rollback/isolation tests, Rust-generated normalized wire fixtures parsed in TypeScript, repository adapter/error checks, typed backend/API and cross-PC developer handoff.
 
-## Planned independently verified blocks
+API, archive/protection/compatibility decisions, restore/recovery/deletion usage, ownership blockers and requirement-by-requirement acceptance matrix: [build-24-data-controls.md](build-24-data-controls.md).
 
-1. A: bounded versioned ZIP manifest, exact table JSON, consistent SQLite image, attachment inventory/checksums, CSV export and safe destination publication.
-2. B: read-only archive inspection, strict paths/entry/resource/version/hash/reference checks, disk-space checks, preview binding, staged replace-only restore, safety backup, exclusive connection/process ownership and interrupted-operation recovery.
-3. C: authoritative scoped deletion preview/confirmation, default lineage blocking, shared catalogue preservation, transactional account deletion and separate entire-journal erasure, attachment ownership/cleanup recovery.
-4. D: portable domain DTOs, existing repository/Tauri adapter commands, structured codes and completion states, native wire/rollback/malicious/legacy regression tests and final acceptance matrix.
+## Changed files / ownership
 
-## Verification status
+Native `src/data_controls/*`, runtime connection/ownership/recovery boundary, thin commands/registration, Cargo dependency lock; portable domain DTOs and existing repository port; nonvisual Tauri data-control adapter; regression/wire fixtures; these new handoffs. Existing legacy deletion preview now points to the confirmed API, with its native fixture updated only for that wording.
 
-Audit only. No Build 24 implementation or test success claimed. Existing Build 15.5 Linux legacy SQLite fixture failures are documented upstream and must be distinguished from regressions. Packaged Windows/cross-profile restore remains unverified.
+No React component, screen, dialog, navigation, CSS, design file, feature hook or active-account state was changed. No applied migration, import normalization or stored financial calculation changed. Build 16 PR #42 remains an unmerged, independent change; its proposed migration 15 is not assumed.
 
-## Decisions and remaining gates
+## Actual verification
 
-Use replace-only restoration. No cloud/merge/encryption/automatic backups. Never disable integrity constraints on live data to force a deletion. Preserve shared catalogue/strategy/tag data on account delete. Block ambiguous external attachment paths, ownership and linked attempts. Any required schema change is forward-only, with migration number rechecked before landing.
+- `npm run typecheck`: pass.
+- `npm test`: **379 domain + 381 desktop pass**.
+- `npm run build`, `npm run check`, `git diff --check`: pass.
+- Full native suite on final code: **210 passed, 4 pre-existing Linux failures, 2 ignored**. All **25** new data-control tests pass without fixture-update mode.
+- `cargo clippy --all-targets -- -D warnings`: pass.
+- Focused desktop adapter/native legacy fixture verification: 12 passed after the intentional legacy-preview wording update.
+- Four legacy-rulebook SQLite IO 1802 failures: `assignment_intervals_follow_effective_from_and_contain_their_snapshots`, `legacy_parameters_use_only_the_keys_the_matrix_maps`, `rule_keys_are_unique_per_version`, `the_legacy_rules_fixture_covers_every_matrix_case`. Reproduced on unchanged dependency `e947dfb` (3 passed / same 4 failed); the relevant test source is unchanged between that dependency and accepted main. Existing issue: https://app.notion.com/p/3ff1bd4b6bde819499abc89a9f2f9795.
+- Earlier Windows CI run 39533327713 failed archive tests at a common I/O boundary. The final hardening opens staged database handles writable for FlushFileBuffers; that code is locally verified but **latest Windows CI is pending**, not claimed green. Packaged Windows rename/power-loss/installer/cross-profile acceptance is unverified.
 
-## Recovery / exact next steps
+Native logs are `/tmp/build24-cargo-final.log` and `/tmp/build24-clippy-final.log`; npm logs `/tmp/build24-{typecheck,npm-tests,build,check}.log`. Managed Linux runtime uses `/workspace/.tools/fundedflow-env.sh` and `CARGO_TARGET_DIR=/workspace/FundedFlow-build16/apps/desktop/src-tauri/target` to reuse compiler artifacts without copying a multi-GB cache. Only compiler artifacts in that shared cache changed; no other worktree source was edited.
 
-Last completed block: repository/spec/dependency audit; this document is the initial checkpoint (its own SHA is available in git log).
-1. Create/persist the draft PR before major code, then record its URL here.
-2. Implement and test Block A. Continue B–D with independent test/commit/push checkpoints; update this file and PR each time.
-3. Run full npm checks, native tests/Clippy and migration regressions. Audit changed paths for backend-only scope.
-4. Publish final evidence and explicit outstanding Build 20/25/Windows acceptance; do not merge or mark Notion Done.
+## Known limitations / review dependencies
 
-## Block A checkpoint
+1. Single-account deletion blocks reset/parent-linked attempts, immutable phase history, other immutable/shared restrictions, or unknown audit/sync ownership. No detach or live constraint bypass is invented. Review policy: https://app.notion.com/p/4001bd4b6bde81d09774d36d727b77be. No conflicting migration is allocated.
+2. Build 20 must coordinate `<app-data>/attachments/<opaque-key>` and its new review/attachment ownership; missing, unsafe or unowned bytes fail clearly. No unmerged review API is claimed.
+3. Claude owns Build 25 UI: show plaintext/scope/retention warnings, exact counts and blockers, collect real consent, handle restart_required/cleanup_pending, and invalidate the appropriate existing account/all-journal queries. No numeric progress percentages are invented.
+4. Archives are unencrypted, hashes are not authentication, filesystem limits are explicit, and advisory process ownership does not govern third-party SQLite tools/older app versions. Close those tools before restore. This is application-data deletion, not forensic secure erase; external backups remain.
+5. Real packaged Windows/another-profile, antivirus/rename/power-loss recovery and installer acceptance belong to Builds 26.75/27. Current Linux second-profile and interruption tests are evidence for the backend, not those release gates.
 
-Implemented native archive/CSV commands, portable DTOs and existing repository adapter methods. ZIP uses Stored entries only (no compression/encryption). SQLite online backup API preserves implicit rowids and WAL content; every table is also represented as typed lossless JSON, including rowids for ordered history. Table schemas, values/counts/IDs and attachment bytes are reconciled on validation. Destinations publish without overwriting an existing file; plaintext acknowledgement is mandatory. CSV includes all selected-account trades including deleted_at, known decimal values and blank unknowns; spreadsheet formulas are escaped only in the human export.
+## Exact next steps for a new session
 
-Tests before this checkpoint: native WAL/table round-trip, attachment missing/corruption, Windows-safe paths/acknowledgement and CSV exact/account isolation. Remaining: restore/recovery, authoritative deletion, adversarial/legacy/wire tests and final full checks. Compile warnings for future block codes are temporary; final Clippy still pending.
-
-## Block B checkpoint
-
-Last completed implementation commit before B: `398a7be` (Block A). Implemented strict archive/current-data-bound inspection tokens, read-only staging/upgrades, conservative disk-space checks, pre-restore DB + attachment safety copies, replace-only confirmation, immediate connection shutdown and exclusive process ownership, restart/retry installation, durable phase markers and rollback before database access after interruption. Normal snapshots use SQLite online backup (not VACUUM) to retain implicit history rowids. Source is rehashed around inspection/staging to reject changes. Unknown/uninventoried attachment bytes block replacement.
-
-Verification: 8 native data-control tests pass, including wrong/stale confirmations, same-ID/table restore to a second profile, failed/mid-interruption rollback, safety copy retention and a second Runtime ownership refusal. Typecheck passes. Windows rename/power-loss semantics remain unverified. New native warnings concern only unused Block C error variants; final Clippy remains pending.
-
-Next: Block C deletion previews/confirmation, account isolation + lineage/provenance blockers, transactional removal and recoverable attachment cleanup. Then Block D malicious/older-schema/wire tests, full checks and final matrix. PR #43 remains draft; all completed blocks must be pushed.
-
-## Block C checkpoint
-
-Prior completed commit: `8e97bba` (B). Implemented authoritative isolated-cascade previews and full-data-bound confirmations, transactional single-account deletion, shared attachment/catalogue/tag preservation, lineage/phase/audit ownership blockers, separate SQLite-atomic whole-journal erasure, persistent post-commit cleanup queue and startup/manual retries. Whole-journal scope includes app-managed recovery copies; externally saved archives remain untouched. No automatic pre-delete backup or claim of forensic secure erasure.
-
-Verification: 13 native tests pass; typecheck passes. New tests cover actual ledger revision/note/attachment cascades, shared attachment and other-account isolation, linked/phase-history blocking, injected live-only delete rollback, stale confirmations and whole-journal scope versus user exports. No applied migration changed.
-
-Known dependency: schema 14 unconditionally restricts phase-history deletion. Such account deletes remain blocked pending a reviewed policy/forward-only migration; no speculative migration 15 conflicts with unmerged Build 16 #42. Unknown audit/sync ownership also blocks account deletion. Exact current behavior is documented in build-24-data-controls.md.
-
-Next: Block D expand corrupt/malicious/resource/legacy/native-wire coverage, test cleanup failures and attachment rollback, run full npm/native/Clippy checks, record final matrix and Windows/Build 20/25 gates. All previous checkpoints are pushed to PR #43.
-
-## Block D verification checkpoint
-
-Prior completed commit: `9cd7d71` (C). Expanded to 23 native data-control tests: malicious paths/case aliases/link metadata, CRC/truncation/magic/resource/space limits, schema-code rejection, cross-account import/evidence integrity, populated v3 staging upgrades, attachment conflict rollback, cleanup_pending/retry, failed whole-journal writes and native wire fixtures. Archives include a reconciled trade CSV as well as exact table JSON/SQLite. Windows CRLF SQL definitions are normalized for cross-platform validation; other schema changes are refused. Deletion commits use FULL synchronization before file cleanup. Recovery failure messages no longer imply unchanged data after partial operations.
-
-Actual verification: full native suite 208 passed / 4 pre-existing Linux legacy-rulebook temporary-journal failures / 2 ignored. All 23 new tests pass without fixture-update mode. Strict all-targets Clippy passes. Full Vitest: 379 domain + 381 desktop; typecheck/build/package checks pass. Existing legacy command fixture changed only for the intentional preview handoff wording, and its 12 focused adapter/fixture tests pass. Native wire fixture normalizes volatile metadata only; real integrity is separately tested.
-
-Policy follow-up: https://app.notion.com/p/4001bd4b6bde81d09774d36d727b77be. Phase/link restrictions stay blocked. Packaged Windows, installer/cross-profile acceptance and Build 20/25 remain pending.
-
-Final hardening still in progress: contain interrupted restore inspection workspaces under a recognizable app-managed directory and include them in whole-journal cleanup; verify with focused tests. Then final changed-path/base audit, acceptance matrix, PR/Notion evidence. Do not mark Done.
+1. Read this file and the full Notion card; inspect PR #43, current accepted main, git log/status and latest CI. Continue this branch/PR; do not recreate completed blocks or force-push.
+2. If Windows CI for the latest head fails, fetch job logs, reproduce/identify the platform-specific issue, fix only backend scope, run applicable checks, then commit/push and update this handoff/PR. Do not confuse the earlier pre-fix run with the latest head.
+3. Obtain review of archive limits/plaintext choice, restart recovery and account phase/lineage policy. Keep blocked operations blocked pending a reviewed forward-only decision.
+4. Coordinate Build 20/25 and packaged Windows acceptance separately. No merge or Notion Done until review and actual acceptance evidence. All completed implementation commits are pushed; preserve that incremental workflow.

@@ -259,7 +259,7 @@ export interface JournalRepository {
   readonly catalogue: CatalogueRepository;
 }
 
-/** The one error type a JournalRepository rejects with. */
+/** Ordinary journal CRUD errors. dataControls uses its exported stable error DTO and host wrapper. */
 export class RepositoryError extends Error {
   readonly error: AppError;
 
