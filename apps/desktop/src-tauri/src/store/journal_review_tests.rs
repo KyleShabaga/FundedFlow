@@ -54,11 +54,12 @@ fn review(account_id: &str, trade_id: &str) -> ReviewInput {
     }
 }
 
-fn png(width: u32, height: u32, salt: u8) -> Vec<u8> {
+/// A minimal PNG header; `marker` is a trailing byte that only makes fixture images (and their hashes) differ.
+fn png(width: u32, height: u32, marker: u8) -> Vec<u8> {
     let mut b = b"\x89PNG\r\n\x1a\n\0\0\0\x0dIHDR".to_vec();
     b.extend(width.to_be_bytes());
     b.extend(height.to_be_bytes());
-    b.extend([8, 6, 0, 0, 0, 0, 0, 0, 0, salt]);
+    b.extend([8, 6, 0, 0, 0, 0, 0, 0, 0, marker]);
     b
 }
 
