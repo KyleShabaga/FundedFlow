@@ -56,7 +56,8 @@ def list_snapshots(
 ) -> list[sqlite3.Row]:
     sql = (
         "SELECT s.id, s.captured_at, s.title, s.content_hash, s.fetch_method, s.content_type, s.final_url,"
-        " s.warnings, c.canonical_url, COALESCE(f.firm_key, 'publisher:' || p.publisher_key) AS firm_key, length(s.text) AS text_chars"
+        " s.warnings, c.canonical_url, COALESCE(f.firm_key, 'publisher:' || p.publisher_key) AS firm_key,"
+        " length(s.text) AS text_chars"
         " FROM source_snapshots s JOIN collector_sources c ON c.id = s.source_id"
         " LEFT JOIN collector_firms f ON f.id = s.firm_id LEFT JOIN directory_publishers p ON p.id = s.firm_id"
     )

@@ -150,7 +150,8 @@ def list_runs(conn: sqlite3.Connection, firm_id: str | None = None, limit: int =
     sql = (
         "SELECT r.*, COALESCE(f.firm_key, 'publisher:' || p.publisher_key) AS firm_key,"
         " (SELECT COUNT(*) FROM fetch_attempts a WHERE a.run_id = r.id) AS attempt_count"
-        " FROM crawl_runs r LEFT JOIN collector_firms f ON f.id = r.firm_id LEFT JOIN directory_publishers p ON p.id = r.firm_id"
+        " FROM crawl_runs r LEFT JOIN collector_firms f ON f.id = r.firm_id"
+        " LEFT JOIN directory_publishers p ON p.id = r.firm_id"
     )
     if firm_id is not None:
         return list(conn.execute(sql + " WHERE r.firm_id = ? ORDER BY r.started_at DESC LIMIT ?", (firm_id, limit)))
@@ -160,7 +161,8 @@ def list_runs(conn: sqlite3.Connection, firm_id: str | None = None, limit: int =
 def get_run(conn: sqlite3.Connection, run_id: str) -> sqlite3.Row | None:
     return conn.execute(  # type: ignore[no-any-return]
         "SELECT r.*, COALESCE(f.firm_key, 'publisher:' || p.publisher_key) AS firm_key FROM crawl_runs r"
-        " LEFT JOIN collector_firms f ON f.id = r.firm_id LEFT JOIN directory_publishers p ON p.id = r.firm_id WHERE r.id = ?",
+        " LEFT JOIN collector_firms f ON f.id = r.firm_id LEFT JOIN directory_publishers p ON p.id = r.firm_id"
+        " WHERE r.id = ?",
         (run_id,),
     ).fetchone()
 
