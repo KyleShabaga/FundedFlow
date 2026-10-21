@@ -12,7 +12,9 @@ on a fresh Windows 11 VM or Windows Sandbox and fills in the results.
 
 - **Unsigned NSIS installer, manual updates.** No certificate, `signCommand`, thumbprint or timestamp URL; no Tauri
   updater plugin and no update checks (`createUpdaterArtifacts` stays unset). A new version is installed by running
-  the new installer over the old one.
+  the new installer over the old one. For a newer version, Tauri's NSIS installer pre-selects "Uninstall before
+  installing", which runs the old uninstaller; its "Delete the application data" checkbox is unchecked by default and
+  must stay unchecked to keep the journal. Testing that upgrade path belongs to NA-5, not this smoke.
 - **No phone-home.** Neither the installer nor the app contacts a server of ours. The one network touch is
   Microsoft's WebView2 bootstrapper, and only on a machine without WebView2 (below).
 
@@ -24,12 +26,12 @@ on a fresh Windows 11 VM or Windows Sandbox and fills in the results.
 | `bundle.publisher` | `Kyle Shabaga` | The copyright holder (LICENSE, `copyright`, Cargo `authors`). Shown as Publisher in Installed apps. Without it Tauri derives `fundedflow` from the identifier. |
 | `bundle.homepage` | `https://github.com/KyleShabaga/FundedFlow` | The project's real public page (the README points readers there). No product website exists, so none is invented. Shown as a link in Installed apps only; nothing fetches it. |
 | `bundle.shortDescription` / `longDescription` | Based on the Cargo `description` and the README "Local data" section | Installer and file metadata. |
-| `bundle.windows.webviewInstallMode` | `{ "type": "downloadBootstrapper", "silent": true }` | See below. |
+| `bundle.windows.webviewInstallMode` | `{ "type": "downloadBootstrapper", "silent": true }` | Tauri's default, set explicitly so the choice is visible. See below. |
 | `bundle.windows.nsis.installMode` | `currentUser` | See below. |
 | `identifier` | `com.fundedflow.desktop` (**unchanged**) | It names the journal folder `%APPDATA%\com.fundedflow.desktop`; changing it would orphan existing journals. |
 | Licence page | none | The user agreement is shown in the app (NA-3), not by the installer. |
 
-**WebView2: `downloadBootstrapper` (silent).** Windows 11 and current Windows 10 ship the Evergreen WebView2 runtime,
+**WebView2: `downloadBootstrapper` (silent).** Windows 11, and Windows 10 kept current by Windows Update, normally have the Evergreen WebView2 runtime,
 so on the V1 target machines the installer skips this step and makes no network call. Only when the runtime is
 missing does it download Microsoft's ~2 MB bootstrapper, which then downloads the runtime. Trade-offs:
 
@@ -106,7 +108,7 @@ Machine: a fresh Windows 11 VM or Windows Sandbox with **no** Node, Rust, Visual
 | 8 | Uninstall from Installed apps, leaving "Delete the application data" **unchecked**. List what remains: `%LOCALAPPDATA%\FundedFlow`, `%APPDATA%\com.fundedflow.desktop`, `%LOCALAPPDATA%\com.fundedflow.desktop`, Start menu, `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall`. | Program files, shortcuts and the uninstall entry are gone; the journal folder remains. Record exactly what is left. | | |
 | 9 | Reinstall with the same installer and launch. | The step-6 account and trades open. | | |
 | 10 | Run the same installer again over the existing install (choose the reinstall option if offered). Launch. | Install completes; the journal is kept. | | |
-| 11 | Optional: with the network reconnected, run Resource Monitor (Network tab) or Wireshark while using the app for a few minutes. | No outbound connections from `fundedflow.exe` or its `msedgewebview2.exe` children. | | |
+| 11 | Optional: with the network reconnected, run Resource Monitor (Network tab) or Wireshark while using the app for a few minutes. No connections from `fundedflow.exe` or its `msedgewebview2.exe` children to non-Microsoft hosts. WebView2 itself may contact Microsoft (for example SmartScreen); record any such hosts. | | |
 
 Attach screenshots of steps 2, 4, 5, 8 and 9. Any failure gets a Triage card.
 
@@ -125,7 +127,8 @@ Attach screenshots of steps 2, 4, 5, 8 and 9. Any failure gets a Triage card.
 >
 > **Your data** lives in `%APPDATA%\com.fundedflow.desktop\fundedflow.db` on this PC only.
 >
-> **Updating:** download the new installer, verify it the same way and run it. Your journal is kept. FundedFlow
-> doesn't check for updates.
+> **Updating:** download the new installer, verify it the same way and run it. If it offers to uninstall the old
+> version first, go ahead, but leave "Delete the application data" **unticked**: that keeps your journal.
+> FundedFlow doesn't check for updates.
 >
 > **Uninstalling** keeps your journal unless you tick "Delete the application data".

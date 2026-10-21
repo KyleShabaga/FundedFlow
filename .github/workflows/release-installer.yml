@@ -66,9 +66,14 @@ jobs:
       - name: Build NSIS installer (release)
         run: npm run tauri -- build
 
-      # Belt and braces: re-run the dev-tools check on the exact frontend that was bundled.
+      # Belt and braces: re-run the dev-tools check on the exact frontend that was bundled. The script only checks
+      # when run as the main module, so require its success line rather than trusting the exit code alone.
       - name: No developer tools in the bundled frontend
-        run: node apps/desktop/scripts/check-no-dev-tools.mjs
+        run: |
+          $out = node apps/desktop/scripts/check-no-dev-tools.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $out
+          if ($out -notcontains 'Production build contains no developer tools.') { throw 'Dev-tools check did not run' }
 
       - name: Locate installer and write SHA256SUMS.txt
         id: installer
