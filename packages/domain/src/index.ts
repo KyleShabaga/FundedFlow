@@ -26,3 +26,9 @@ export * from "./ports/journal-repository.js";
 export * from "./risk/contracts.js";
 export * from "./risk/reconciliation.js";
 export * from "./risk/sufficiency.js";
+
+export * from "./engine/contracts.js";
+export * from "./engine/canonical.js";
+export * from "./engine/applicability.js";
+export * from "./engine/evaluate.js";
+export * from "./engine/snapshot.js";

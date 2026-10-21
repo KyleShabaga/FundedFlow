@@ -1,0 +1,1994 @@
+[
+  {
+    "name": "known",
+    "input": {
+      "schemaVersion": 1,
+      "account": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": "Synthetic attempt",
+        "broker": null,
+        "propFirm": "Synthetic firm",
+        "externalRef": "can-be-reused",
+        "accountType": "evaluation",
+        "status": "active",
+        "currency": "USD",
+        "startingBalance": "50000",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00",
+        "notes": null,
+        "createdAt": "2026-10-01T00:00:00.000Z",
+        "updatedAt": "2026-10-01T00:00:00.000Z",
+        "archivedAt": null,
+        "predecessorAccountId": null,
+        "successorAccountId": null
+      },
+      "asOf": "2026-10-20T20:00:00.000Z",
+      "effectiveTradingDay": "2026-10-20",
+      "observations": [
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "kind": "opening_balance",
+          "value": "50000",
+          "currency": "USD",
+          "basis": "balance",
+          "observedAt": "2026-10-01T00:00:00.000Z",
+          "sourceCategory": "firm_dashboard",
+          "sourceReference": "Synthetic opening baseline",
+          "confirmation": "user_confirmed",
+          "confidence": "user_reported",
+          "validUntil": null,
+          "actor": "synthetic user",
+          "note": null,
+          "id": "00000000-0000-4000-8000-000000000002",
+          "recordedAt": "2026-10-01T00:00:00.000Z",
+          "effectiveTradingDay": "2026-10-01",
+          "timezone": "America/New_York",
+          "tradingDayResetTime": "17:00",
+          "supersedesId": null,
+          "correctionReason": null
+        }
+      ],
+      "trades": [],
+      "ledger": [],
+      "ledgerHistory": [],
+      "phaseHistory": [
+        {
+          "id": "00000000-0000-4000-8000-000000000042",
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "fromPhase": null,
+          "toPhase": "evaluation",
+          "providerLabel": null,
+          "occurredAt": "2026-10-01T00:00:00.000Z",
+          "recordedAt": "2026-10-01T00:00:00.000Z",
+          "source": "user_entered",
+          "actor": "user",
+          "note": null,
+          "correctionOfEventId": null,
+          "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+          "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+          "phasePathId": "00000000-0000-4000-8000-000000000041"
+        }
+      ],
+      "catalogueLink": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "providerId": "00000000-0000-4000-8000-000000000010",
+        "programmeVariantId": "00000000-0000-4000-8000-000000000011",
+        "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+        "selectedPhasePathId": "00000000-0000-4000-8000-000000000041",
+        "parentAccountId": null,
+        "sizeSource": "user_entered"
+      },
+      "assignments": [
+        {
+          "id": "00000000-0000-4000-8000-000000000030",
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+          "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+          "phasePathId": "00000000-0000-4000-8000-000000000041",
+          "accountPhaseEventId": "00000000-0000-4000-8000-000000000042",
+          "effectiveFrom": "2026-10-01",
+          "effectiveTo": null,
+          "assignedAt": "2026-10-01T00:00:00.000Z",
+          "assignmentSource": "user"
+        }
+      ],
+      "rulebookVersions": [
+        {
+          "rulebook": {
+            "id": "00000000-0000-4000-8000-000000000019",
+            "providerId": "00000000-0000-4000-8000-000000000010",
+            "ownerAccountId": null,
+            "slug": "synthetic",
+            "displayName": "Synthetic",
+            "description": null,
+            "recordStatus": "active",
+            "createdAt": "2026-10-01T00:00:00.000Z",
+            "updatedAt": "2026-10-01T00:00:00.000Z"
+          },
+          "version": {
+            "id": "00000000-0000-4000-8000-000000000020",
+            "rulebookId": "00000000-0000-4000-8000-000000000019",
+            "versionNumber": 1,
+            "schemaVersion": 1,
+            "verificationStatus": "verified",
+            "origin": "catalogue",
+            "capturedAt": "2026-10-01T00:00:00.000Z",
+            "effectiveFrom": null,
+            "effectiveTo": null,
+            "verifiedBy": "synthetic reviewer",
+            "verifiedAt": "2026-10-01T00:00:00.000Z",
+            "userConfirmedAt": null,
+            "changeReason": null,
+            "supersedesVersionId": null,
+            "recordStatus": "active",
+            "createdAt": "2026-10-01T00:00:00.000Z",
+            "updatedAt": "2026-10-01T00:00:00.000Z"
+          },
+          "rules": [
+            {
+              "id": "00000000-0000-4000-8000-000000000101",
+              "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+              "ruleKey": "rule_1",
+              "parameterSchemaVersion": 1,
+              "providerLabel": "Synthetic sourced rule",
+              "displayLabel": null,
+              "sourceText": "Synthetic parameter fixture, not provider terms",
+              "supportStatus": "supported",
+              "overrideKind": null,
+              "displayOrder": 1,
+              "ruleType": "max_drawdown",
+              "parameters": {
+                "amount": {
+                  "state": "value",
+                  "value": "2000"
+                },
+                "method": "static",
+                "basis": "realized",
+                "lock": {
+                  "state": "explicit_none"
+                }
+              }
+            }
+          ],
+          "applicability": [
+            {
+              "id": "00000000-0000-4000-8000-000000000043",
+              "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+              "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+              "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+              "phasePathId": "00000000-0000-4000-8000-000000000041"
+            }
+          ],
+          "claims": [
+            {
+              "id": "00000000-0000-4000-8000-000000000200",
+              "ruleDefinitionId": "00000000-0000-4000-8000-000000000101",
+              "sourceId": "00000000-0000-4000-8000-000000000300",
+              "field": null,
+              "origin": "provider_stated",
+              "providerText": "Synthetic complete parameter and boundary claim",
+              "claimStatus": "verified",
+              "note": null,
+              "reviewedBy": "synthetic reviewer",
+              "reviewedAt": "2026-10-01T00:00:00.000Z",
+              "createdAt": "2026-10-01T00:00:00.000Z"
+            }
+          ]
+        }
+      ],
+      "applicableAssignment": {
+        "id": "00000000-0000-4000-8000-000000000030",
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+        "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+        "phasePathId": "00000000-0000-4000-8000-000000000041",
+        "accountPhaseEventId": "00000000-0000-4000-8000-000000000042",
+        "effectiveFrom": "2026-10-01",
+        "effectiveTo": null,
+        "assignedAt": "2026-10-01T00:00:00.000Z",
+        "assignmentSource": "user"
+      },
+      "applicableRulebook": null,
+      "coverage": {
+        "baseline": "available",
+        "closedTrades": "available",
+        "fees": "available",
+        "ledger": "available",
+        "openPositions": "missing",
+        "eodHistory": "missing",
+        "intradayHistory": "unsupported",
+        "sourceReference": "Synthetic full interval assertion"
+      },
+      "missingInputs": []
+    },
+    "policy": {
+      "ruleCurrency": "USD",
+      "ruleCurrencySourceClaimIds": [
+        "00000000-0000-4000-8000-000000000200"
+      ],
+      "boundary": "touch_is_breach",
+      "boundarySourceClaimIds": [
+        "00000000-0000-4000-8000-000000000200"
+      ],
+      "personalCautionHeadroom": null,
+      "reconciliationRevisionIds": [],
+      "priorBreaches": []
+    },
+    "result": {
+      "accountId": "00000000-0000-4000-8000-000000000001",
+      "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+      "assignmentId": "00000000-0000-4000-8000-000000000030",
+      "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+      "phasePathId": "00000000-0000-4000-8000-000000000041",
+      "engineVersion": "fundedflow-risk/1",
+      "tradingDay": "2026-10-20",
+      "asOf": "2026-10-20T20:00:00.000Z",
+      "dataAsOf": "2026-10-01T00:00:00.000Z",
+      "inputsHash": "ed1b03b9c54dc9ce47ff4d0b591c3be5c15f2f99d3773be0e23afe32a72e83e1",
+      "status": "Safe",
+      "assurance": "user_reported_estimate",
+      "reasons": [],
+      "rules": [
+        {
+          "ruleId": "00000000-0000-4000-8000-000000000101",
+          "ruleKey": "rule_1",
+          "ruleType": "max_drawdown",
+          "state": "satisfied",
+          "reasonCode": "satisfied",
+          "metrics": {
+            "highWaterMark": "50000",
+            "drawdownFloor": "48000",
+            "drawdownHeadroom": "2000",
+            "drawdownLocked": false
+          },
+          "formula": "floor = initial reference (static) or sourced high-water mark (trailing) minus amount, or sourced locked floor; headroom = comparable balance - floor",
+          "operands": {
+            "opening": "50000",
+            "amount": "2000",
+            "highWaterMark": "50000"
+          },
+          "sourceReferences": [
+            "00000000-0000-4000-8000-000000000002",
+            "00000000-0000-4000-8000-000000000042",
+            "00000000-0000-4000-8000-000000000200",
+            "00000000-0000-4000-8000-000000000300",
+            "Synthetic opening baseline"
+          ],
+          "missingInputs": [],
+          "evidence": [
+            {
+              "requirement": "baseline",
+              "state": "available",
+              "reasonCode": "baseline_available",
+              "nextVerificationAction": "Verify rule applicability and semantics separately",
+              "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+              "asOf": "2026-10-20T20:00:00.000Z"
+            },
+            {
+              "requirement": "closedTrades",
+              "state": "available",
+              "reasonCode": "closedTrades_available",
+              "nextVerificationAction": "Verify rule applicability and semantics separately",
+              "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+              "asOf": "2026-10-20T20:00:00.000Z"
+            },
+            {
+              "requirement": "fees",
+              "state": "available",
+              "reasonCode": "fees_available",
+              "nextVerificationAction": "Verify rule applicability and semantics separately",
+              "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+              "asOf": "2026-10-20T20:00:00.000Z"
+            },
+            {
+              "requirement": "ledger",
+              "state": "available",
+              "reasonCode": "ledger_available",
+              "nextVerificationAction": "Verify rule applicability and semantics separately",
+              "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+              "asOf": "2026-10-20T20:00:00.000Z"
+            }
+          ],
+          "assumptions": [
+            "User-reported financial evidence; not an official broker compliance determination"
+          ]
+        }
+      ],
+      "tradingDaysCompleted": 0,
+      "balance": "50000",
+      "realizedDayPnl": "0",
+      "sourceReferences": [
+        "00000000-0000-4000-8000-000000000002",
+        "00000000-0000-4000-8000-000000000042",
+        "Synthetic opening baseline"
+      ],
+      "assumptions": [
+        "Rust-normalized net realized P&L already includes fees",
+        "Coverage, checkpoints and actor labels are user-reported",
+        "Closed round trips do not establish live equity, execution counts or intraday peak history"
+      ]
+    },
+    "snapshot": {
+      "accountId": "00000000-0000-4000-8000-000000000001",
+      "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+      "tradingDay": "2026-10-20",
+      "isEndOfDay": true,
+      "dataAsOf": "2026-10-01T00:00:00.000Z",
+      "dataSource": "manual",
+      "engineVersion": "fundedflow-risk/1",
+      "inputsHash": "ed1b03b9c54dc9ce47ff4d0b591c3be5c15f2f99d3773be0e23afe32a72e83e1",
+      "feesIncluded": true,
+      "unrealizedIncluded": false,
+      "balance": "50000",
+      "realizedDayPnl": "0",
+      "unrealizedPnl": null,
+      "dailyLossLimit": null,
+      "dailyLossRemaining": null,
+      "drawdownMode": "static",
+      "highWaterMark": "50000",
+      "drawdownFloor": "48000",
+      "drawdownHeadroom": "2000",
+      "drawdownLocked": false,
+      "profitTarget": null,
+      "tradingDaysCompleted": 0,
+      "tradingDaysRequired": null,
+      "status": "safe",
+      "statusReasons": [],
+      "explanation": {
+        "engine": {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+          "assignmentId": "00000000-0000-4000-8000-000000000030",
+          "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+          "phasePathId": "00000000-0000-4000-8000-000000000041",
+          "engineVersion": "fundedflow-risk/1",
+          "tradingDay": "2026-10-20",
+          "asOf": "2026-10-20T20:00:00.000Z",
+          "dataAsOf": "2026-10-01T00:00:00.000Z",
+          "inputsHash": "ed1b03b9c54dc9ce47ff4d0b591c3be5c15f2f99d3773be0e23afe32a72e83e1",
+          "status": "Safe",
+          "assurance": "user_reported_estimate",
+          "reasons": [],
+          "rules": [
+            {
+              "ruleId": "00000000-0000-4000-8000-000000000101",
+              "ruleKey": "rule_1",
+              "ruleType": "max_drawdown",
+              "state": "satisfied",
+              "reasonCode": "satisfied",
+              "metrics": {
+                "highWaterMark": "50000",
+                "drawdownFloor": "48000",
+                "drawdownHeadroom": "2000",
+                "drawdownLocked": false
+              },
+              "formula": "floor = initial reference (static) or sourced high-water mark (trailing) minus amount, or sourced locked floor; headroom = comparable balance - floor",
+              "operands": {
+                "opening": "50000",
+                "amount": "2000",
+                "highWaterMark": "50000"
+              },
+              "sourceReferences": [
+                "00000000-0000-4000-8000-000000000002",
+                "00000000-0000-4000-8000-000000000042",
+                "00000000-0000-4000-8000-000000000200",
+                "00000000-0000-4000-8000-000000000300",
+                "Synthetic opening baseline"
+              ],
+              "missingInputs": [],
+              "evidence": [
+                {
+                  "requirement": "baseline",
+                  "state": "available",
+                  "reasonCode": "baseline_available",
+                  "nextVerificationAction": "Verify rule applicability and semantics separately",
+                  "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+                  "asOf": "2026-10-20T20:00:00.000Z"
+                },
+                {
+                  "requirement": "closedTrades",
+                  "state": "available",
+                  "reasonCode": "closedTrades_available",
+                  "nextVerificationAction": "Verify rule applicability and semantics separately",
+                  "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+                  "asOf": "2026-10-20T20:00:00.000Z"
+                },
+                {
+                  "requirement": "fees",
+                  "state": "available",
+                  "reasonCode": "fees_available",
+                  "nextVerificationAction": "Verify rule applicability and semantics separately",
+                  "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+                  "asOf": "2026-10-20T20:00:00.000Z"
+                },
+                {
+                  "requirement": "ledger",
+                  "state": "available",
+                  "reasonCode": "ledger_available",
+                  "nextVerificationAction": "Verify rule applicability and semantics separately",
+                  "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+                  "asOf": "2026-10-20T20:00:00.000Z"
+                }
+              ],
+              "assumptions": [
+                "User-reported financial evidence; not an official broker compliance determination"
+              ]
+            }
+          ],
+          "tradingDaysCompleted": 0,
+          "balance": "50000",
+          "realizedDayPnl": "0",
+          "sourceReferences": [
+            "00000000-0000-4000-8000-000000000002",
+            "00000000-0000-4000-8000-000000000042",
+            "Synthetic opening baseline"
+          ],
+          "assumptions": [
+            "Rust-normalized net realized P&L already includes fees",
+            "Coverage, checkpoints and actor labels are user-reported",
+            "Closed round trips do not establish live equity, execution counts or intraday peak history"
+          ]
+        },
+        "inputs": {
+          "account": {
+            "accountType": "evaluation",
+            "archivedAt": null,
+            "broker": null,
+            "createdAt": "2026-10-01T00:00:00.000Z",
+            "currency": "USD",
+            "externalRef": "can-be-reused",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "name": "Synthetic attempt",
+            "notes": null,
+            "predecessorAccountId": null,
+            "propFirm": "Synthetic firm",
+            "startingBalance": "50000",
+            "status": "active",
+            "successorAccountId": null,
+            "timezone": "America/New_York",
+            "tradingDayResetTime": "17:00",
+            "updatedAt": "2026-10-01T00:00:00.000Z"
+          },
+          "applicableAssignment": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "accountPhaseEventId": "00000000-0000-4000-8000-000000000042",
+            "assignedAt": "2026-10-01T00:00:00.000Z",
+            "assignmentSource": "user",
+            "effectiveFrom": "2026-10-01",
+            "effectiveTo": null,
+            "id": "00000000-0000-4000-8000-000000000030",
+            "phasePathId": "00000000-0000-4000-8000-000000000041",
+            "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000020"
+          },
+          "applicableRulebook": null,
+          "asOf": "2026-10-20T20:00:00.000Z",
+          "assignments": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "accountPhaseEventId": "00000000-0000-4000-8000-000000000042",
+              "assignedAt": "2026-10-01T00:00:00.000Z",
+              "assignmentSource": "user",
+              "effectiveFrom": "2026-10-01",
+              "effectiveTo": null,
+              "id": "00000000-0000-4000-8000-000000000030",
+              "phasePathId": "00000000-0000-4000-8000-000000000041",
+              "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+              "rulebookVersionId": "00000000-0000-4000-8000-000000000020"
+            }
+          ],
+          "catalogueLink": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+            "parentAccountId": null,
+            "programmeVariantId": "00000000-0000-4000-8000-000000000011",
+            "providerId": "00000000-0000-4000-8000-000000000010",
+            "selectedPhasePathId": "00000000-0000-4000-8000-000000000041",
+            "sizeSource": "user_entered"
+          },
+          "coverage": {
+            "baseline": "available",
+            "closedTrades": "available",
+            "eodHistory": "missing",
+            "fees": "available",
+            "intradayHistory": "unsupported",
+            "ledger": "available",
+            "openPositions": "missing",
+            "sourceReference": "Synthetic full interval assertion"
+          },
+          "effectiveTradingDay": "2026-10-20",
+          "ledger": [],
+          "ledgerHistory": [],
+          "missingInputs": [],
+          "observations": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "actor": "synthetic user",
+              "basis": "balance",
+              "confidence": "user_reported",
+              "confirmation": "user_confirmed",
+              "correctionReason": null,
+              "currency": "USD",
+              "effectiveTradingDay": "2026-10-01",
+              "id": "00000000-0000-4000-8000-000000000002",
+              "kind": "opening_balance",
+              "note": null,
+              "observedAt": "2026-10-01T00:00:00.000Z",
+              "recordedAt": "2026-10-01T00:00:00.000Z",
+              "sourceCategory": "firm_dashboard",
+              "sourceReference": "Synthetic opening baseline",
+              "supersedesId": null,
+              "timezone": "America/New_York",
+              "tradingDayResetTime": "17:00",
+              "validUntil": null,
+              "value": "50000"
+            }
+          ],
+          "phaseHistory": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "actor": "user",
+              "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+              "correctionOfEventId": null,
+              "fromPhase": null,
+              "id": "00000000-0000-4000-8000-000000000042",
+              "note": null,
+              "occurredAt": "2026-10-01T00:00:00.000Z",
+              "phasePathId": "00000000-0000-4000-8000-000000000041",
+              "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+              "providerLabel": null,
+              "recordedAt": "2026-10-01T00:00:00.000Z",
+              "source": "user_entered",
+              "toPhase": "evaluation"
+            }
+          ],
+          "rulebookVersions": [
+            {
+              "applicability": [
+                {
+                  "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+                  "id": "00000000-0000-4000-8000-000000000043",
+                  "phasePathId": "00000000-0000-4000-8000-000000000041",
+                  "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+                  "rulebookVersionId": "00000000-0000-4000-8000-000000000020"
+                }
+              ],
+              "claims": [
+                {
+                  "claimStatus": "verified",
+                  "createdAt": "2026-10-01T00:00:00.000Z",
+                  "field": null,
+                  "id": "00000000-0000-4000-8000-000000000200",
+                  "note": null,
+                  "origin": "provider_stated",
+                  "providerText": "Synthetic complete parameter and boundary claim",
+                  "reviewedAt": "2026-10-01T00:00:00.000Z",
+                  "reviewedBy": "synthetic reviewer",
+                  "ruleDefinitionId": "00000000-0000-4000-8000-000000000101",
+                  "sourceId": "00000000-0000-4000-8000-000000000300"
+                }
+              ],
+              "rulebook": {
+                "createdAt": "2026-10-01T00:00:00.000Z",
+                "description": null,
+                "displayName": "Synthetic",
+                "id": "00000000-0000-4000-8000-000000000019",
+                "ownerAccountId": null,
+                "providerId": "00000000-0000-4000-8000-000000000010",
+                "recordStatus": "active",
+                "slug": "synthetic",
+                "updatedAt": "2026-10-01T00:00:00.000Z"
+              },
+              "rules": [
+                {
+                  "displayLabel": null,
+                  "displayOrder": 1,
+                  "id": "00000000-0000-4000-8000-000000000101",
+                  "overrideKind": null,
+                  "parameterSchemaVersion": 1,
+                  "parameters": {
+                    "amount": {
+                      "state": "value",
+                      "value": "2000"
+                    },
+                    "basis": "realized",
+                    "lock": {
+                      "state": "explicit_none"
+                    },
+                    "method": "static"
+                  },
+                  "providerLabel": "Synthetic sourced rule",
+                  "ruleKey": "rule_1",
+                  "ruleType": "max_drawdown",
+                  "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+                  "sourceText": "Synthetic parameter fixture, not provider terms",
+                  "supportStatus": "supported"
+                }
+              ],
+              "version": {
+                "capturedAt": "2026-10-01T00:00:00.000Z",
+                "changeReason": null,
+                "createdAt": "2026-10-01T00:00:00.000Z",
+                "effectiveFrom": null,
+                "effectiveTo": null,
+                "id": "00000000-0000-4000-8000-000000000020",
+                "origin": "catalogue",
+                "recordStatus": "active",
+                "rulebookId": "00000000-0000-4000-8000-000000000019",
+                "schemaVersion": 1,
+                "supersedesVersionId": null,
+                "updatedAt": "2026-10-01T00:00:00.000Z",
+                "userConfirmedAt": null,
+                "verificationStatus": "verified",
+                "verifiedAt": "2026-10-01T00:00:00.000Z",
+                "verifiedBy": "synthetic reviewer",
+                "versionNumber": 1
+              }
+            }
+          ],
+          "schemaVersion": 1,
+          "trades": []
+        },
+        "policy": {
+          "boundary": "touch_is_breach",
+          "boundarySourceClaimIds": [
+            "00000000-0000-4000-8000-000000000200"
+          ],
+          "personalCautionHeadroom": null,
+          "priorBreaches": [],
+          "reconciliationRevisionIds": [],
+          "ruleCurrency": "USD",
+          "ruleCurrencySourceClaimIds": [
+            "00000000-0000-4000-8000-000000000200"
+          ]
+        },
+        "recalculation": "New source/correction/version/as-of/policy changes inputsHash; preserve older rows"
+      }
+    }
+  },
+  {
+    "name": "unknown",
+    "input": {
+      "schemaVersion": 1,
+      "account": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": "Synthetic attempt",
+        "broker": null,
+        "propFirm": "Synthetic firm",
+        "externalRef": "can-be-reused",
+        "accountType": "evaluation",
+        "status": "active",
+        "currency": "USD",
+        "startingBalance": "50000",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00",
+        "notes": null,
+        "createdAt": "2026-10-01T00:00:00.000Z",
+        "updatedAt": "2026-10-01T00:00:00.000Z",
+        "archivedAt": null,
+        "predecessorAccountId": null,
+        "successorAccountId": null
+      },
+      "asOf": "2026-10-20T20:00:00.000Z",
+      "effectiveTradingDay": "2026-10-20",
+      "observations": [
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "kind": "opening_balance",
+          "value": "50000",
+          "currency": "USD",
+          "basis": "balance",
+          "observedAt": "2026-10-01T00:00:00.000Z",
+          "sourceCategory": "firm_dashboard",
+          "sourceReference": "Synthetic opening baseline",
+          "confirmation": "user_confirmed",
+          "confidence": "user_reported",
+          "validUntil": null,
+          "actor": "synthetic user",
+          "note": null,
+          "id": "00000000-0000-4000-8000-000000000002",
+          "recordedAt": "2026-10-01T00:00:00.000Z",
+          "effectiveTradingDay": "2026-10-01",
+          "timezone": "America/New_York",
+          "tradingDayResetTime": "17:00",
+          "supersedesId": null,
+          "correctionReason": null
+        }
+      ],
+      "trades": [],
+      "ledger": [],
+      "ledgerHistory": [],
+      "phaseHistory": [
+        {
+          "id": "00000000-0000-4000-8000-000000000042",
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "fromPhase": null,
+          "toPhase": "evaluation",
+          "providerLabel": null,
+          "occurredAt": "2026-10-01T00:00:00.000Z",
+          "recordedAt": "2026-10-01T00:00:00.000Z",
+          "source": "user_entered",
+          "actor": "user",
+          "note": null,
+          "correctionOfEventId": null,
+          "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+          "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+          "phasePathId": "00000000-0000-4000-8000-000000000041"
+        }
+      ],
+      "catalogueLink": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "providerId": "00000000-0000-4000-8000-000000000010",
+        "programmeVariantId": "00000000-0000-4000-8000-000000000011",
+        "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+        "selectedPhasePathId": "00000000-0000-4000-8000-000000000041",
+        "parentAccountId": null,
+        "sizeSource": "user_entered"
+      },
+      "assignments": [
+        {
+          "id": "00000000-0000-4000-8000-000000000030",
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+          "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+          "phasePathId": "00000000-0000-4000-8000-000000000041",
+          "accountPhaseEventId": "00000000-0000-4000-8000-000000000042",
+          "effectiveFrom": "2026-10-01",
+          "effectiveTo": null,
+          "assignedAt": "2026-10-01T00:00:00.000Z",
+          "assignmentSource": "user"
+        }
+      ],
+      "rulebookVersions": [
+        {
+          "rulebook": {
+            "id": "00000000-0000-4000-8000-000000000019",
+            "providerId": "00000000-0000-4000-8000-000000000010",
+            "ownerAccountId": null,
+            "slug": "synthetic",
+            "displayName": "Synthetic",
+            "description": null,
+            "recordStatus": "active",
+            "createdAt": "2026-10-01T00:00:00.000Z",
+            "updatedAt": "2026-10-01T00:00:00.000Z"
+          },
+          "version": {
+            "id": "00000000-0000-4000-8000-000000000020",
+            "rulebookId": "00000000-0000-4000-8000-000000000019",
+            "versionNumber": 1,
+            "schemaVersion": 1,
+            "verificationStatus": "verified",
+            "origin": "catalogue",
+            "capturedAt": "2026-10-01T00:00:00.000Z",
+            "effectiveFrom": null,
+            "effectiveTo": null,
+            "verifiedBy": "synthetic reviewer",
+            "verifiedAt": "2026-10-01T00:00:00.000Z",
+            "userConfirmedAt": null,
+            "changeReason": null,
+            "supersedesVersionId": null,
+            "recordStatus": "active",
+            "createdAt": "2026-10-01T00:00:00.000Z",
+            "updatedAt": "2026-10-01T00:00:00.000Z"
+          },
+          "rules": [
+            {
+              "id": "00000000-0000-4000-8000-000000000101",
+              "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+              "ruleKey": "rule_1",
+              "parameterSchemaVersion": 1,
+              "providerLabel": "Synthetic sourced rule",
+              "displayLabel": null,
+              "sourceText": "Synthetic parameter fixture, not provider terms",
+              "supportStatus": "supported",
+              "overrideKind": null,
+              "displayOrder": 1,
+              "ruleType": "max_drawdown",
+              "parameters": {
+                "amount": {
+                  "state": "value",
+                  "value": "2000"
+                },
+                "method": "static",
+                "basis": "realized",
+                "lock": {
+                  "state": "explicit_none"
+                }
+              }
+            }
+          ],
+          "applicability": [
+            {
+              "id": "00000000-0000-4000-8000-000000000043",
+              "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+              "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+              "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+              "phasePathId": "00000000-0000-4000-8000-000000000041"
+            }
+          ],
+          "claims": [
+            {
+              "id": "00000000-0000-4000-8000-000000000200",
+              "ruleDefinitionId": "00000000-0000-4000-8000-000000000101",
+              "sourceId": "00000000-0000-4000-8000-000000000300",
+              "field": null,
+              "origin": "provider_stated",
+              "providerText": "Synthetic complete parameter and boundary claim",
+              "claimStatus": "verified",
+              "note": null,
+              "reviewedBy": "synthetic reviewer",
+              "reviewedAt": "2026-10-01T00:00:00.000Z",
+              "createdAt": "2026-10-01T00:00:00.000Z"
+            }
+          ]
+        }
+      ],
+      "applicableAssignment": {
+        "id": "00000000-0000-4000-8000-000000000030",
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+        "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+        "phasePathId": "00000000-0000-4000-8000-000000000041",
+        "accountPhaseEventId": "00000000-0000-4000-8000-000000000042",
+        "effectiveFrom": "2026-10-01",
+        "effectiveTo": null,
+        "assignedAt": "2026-10-01T00:00:00.000Z",
+        "assignmentSource": "user"
+      },
+      "applicableRulebook": null,
+      "coverage": {
+        "baseline": "available",
+        "closedTrades": "missing",
+        "fees": "missing",
+        "ledger": "available",
+        "openPositions": "missing",
+        "eodHistory": "missing",
+        "intradayHistory": "unsupported",
+        "sourceReference": "Synthetic full interval assertion"
+      },
+      "missingInputs": []
+    },
+    "policy": {
+      "ruleCurrency": "USD",
+      "ruleCurrencySourceClaimIds": [
+        "00000000-0000-4000-8000-000000000200"
+      ],
+      "boundary": "touch_is_breach",
+      "boundarySourceClaimIds": [
+        "00000000-0000-4000-8000-000000000200"
+      ],
+      "personalCautionHeadroom": null,
+      "reconciliationRevisionIds": [],
+      "priorBreaches": []
+    },
+    "result": {
+      "accountId": "00000000-0000-4000-8000-000000000001",
+      "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+      "assignmentId": "00000000-0000-4000-8000-000000000030",
+      "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+      "phasePathId": "00000000-0000-4000-8000-000000000041",
+      "engineVersion": "fundedflow-risk/1",
+      "tradingDay": "2026-10-20",
+      "asOf": "2026-10-20T20:00:00.000Z",
+      "dataAsOf": "2026-10-01T00:00:00.000Z",
+      "inputsHash": "22851d00cd13191fc30c003b682732958244dd8f8966bee3cd8cb8ab7d592c33",
+      "status": "Unknown",
+      "assurance": "user_reported_estimate",
+      "reasons": [
+        "incomplete_trade_history",
+        "insufficient_rule_evidence"
+      ],
+      "rules": [
+        {
+          "ruleId": "00000000-0000-4000-8000-000000000101",
+          "ruleKey": "rule_1",
+          "ruleType": "max_drawdown",
+          "state": "unknown",
+          "reasonCode": "insufficient_rule_evidence",
+          "metrics": {},
+          "formula": "",
+          "operands": {},
+          "sourceReferences": [
+            "00000000-0000-4000-8000-000000000002",
+            "00000000-0000-4000-8000-000000000042",
+            "00000000-0000-4000-8000-000000000200",
+            "00000000-0000-4000-8000-000000000300",
+            "Synthetic opening baseline"
+          ],
+          "missingInputs": [
+            "closedTrades",
+            "fees"
+          ],
+          "evidence": [
+            {
+              "requirement": "baseline",
+              "state": "available",
+              "reasonCode": "baseline_available",
+              "nextVerificationAction": "Verify rule applicability and semantics separately",
+              "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+              "asOf": "2026-10-20T20:00:00.000Z"
+            },
+            {
+              "requirement": "closedTrades",
+              "state": "missing",
+              "reasonCode": "closedTrades_missing",
+              "nextVerificationAction": "Supply or verify sourced closedTrades",
+              "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+              "asOf": "2026-10-20T20:00:00.000Z"
+            },
+            {
+              "requirement": "fees",
+              "state": "missing",
+              "reasonCode": "fees_missing",
+              "nextVerificationAction": "Supply or verify sourced fees",
+              "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+              "asOf": "2026-10-20T20:00:00.000Z"
+            },
+            {
+              "requirement": "ledger",
+              "state": "available",
+              "reasonCode": "ledger_available",
+              "nextVerificationAction": "Verify rule applicability and semantics separately",
+              "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+              "asOf": "2026-10-20T20:00:00.000Z"
+            }
+          ],
+          "assumptions": [
+            "User-reported financial evidence; not an official broker compliance determination"
+          ]
+        }
+      ],
+      "tradingDaysCompleted": null,
+      "balance": null,
+      "realizedDayPnl": null,
+      "sourceReferences": [
+        "00000000-0000-4000-8000-000000000002",
+        "00000000-0000-4000-8000-000000000042",
+        "Synthetic opening baseline"
+      ],
+      "assumptions": [
+        "Rust-normalized net realized P&L already includes fees",
+        "Coverage, checkpoints and actor labels are user-reported",
+        "Closed round trips do not establish live equity, execution counts or intraday peak history"
+      ]
+    },
+    "snapshot": {
+      "accountId": "00000000-0000-4000-8000-000000000001",
+      "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+      "tradingDay": "2026-10-20",
+      "isEndOfDay": true,
+      "dataAsOf": "2026-10-01T00:00:00.000Z",
+      "dataSource": "manual",
+      "engineVersion": "fundedflow-risk/1",
+      "inputsHash": "22851d00cd13191fc30c003b682732958244dd8f8966bee3cd8cb8ab7d592c33",
+      "feesIncluded": false,
+      "unrealizedIncluded": false,
+      "balance": null,
+      "realizedDayPnl": null,
+      "unrealizedPnl": null,
+      "dailyLossLimit": null,
+      "dailyLossRemaining": null,
+      "drawdownMode": "static",
+      "highWaterMark": null,
+      "drawdownFloor": null,
+      "drawdownHeadroom": null,
+      "drawdownLocked": null,
+      "profitTarget": null,
+      "tradingDaysCompleted": null,
+      "tradingDaysRequired": null,
+      "status": "unknown",
+      "statusReasons": [
+        "incomplete_trade_history",
+        "insufficient_rule_evidence"
+      ],
+      "explanation": {
+        "engine": {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+          "assignmentId": "00000000-0000-4000-8000-000000000030",
+          "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+          "phasePathId": "00000000-0000-4000-8000-000000000041",
+          "engineVersion": "fundedflow-risk/1",
+          "tradingDay": "2026-10-20",
+          "asOf": "2026-10-20T20:00:00.000Z",
+          "dataAsOf": "2026-10-01T00:00:00.000Z",
+          "inputsHash": "22851d00cd13191fc30c003b682732958244dd8f8966bee3cd8cb8ab7d592c33",
+          "status": "Unknown",
+          "assurance": "user_reported_estimate",
+          "reasons": [
+            "incomplete_trade_history",
+            "insufficient_rule_evidence"
+          ],
+          "rules": [
+            {
+              "ruleId": "00000000-0000-4000-8000-000000000101",
+              "ruleKey": "rule_1",
+              "ruleType": "max_drawdown",
+              "state": "unknown",
+              "reasonCode": "insufficient_rule_evidence",
+              "metrics": {},
+              "formula": "",
+              "operands": {},
+              "sourceReferences": [
+                "00000000-0000-4000-8000-000000000002",
+                "00000000-0000-4000-8000-000000000042",
+                "00000000-0000-4000-8000-000000000200",
+                "00000000-0000-4000-8000-000000000300",
+                "Synthetic opening baseline"
+              ],
+              "missingInputs": [
+                "closedTrades",
+                "fees"
+              ],
+              "evidence": [
+                {
+                  "requirement": "baseline",
+                  "state": "available",
+                  "reasonCode": "baseline_available",
+                  "nextVerificationAction": "Verify rule applicability and semantics separately",
+                  "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+                  "asOf": "2026-10-20T20:00:00.000Z"
+                },
+                {
+                  "requirement": "closedTrades",
+                  "state": "missing",
+                  "reasonCode": "closedTrades_missing",
+                  "nextVerificationAction": "Supply or verify sourced closedTrades",
+                  "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+                  "asOf": "2026-10-20T20:00:00.000Z"
+                },
+                {
+                  "requirement": "fees",
+                  "state": "missing",
+                  "reasonCode": "fees_missing",
+                  "nextVerificationAction": "Supply or verify sourced fees",
+                  "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+                  "asOf": "2026-10-20T20:00:00.000Z"
+                },
+                {
+                  "requirement": "ledger",
+                  "state": "available",
+                  "reasonCode": "ledger_available",
+                  "nextVerificationAction": "Verify rule applicability and semantics separately",
+                  "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+                  "asOf": "2026-10-20T20:00:00.000Z"
+                }
+              ],
+              "assumptions": [
+                "User-reported financial evidence; not an official broker compliance determination"
+              ]
+            }
+          ],
+          "tradingDaysCompleted": null,
+          "balance": null,
+          "realizedDayPnl": null,
+          "sourceReferences": [
+            "00000000-0000-4000-8000-000000000002",
+            "00000000-0000-4000-8000-000000000042",
+            "Synthetic opening baseline"
+          ],
+          "assumptions": [
+            "Rust-normalized net realized P&L already includes fees",
+            "Coverage, checkpoints and actor labels are user-reported",
+            "Closed round trips do not establish live equity, execution counts or intraday peak history"
+          ]
+        },
+        "inputs": {
+          "account": {
+            "accountType": "evaluation",
+            "archivedAt": null,
+            "broker": null,
+            "createdAt": "2026-10-01T00:00:00.000Z",
+            "currency": "USD",
+            "externalRef": "can-be-reused",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "name": "Synthetic attempt",
+            "notes": null,
+            "predecessorAccountId": null,
+            "propFirm": "Synthetic firm",
+            "startingBalance": "50000",
+            "status": "active",
+            "successorAccountId": null,
+            "timezone": "America/New_York",
+            "tradingDayResetTime": "17:00",
+            "updatedAt": "2026-10-01T00:00:00.000Z"
+          },
+          "applicableAssignment": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "accountPhaseEventId": "00000000-0000-4000-8000-000000000042",
+            "assignedAt": "2026-10-01T00:00:00.000Z",
+            "assignmentSource": "user",
+            "effectiveFrom": "2026-10-01",
+            "effectiveTo": null,
+            "id": "00000000-0000-4000-8000-000000000030",
+            "phasePathId": "00000000-0000-4000-8000-000000000041",
+            "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000020"
+          },
+          "applicableRulebook": null,
+          "asOf": "2026-10-20T20:00:00.000Z",
+          "assignments": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "accountPhaseEventId": "00000000-0000-4000-8000-000000000042",
+              "assignedAt": "2026-10-01T00:00:00.000Z",
+              "assignmentSource": "user",
+              "effectiveFrom": "2026-10-01",
+              "effectiveTo": null,
+              "id": "00000000-0000-4000-8000-000000000030",
+              "phasePathId": "00000000-0000-4000-8000-000000000041",
+              "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+              "rulebookVersionId": "00000000-0000-4000-8000-000000000020"
+            }
+          ],
+          "catalogueLink": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+            "parentAccountId": null,
+            "programmeVariantId": "00000000-0000-4000-8000-000000000011",
+            "providerId": "00000000-0000-4000-8000-000000000010",
+            "selectedPhasePathId": "00000000-0000-4000-8000-000000000041",
+            "sizeSource": "user_entered"
+          },
+          "coverage": {
+            "baseline": "available",
+            "closedTrades": "missing",
+            "eodHistory": "missing",
+            "fees": "missing",
+            "intradayHistory": "unsupported",
+            "ledger": "available",
+            "openPositions": "missing",
+            "sourceReference": "Synthetic full interval assertion"
+          },
+          "effectiveTradingDay": "2026-10-20",
+          "ledger": [],
+          "ledgerHistory": [],
+          "missingInputs": [],
+          "observations": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "actor": "synthetic user",
+              "basis": "balance",
+              "confidence": "user_reported",
+              "confirmation": "user_confirmed",
+              "correctionReason": null,
+              "currency": "USD",
+              "effectiveTradingDay": "2026-10-01",
+              "id": "00000000-0000-4000-8000-000000000002",
+              "kind": "opening_balance",
+              "note": null,
+              "observedAt": "2026-10-01T00:00:00.000Z",
+              "recordedAt": "2026-10-01T00:00:00.000Z",
+              "sourceCategory": "firm_dashboard",
+              "sourceReference": "Synthetic opening baseline",
+              "supersedesId": null,
+              "timezone": "America/New_York",
+              "tradingDayResetTime": "17:00",
+              "validUntil": null,
+              "value": "50000"
+            }
+          ],
+          "phaseHistory": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "actor": "user",
+              "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+              "correctionOfEventId": null,
+              "fromPhase": null,
+              "id": "00000000-0000-4000-8000-000000000042",
+              "note": null,
+              "occurredAt": "2026-10-01T00:00:00.000Z",
+              "phasePathId": "00000000-0000-4000-8000-000000000041",
+              "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+              "providerLabel": null,
+              "recordedAt": "2026-10-01T00:00:00.000Z",
+              "source": "user_entered",
+              "toPhase": "evaluation"
+            }
+          ],
+          "rulebookVersions": [
+            {
+              "applicability": [
+                {
+                  "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+                  "id": "00000000-0000-4000-8000-000000000043",
+                  "phasePathId": "00000000-0000-4000-8000-000000000041",
+                  "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+                  "rulebookVersionId": "00000000-0000-4000-8000-000000000020"
+                }
+              ],
+              "claims": [
+                {
+                  "claimStatus": "verified",
+                  "createdAt": "2026-10-01T00:00:00.000Z",
+                  "field": null,
+                  "id": "00000000-0000-4000-8000-000000000200",
+                  "note": null,
+                  "origin": "provider_stated",
+                  "providerText": "Synthetic complete parameter and boundary claim",
+                  "reviewedAt": "2026-10-01T00:00:00.000Z",
+                  "reviewedBy": "synthetic reviewer",
+                  "ruleDefinitionId": "00000000-0000-4000-8000-000000000101",
+                  "sourceId": "00000000-0000-4000-8000-000000000300"
+                }
+              ],
+              "rulebook": {
+                "createdAt": "2026-10-01T00:00:00.000Z",
+                "description": null,
+                "displayName": "Synthetic",
+                "id": "00000000-0000-4000-8000-000000000019",
+                "ownerAccountId": null,
+                "providerId": "00000000-0000-4000-8000-000000000010",
+                "recordStatus": "active",
+                "slug": "synthetic",
+                "updatedAt": "2026-10-01T00:00:00.000Z"
+              },
+              "rules": [
+                {
+                  "displayLabel": null,
+                  "displayOrder": 1,
+                  "id": "00000000-0000-4000-8000-000000000101",
+                  "overrideKind": null,
+                  "parameterSchemaVersion": 1,
+                  "parameters": {
+                    "amount": {
+                      "state": "value",
+                      "value": "2000"
+                    },
+                    "basis": "realized",
+                    "lock": {
+                      "state": "explicit_none"
+                    },
+                    "method": "static"
+                  },
+                  "providerLabel": "Synthetic sourced rule",
+                  "ruleKey": "rule_1",
+                  "ruleType": "max_drawdown",
+                  "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+                  "sourceText": "Synthetic parameter fixture, not provider terms",
+                  "supportStatus": "supported"
+                }
+              ],
+              "version": {
+                "capturedAt": "2026-10-01T00:00:00.000Z",
+                "changeReason": null,
+                "createdAt": "2026-10-01T00:00:00.000Z",
+                "effectiveFrom": null,
+                "effectiveTo": null,
+                "id": "00000000-0000-4000-8000-000000000020",
+                "origin": "catalogue",
+                "recordStatus": "active",
+                "rulebookId": "00000000-0000-4000-8000-000000000019",
+                "schemaVersion": 1,
+                "supersedesVersionId": null,
+                "updatedAt": "2026-10-01T00:00:00.000Z",
+                "userConfirmedAt": null,
+                "verificationStatus": "verified",
+                "verifiedAt": "2026-10-01T00:00:00.000Z",
+                "verifiedBy": "synthetic reviewer",
+                "versionNumber": 1
+              }
+            }
+          ],
+          "schemaVersion": 1,
+          "trades": []
+        },
+        "policy": {
+          "boundary": "touch_is_breach",
+          "boundarySourceClaimIds": [
+            "00000000-0000-4000-8000-000000000200"
+          ],
+          "personalCautionHeadroom": null,
+          "priorBreaches": [],
+          "reconciliationRevisionIds": [],
+          "ruleCurrency": "USD",
+          "ruleCurrencySourceClaimIds": [
+            "00000000-0000-4000-8000-000000000200"
+          ]
+        },
+        "recalculation": "New source/correction/version/as-of/policy changes inputsHash; preserve older rows"
+      }
+    }
+  },
+  {
+    "name": "micro",
+    "input": {
+      "schemaVersion": 1,
+      "account": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": "Synthetic attempt",
+        "broker": null,
+        "propFirm": "Synthetic firm",
+        "externalRef": "can-be-reused",
+        "accountType": "evaluation",
+        "status": "active",
+        "currency": "USD",
+        "startingBalance": "50000",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00",
+        "notes": null,
+        "createdAt": "2026-10-01T00:00:00.000Z",
+        "updatedAt": "2026-10-01T00:00:00.000Z",
+        "archivedAt": null,
+        "predecessorAccountId": null,
+        "successorAccountId": null
+      },
+      "asOf": "2026-10-20T20:00:00.000Z",
+      "effectiveTradingDay": "2026-10-20",
+      "observations": [
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "kind": "opening_balance",
+          "value": "50000",
+          "currency": "USD",
+          "basis": "balance",
+          "observedAt": "2026-10-01T00:00:00.000Z",
+          "sourceCategory": "firm_dashboard",
+          "sourceReference": "Synthetic opening baseline",
+          "confirmation": "user_confirmed",
+          "confidence": "user_reported",
+          "validUntil": null,
+          "actor": "synthetic user",
+          "note": null,
+          "id": "00000000-0000-4000-8000-000000000002",
+          "recordedAt": "2026-10-01T00:00:00.000Z",
+          "effectiveTradingDay": "2026-10-01",
+          "timezone": "America/New_York",
+          "tradingDayResetTime": "17:00",
+          "supersedesId": null,
+          "correctionReason": null
+        }
+      ],
+      "trades": [
+        {
+          "id": "00000000-0000-4000-8000-000000000401",
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "source": "manual",
+          "importBatchId": null,
+          "brokerTradeId": null,
+          "symbol": "ES",
+          "side": "long",
+          "quantity": "1",
+          "entryAt": "2026-10-20T12:00:00.000Z",
+          "exitAt": "2026-10-20T13:00:00.000Z",
+          "entryPrice": "5000",
+          "exitPrice": "5001",
+          "fees": "0",
+          "tradingDay": "2026-10-20",
+          "reportedPnl": "0.000001",
+          "grossPnl": "0.000001",
+          "realizedPnl": "0.000001",
+          "pnlStatus": "reported",
+          "notes": null,
+          "roundTrip": null,
+          "createdAt": "2026-10-20T20:00:00.000Z",
+          "updatedAt": "2026-10-20T20:00:00.000Z"
+        }
+      ],
+      "ledger": [],
+      "ledgerHistory": [],
+      "phaseHistory": [
+        {
+          "id": "00000000-0000-4000-8000-000000000042",
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "fromPhase": null,
+          "toPhase": "evaluation",
+          "providerLabel": null,
+          "occurredAt": "2026-10-01T00:00:00.000Z",
+          "recordedAt": "2026-10-01T00:00:00.000Z",
+          "source": "user_entered",
+          "actor": "user",
+          "note": null,
+          "correctionOfEventId": null,
+          "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+          "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+          "phasePathId": "00000000-0000-4000-8000-000000000041"
+        }
+      ],
+      "catalogueLink": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "providerId": "00000000-0000-4000-8000-000000000010",
+        "programmeVariantId": "00000000-0000-4000-8000-000000000011",
+        "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+        "selectedPhasePathId": "00000000-0000-4000-8000-000000000041",
+        "parentAccountId": null,
+        "sizeSource": "user_entered"
+      },
+      "assignments": [
+        {
+          "id": "00000000-0000-4000-8000-000000000030",
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+          "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+          "phasePathId": "00000000-0000-4000-8000-000000000041",
+          "accountPhaseEventId": "00000000-0000-4000-8000-000000000042",
+          "effectiveFrom": "2026-10-01",
+          "effectiveTo": null,
+          "assignedAt": "2026-10-01T00:00:00.000Z",
+          "assignmentSource": "user"
+        }
+      ],
+      "rulebookVersions": [
+        {
+          "rulebook": {
+            "id": "00000000-0000-4000-8000-000000000019",
+            "providerId": "00000000-0000-4000-8000-000000000010",
+            "ownerAccountId": null,
+            "slug": "synthetic",
+            "displayName": "Synthetic",
+            "description": null,
+            "recordStatus": "active",
+            "createdAt": "2026-10-01T00:00:00.000Z",
+            "updatedAt": "2026-10-01T00:00:00.000Z"
+          },
+          "version": {
+            "id": "00000000-0000-4000-8000-000000000020",
+            "rulebookId": "00000000-0000-4000-8000-000000000019",
+            "versionNumber": 1,
+            "schemaVersion": 1,
+            "verificationStatus": "verified",
+            "origin": "catalogue",
+            "capturedAt": "2026-10-01T00:00:00.000Z",
+            "effectiveFrom": null,
+            "effectiveTo": null,
+            "verifiedBy": "synthetic reviewer",
+            "verifiedAt": "2026-10-01T00:00:00.000Z",
+            "userConfirmedAt": null,
+            "changeReason": null,
+            "supersedesVersionId": null,
+            "recordStatus": "active",
+            "createdAt": "2026-10-01T00:00:00.000Z",
+            "updatedAt": "2026-10-01T00:00:00.000Z"
+          },
+          "rules": [
+            {
+              "id": "00000000-0000-4000-8000-000000000101",
+              "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+              "ruleKey": "rule_1",
+              "parameterSchemaVersion": 1,
+              "providerLabel": "Synthetic sourced rule",
+              "displayLabel": null,
+              "sourceText": "Synthetic parameter fixture, not provider terms",
+              "supportStatus": "supported",
+              "overrideKind": null,
+              "displayOrder": 1,
+              "ruleType": "max_drawdown",
+              "parameters": {
+                "amount": {
+                  "state": "value",
+                  "value": "2000"
+                },
+                "method": "static",
+                "basis": "realized",
+                "lock": {
+                  "state": "explicit_none"
+                }
+              }
+            }
+          ],
+          "applicability": [
+            {
+              "id": "00000000-0000-4000-8000-000000000043",
+              "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+              "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+              "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+              "phasePathId": "00000000-0000-4000-8000-000000000041"
+            }
+          ],
+          "claims": [
+            {
+              "id": "00000000-0000-4000-8000-000000000200",
+              "ruleDefinitionId": "00000000-0000-4000-8000-000000000101",
+              "sourceId": "00000000-0000-4000-8000-000000000300",
+              "field": null,
+              "origin": "provider_stated",
+              "providerText": "Synthetic complete parameter and boundary claim",
+              "claimStatus": "verified",
+              "note": null,
+              "reviewedBy": "synthetic reviewer",
+              "reviewedAt": "2026-10-01T00:00:00.000Z",
+              "createdAt": "2026-10-01T00:00:00.000Z"
+            }
+          ]
+        }
+      ],
+      "applicableAssignment": {
+        "id": "00000000-0000-4000-8000-000000000030",
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+        "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+        "phasePathId": "00000000-0000-4000-8000-000000000041",
+        "accountPhaseEventId": "00000000-0000-4000-8000-000000000042",
+        "effectiveFrom": "2026-10-01",
+        "effectiveTo": null,
+        "assignedAt": "2026-10-01T00:00:00.000Z",
+        "assignmentSource": "user"
+      },
+      "applicableRulebook": null,
+      "coverage": {
+        "baseline": "available",
+        "closedTrades": "available",
+        "fees": "available",
+        "ledger": "available",
+        "openPositions": "missing",
+        "eodHistory": "missing",
+        "intradayHistory": "unsupported",
+        "sourceReference": "Synthetic full interval assertion"
+      },
+      "missingInputs": []
+    },
+    "policy": {
+      "ruleCurrency": "USD",
+      "ruleCurrencySourceClaimIds": [
+        "00000000-0000-4000-8000-000000000200"
+      ],
+      "boundary": "touch_is_breach",
+      "boundarySourceClaimIds": [
+        "00000000-0000-4000-8000-000000000200"
+      ],
+      "personalCautionHeadroom": null,
+      "reconciliationRevisionIds": [],
+      "priorBreaches": []
+    },
+    "result": {
+      "accountId": "00000000-0000-4000-8000-000000000001",
+      "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+      "assignmentId": "00000000-0000-4000-8000-000000000030",
+      "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+      "phasePathId": "00000000-0000-4000-8000-000000000041",
+      "engineVersion": "fundedflow-risk/1",
+      "tradingDay": "2026-10-20",
+      "asOf": "2026-10-20T20:00:00.000Z",
+      "dataAsOf": "2026-10-20T13:00:00.000Z",
+      "inputsHash": "5717341c41d93815efb0132a3c72cd281dabd9bf9fb1f1431612c8783c1f8167",
+      "status": "Safe",
+      "assurance": "user_reported_estimate",
+      "reasons": [],
+      "rules": [
+        {
+          "ruleId": "00000000-0000-4000-8000-000000000101",
+          "ruleKey": "rule_1",
+          "ruleType": "max_drawdown",
+          "state": "satisfied",
+          "reasonCode": "satisfied",
+          "metrics": {
+            "highWaterMark": "50000",
+            "drawdownFloor": "48000",
+            "drawdownHeadroom": "2000.000001",
+            "drawdownLocked": false
+          },
+          "formula": "floor = initial reference (static) or sourced high-water mark (trailing) minus amount, or sourced locked floor; headroom = comparable balance - floor",
+          "operands": {
+            "opening": "50000",
+            "amount": "2000",
+            "highWaterMark": "50000"
+          },
+          "sourceReferences": [
+            "00000000-0000-4000-8000-000000000002",
+            "00000000-0000-4000-8000-000000000042",
+            "00000000-0000-4000-8000-000000000200",
+            "00000000-0000-4000-8000-000000000300",
+            "00000000-0000-4000-8000-000000000401",
+            "Synthetic opening baseline"
+          ],
+          "missingInputs": [],
+          "evidence": [
+            {
+              "requirement": "baseline",
+              "state": "available",
+              "reasonCode": "baseline_available",
+              "nextVerificationAction": "Verify rule applicability and semantics separately",
+              "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+              "asOf": "2026-10-20T20:00:00.000Z"
+            },
+            {
+              "requirement": "closedTrades",
+              "state": "available",
+              "reasonCode": "closedTrades_available",
+              "nextVerificationAction": "Verify rule applicability and semantics separately",
+              "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+              "asOf": "2026-10-20T20:00:00.000Z"
+            },
+            {
+              "requirement": "fees",
+              "state": "available",
+              "reasonCode": "fees_available",
+              "nextVerificationAction": "Verify rule applicability and semantics separately",
+              "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+              "asOf": "2026-10-20T20:00:00.000Z"
+            },
+            {
+              "requirement": "ledger",
+              "state": "available",
+              "reasonCode": "ledger_available",
+              "nextVerificationAction": "Verify rule applicability and semantics separately",
+              "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+              "asOf": "2026-10-20T20:00:00.000Z"
+            }
+          ],
+          "assumptions": [
+            "User-reported financial evidence; not an official broker compliance determination"
+          ]
+        }
+      ],
+      "tradingDaysCompleted": 1,
+      "balance": "50000.000001",
+      "realizedDayPnl": "0.000001",
+      "sourceReferences": [
+        "00000000-0000-4000-8000-000000000002",
+        "00000000-0000-4000-8000-000000000042",
+        "00000000-0000-4000-8000-000000000401",
+        "Synthetic opening baseline"
+      ],
+      "assumptions": [
+        "Rust-normalized net realized P&L already includes fees",
+        "Coverage, checkpoints and actor labels are user-reported",
+        "Closed round trips do not establish live equity, execution counts or intraday peak history"
+      ]
+    },
+    "snapshot": {
+      "accountId": "00000000-0000-4000-8000-000000000001",
+      "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+      "tradingDay": "2026-10-20",
+      "isEndOfDay": true,
+      "dataAsOf": "2026-10-20T13:00:00.000Z",
+      "dataSource": "manual",
+      "engineVersion": "fundedflow-risk/1",
+      "inputsHash": "5717341c41d93815efb0132a3c72cd281dabd9bf9fb1f1431612c8783c1f8167",
+      "feesIncluded": true,
+      "unrealizedIncluded": false,
+      "balance": "50000.000001",
+      "realizedDayPnl": "0.000001",
+      "unrealizedPnl": null,
+      "dailyLossLimit": null,
+      "dailyLossRemaining": null,
+      "drawdownMode": "static",
+      "highWaterMark": "50000",
+      "drawdownFloor": "48000",
+      "drawdownHeadroom": "2000.000001",
+      "drawdownLocked": false,
+      "profitTarget": null,
+      "tradingDaysCompleted": 1,
+      "tradingDaysRequired": null,
+      "status": "safe",
+      "statusReasons": [],
+      "explanation": {
+        "engine": {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+          "assignmentId": "00000000-0000-4000-8000-000000000030",
+          "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+          "phasePathId": "00000000-0000-4000-8000-000000000041",
+          "engineVersion": "fundedflow-risk/1",
+          "tradingDay": "2026-10-20",
+          "asOf": "2026-10-20T20:00:00.000Z",
+          "dataAsOf": "2026-10-20T13:00:00.000Z",
+          "inputsHash": "5717341c41d93815efb0132a3c72cd281dabd9bf9fb1f1431612c8783c1f8167",
+          "status": "Safe",
+          "assurance": "user_reported_estimate",
+          "reasons": [],
+          "rules": [
+            {
+              "ruleId": "00000000-0000-4000-8000-000000000101",
+              "ruleKey": "rule_1",
+              "ruleType": "max_drawdown",
+              "state": "satisfied",
+              "reasonCode": "satisfied",
+              "metrics": {
+                "highWaterMark": "50000",
+                "drawdownFloor": "48000",
+                "drawdownHeadroom": "2000.000001",
+                "drawdownLocked": false
+              },
+              "formula": "floor = initial reference (static) or sourced high-water mark (trailing) minus amount, or sourced locked floor; headroom = comparable balance - floor",
+              "operands": {
+                "opening": "50000",
+                "amount": "2000",
+                "highWaterMark": "50000"
+              },
+              "sourceReferences": [
+                "00000000-0000-4000-8000-000000000002",
+                "00000000-0000-4000-8000-000000000042",
+                "00000000-0000-4000-8000-000000000200",
+                "00000000-0000-4000-8000-000000000300",
+                "00000000-0000-4000-8000-000000000401",
+                "Synthetic opening baseline"
+              ],
+              "missingInputs": [],
+              "evidence": [
+                {
+                  "requirement": "baseline",
+                  "state": "available",
+                  "reasonCode": "baseline_available",
+                  "nextVerificationAction": "Verify rule applicability and semantics separately",
+                  "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+                  "asOf": "2026-10-20T20:00:00.000Z"
+                },
+                {
+                  "requirement": "closedTrades",
+                  "state": "available",
+                  "reasonCode": "closedTrades_available",
+                  "nextVerificationAction": "Verify rule applicability and semantics separately",
+                  "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+                  "asOf": "2026-10-20T20:00:00.000Z"
+                },
+                {
+                  "requirement": "fees",
+                  "state": "available",
+                  "reasonCode": "fees_available",
+                  "nextVerificationAction": "Verify rule applicability and semantics separately",
+                  "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+                  "asOf": "2026-10-20T20:00:00.000Z"
+                },
+                {
+                  "requirement": "ledger",
+                  "state": "available",
+                  "reasonCode": "ledger_available",
+                  "nextVerificationAction": "Verify rule applicability and semantics separately",
+                  "sourceSummary": "User-reported input sufficiency only; not provider compliance",
+                  "asOf": "2026-10-20T20:00:00.000Z"
+                }
+              ],
+              "assumptions": [
+                "User-reported financial evidence; not an official broker compliance determination"
+              ]
+            }
+          ],
+          "tradingDaysCompleted": 1,
+          "balance": "50000.000001",
+          "realizedDayPnl": "0.000001",
+          "sourceReferences": [
+            "00000000-0000-4000-8000-000000000002",
+            "00000000-0000-4000-8000-000000000042",
+            "00000000-0000-4000-8000-000000000401",
+            "Synthetic opening baseline"
+          ],
+          "assumptions": [
+            "Rust-normalized net realized P&L already includes fees",
+            "Coverage, checkpoints and actor labels are user-reported",
+            "Closed round trips do not establish live equity, execution counts or intraday peak history"
+          ]
+        },
+        "inputs": {
+          "account": {
+            "accountType": "evaluation",
+            "archivedAt": null,
+            "broker": null,
+            "createdAt": "2026-10-01T00:00:00.000Z",
+            "currency": "USD",
+            "externalRef": "can-be-reused",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "name": "Synthetic attempt",
+            "notes": null,
+            "predecessorAccountId": null,
+            "propFirm": "Synthetic firm",
+            "startingBalance": "50000",
+            "status": "active",
+            "successorAccountId": null,
+            "timezone": "America/New_York",
+            "tradingDayResetTime": "17:00",
+            "updatedAt": "2026-10-01T00:00:00.000Z"
+          },
+          "applicableAssignment": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "accountPhaseEventId": "00000000-0000-4000-8000-000000000042",
+            "assignedAt": "2026-10-01T00:00:00.000Z",
+            "assignmentSource": "user",
+            "effectiveFrom": "2026-10-01",
+            "effectiveTo": null,
+            "id": "00000000-0000-4000-8000-000000000030",
+            "phasePathId": "00000000-0000-4000-8000-000000000041",
+            "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000020"
+          },
+          "applicableRulebook": null,
+          "asOf": "2026-10-20T20:00:00.000Z",
+          "assignments": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "accountPhaseEventId": "00000000-0000-4000-8000-000000000042",
+              "assignedAt": "2026-10-01T00:00:00.000Z",
+              "assignmentSource": "user",
+              "effectiveFrom": "2026-10-01",
+              "effectiveTo": null,
+              "id": "00000000-0000-4000-8000-000000000030",
+              "phasePathId": "00000000-0000-4000-8000-000000000041",
+              "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+              "rulebookVersionId": "00000000-0000-4000-8000-000000000020"
+            }
+          ],
+          "catalogueLink": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+            "parentAccountId": null,
+            "programmeVariantId": "00000000-0000-4000-8000-000000000011",
+            "providerId": "00000000-0000-4000-8000-000000000010",
+            "selectedPhasePathId": "00000000-0000-4000-8000-000000000041",
+            "sizeSource": "user_entered"
+          },
+          "coverage": {
+            "baseline": "available",
+            "closedTrades": "available",
+            "eodHistory": "missing",
+            "fees": "available",
+            "intradayHistory": "unsupported",
+            "ledger": "available",
+            "openPositions": "missing",
+            "sourceReference": "Synthetic full interval assertion"
+          },
+          "effectiveTradingDay": "2026-10-20",
+          "ledger": [],
+          "ledgerHistory": [],
+          "missingInputs": [],
+          "observations": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "actor": "synthetic user",
+              "basis": "balance",
+              "confidence": "user_reported",
+              "confirmation": "user_confirmed",
+              "correctionReason": null,
+              "currency": "USD",
+              "effectiveTradingDay": "2026-10-01",
+              "id": "00000000-0000-4000-8000-000000000002",
+              "kind": "opening_balance",
+              "note": null,
+              "observedAt": "2026-10-01T00:00:00.000Z",
+              "recordedAt": "2026-10-01T00:00:00.000Z",
+              "sourceCategory": "firm_dashboard",
+              "sourceReference": "Synthetic opening baseline",
+              "supersedesId": null,
+              "timezone": "America/New_York",
+              "tradingDayResetTime": "17:00",
+              "validUntil": null,
+              "value": "50000"
+            }
+          ],
+          "phaseHistory": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "actor": "user",
+              "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+              "correctionOfEventId": null,
+              "fromPhase": null,
+              "id": "00000000-0000-4000-8000-000000000042",
+              "note": null,
+              "occurredAt": "2026-10-01T00:00:00.000Z",
+              "phasePathId": "00000000-0000-4000-8000-000000000041",
+              "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+              "providerLabel": null,
+              "recordedAt": "2026-10-01T00:00:00.000Z",
+              "source": "user_entered",
+              "toPhase": "evaluation"
+            }
+          ],
+          "rulebookVersions": [
+            {
+              "applicability": [
+                {
+                  "catalogueVersionId": "00000000-0000-4000-8000-000000000012",
+                  "id": "00000000-0000-4000-8000-000000000043",
+                  "phasePathId": "00000000-0000-4000-8000-000000000041",
+                  "programmePhaseId": "00000000-0000-4000-8000-000000000040",
+                  "rulebookVersionId": "00000000-0000-4000-8000-000000000020"
+                }
+              ],
+              "claims": [
+                {
+                  "claimStatus": "verified",
+                  "createdAt": "2026-10-01T00:00:00.000Z",
+                  "field": null,
+                  "id": "00000000-0000-4000-8000-000000000200",
+                  "note": null,
+                  "origin": "provider_stated",
+                  "providerText": "Synthetic complete parameter and boundary claim",
+                  "reviewedAt": "2026-10-01T00:00:00.000Z",
+                  "reviewedBy": "synthetic reviewer",
+                  "ruleDefinitionId": "00000000-0000-4000-8000-000000000101",
+                  "sourceId": "00000000-0000-4000-8000-000000000300"
+                }
+              ],
+              "rulebook": {
+                "createdAt": "2026-10-01T00:00:00.000Z",
+                "description": null,
+                "displayName": "Synthetic",
+                "id": "00000000-0000-4000-8000-000000000019",
+                "ownerAccountId": null,
+                "providerId": "00000000-0000-4000-8000-000000000010",
+                "recordStatus": "active",
+                "slug": "synthetic",
+                "updatedAt": "2026-10-01T00:00:00.000Z"
+              },
+              "rules": [
+                {
+                  "displayLabel": null,
+                  "displayOrder": 1,
+                  "id": "00000000-0000-4000-8000-000000000101",
+                  "overrideKind": null,
+                  "parameterSchemaVersion": 1,
+                  "parameters": {
+                    "amount": {
+                      "state": "value",
+                      "value": "2000"
+                    },
+                    "basis": "realized",
+                    "lock": {
+                      "state": "explicit_none"
+                    },
+                    "method": "static"
+                  },
+                  "providerLabel": "Synthetic sourced rule",
+                  "ruleKey": "rule_1",
+                  "ruleType": "max_drawdown",
+                  "rulebookVersionId": "00000000-0000-4000-8000-000000000020",
+                  "sourceText": "Synthetic parameter fixture, not provider terms",
+                  "supportStatus": "supported"
+                }
+              ],
+              "version": {
+                "capturedAt": "2026-10-01T00:00:00.000Z",
+                "changeReason": null,
+                "createdAt": "2026-10-01T00:00:00.000Z",
+                "effectiveFrom": null,
+                "effectiveTo": null,
+                "id": "00000000-0000-4000-8000-000000000020",
+                "origin": "catalogue",
+                "recordStatus": "active",
+                "rulebookId": "00000000-0000-4000-8000-000000000019",
+                "schemaVersion": 1,
+                "supersedesVersionId": null,
+                "updatedAt": "2026-10-01T00:00:00.000Z",
+                "userConfirmedAt": null,
+                "verificationStatus": "verified",
+                "verifiedAt": "2026-10-01T00:00:00.000Z",
+                "verifiedBy": "synthetic reviewer",
+                "versionNumber": 1
+              }
+            }
+          ],
+          "schemaVersion": 1,
+          "trades": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "brokerTradeId": null,
+              "createdAt": "2026-10-20T20:00:00.000Z",
+              "entryAt": "2026-10-20T12:00:00.000Z",
+              "entryPrice": "5000",
+              "exitAt": "2026-10-20T13:00:00.000Z",
+              "exitPrice": "5001",
+              "fees": "0",
+              "grossPnl": "0.000001",
+              "id": "00000000-0000-4000-8000-000000000401",
+              "importBatchId": null,
+              "notes": null,
+              "pnlStatus": "reported",
+              "quantity": "1",
+              "realizedPnl": "0.000001",
+              "reportedPnl": "0.000001",
+              "roundTrip": null,
+              "side": "long",
+              "source": "manual",
+              "symbol": "ES",
+              "tradingDay": "2026-10-20",
+              "updatedAt": "2026-10-20T20:00:00.000Z"
+            }
+          ]
+        },
+        "policy": {
+          "boundary": "touch_is_breach",
+          "boundarySourceClaimIds": [
+            "00000000-0000-4000-8000-000000000200"
+          ],
+          "personalCautionHeadroom": null,
+          "priorBreaches": [],
+          "reconciliationRevisionIds": [],
+          "ruleCurrency": "USD",
+          "ruleCurrencySourceClaimIds": [
+            "00000000-0000-4000-8000-000000000200"
+          ]
+        },
+        "recalculation": "New source/correction/version/as-of/policy changes inputsHash; preserve older rows"
+      }
+    }
+  }
+]

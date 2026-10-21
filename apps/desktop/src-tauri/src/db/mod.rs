@@ -106,6 +106,7 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "financial_evidence",
         step: Step::Sql(include_str!("../../migrations/0014_financial_evidence.sql")),
     },
+    Migration { version: 15, name: "nullable_engine_snapshots", step: Step::Sql(include_str!("../../migrations/0015_nullable_engine_snapshots.sql")) },
 ];
 
 /// Latest schema version this build understands.

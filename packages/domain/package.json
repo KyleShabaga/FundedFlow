@@ -24,13 +24,16 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "check:boundaries": "node scripts/check-boundaries.mjs",
-    "check:dist": "node scripts/check-dist.mjs"
+    "check:dist": "node scripts/check-dist.mjs",
+    "check:engine-runtimes": "node scripts/check-engine-runtimes.mjs",
+    "fixtures:engine": "node scripts/generate-engine-contract-fixture.mjs"
   },
   "dependencies": {
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "typescript": "~6.0.3",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "vite": "^8.0.16"
   }
 }
