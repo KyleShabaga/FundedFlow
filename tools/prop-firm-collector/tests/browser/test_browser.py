@@ -158,3 +158,24 @@ def test_in_browser_redirect_to_a_robots_disallowed_page_is_refused(
     summary = harness.run(discover=False)
     assert [r.outcome.value for r in summary.results] == ["robots_blocked"]
     assert harness.conn.execute("SELECT COUNT(*) FROM source_snapshots").fetchone()[0] == 0
+
+
+@pytest.mark.browser
+@pytest.mark.enable_socket
+def test_a_client_rendered_publisher_list_is_read_through_the_same_browser_fallback(
+    chromium: None, dharness: Harness
+) -> None:
+    """The static list is empty (js_unavailable); the existing allowlisted browser renders it, and the adapter then
+    follows only the publisher's own firm pages."""
+    from tests.conftest import install_publisher, run_publisher
+
+    dharness.renderer = renderer()
+    install_publisher(dharness.conn, dharness.clock, "propfirmgorilla")
+    summary = run_publisher(dharness, "propfirmgorilla")
+    listing = next(r for r in summary.results if r.url == "https://propfirmgorilla.com/firms")
+    assert listing.directory == "collected"
+    pages = {r.url: r.directory for r in summary.results}
+    assert pages["https://propfirmgorilla.com/firms/northwind-futures"] == "collected"
+    methods = {r[0] for r in dharness.conn.execute("SELECT DISTINCT capture_channel FROM directory_observations")}
+    assert methods <= {"fixture_replay"}
+    assert all(u.startswith("https://propfirmgorilla.com/") for u in dharness.site.requests)

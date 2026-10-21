@@ -10,10 +10,10 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from fundedflow_collector.cli import admin_cmds, run_cmds
+from fundedflow_collector.cli import admin_cmds, directory_cmds, run_cmds
 from fundedflow_collector.cli.main import app
 from fundedflow_collector.clock import FakeClock
-from tests.conftest import CAPTURES, FIXTURE_SITE, PROJECT
+from tests.conftest import CAPTURES, DIRECTORY_CAPTURES, DIRECTORY_SITE, FIXTURE_SITE, PROJECT
 
 runner = CliRunner()
 COMMANDS = [
@@ -51,6 +51,31 @@ COMMANDS = [
     ["prune-raw"],
     ["reset"],
     ["gui"],
+    ["directory"],
+    ["directory", "presets"],
+    ["directory", "add-preset"],
+    ["directory", "add"],
+    ["directory", "list"],
+    ["directory", "show"],
+    ["directory", "update"],
+    ["directory", "enable"],
+    ["directory", "disable"],
+    ["directory", "host-add"],
+    ["directory", "terms"],
+    ["directory", "seed-add"],
+    ["directory", "fetch"],
+    ["directory", "capture"],
+    ["directory", "observations"],
+    ["directory", "show-observation"],
+    ["directory", "export"],
+    ["directory", "adapters"],
+    ["directory", "review"],
+    ["directory", "review", "list"],
+    ["directory", "review", "map"],
+    ["directory", "review", "separate"],
+    ["directory", "review", "note"],
+    ["directory", "review", "verify"],
+    ["directory", "review", "unverify"],
 ]
 
 
@@ -63,6 +88,7 @@ def cli(*args: str) -> tuple[int, str]:
 def fake_run_clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
     clock = FakeClock()
     monkeypatch.setattr(run_cmds, "clock", clock)
+    monkeypatch.setattr(directory_cmds, "clock", clock)
     # The browser adapter has its own tests (tests/browser); here it is reported as unavailable.
     monkeypatch.setattr(run_cmds, "browser_status", lambda: (False, "not used in CLI tests"))
     monkeypatch.setattr(admin_cmds, "browser_status", lambda: (False, "not used in CLI tests"))
@@ -285,3 +311,81 @@ def test_synthetic_walkthrough(ready: Path, tmp_path: Path) -> None:
     assert code == 0 and "app database was not touched" in output
     assert not (Path(os.environ["FFC_DATA_DIR"]) / "collector.db").exists()
     assert (Path(os.environ["FFC_DATA_DIR"]) / "collector.toml").exists()
+
+
+def test_directory_walkthrough(ready: Path, tmp_path: Path) -> None:
+    """Presets, policy gates, a practice collection, a manual capture, review and export, all through the CLI."""
+    code, output = cli("directory", "presets")
+    assert code == 0 and "propfirmmatch-futures" in output and "manual_only" in output
+    assert cli("directory", "add-preset", "--all")[0] == 0
+    code, output = cli("directory", "fetch", "--publisher", "onlypropfirms")
+    assert code == 4 and "disabled" in output  # nothing fetched before review (exit 4, as for a disabled firm)
+    code, output = cli("directory", "enable", "onlypropfirms")
+    assert code == 3 and "terms review" in output
+    code, output = cli("directory", "enable", "propfirmmatch-futures")
+    assert code == 3 and "manual capture only" in output
+    code, output = cli("directory", "fetch", "--publisher", "onlypropfirms", "--dry-run")
+    assert code == 4 and "terms_blocked" in output and "collector directory terms" in output
+    terms = [
+        "directory",
+        "terms",
+        "--publisher",
+        "onlypropfirms",
+        "--host",
+        "onlypropfirms.com",
+        "--decision",
+        "unclear",
+        "--terms-url",
+        "https://onlypropfirms.com/privacy-policy",
+        "--accept-unclear-terms",
+    ]
+    assert cli(*terms)[0] == 0
+    assert cli("directory", "enable", "onlypropfirms")[0] == 0
+    site = tmp_path / "dsite"
+    shutil.copytree(DIRECTORY_SITE, site)
+    code, output = cli("directory", "fetch", "--publisher", "onlypropfirms", "--fixture-site", str(site))
+    assert code == 0, output
+    assert (
+        "pages read: collected" in output
+        and "structure_changed: https://onlypropfirms.com/prop-firms/contoso" in output
+    )
+    code, output = cli(
+        "directory",
+        "capture",
+        "--publisher",
+        "propfirmmatch-futures",
+        "--url",
+        "https://propfirmmatch.com/futures/prop-firm-challenges",
+        "--file",
+        str(DIRECTORY_CAPTURES / "propfirmmatch-futures-challenges.html"),
+    )
+    assert code == 0 and "read as   comparison, 3 records" in output
+    code, output = cli("import-capture", "--url", "https://x.test/", "--file", str(CAPTURES / "sample-funding-faq.txt"))
+    assert code == 2  # neither --firm nor --publisher
+    code, output = cli("directory", "list")
+    assert code == 0 and "Needs manual capture" in output and "Not reviewed" in output
+    code, output = cli("directory", "observations", "--publisher", "onlypropfirms", "--firm", "northwind")
+    assert code == 0 and "Daily loss limit" in output
+    code, output = cli("directory", "observations", "--json")
+    rows = json.loads(output)
+    obs = next(r for r in rows if r["publisher_key"] == "propfirmmatch-futures")
+    code, output = cli("directory", "show-observation", obs["id"])
+    assert code == 0 and "unverified" in output and "History:" in output
+    assert cli("directory", "observations", "--status", "approved")[0] == 2
+    code, output = cli("directory", "review", "list")
+    assert code == 0
+    assert (
+        cli("directory", "review", "map", "--publisher", "onlypropfirms", "--firm-name", "Northwind", "--to", "nope")[0]
+        == 3
+    )
+    out = tmp_path / "observations.json"
+    code, output = cli("directory", "export", "--out", str(out))
+    assert code == 0 and "collector-directory-observations-v1: valid" in output
+    code, output = cli("validate", str(out))
+    assert code == 0 and "valid collector-directory-observations-v1" in output
+    code, output = cli("directory", "show", "onlypropfirms")
+    assert code == 0 and "third-party comparison publisher" in output and "Page structure changed" in output
+    code, output = cli("runs")
+    assert code == 0 and "publisher:onlypropfirms" in output
+    code, output = cli("directory", "host-add", "--publisher", "onlypropfirms", "--host", "www.northwind-futures.test")
+    assert code == 3 and "not part of" in output

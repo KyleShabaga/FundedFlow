@@ -1,6 +1,6 @@
 name: Prop-firm collector
 
-# Build 29: the standalone Python collector in tools/prop-firm-collector. Tests run fully offline
+# Build 29 / 29.25: the standalone Python collector in tools/prop-firm-collector. Tests run fully offline
 # (pytest-socket blocks real network access; fixtures are synthetic). The npm/Rust CI is separate and unchanged.
 
 on:
@@ -60,8 +60,10 @@ jobs:
       - name: Tests (offline; includes contract, CLI walkthrough and browser tests)
         run: uv run pytest -ra
 
-      - name: Export schema validates the checked-in fixture
-        run: uv run collector validate tests/fixtures/collector-snapshot-v1.json
+      - name: Export schemas validate the checked-in fixtures
+        run: |
+          uv run collector validate tests/fixtures/collector-snapshot-v1.json
+          uv run collector validate tests/fixtures/collector-directory-observations-v1.json
 
       - name: Dependency audit (pip-audit)
         shell: pwsh

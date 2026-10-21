@@ -222,16 +222,16 @@ class FirmRunner:
     # ------------------------------------------------------------------ entry point
 
     def run(self) -> RunSummary:
-        if not self.firm.enabled and not (isinstance(self.firm, Publisher) and self.options.dry_run):
-            self.summary.status = "skipped_disabled"
-            self.summary.message = f"{self.firm.owner_key} is disabled: {self.firm.disabled_reason}"
-            return self.summary
         if isinstance(self.firm, Publisher) and self.firm.capture_mode == "manual_only":
             self.summary.status = "skipped_manual_only"
             self.summary.message = (
                 f"{self.firm.owner_key} is manual capture only: nothing is fetched. Save its pages in your browser "
                 "and import them (Manual capture)."
             )
+            return self.summary
+        if not self.firm.enabled and not (isinstance(self.firm, Publisher) and self.options.dry_run):
+            self.summary.status = "skipped_disabled"
+            self.summary.message = f"{self.firm.owner_key} is disabled: {self.firm.disabled_reason}"
             return self.summary
         if self.options.dry_run:
             return self._dry_run()
@@ -310,6 +310,8 @@ class FirmRunner:
             return Block(Outcome.DISABLED, "firm or source is disabled")
         reason = terms_block_reason(host_row, self.clock.now())
         if reason is not None:
+            if isinstance(self.firm, Publisher):
+                reason = reason.replace("collector host terms", "collector directory terms")
             return Block(Outcome.TERMS_BLOCKED, reason)
         state = circuit.current(self.conn, host, self.clock.now(), persist=not self.options.dry_run)
         if state.open or host in self.tripped:
