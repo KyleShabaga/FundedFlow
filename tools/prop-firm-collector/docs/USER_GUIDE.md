@@ -29,7 +29,42 @@ with the tool. The output is real but trimmed, and folder paths are shortened to
 
 You need Windows 10 or 11, PowerShell, Git and about 1 GB of disk space (most of it for the optional browser).
 
-1. Install `uv`, the tool that installs Python and the collector's dependencies:
+### Where to type the commands
+
+Open PowerShell: press **Start**, type `PowerShell`, and open it (Windows Terminal works too). The window shows a
+**prompt** that tells you which folder you're in. A new window starts in your home folder:
+
+```text
+PS C:\Users\Kyle>
+```
+
+`PS` means PowerShell and `C:\Users\Kyle` is the current folder (yours shows your own user name). Type each command
+after the `>` and press Enter. Don't type the `PS ...>` part. Each command has to run from the right folder:
+
+| Commands | Run them from | The prompt looks like |
+|---|---|---|
+| `winget install ...` | Anywhere | `PS C:\Users\Kyle>` |
+| `git clone ...` | The folder you want the code in, e.g. Documents | `PS C:\Users\Kyle\Documents>` |
+| Every `uv ...` command (`uv sync`, `uv run collector ...`) | The collector folder inside the code | `PS C:\Users\Kyle\Documents\FundedFlow\tools\prop-firm-collector>` |
+
+To get to the collector folder in a new PowerShell window (for example after a restart), use `cd` ("change
+directory"):
+
+```powershell
+cd $HOME\Documents\FundedFlow\tools\prop-firm-collector
+```
+
+```text
+PS C:\Users\Kyle\Documents\FundedFlow\tools\prop-firm-collector>
+```
+
+If you cloned the code somewhere else, `cd` into that copy's `tools\prop-firm-collector` folder instead. If a
+`uv run collector` command answers `error: Failed to spawn: collector` / `cause: program not found`, you're in the
+wrong folder. Check the prompt and `cd` to the collector folder.
+
+### Steps
+
+1. Install `uv`, the tool that installs Python and the collector's dependencies. Run this from any folder:
 
    ```powershell
    winget install --id astral-sh.uv -e
@@ -37,10 +72,12 @@ You need Windows 10 or 11, PowerShell, Git and about 1 GB of disk space (most of
 
    Close and reopen PowerShell afterwards so the `uv` command is found.
 
-2. Get the code and install. `uv` downloads Python 3.12 by itself, and the dependency versions are locked with
+2. Get the code and install. This puts the code in your Documents folder and then moves into the collector folder,
+   where every later command runs. `uv` downloads Python 3.12 by itself, and the dependency versions are locked with
    checksums:
 
    ```powershell
+   cd $HOME\Documents
    git clone https://github.com/KyleShabaga/FundedFlow.git
    cd FundedFlow\tools\prop-firm-collector
    uv sync
@@ -76,7 +113,8 @@ You need Windows 10 or 11, PowerShell, Git and about 1 GB of disk space (most of
    A healthy result has no `FAIL` lines. The two `WARN` lines go away after the next section. If you skipped
    step 3, the browser line says `info ... not available`, which is fine.
 
-Run every `uv run collector ...` command from the `tools\prop-firm-collector` folder.
+From here on, every command runs from the collector folder
+(`PS C:\Users\Kyle\Documents\FundedFlow\tools\prop-firm-collector>`).
 
 ## 3. First-time setup
 
@@ -582,6 +620,7 @@ must not be imported into FundedFlow as rules. A person reviews any rule values 
 | `refusing to use ...: it is inside the FundedFlow app data folder` | The collector never uses the app's folder. Pick another `--data-dir`. |
 | `... is in use; close other collector windows` (during reset) | Close other PowerShell windows running the collector, then retry. |
 | `uv` is not recognised | Close and reopen PowerShell after installing uv. |
+| `error: Failed to spawn: collector` / `cause: program not found` | You're in the wrong folder. Run `cd $HOME\Documents\FundedFlow\tools\prop-firm-collector` (section 2). |
 
 ```powershell
 uv run collector fetch --firm missing-firm
