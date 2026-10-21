@@ -221,6 +221,7 @@ export function AccountsPage() {
             {view === "table" ? (
               <DataTable
                 label="Accounts"
+                headingLevel={2}
                 columns={columns}
                 rows={pageRows}
                 getRowId={a => a.id}

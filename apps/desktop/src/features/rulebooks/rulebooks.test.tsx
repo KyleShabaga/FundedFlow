@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // Build 19 journeys through the real rulebook pages, Build 13 components and Build 14 hooks. The repository is
 // an in-memory store that follows the Rust rules (test-store.ts); native persistence is tested in Rust.
+import type { RuleDefinitionInput } from "@fundedflow/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -12,7 +13,7 @@ import { ToastProvider } from "../../design-system";
 import { makeAccount } from "../accounts/test-store";
 import { RulebookPage } from "./components/RulebookPage";
 import { RulebookVersionPage } from "./components/RulebookVersionPage";
-import { closedTrade, createRulebookStore } from "./test-store";
+import { catalogueRules, closedTrade, createRulebookStore, PROVIDER } from "./test-store";
 
 const runtime = vi.hoisted(() => ({ state: { kind: "ready" } as unknown as RuntimeState, check: vi.fn() }));
 const holder = vi.hoisted(() => ({ store: null as unknown as ReturnType<typeof createRulebookStore> }));
@@ -171,7 +172,10 @@ describe("rulebook overview", () => {
 });
 
 describe("draft, compare, preview, publish and assign", () => {
-  it("runs the whole journey without changing the version it started from", async () => {
+  // One journey in two tests (Build 26): as a single test it took ~1.7 s locally and timed out at 5 s on a busy
+  // Windows CI runner. Nothing hung; it was ~17 jsdom interactions in a row. The second half starts from the
+  // saved draft the first half produces, built through the same repository calls.
+  it("edits, compares and previews a draft without writing, then saves it, without changing the version it started from", async () => {
     await assignCatalogue();
     const before = structuredClone(holder.store.versions.get(holder.store.verifiedVersionId));
     const user = userEvent.setup();
@@ -207,6 +211,27 @@ describe("draft, compare, preview, publish and assign", () => {
     expect((screen.getByRole("textbox", { name: "Target" }) as HTMLInputElement).value).toBe("2500");
     await user.click(screen.getByRole("button", { name: "Save draft" }));
     expect(await screen.findByText("All changes saved")).toBeTruthy();
+    const mine = [...holder.store.versions.values()].find(v => v.rulebook.ownerAccountId === A)!;
+    expect(mine.rules.find(r => r.ruleKey === "profit_target")?.parameters).toMatchObject({ amount: { state: "value", value: "2500" } });
+    expect(holder.store.versions.get(holder.store.verifiedVersionId)).toEqual(before);
+    expect(holder.store.events.map(e => e.action)).toEqual(["assigned", "draft_created", "draft_saved"]);
+  });
+
+  it("publishes a saved draft with explicit confirmation and assigns it, without changing the version it started from", async () => {
+    await assignCatalogue();
+    const before = structuredClone(holder.store.versions.get(holder.store.verifiedVersionId));
+    const rules = catalogueRules().map(r => r.ruleKey === "profit_target" ? { ...r, parameters: { ...r.parameters, amount: { state: "value" as const, value: "2500" } } } as RuleDefinitionInput : r);
+    const draft = await holder.store.repository.rulebooks.createDraft({
+      rulebookId: null, newRulebook: { providerId: PROVIDER, ownerAccountId: A, slug: "account-accta", displayName: "Eval A rules", description: null },
+      supersedesVersionId: null, changeReason: "Copied from Example 50K v1", capturedAt: "2026-10-01T00:00:00.000Z", effectiveFrom: null, effectiveTo: null,
+      rules: catalogueRules(), applicability: [],
+    }, { actor: "local_user", reason: null });
+    await holder.store.repository.rulebooks.updateDraft(draft.version.id, draft.version.updatedAt, {
+      changeReason: draft.version.changeReason, capturedAt: draft.version.capturedAt, effectiveFrom: null, effectiveTo: null, rules, applicability: [],
+    }, { actor: "local_user", reason: null });
+    const user = userEvent.setup();
+    renderAt(`/accounts/${A}/rulebook/versions/${draft.version.id}`);
+    await screen.findByRole("heading", { name: /Eval A rules · v1/ });
 
     // Review and publish with explicit confirmation.
     await user.click(screen.getByRole("tab", { name: "Review and publish" }));
@@ -230,9 +255,8 @@ describe("draft, compare, preview, publish and assign", () => {
     expect(holder.store.versions.get(holder.store.verifiedVersionId)).toEqual(before);
     expect(holder.store.events.map(e => e.action)).toEqual(["assigned", "draft_created", "draft_saved", "published", "assigned"]);
     // The published version is read-only now.
-    const mine = [...holder.store.versions.values()].find(v => v.rulebook.ownerAccountId === A)!;
     cleanup();
-    renderAt(`/accounts/${A}/rulebook/versions/${mine.version.id}`);
+    renderAt(`/accounts/${A}/rulebook/versions/${draft.version.id}`);
     expect(await screen.findByText("Account rules (private)")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
     expect(screen.getByRole("button", { name: "Start a draft from this version" })).toBeTruthy();

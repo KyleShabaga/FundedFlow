@@ -11,7 +11,7 @@ import { formatInstant, formatMoney, formatPercent, moneySign, sumMoney, UNKNOWN
 import { cx } from "./cx";
 import { Checkbox, Select } from "./forms";
 import { OverlayClose, Popover } from "./overlays";
-import { Button, IconButton } from "./primitives";
+import { Button, type HeadingLevel, IconButton } from "./primitives";
 
 /* ---------- Unknown ---------- */
 
@@ -280,6 +280,8 @@ export interface DataTableProps<T> {
   fallback?: ReactNode;
   /** Marks the table busy (initial load or refresh). */
   busy?: boolean;
+  /** Level of the table's (visually hidden) heading in the page outline. 2 when the table is a page's top-level section. */
+  headingLevel?: HeadingLevel;
   className?: string;
 }
 
@@ -313,8 +315,10 @@ export function DataTable<T>({
   footer,
   fallback,
   busy,
+  headingLevel = 3,
   className,
 }: DataTableProps<T>) {
+  const Heading = `h${headingLevel}` as const;
   const ids = rows.map(getRowId);
   const selectedVisible = selection ? ids.filter((id) => selection.selected.has(id)) : [];
   const allSelected = ids.length > 0 && selectedVisible.length === ids.length;
@@ -358,9 +362,9 @@ export function DataTable<T>({
 
   return (
     <section className={cx("ds-dt-card", className)} aria-labelledby={headingId}>
-      <h3 id={headingId} className="ds-sr-only">
+      <Heading id={headingId} className="ds-sr-only">
         {label}
-      </h3>
+      </Heading>
       {showToolbar && (
         <div className="ds-dt-toolbar">
           <div className="ds-dt-tools">{toolbar}</div>

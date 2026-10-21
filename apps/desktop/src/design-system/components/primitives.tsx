@@ -142,6 +142,9 @@ export function SegmentedControl<V extends string>({ label, options, value, onVa
   );
 }
 
+/** Heading level of a titled design-system section in the page outline (the page title is the shell's h1). */
+export type HeadingLevel = 2 | 3 | 4;
+
 /* ---------- Badge ---------- */
 
 export type Tone = "neutral" | "flow" | "profit" | "loss" | "warn";
@@ -263,11 +266,13 @@ export function Tabs({ items, value, defaultValue, onValueChange, label, childre
 
 /**
  * One tab's content. `keepMounted` keeps it in the page (hidden) while another tab is shown, so a
- * form inside keeps its unsaved state across tab switches.
+ * form inside keeps its unsaved state across tab switches. `heading` adds a visually hidden h2 (usually
+ * the tab's label) when the panel's own sections use h3 titles, so the page outline doesn't skip a level.
  */
-export function TabPanel({ value, children, className, keepMounted }: { value: string; children: ReactNode; className?: string; keepMounted?: boolean }) {
+export function TabPanel({ value, children, className, keepMounted, heading }: { value: string; children: ReactNode; className?: string; keepMounted?: boolean; heading?: string }) {
   return (
     <RadixTabs.Content value={value} forceMount={keepMounted ? true : undefined} className={cx("ds-tab-panel", keepMounted && "ds-tab-panel-kept", className)}>
+      {heading && <h2 className="ds-sr-only">{heading}</h2>}
       {children}
     </RadixTabs.Content>
   );

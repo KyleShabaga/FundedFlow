@@ -6,6 +6,7 @@ import { type ReactNode, useId } from "react";
 import { formatInstant, formatMoney, moneySign, moneyToNumberForDisplay } from "../format";
 import { type AsyncState, type EmptyKind, hasData, LoadingState, StateBoundary } from "./async-states";
 import { cx } from "./cx";
+import type { HeadingLevel } from "./primitives";
 
 /* ---------- WinGauge ---------- */
 
@@ -211,6 +212,8 @@ export interface ChartPanelProps<T> {
   onRetry?: () => void;
   /** Minimum body height so loading, empty and chart states keep the same size. Default 200. */
   minHeight?: number;
+  /** Level of the title in the page outline. 2 when the panel is a page's top-level section. */
+  headingLevel?: HeadingLevel;
   className?: string;
 }
 
@@ -219,16 +222,17 @@ export interface ChartPanelProps<T> {
  * empty, error and stale fallbacks of StateBoundary. Live charting
  * (TradingView, market data) is a P2 card, not this wrapper.
  */
-export function ChartPanel<T>({ title, subtitle, actions, state, children, timeZone, empty, onRetry, minHeight = 200, className }: ChartPanelProps<T>) {
+export function ChartPanel<T>({ title, subtitle, actions, state, children, timeZone, empty, onRetry, minHeight = 200, headingLevel = 3, className }: ChartPanelProps<T>) {
   const headingId = useId();
+  const Heading = `h${headingLevel}` as const;
   const asOf = hasData(state) ? (state.asOf ?? null) : undefined;
   return (
     <section className={cx("ds-card", "ds-chart-panel", className)} aria-labelledby={headingId}>
       <header className="ds-chart-head">
         <div>
-          <h3 id={headingId} className="ds-title ds-chart-title">
+          <Heading id={headingId} className="ds-title ds-chart-title">
             {title}
-          </h3>
+          </Heading>
           {subtitle != null && <p className="ds-faint ds-chart-sub">{subtitle}</p>}
         </div>
         <div className="ds-chart-meta">

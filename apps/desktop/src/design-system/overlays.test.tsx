@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -257,6 +257,36 @@ describe("StatusIndicator", () => {
     expect(unknown.querySelector("svg")).toBeTruthy();
     expect(unknown.textContent).toContain("No rulebook for this account");
     expect(screen.getByText("Safe").parentElement!.className).toContain("ds-status-success");
+  });
+});
+
+describe("focus return when the opener is gone", () => {
+  it("moves focus to a surviving control in the same container, not the page body", async () => {
+    function Harness() {
+      const [rows, setRows] = useState(["a", "b"]);
+      const [open, setOpen] = useState<string | null>(null);
+      return (
+        <>
+          <ul aria-label="Accounts">
+            {rows.map(r => (
+              <li key={r}>
+                <DropdownMenu trigger={<Button>Actions {r}</Button>} items={[{ label: "Delete…", onSelect: () => setOpen(r) }]} />
+              </li>
+            ))}
+          </ul>
+          <Dialog open={open !== null} onOpenChange={next => !next && setOpen(null)} title="Delete account"
+            footer={<Button onClick={() => { setRows(rs => rs.filter(x => x !== open)); setOpen(null); }}>Delete</Button>} />
+        </>
+      );
+    }
+    render(<Harness />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Actions a" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Delete…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Delete account" });
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Actions b" })));
   });
 });
 

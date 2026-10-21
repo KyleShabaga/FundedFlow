@@ -280,6 +280,18 @@ describe("Rule state", () => {
   });
 });
 
+describe("section heading levels", () => {
+  it("DataTable and ChartPanel default to h3 and take h2 as a page's top-level section", () => {
+    const { rerender } = render(<DataTable label="Accounts" columns={COLUMNS} rows={ROWS} getRowId={r => r.id} />);
+    expect(screen.getByRole("heading", { level: 3, name: "Accounts" })).toBeTruthy();
+    rerender(<DataTable label="Accounts" headingLevel={2} columns={COLUMNS} rows={ROWS} getRowId={r => r.id} />);
+    expect(screen.getByRole("heading", { level: 2, name: "Accounts" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Accounts" })).toBeTruthy();
+    rerender(<ChartPanel title="Balance" headingLevel={2} state={{ status: "loading" }}>{() => null}</ChartPanel>);
+    expect(screen.getByRole("heading", { level: 2, name: "Balance" })).toBeTruthy();
+  });
+});
+
 describe("ChartPanel", () => {
   it("renders the chart only with data and keeps the title in every state", () => {
     const draw = vi.fn(() => <svg role="img" aria-label="Balance chart" />);

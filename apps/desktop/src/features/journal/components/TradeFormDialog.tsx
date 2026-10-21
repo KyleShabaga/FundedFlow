@@ -11,6 +11,7 @@ import {
   ConfirmDialog,
   Dialog,
   focusFirstInvalid,
+  focusFirstInvalidWhenShown,
   FormSection,
   InlineNotice,
   MutationFeedback,
@@ -188,7 +189,7 @@ function TradeFormBody({ account, trade, open, onOpenChange, onSaved }: TradeFor
         onOpenChange(false);
         onSaved?.(saved);
       })
-      .catch(() => queueMicrotask(() => focusFirstInvalid(form.current)));
+      .catch(() => focusFirstInvalidWhenShown(form.current));
   };
 
   const feedback = toMutationState(mutation, {
