@@ -1,0 +1,25 @@
+name: Developer tools
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/reset-test-data*.mjs'
+      - '.github/workflows/dev-tools.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/reset-test-data*.mjs'
+      - '.github/workflows/dev-tools.yml'
+
+jobs:
+  reset-tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/reset-test-data.test.mjs
