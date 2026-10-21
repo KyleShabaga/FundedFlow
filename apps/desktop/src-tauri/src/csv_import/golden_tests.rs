@@ -98,6 +98,9 @@ fn normalization_v1_golden_baseline_matches_rust() {
             Err(AppError::Validation { .. }) => (Value::Null, json!("validation")),
             Err(error) => panic!("unexpected commit failure for {}: {error}", case["name"]),
         };
+        let mut p = serde_json::to_value(p).unwrap();
+        // The digest includes generated account identity and timestamps.
+        p["targetAssessment"]["previewToken"] = json!("<preview-token>");
         let expected = json!({ "preview": p, "dedupKeys": keys, "batch": batch, "commitError": commit_error });
         if update {
             case["expected"] = expected;

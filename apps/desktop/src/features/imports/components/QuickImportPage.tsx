@@ -6,7 +6,7 @@
 // choices kept and no confirmation carried over. The commit is the wizard's: same scope, same native transaction
 // and duplicate checks, one request per click, never retried.
 import { History, ListChecks, ShieldCheck, Workflow } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
@@ -80,15 +80,21 @@ export function QuickImportPage() {
   // times without an offset are read in the account's own zone (its saved, validated setting).
   const wizardState: WizardState | null = account && file ? { ...initialWizardState(account.id, account.timezone), file } : null;
   const request = wizardState ? buildRequest(wizardState) : null;
-  const key = wizardState ? requestKey(wizardState) : null;
+  // The request plus the account's settings and reset lineage: a change to any of them makes the preview stale
+  // (the same rule the wizard applies).
+  const context = JSON.stringify([account, lineage.data?.map(a => [a.accountId, a.resetToNext])]);
+  const requestOnly = wizardState ? requestKey(wizardState) : null;
+  const key = requestOnly ? JSON.stringify([requestOnly, context]) : null;
   const latestKey = useRef(key);
   latestKey.current = key;
   const fresh = preview.data !== undefined && previewFor !== null && previewFor === key;
   const current = fresh ? preview.data : undefined;
   const p = current?.preview;
-  const tradingDays = useMemo(() => [...new Set((p?.rows ?? []).filter(r => r.status === "new" && r.trade).map(r => r.trade!.tradingDay))], [p]);
-  const assessment = assessTarget(account, lineage.data, tradingDays);
-  const confirmed = confirmedFor !== null && confirmedFor === key;
+  // Rust assesses the destination against the exact attempt interval for the whole file; a tick only ever applies
+  // to that preview's token.
+  const assessment = assessTarget(account, p?.targetAssessment);
+  const confirmationKey = p ? JSON.stringify([key, p.targetAssessment.previewToken]) : null;
+  const confirmed = confirmationKey !== null && confirmedFor === confirmationKey;
   const targetReady = !assessment.blocked && (assessment.confirmations.length === 0 || confirmed);
   const blockers = p ? quickImportBlockers(p) : [];
   const importable = p && blockers.length === 0 ? p.newCount : 0;
@@ -108,8 +114,10 @@ export function QuickImportPage() {
   // A preview only reads, so it runs as soon as the destination and file are known, and again whenever either
   // changes. The result is only shown for the exact request it was made for. (runPreview reads the same key.)
   useEffect(() => {
-    if (key && !assessment.blocked && previewFor !== key && runtime.kind === "ready") runPreview();
-  }, [key, assessment.blocked, runtime.kind]);
+    // Waits for the lineage so the preview is made once, for the context it will be judged against.
+    const lineageKnown = lineage.data !== undefined || Boolean(lineage.error);
+    if (key && lineageKnown && !assessment.blocked && previewFor !== key && runtime.kind === "ready" && !preview.isPending && !preview.error) runPreview();
+  }, [key, assessment.blocked, runtime.kind, previewFor]);
 
   const fileChoice = useCsvFileChoice(read => {
     preview.reset();
@@ -158,7 +166,7 @@ export function QuickImportPage() {
 
   const doImport = async () => {
     if (!request || !fresh || !account || !p || blockers.length > 0 || !targetReady || !commit.canSubmit) return;
-    const issue = await recheck(account, lineage.data, tradingDays);
+    const issue = await recheck(account, p.targetAssessment);
     if (issue) {
       toast.show({ tone: "error", title: issue.title, description: issue.description });
       if (issue.changed) {
@@ -168,11 +176,15 @@ export function QuickImportPage() {
       return;
     }
     commit
-      .submit(request)
+      .submit({ ...request, targetAcknowledgement: { previewToken: p.targetAssessment.previewToken, historicalConfirmed: confirmed } })
       .then(batch => {
         if (batch.status === "committed") toast.show({ tone: "success", title: `Imported ${batch.importedCount} ${batch.importedCount === 1 ? "trade" : "trades"}`, description: `Into ${account.name}` });
       })
-      .catch(() => {});
+      .catch(() => {
+        // A refused or failed commit needs a fresh preview and confirmation; nothing is retried.
+        setPreviewFor(null);
+        setConfirmedFor(null);
+      });
   };
 
   /* Runtime and accounts gate (same as the wizard) */
@@ -267,6 +279,7 @@ export function QuickImportPage() {
     : !fresh ? "The file needs checking first"
     : blockers.length > 0 ? "This file needs the full wizard"
     : importable === 0 ? "Nothing new to import"
+    : assessment.blocked ? "This attempt can't take these trades"
     : !targetReady ? "Confirm the destination first"
     : undefined;
 
@@ -278,7 +291,7 @@ export function QuickImportPage() {
         <section className="ds-card imp-panel" aria-labelledby="qi-dest-h">
           <h2 id="qi-dest-h" className="ds-title">Account attempt</h2>
           <ImportTargetPicker accounts={all} value={accountId} onChange={chooseAccount} disabled={committing} lineage={lineage.data} assessment={assessment}
-            confirmed={confirmed} onConfirmedChange={c => setConfirmedFor(c ? key : null)} showConfirm={Boolean(fresh && blockers.length === 0 && importable > 0)} />
+            confirmed={confirmed} onConfirmedChange={c => setConfirmedFor(c ? confirmationKey : null)} showConfirm={Boolean(fresh && blockers.length === 0 && importable > 0)} />
         </section>
         <section className="ds-card imp-panel" aria-labelledby="qi-file-h">
           <h2 id="qi-file-h" className="ds-title">File</h2>

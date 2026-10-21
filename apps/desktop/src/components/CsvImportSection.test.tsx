@@ -27,6 +27,7 @@ function preview(rows: RowReport[], counts: Partial<CsvPreview> = {}): CsvPrevie
   return {
     format: "generic", formatReason: "has side, entry and exit columns", dateFormat: "ymd", dateFormatReason: "ISO",
     headers: ["symbol"], mapping: [{ field: "symbol", header: "symbol", required: true }], ignoredHeaders: [],
+    targetAssessment: { previewToken: "test-preview", blocked: null, confirmations: [], startInclusive: null, endExclusive: null, candidateCount: rows.length },
     fileIssues: [], fileWarnings: [], filePreviouslyImported: false, rowCount: rows.length,
     newCount: rows.filter((r) => r.status === "new").length, restoreCount: 0, duplicateCount: 0, blankCount: 0,
     invalidCount: rows.filter((r) => r.status === "invalid").length, warningCount: 0, rows, rowsOmitted: 0,

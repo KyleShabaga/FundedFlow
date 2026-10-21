@@ -29,16 +29,21 @@ fn read(conn: &Connection, ids: &[&str]) -> InsightsDataset {
 }
 
 fn import(conn: &mut Connection, account_id: &str) -> usize {
+    import_content(conn, account_id, PERFORMANCE)
+}
+
+fn import_content(conn: &mut Connection, account_id: &str, content: &str) -> usize {
     let req = CsvImportRequest {
         account_id: account_id.into(),
         file_name: "Performance.csv".into(),
-        content: PERFORMANCE.into(),
+        content: content.into(),
         timezone: "America/New_York".into(),
         format: FormatChoice::Auto,
         date_format: DateFormatChoice::Auto,
         columns: None,
+        target_acknowledgement: None,
     };
-    csv_import::commit(conn, &req).unwrap().imported_count as usize
+    csv_import::commit_reviewed(conn, &req).unwrap().imported_count as usize
 }
 
 fn trade(account_id: &str, symbol: &str, exit_at: &str, entry: &str, exit: &str) -> TradeInput {
@@ -90,7 +95,7 @@ fn metric_trades(d: &InsightsDataset) -> Vec<MetricTrade> {
 }
 
 /// Two old attempts (the first failed, the second passed then archived) and the current attempt, all with the same
-/// broker account number, each holding the same imported file.
+/// broker account number, holding identical economics/IDs at valid distinct attempt instants.
 fn chain(conn: &mut Connection) -> (String, String, String) {
     let first = accounts::create(conn, AccountInput { external_ref: Some("TOP-1".into()), ..account_input("Attempt 1") }).unwrap();
     import(conn, &first.id);
@@ -112,7 +117,8 @@ fn chain(conn: &mut Connection) -> (String, String, String) {
     )
     .unwrap()
     .successor;
-    import(conn, &second.id);
+    // Identical broker IDs/economics, but timestamps must belong to attempt 2.
+    import_content(conn, &second.id, &PERFORMANCE.replace("10/19/2026", "10/21/2026"));
     let third = attempts::reset(
         conn,
         ResetInput {
@@ -144,7 +150,7 @@ fn attempts_never_share_trades_even_with_the_same_broker_number() {
     let two = read(&conn, &[&a2]);
     let three = read(&conn, &[&a3]);
     assert!(!one.trades.is_empty());
-    assert_eq!(one.trades.len(), two.trades.len(), "the same file was imported into each attempt");
+    assert_eq!(one.trades.len(), two.trades.len(), "the same economic rows at each attempt's own instants");
     assert!(one.trades.iter().all(|t| t.account_id == a1));
     assert!(two.trades.iter().all(|t| t.account_id == a2));
     let ids1: Vec<_> = one.trades.iter().map(|t| &t.id).collect();

@@ -1,8 +1,8 @@
 // The destination account attempt: chosen by local id, explained by name, firm,
 // status, broker number and reset lineage. Archived attempts are refused; finished
 // attempts and trades outside an attempt's reset window need explicit confirmation
-// (assessImportTarget from the domain). Nothing is reassigned or split automatically.
-import { assessImportTarget, statusLabels, type AttemptSummary } from "@fundedflow/domain";
+// (from the native preview). Nothing is reassigned or split automatically.
+import { statusLabels, type AttemptSummary, type CsvPreview } from "@fundedflow/domain";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Checkbox, formatInstant, InlineNotice, Select, StatList } from "../../../design-system";
@@ -16,9 +16,10 @@ export interface TargetAssessment {
   confirmations: string[];
 }
 
-export function assessTarget(account: AccountViewModel | undefined, lineage: readonly AttemptSummary[] | undefined, tradingDays: readonly string[]): TargetAssessment {
+export function assessTarget(account: AccountViewModel | undefined, native?: CsvPreview["targetAssessment"]): TargetAssessment {
   if (!account) return { blocked: "Choose the account these trades belong to.", confirmations: [] };
-  return assessImportTarget(account, lineage ?? [], tradingDays);
+  if (account.archivedAt) return { blocked: `"${account.name}" is archived. Restore it first before importing.`, confirmations: [] };
+  return native ?? { blocked: null, confirmations: [] };
 }
 
 export interface RecheckProblem {
@@ -35,14 +36,14 @@ export interface RecheckProblem {
 export function useDestinationRecheck(accountId: string | null) {
   const client = useQueryClient();
   const accountQuery = useAccount(accountId);
-  return async (account: AccountViewModel, lineage: readonly AttemptSummary[] | undefined, tradingDays: readonly string[]): Promise<RecheckProblem | null> => {
+  return async (account: AccountViewModel, native: CsvPreview["targetAssessment"]): Promise<RecheckProblem | null> => {
     try {
       await accountQuery.refresh();
     } catch {
       return { title: "Couldn't check the account", description: "Nothing was imported. Try again when local data is available.", changed: false };
     }
     const latest = client.getQueryData<{ value: AccountViewModel }>(featureKeys.detail(account.id))?.value;
-    const recheck = assessTarget(latest, lineage, tradingDays);
+    const recheck = assessTarget(latest, native);
     if (!latest || recheck.blocked || latest.status !== account.status)
       return { title: "The account changed", description: "Nothing was imported. Check the destination and review again.", changed: true };
     return null;
@@ -76,7 +77,7 @@ export function ImportTargetPicker({
   assessment: TargetAssessment;
   confirmed: boolean;
   onConfirmedChange: (confirmed: boolean) => void;
-  /** Confirmations apply once the file's trading days are known (after preview). */
+  /** Confirmations come from the native assessment of the complete preview. */
   showConfirm: boolean;
   disabled?: boolean;
 }) {

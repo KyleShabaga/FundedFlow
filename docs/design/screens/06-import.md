@@ -59,8 +59,10 @@ Where this differs from the layout above (the card wins):
   preview command before showing one.
 - **Extra columns and filter.** The table adds Fees and a Restores filter; invalid rows show their source cells.
 - **Separate confirm step.** Step 4 restates every count and the destination attempt before the import button.
-  Finished attempts and trades outside the attempt's window (`assessImportTarget`) need a confirmation tick; the
-  account is reloaded and re-checked just before the import is sent.
+  Native `targetAssessment` blocks rows outside the exact attempt interval or spanning a reset; these cannot be
+  overridden by a tick. In-window non-active attempts need explicit confirmation. The reviewed preview digest is
+  sent to commit, which rechecks account settings, lineage and every candidate inside the write transaction.
+  Input, account-context and lineage changes clear confirmation and require another preview.
 - **Row limit.** The 10 MiB limit is checked on the file's bytes before it is read. The 50,000-row limit needs
   a parse, so it comes back from Rust as a blocking file issue; the wizard has no CSV parser of its own.
 - **Large files.** When the preview leaves rows out (`rowsOmitted`), the counts still cover the whole file and a
@@ -87,13 +89,15 @@ moves the wizard on. A file dropped outside a drop zone no longer opens in the w
 
 **Quick import** (`/import/quick`, `QuickImportPage`), from the header Import CSV menu, the Accounts "Import trades"
 menu, each account card's menu (that attempt preselected) and the wizard's head. The trader picks the exact attempt
-(same `ImportTargetPicker`: archived refused, finished attempts and out-of-window trades need the same tick, shared
-broker numbers called out) and one file. The read-only Rust preview runs as soon as both are known, with
+(same `ImportTargetPicker`: archived refused; Rust's `targetAssessment` blocks rows outside the exact attempt
+interval and asks for the same tick for in-window non-active attempts, bound to that preview's token; shared broker
+numbers called out) and one file. The read-only Rust preview runs as soon as both are known, with
 `format: auto`, `dateFormat: auto` and the account's own time zone. The compact summary lists file and size,
 destination, detected format and reason, zone, date order and reason, and the counts (will import, restores,
 duplicates, errors, blank rows, warnings), with "View all rows and issues" opening the wizard's row table.
-"Confirm import of n trades" re-checks the destination and commits with the wizard's hook (same scope, so an
-uncertain commit locks both paths; one request per click; never retried). A lost answer shows "Verify in import
+"Confirm import of n trades" re-checks the destination and commits with the wizard's hook and the preview's
+`targetAcknowledgement` (same scope, so an uncertain commit locks both paths; one request per click; never
+retried). Account-setting or lineage changes make the preview stale and it is checked again (read-only). A lost answer shows "Verify in import
 history".
 
 Quick import never decides anything Rust didn't: any `fileIssues` (ambiguous date order, time zone, columns, row

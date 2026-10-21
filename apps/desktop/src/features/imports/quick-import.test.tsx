@@ -36,13 +36,15 @@ beforeAll(() => {
 function createImports() {
   const batches: ImportBatch[] = [];
   const previews: CsvImportRequest[] = [];
+  const overrides = new Map<string, (p: CsvPreview) => CsvPreview>();
   let n = 0;
   const caseFor = (req: CsvImportRequest) => golden.cases.find(c => c.request.content === req.content);
   const preview = vi.fn(async (req: CsvImportRequest): Promise<CsvPreview> => {
     previews.push(req);
     const c = caseFor(req);
     if (!c) throw new RepositoryError({ kind: "validation", message: "no fixture", issues: [{ field: "content", message: "The file is empty." }] });
-    return structuredClone(c.expected.preview) as CsvPreview;
+    const p = structuredClone(c.expected.preview) as CsvPreview;
+    return overrides.get(req.fileName)?.(p) ?? p;
   });
   const commit = vi.fn(async (req: CsvImportRequest): Promise<ImportBatch> => {
     const c = caseFor(req)!;
@@ -50,7 +52,7 @@ function createImports() {
     batches.push(batch);
     return batch;
   });
-  return { repository: { preview, commit, list: vi.fn(async (id: string) => batches.filter(b => b.accountId === id)), problemRows: vi.fn(async () => []) }, batches, previews };
+  return { repository: { preview, commit, list: vi.fn(async (id: string) => batches.filter(b => b.accountId === id)), problemRows: vi.fn(async () => []) }, batches, previews, overrides };
 }
 
 let store: ReturnType<typeof createTestStore>;
@@ -270,8 +272,12 @@ describe("Quick import: destination", () => {
     expect(confirmButton().getAttribute("aria-disabled")).toBe("true");
   });
 
-  it("keeps the finished-attempt confirmation before importing", async () => {
+  it("keeps the finished-attempt confirmation before importing, bound to that preview's token", async () => {
     setup([makeAccount({ id: "p", name: "Eval", status: "failed" })], "p");
+    imports.overrides.set(byName("paired-short-warning").request.fileName, p => {
+      p.targetAssessment.confirmations = ["Eval is a finished (failed) attempt. Confirm these historical trades belong to it."];
+      return p;
+    });
     const user = userEvent.setup();
     renderAt("/import/quick", { accountId: "p" });
     await ready();
@@ -280,6 +286,24 @@ describe("Quick import: destination", () => {
     expect(confirmButton().getAttribute("aria-disabled")).toBe("true");
     await user.click(screen.getByRole("checkbox", { name: "These trades belong to this attempt" }));
     expect(confirmButton().getAttribute("aria-disabled")).toBeNull();
+    await user.click(confirmButton());
+    await waitFor(() => expect(imports.repository.commit).toHaveBeenCalledTimes(1));
+    expect(imports.repository.commit.mock.calls[0]![0].targetAcknowledgement).toEqual({ previewToken: "<preview-token>", historicalConfirmed: true });
+  });
+
+  it("refuses a file Rust says crosses the attempt's reset boundary; a tick can't override it", async () => {
+    imports.overrides.set(byName("paired-short-warning").request.fileName, p => {
+      p.targetAssessment.blocked = "One row spans this attempt's reset. Split the file.";
+      return p;
+    });
+    const user = userEvent.setup();
+    renderAt();
+    await ready();
+    await user.upload(fileInput(), csvFile(byName("paired-short-warning")));
+    expect((await screen.findAllByText(/spans this attempt's reset/)).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("checkbox", { name: "These trades belong to this attempt" })).toBeNull();
+    expect(confirmButton().getAttribute("aria-disabled")).toBe("true");
+    expect(imports.repository.commit).not.toHaveBeenCalled();
   });
 });
 
