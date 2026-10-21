@@ -28,3 +28,5 @@ widening scope. P2 and Web V2 items are not V1 work.
 ## Checks
 
 `npm run typecheck`, `npm test`, `npm run build`; in `apps/desktop/src-tauri`: `cargo test`, `cargo clippy --all-targets -- -D warnings`.
+Prop-firm collector (Python, `tools/prop-firm-collector`, see its README): `uv run ruff check src tests scripts`,
+`uv run mypy src tests`, `uv run pytest`.

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://www.example-firm.test/</loc></url>
+  <url><loc>https://www.example-firm.test/rules</loc><lastmod>2026-10-01</lastmod></url>
+  <url><loc>https://www.example-firm.test/evaluation-rules</loc><lastmod>2026-10-01</lastmod></url>
+  <url><loc>https://www.example-firm.test/faq</loc></url>
+  <url><loc>https://www.example-firm.test/docs/rulebook.pdf</loc></url>
+  <url><loc>https://www.example-firm.test/funded-dashboard</loc></url>
+  <url><loc>https://www.example-firm.test/private/internal</loc></url>
+  <url><loc>https://www.example-firm.test/blog/news</loc></url>
+  <url><loc>https://other-firm.test/rules</loc></url>
+</urlset>
