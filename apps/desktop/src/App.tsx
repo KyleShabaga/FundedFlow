@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 import { AppProviders } from "./app/AppProviders";
-import { AppShell, NotFound, RoutePlaceholder } from "./app/AppShell";
+import { AppShell, NotFound } from "./app/AppShell";
 import { RuntimeGate } from "./components/RuntimeGate";
 import { AccountDetailPage } from "./features/accounts/components/AccountDetailPage";
 import { AccountsPage } from "./features/accounts/components/AccountsPage";
