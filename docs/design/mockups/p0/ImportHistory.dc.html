@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Import history</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.hrow{cursor:pointer}
+.hrow a{color:var(--ink);text-decoration:none;font-weight:500}
+.hrow:hover a{color:var(--flow)}
+.hrow a:focus-visible{outline:2px solid var(--flow);outline-offset:2px;border-radius:4px}
+</style>
+</helmet>
+<div class="shell" data-theme="dark">
+  <dc-import name="P0Sidebar" active="none" hint-size="248px,100%"></dc-import>
+  <div class="shell-main">
+    <dc-import name="P0Header" title="Import history" account="Apex 100K · PA-48213" hint-size="100%,96px"></dc-import>
+    <main class="shell-content">
+      <div class="wrap">
+        <div class="mock-states" role="group" aria-label="Mockup state (review only)">
+          <span>Mockup state</span>
+          <sc-for list="{{views}}" as="v" hint-placeholder-count="5"><button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for>
+        </div>
+        <div class="sec-head">
+          <p class="lede" style="margin: 0; font-size: 14px;">Every import into an account, newest first, with the rows that weren't saved.</p>
+          <a class="btn btn-sm" href="QuickImport.dc.html">Quick import</a>
+        </div>
+
+        <section class="dt-card" aria-labelledby="ih-h">
+          <h2 id="ih-h" class="sr-only" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Imports</h2>
+          <div class="dt-toolbar">
+            <div class="row" style="gap: 12px;">
+              <label class="row" style="gap: 8px;"><span class="fld-label">Account</span><select class="input select" style="width: 300px;"><option>All accounts</option><option>Apex 100K · PA-48213 · attempt 2</option><option>Topstep 50K · XFA-1182 · Failed</option></select></label>
+              <div class="seg" role="group" aria-label="Result">
+                <sc-for list="{{filters}}" as="f" hint-placeholder-count="4"><button type="button" class="{{f.cls}}" aria-pressed="{{f.on}}" onClick="{{f.pick}}">{{f.label}} <span class="mono" style="font-size: 11px; color: var(--ink-faint);">{{f.n}}</span></button></sc-for>
+              </div>
+            </div>
+            <span class="faint">Rows open the import's details</span>
+          </div>
+
+          <sc-if value="{{isLoading}}" hint-placeholder-val="{{ false }}">
+            <div class="pad stack-s" aria-busy="true"><span class="skel" style="height: 18px;"></span><span class="skel" style="height: 18px;"></span><span class="skel" style="height: 18px;"></span><span class="faint" role="status">Loading import history…</span></div>
+          </sc-if>
+          <sc-if value="{{isEmpty}}" hint-placeholder-val="{{ false }}">
+            <div class="state"><span class="state-mark"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path></svg></span><h3>No imports yet</h3><p>Imports you run from a CSV appear here with their counts and problem rows.</p><a class="btn btn-sm btn-primary" href="QuickImport.dc.html" style="margin-top: 6px;">Import a CSV</a></div>
+          </sc-if>
+          <sc-if value="{{isError}}" hint-placeholder-val="{{ false }}">
+            <div class="state" role="alert"><span class="state-mark" style="color: var(--loss);"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg></span><h3>Import history couldn't be loaded</h3><p>Nothing was changed. Imports are not lost; try again.</p><button type="button" class="btn btn-sm" style="margin-top: 6px;">Try again</button></div>
+          </sc-if>
+          <sc-if value="{{isNoMatch}}" hint-placeholder-val="{{ false }}">
+            <div class="state"><h3>No imports match</h3><p>No import into this account didn't complete.</p><button type="button" class="btn btn-sm" style="margin-top: 6px;">Show all results</button></div>
+          </sc-if>
+
+          <sc-if value="{{showTable}}" hint-placeholder-val="{{ true }}">
+            <div class="dt-scroll"><table class="dt">
+              <thead><tr>
+                <th scope="col" class="is-sorted" aria-sort="descending"><span>Finished ↓</span></th><th scope="col"><span>Account</span></th><th scope="col"><span>File</span></th><th scope="col"><span>Result</span></th>
+                <th scope="col" class="num"><span>Rows</span></th><th scope="col" class="num"><span>Imported</span></th><th scope="col" class="num"><span>Duplicates</span></th><th scope="col" class="num"><span>Errors</span></th><th scope="col" class="num"><span>Warnings</span></th><th scope="col"><span class="sr-only" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Open</span></th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+                  <tr class="hrow">
+                    <td class="mono" style="font-size: 12.5px;">{{r.when}}</td>
+                    <td>{{r.acct}}</td>
+                    <td><a href="ImportDetail.dc.html">{{r.file}}</a><span class="faint" style="display: block;">{{r.fmt}}</span></td>
+                    <td><span class="{{r.res.cls}}" style="height: 22px;"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{r.res.d}}"></path></svg>{{r.res.label}}</span></td>
+                    <td class="num">{{r.rows}}</td><td class="num">{{r.imp}}</td><td class="num muted">{{r.dup}}</td><td class="num"><span class="{{r.errCls}}">{{r.err}}</span></td><td class="num"><span class="{{r.warnCls}}">{{r.warn}}</span></td>
+                    <td style="width: 32px;"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--ink-faint);"><path d="M9 6l6 6-6 6"></path></svg></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table></div>
+            <div class="dt-foot"><span>Showing 1–7 of 7 imports · There is no undo for a whole import yet.</span><div class="pager"><button type="button" aria-label="Previous page" disabled="{{yes}}">‹</button><button type="button" class="is-on" aria-current="page">1</button><button type="button" aria-label="Next page" disabled="{{yes}}">›</button></div></div>
+          </sc-if>
+        </section>
+        <p class="faint" style="margin: 0;">"All accounts" combines each account's own history (one read per account, as Accounts already does). Counts are what each import returned.</p>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startState":{"editor":"enum","options":["loaded","loading","empty","error"],"default":"loaded"},"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: props.startState || 'loaded', f: 'all' }; }
+  renderVals() {
+    var self = this, v = this.state.view, f = this.state.f;
+    var R = { ok: { cls: 'status s-ok', d: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3', label: 'Completed' }, bad: { cls: 'status s-err', d: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6', label: 'Didn’t complete' } };
+    var all = [
+      { when: 'Oct 21, 12:04 PM', acct: 'Apex 100K · PA-48213', file: 'Performance (14).csv', fmt: 'Performance export', res: R.ok, rows: 68, imp: 64, dup: 2, err: 1, warn: 2 },
+      { when: 'Oct 20, 5:18 PM', acct: 'Topstep 50K · XFA-1182', file: 'Performance.csv', fmt: 'Performance export', res: R.ok, rows: 22, imp: 22, dup: 0, err: 0, warn: 0 },
+      { when: 'Oct 19, 4:12 PM', acct: 'Apex 100K · PA-48213', file: 'Performance (13).csv', fmt: 'Performance export', res: R.ok, rows: 11, imp: 11, dup: 0, err: 0, warn: 0 },
+      { when: 'Oct 16, 5:30 PM', acct: 'Apex 100K · PA-48213', file: 'Performance (12).csv', fmt: 'Performance export', res: R.bad, rows: 40, imp: 0, dup: '—', err: '—', warn: '—' },
+      { when: 'Oct 16, 5:26 PM', acct: 'Apex 100K · PA-48213', file: 'trades-export.csv', fmt: 'Generic trade list', res: R.ok, rows: 212, imp: 198, dup: 9, err: 5, warn: 0 },
+      { when: 'Oct 9, 4:40 PM', acct: 'Topstep 50K · XFA-1182', file: 'Performance.csv', fmt: 'Performance export', res: R.ok, rows: 38, imp: 0, dup: 38, err: 0, warn: 0 },
+      { when: 'Oct 5, 7:02 PM', acct: 'Apex 100K · PA-48213', file: 'Performance (11).csv', fmt: 'Performance export', res: R.ok, rows: 19, imp: 19, dup: 0, err: 0, warn: 1 }
+    ];
+    var keep = function (r) { return f === 'all' || (f === 'ok' && r.res === R.ok) || (f === 'bad' && r.res === R.bad) || (f === 'prob' && (r.err > 0 || r.warn > 0 || r.res === R.bad)); };
+    var rows = all.filter(keep).map(function (r) { return Object.assign({}, r, { errCls: r.err > 0 ? 'neg' : 'muted', warnCls: r.warn > 0 ? 'wrn' : 'muted' }); });
+    var counts = { all: 7, ok: 6, bad: 1, prob: 4 };
+    var filters = [['all', 'All'], ['ok', 'Completed'], ['bad', 'Didn’t complete'], ['prob', 'With problem rows']].map(function (x) {
+      return { label: x[1], n: counts[x[0]], on: f === x[0], cls: f === x[0] ? 'is-on' : '', pick: function () { self.setState({ f: x[0] }); } };
+    });
+    var views = [['loaded', 'History'], ['loading', 'Loading'], ['empty', 'No imports'], ['error', 'Couldn’t load']].map(function (x) {
+      return { label: x[1], on: v === x[0], cls: v === x[0] ? 'is-on' : '', pick: function () { self.setState({ view: x[0] }); } };
+    });
+    return { views: views, filters: filters, rows: rows, yes: true,
+      isLoading: v === 'loading', isEmpty: v === 'empty', isError: v === 'error', isNoMatch: v === 'loaded' && rows.length === 0, showTable: v === 'loaded' && rows.length > 0 };
+  }
+}
+</script>
+</body>
+</html>

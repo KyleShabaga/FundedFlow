@@ -113,3 +113,39 @@ Decisions and gaps:
 - Generic CSVs always go to the wizard, even when Rust matched every column by name, so a human checks the matches.
 - Native drop on packaged Windows depends on `dragDropEnabled: false` (tauri.conf.json, Build 20). It must be
   re-checked by a person dragging from Explorer on each release.
+
+## P0 design: Quick import and history (Build 25.1)
+
+Boards in [`mockups/p0/`](../mockups/p0/): 5A `QuickImport` (no file, dragging, checking, ready, needs wizard,
+nothing new, importing, imported, uncertain), 5B `ImportHistory` (history, loading, no imports, couldn't load; result
+filter), 5C `ImportDetail` (drawer for a completed and a failed import, problem-row filter), 5D `ImportFailures`
+(invalid file, too large, several files, unreadable, generic format → wizard, imported before, no or archived account,
+rows outside the attempt, uncertain, stale preview, partial, all invalid, didn't complete), 5E `NarrowImport`.
+The full wizard keeps its Build 18 mockup (`Import.dc.html`).
+
+### Decisions
+- **Quick import is three steps on one page**: Account attempt → File → Confirm, shown as a light step line, not the
+  wizard's stepper. Account and file cards sit side by side; the summary card lists into, format (with the reason it
+  was detected), times read in and date order, then six counts (will import, duplicates, errors, warnings, blank rows,
+  rows in file). The sticky bar says "Nothing is saved until you confirm. All n trades are written together, or none
+  are." and holds the one primary button.
+- **The wizard is one click away and never a dead end**: "Full wizard" in the head, and any file Quick import can't
+  decide (ambiguous dates, generic columns, file issues) shows "This file needs the full wizard" with
+  Continue in full wizard; the wizard then shows "Continued from Quick import" with the reason.
+- **Success** shows the counts the import returned (not the preview's) and links to its details.
+- **Uncertain** locks both paths and offers "Verify in import history" plus "I've checked the history"; nothing retries.
+- **History** adds an Account column and an "All accounts" choice in the picker (a UI merge of each account's
+  `list_csv_imports`, as Accounts already does), a result filter (All, Completed, Didn't complete, With problem
+  rows), and the existing columns. Rows open the details drawer.
+- **Details** stay a 720 px `Drawer` (as built): facts, failure message when present, and problem rows with a filter
+  (Errors, Duplicates, Skipped), the reason, a help line and the original cells in mono.
+
+### Keyboard and narrow windows
+The drop zone is also a button; dropping several files is refused with a message. Drawer: Escape closes and focus
+returns to the row. At 720 px the cards stack, counts become 2×3, and the drawer is full width.
+
+### Changes proposed (UI only) and gaps
+- "All accounts" history view and Account column; result filter; problem-row filter in the drawer.
+- A URL per import (`/import/history/:batchId`) would let account detail and toasts deep-link to one import; it needs
+  only routing, but it is a new route, so it is proposed, not designed in as built.
+- Undo for a whole import still needs a backend command.

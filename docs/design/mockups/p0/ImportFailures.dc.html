@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Import failure and recovery</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.cap{font:600 12px/16px var(--font-sans);color:var(--ink-faint);letter-spacing:.4px;text-transform:uppercase;margin:0 0 8px}
+.cell{display:flex;flex-direction:column;min-width:0}
+.cell>.card{flex:1}
+</style>
+</helmet>
+<div class="shell" style="display: block; width: 1600px; min-height: 1500px; padding: 32px; box-sizing: border-box;">
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+
+    <div class="cell"><p class="cap">Invalid file · not a CSV</p>
+      <div class="card pad stack">
+        <div class="drop is-invalid" style="padding: 20px;"><span class="drop-mark" style="color: var(--loss);"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M10 12l4 4M14 12l-4 4"></path></svg></span><b>statement.pdf</b><span class="small muted">Drag a CSV here, or choose one</span></div>
+        <p class="fld-err" role="alert"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 8v4M12 16h.01"></path></svg>That isn't a CSV file. Export trades from your platform as .csv and choose that file.</p>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Too large · several files · unreadable</p>
+      <div class="card pad stack">
+        <div class="notice n-err" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg><div><b>This file is over 10 MB</b><p>Performance-2025.csv is 14.2 MB. Split it by date in your platform and import each part.</p></div></div>
+        <div class="notice n-warn" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg><div><b>Drop one file at a time</b><p>3 files were dropped. Nothing was read; choose the one to import.</p></div></div>
+        <div class="notice n-err" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg><div><b>This file couldn't be read as text</b><p>It isn't UTF-8 or it's empty. Export it again as CSV (UTF-8).</p></div></div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Unsupported or generic format → wizard</p>
+      <div class="card pad stack">
+        <div class="notice n-warn" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg><div><b>This file needs the full wizard</b><p>Its columns were matched by name (generic trade list), so a person should check the matches. Quick import only takes formats it recognises exactly.</p><div class="notice-actions"><a class="btn btn-sm btn-primary" href="Main.dc.html">Continue in full wizard</a></div></div></div>
+        <div class="notice n-info"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 16v-4M12 8h.01"></path></svg><div><b>In the wizard: Continued from Quick import</b><p>Why: columns matched by name. The attempt, file and time zone came with you; nothing was confirmed.</p></div></div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Duplicate records · imported before</p>
+      <div class="card pad stack">
+        <div class="notice n-info" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 16v-4M12 8h.01"></path></svg><div><b>This file was imported before</b><p>On Oct 19 at 4:12 PM into this attempt. Its 38 trades are already saved, so they would be skipped as duplicates.</p><div class="notice-actions"><a class="btn btn-sm" href="ImportDetail.dc.html">Open that import</a></div></div></div>
+        <div class="dt-card"><table class="dt"><thead><tr><th scope="col" class="num"><span>Line</span></th><th scope="col"><span>Status</span></th><th scope="col"><span>Details</span></th></tr></thead><tbody>
+          <tr style="opacity: .62;"><td class="num">3</td><td><span class="badge b-neutral">Duplicate</span></td><td style="white-space: normal;">Same fill pair as a trade saved on Oct 19, 4:12 PM</td></tr>
+          <tr><td class="num">4</td><td><span class="badge b-profit">New</span></td><td style="white-space: normal;">Shares a buy fill with line 3; a different sell fill, so not a duplicate</td></tr>
+        </tbody></table></div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Missing or unusable account</p>
+      <div class="card stack" style="gap: 0;">
+        <div class="state" style="padding-block: 24px;"><span class="state-mark"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3"></path></svg></span><h3>Add an account first</h3><p>Trades are always imported into one account attempt.</p><a class="btn btn-sm btn-primary" href="AccountDialogs.dc.html" style="margin-top: 6px;">Add account</a></div>
+        <hr class="hr">
+        <div class="pad-s"><div class="notice n-neutral"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><div><b>Old demo is archived</b><p>Archived accounts can't receive imports. Restore it first, or choose another account.</p></div></div></div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Rows outside this attempt · blocked</p>
+      <div class="card pad stack">
+        <div class="notice n-err" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg><div><b>Check the destination before importing</b><p>12 rows are from before Oct 5, 2026, when this attempt started, so they belong to attempt 1. FundedFlow won't put them into attempt 2, and a tick can't override it.</p><div class="notice-actions"><button type="button" class="btn btn-sm">Import into attempt 1 instead</button></div></div></div>
+        <label class="chk" style="opacity: .55;"><input type="checkbox" disabled="{{yes}}">These trades belong to this attempt</label>
+        <p class="faint" style="margin: 0;">For a finished attempt whose dates fit, the same tick is required and enabled; it is tied to this check and cleared if anything changes.</p>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Uncertain completion · both paths locked</p>
+      <div class="card pad stack">
+        <div class="notice n-warn" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></svg><div><b>Couldn't confirm the import finished</b><p>It may have been saved. Check import history before importing this file again; FundedFlow won't retry it for you.</p><div class="notice-actions"><a class="btn btn-sm btn-primary" href="ImportHistory.dc.html">Check import history</a><button type="button" class="btn btn-sm">I've checked the history</button></div></div></div>
+        <p class="faint" style="margin: 0;">Quick import and the wizard both stay locked for this attempt until the trader says they've checked.</p>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Stale preview · something changed</p>
+      <div class="card pad stack">
+        <div class="notice n-info" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"></path></svg><div><b>The account changed</b><p>Its time zone was edited after this check, so the preview is out of date. It is being checked again (read-only); confirm once the new counts appear.</p></div></div>
+        <div class="actbar" style="position: static; box-shadow: none;"><span class="small muted">Checking again…</span><button type="button" class="btn btn-sm btn-primary" aria-disabled="true" title="Wait for the new check">Confirm import of 64 trades</button></div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Partial validation · every row invalid · didn't complete</p>
+      <div class="card pad stack">
+        <div class="notice n-warn"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg><div><b>1 row will be left out</b><p>64 rows are fine and can be imported now; line 41 has an error. Fix it in the file and import again later: duplicates are skipped then.</p></div></div>
+        <div class="notice n-err"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg><div><b>Nothing can be imported yet</b><p>Every row has an error, for example "entry: not a number" on line 2. Fix the file and choose it again.</p></div></div>
+        <div class="notice n-err"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg><div><b>The import didn't complete</b><p>Nothing was written. The attempt is recorded in import history with its problem rows.</p><div class="notice-actions"><a class="btn btn-sm" href="ImportHistory.dc.html">Import history</a><a class="btn btn-sm" href="Main.dc.html">Open in the full wizard</a></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() { return { yes: true }; }
+}
+</script>
+</body>
+</html>
