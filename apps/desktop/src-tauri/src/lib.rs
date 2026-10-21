@@ -37,6 +37,18 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::get_account_risk_inputs,
+            commands::create_financial_observation,
+            commands::get_financial_observation,
+            commands::list_financial_observations,
+            commands::correct_financial_observation,
+            commands::get_ledger_history,
+            commands::correct_ledger_entry,
+            commands::remove_ledger_entry_with_reason,
+            commands::reconcile_financial_balance,
+            commands::list_financial_reconciliations,
+            commands::resolve_financial_reconciliation,
+            commands::list_reconciliation_resolutions,
             commands::runtime_status,
             commands::retry_runtime,
             commands::list_accounts,
