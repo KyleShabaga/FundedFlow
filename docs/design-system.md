@@ -30,6 +30,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `format.ts` | Money, compact money, percentage, byte size (`formatBytes`), trading-day and instant (`formatInstant`) formatting; exact money sums |
 | `components/primitives.tsx` | `Button`, `Badge`, `Pnl`, `StatTile`, `Tabs` + `TabPanel` (Radix Tabs; `keepMounted` keeps a panel's form state while another tab shows, Build 19) |
 | `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots and a `sidebarEdge` slot centred on the sidebar border (Build 18.5); Build 12 supplies navigation and routing |
+| `components/brand.tsx` | `BrandMark` (the swept-F mark, decorative) and `BrandLogo` (mark + "FundedFlow" wordmark; `showName={false}` for the icon rail) (P0-D01) |
 | `components/rules.tsx` | `RuleMeter`, `ruleState`, `AccountCard` |
 | `components/account-overview.tsx` | `AccountOverviewCard`, `ProgressMeter`, `meterFraction` (Build 18.5) |
 | `components/charts.tsx` | `WinGauge`, `Sparkline`, `EquityCurve` |
@@ -81,7 +82,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | Grounds | `bg-000` page, `bg-100` cards, `bg-200` insets (table header, meter track), `bg-300` hover/selected |
 | Lines | `line-100` hairlines (decorative), `line-200` control borders (3:1) |
 | Text | `ink`, `ink-muted` (labels), `ink-faint` (axes, timestamps); all 4.5:1 on cards |
-| Brand | `flow` text/lines, `flow-fill` primary button (with `on-flow` text), `flow-soft` selection |
+| Brand | `flow` text/lines, `flow-fill` primary button (with `on-flow` text), `flow-soft` selection; `brand-mark-start`/`brand-mark-end` the logo mark's gradient only (each end 3:1 on `bg-000` and `bg-100`) |
 | Meaning | `profit`, `loss`, `warn` (rule at 70%+), each with a `-soft` ground that holds its own colour as text |
 | Charts | `chart-1` balance/equity, `chart-2`…`chart-5` categorical series |
 | Space | `space-1` 4 · `space-2` 8 · `space-3` 12 · `space-4` 16 · `space-6` 24 · `space-8` 32 |
@@ -224,3 +225,14 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
   300 px only identity, status, the primary figure and the actions remain. It computes nothing.
 - `ProgressMeter` draws a bar for two amounts the caller already has (engine figures), with a required `valueText`
   for screen readers. Only `value ÷ max` (bigint micro-units, `meterFraction`) sets the width; it states no verdict.
+
+## P0-D01: brand mark and logo
+
+- `BrandMark` draws the FundedFlow mark (the outline in `docs/brand/fundedflow-mark.svg`) centred in a square `size`
+  box (default 32 px). It is always `aria-hidden`; the text beside it carries the name. Its gradient stops read the
+  `brand-mark-start`/`brand-mark-end` tokens, so one component serves both themes, and each instance gets its own
+  gradient ids.
+- `BrandLogo` is the mark plus the wordmark: "Funded" in `ink` and "Flow" in `flow`, Space Grotesk 600 at the
+  display title size (20/28). Its text reads "FundedFlow". `showName={false}` leaves the mark alone, as in the
+  collapsed sidebar rail. The app shell's brand row uses it.
+- Files for uses outside the app (icons, lockups, PNGs) and the usage rules are in `docs/brand/`.

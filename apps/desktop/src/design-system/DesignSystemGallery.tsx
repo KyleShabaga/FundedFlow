@@ -9,6 +9,8 @@ import {
   AccountCard,
   AppFrame,
   Badge,
+  BrandLogo,
+  BrandMark,
   Button,
   DayCard,
   EquityCurve,
@@ -107,6 +109,14 @@ export function DesignSystemGallery() {
             <AppFrame collapsed={false} sidebar={<p>Navigation slot</p>} sidebarEdge={<span className="dsg-edge-dot" aria-hidden="true" />} header={<h3>Header slot</h3>}>
               <p>Route content slot</p>
             </AppFrame>
+          </div>
+        </Section>
+        <Section title="Brand mark and logo" note="BrandLogo: the mark beside &quot;Funded&quot; in ink and &quot;Flow&quot; in flow blue; showName={false} for the icon rail. The mark is decorative and takes its gradient from the brand-mark tokens, so it follows the theme. Files for other uses are in docs/brand.">
+          <div className="dsg-row">
+            <BrandLogo />
+            <BrandLogo showName={false} />
+            <BrandMark size={20} />
+            <BrandMark size={64} />
           </div>
         </Section>
         <Section title="Button and Badge" note="One primary action per view. Badges label outcome, side, phase, setup and mistakes.">

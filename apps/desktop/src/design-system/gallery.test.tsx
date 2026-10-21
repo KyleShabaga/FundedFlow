@@ -25,6 +25,12 @@ describe("DesignSystemGallery", () => {
     }
     expect(screen.getByRole("table", { name: "Example accounts" })).toBeTruthy();
   });
+  it("shows the brand mark and logo section", () => {
+    render(<DesignSystemGallery />);
+    const section = screen.getByRole("heading", { name: "Brand mark and logo" }).closest("section")!;
+    expect(within(section).getByText("Flow").closest(".ds-brand-name")?.textContent).toBe("FundedFlow");
+    expect(section.querySelectorAll("svg.ds-brand-mark").length).toBe(4);
+  });
   it("switches the example async state without showing numbers while loading", async () => {
     render(<DesignSystemGallery />);
     const group = screen.getByRole("group", { name: "Example state" });

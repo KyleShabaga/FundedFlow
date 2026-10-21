@@ -45,4 +45,9 @@ describe.each([
   it("control borders are at least 3:1 on cards", () => {
     expect(contrast(t["line-200"], t["bg-100"])).toBeGreaterThanOrEqual(3);
   });
+  it("both ends of the brand mark gradient are at least 3:1 on the page and on cards", () => {
+    for (const stop of ["brand-mark-start", "brand-mark-end"]) {
+      for (const bg of ["bg-000", "bg-100"]) expect(contrast(t[stop], t[bg]), `${stop} on ${bg}`).toBeGreaterThanOrEqual(3);
+    }
+  });
 });

@@ -1,10 +1,8 @@
 /* Brand row: the mark is level with the edge toggle, which AppFrame centres on the sidebar border. The right
    padding keeps the name clear of the half of the toggle that overlaps the sidebar. */
-.shell-brand { display: flex; align-items: center; gap: var(--space-3); min-height: 32px; padding: var(--space-6) var(--space-8) var(--space-6) var(--space-6); font: 600 20px/28px var(--font-display); }
-.shell-brand-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shell-brand { display: flex; align-items: center; min-height: 32px; padding: var(--space-6) var(--space-8) var(--space-6) var(--space-6); }
 /* Collapsed: the mark sits left of centre so the edge toggle (and its focus ring) keeps clear of it. */
 .is-collapsed .shell-brand { justify-content: flex-start; padding-inline: var(--space-3); }
-.shell-mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-md); background: var(--flow-fill); color: var(--on-flow); }
 /* 32 px visible circle; ::before extends the hit area to 44 px without covering the logo. */
 .shell-toggle { position: relative; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border-radius: var(--radius-pill); border: 1px solid var(--line-200); background: var(--bg-100); color: var(--ink-muted); box-shadow: none; cursor: pointer; }
 .shell-toggle::before { content: ""; position: absolute; inset: -6px; border-radius: inherit; }

@@ -31,6 +31,7 @@
  *   --chart-3: Third categorical series.
  *   --chart-4: Fourth categorical series.
  *   --chart-5: Fifth series / 'other' bucket in symbol donut.
+ *   --brand-mark-start / --brand-mark-end: The FundedFlow mark's gradient (BrandMark). Brand only, never data.
  */
 
 :root,
@@ -59,6 +60,8 @@
   --chart-3: #f6b744;
   --chart-4: #ff8f5e;
   --chart-5: #b9c4da;
+  --brand-mark-start: #5b9dff;
+  --brand-mark-end: #2563eb;
   --shadow-pop: 0 12px 32px rgba(0,0,0,0.5);
   color-scheme: dark;
 }
@@ -89,6 +92,8 @@
     --chart-3: #b07000;
     --chart-4: #c4521a;
     --chart-5: #55617a;
+    --brand-mark-start: #2f74e6;
+    --brand-mark-end: #1a4fb0;
     --shadow-pop: 0 12px 32px rgba(13,21,38,0.12);
     color-scheme: light;
   }
@@ -119,6 +124,8 @@
   --chart-3: #b07000;
   --chart-4: #c4521a;
   --chart-5: #55617a;
+  --brand-mark-start: #2f74e6;
+  --brand-mark-end: #1a4fb0;
   --shadow-pop: 0 12px 32px rgba(13,21,38,0.12);
   color-scheme: light;
 }

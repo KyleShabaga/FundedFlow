@@ -24,6 +24,10 @@ The desktop bundle icons in `apps/desktop/src-tauri/icons/` (PNG sizes, `icon.ic
 from `fundedflow-app-icon.svg`. Regenerate them from that file when the mark changes; with the Tauri CLI
 installed, `npx tauri icon docs/brand/png/fundedflow-app-icon-1024.png` produces the full set.
 
+Inside the app, use the design-system components instead of these files: `BrandMark` and `BrandLogo` in
+`apps/desktop/src/design-system/components/brand.tsx` draw the same outline and take the gradient from the
+`brand-mark-start`/`brand-mark-end` tokens, so they follow the theme (see `docs/design-system.md`).
+
 ## Using the mark
 
 - Keep clear space around the mark of at least a quarter of its height.
