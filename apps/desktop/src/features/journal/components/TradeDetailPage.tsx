@@ -4,13 +4,14 @@
 // round trip is not an execution record, so nothing is reconstructed or drawn from invented prices.
 import { ArrowLeft, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import {
   Badge,
   Button,
   ConfirmDialog,
   EmptyState,
+  ErrorState,
   formatInstant,
   formatMoney,
   LoadingState,
@@ -22,6 +23,7 @@ import {
   useToast,
   zonedDay,
 } from "../../../design-system";
+import { useActiveAccount } from "../../accounts/active-account";
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import { retryRead, toAsyncState } from "../../shared/presentation";
 import { useRemoveTrade, useRestoreTrade, useTradeRecord } from "../../trades/hooks/trades";
@@ -34,7 +36,28 @@ import "./journal.css";
 
 export function TradeDetailPage() {
   const { tradeId = "" } = useParams();
+  const [params] = useSearchParams();
+  const accountId = params.get("account");
+  // ?account= names the attempt explicitly (Insights drill-downs across attempts); otherwise the active account.
+  if (accountId) return <NamedAccountTrade accountId={accountId} tradeId={tradeId} />;
   return <JournalAccountGate>{account => <AccountTrade key={`${account.id}:${tradeId}`} account={account} tradeId={tradeId} />}</JournalAccountGate>;
+}
+
+function NamedAccountTrade({ accountId, tradeId }: { accountId: string; tradeId: string }) {
+  const { state, accounts } = useActiveAccount();
+  if (state.kind === "loading") return <LoadingState label="Loading accounts" layout="lines" rows={4} />;
+  if (state.kind === "error") return <ErrorState scope="route" title="Accounts couldn't be loaded" message="The trade needs to know which account it belongs to. Use the recovery controls, then try again." />;
+  const account = (accounts ?? []).find(a => a.id === accountId);
+  if (!account) {
+    return (
+      <div className="jr-page">
+        <div className="ds-card">
+          <EmptyState kind="no-matches" title="This account isn't in the journal" description="It may have been deleted. Nothing was changed." />
+        </div>
+      </div>
+    );
+  }
+  return <AccountTrade key={`${account.id}:${tradeId}`} account={account} tradeId={tradeId} named />;
 }
 
 const PNL_SOURCE: Record<string, string> = {
@@ -51,27 +74,32 @@ const FIELD_LABEL: Record<string, string> = {
   realizedPnl: "Net P&L", pnlStatus: "P&L source", notes: "Notes",
 };
 
-function AccountTrade({ account, tradeId }: { account: AccountViewModel; tradeId: string }) {
+function AccountTrade({ account, tradeId, named = false }: { account: AccountViewModel; tradeId: string; named?: boolean }) {
   const record = useTradeRecord(account.id, tradeId);
+  const location = useLocation();
+  const back = (location.state as { from?: string; back?: string } | null)?.from === "insights" ? (location.state as { back?: string }).back ?? "/insights" : null;
   return (
     <div className="jr-page">
-      <Link to="/journal?view=log" className="jr-back"><ArrowLeft size={16} aria-hidden="true" />Journal</Link>
+      {back
+        ? <Link to={back} className="jr-back"><ArrowLeft size={16} aria-hidden="true" />Back to Insights</Link>
+        : <Link to="/journal?view=log" className="jr-back"><ArrowLeft size={16} aria-hidden="true" />Journal</Link>}
+      {named && <p className="jr-sub">Trade of <strong>{account.name}</strong>{account.archivedAt ? " (archived, read-only)" : ""}</p>}
       {record.error?.category === "not-found" && record.data === undefined ? (
         <div className="ds-card">
-          <EmptyState kind="no-matches" title="This trade isn't in the selected account"
+          <EmptyState kind="no-matches" title={named ? "This trade isn't in this account" : "This trade isn't in the selected account"}
             description="It may have been deleted, or it belongs to another account. Trades are never matched across accounts." />
         </div>
       ) : (
         <StateBoundary state={toAsyncState(record)} label="trade" scope="route" onRetry={retryRead(record.refresh)}
           loading={<LoadingState label="Loading the trade" layout="lines" rows={8} />}>
-          {r => <TradeView account={account} record={r} />}
+          {r => <TradeView account={account} record={r} named={named} />}
         </StateBoundary>
       )}
     </div>
   );
 }
 
-function TradeView({ account, record }: { account: AccountViewModel; record: TradeRecordView }) {
+function TradeView({ account, record, named = false }: { account: AccountViewModel; record: TradeRecordView; named?: boolean }) {
   const navigate = useNavigate();
   const toast = useToast();
   const t = record.trade;
@@ -100,9 +128,9 @@ function TradeView({ account, record }: { account: AccountViewModel; record: Tra
         </div>
         <div className="jr-detail-actions">
           <Button size="sm" icon={<ChevronLeft size={14} aria-hidden="true" />} disabled={!record.previousTradeId}
-            onClick={() => record.previousTradeId && navigate(tradePath(record.previousTradeId))}>Previous trade</Button>
+            onClick={() => record.previousTradeId && navigate(tradePath(record.previousTradeId, named ? account.id : undefined))}>Previous trade</Button>
           <Button size="sm" icon={<ChevronRight size={14} aria-hidden="true" />} disabled={!record.nextTradeId}
-            onClick={() => record.nextTradeId && navigate(tradePath(record.nextTradeId))}>Next trade</Button>
+            onClick={() => record.nextTradeId && navigate(tradePath(record.nextTradeId, named ? account.id : undefined))}>Next trade</Button>
           <Button size="sm" icon={<Pencil size={14} aria-hidden="true" />} onClick={() => setEditing(true)} disabled={readOnly} disabledReason={readOnly ? "Archived accounts are read-only" : undefined}>Correct trade</Button>
           <Button size="sm" variant="ghost" icon={<Trash2 size={14} aria-hidden="true" />} onClick={() => setDeleting(true)} disabled={readOnly} disabledReason={readOnly ? "Archived accounts are read-only" : undefined}>Delete</Button>
         </div>
