@@ -334,3 +334,19 @@ fn failed_transaction_rolls_back_every_row_and_review_can_be_retried() {
     conn.execute_batch("DROP TRIGGER fail_trade;").unwrap();
     assert_eq!(native_commit(&mut conn, &ack).unwrap().imported_count, 1);
 }
+
+#[test]
+fn failure_logging_cannot_write_into_an_account_archived_after_analysis() {
+    let (mut conn, account) = setup();
+    let req = request(
+        &account,
+        &csv("2026-10-20T20:00:00Z", "2026-10-20T20:01:00Z", "id"),
+    );
+    let analysis = analyze(&conn, &req).unwrap();
+    accounts::archive(&mut conn, &account).unwrap();
+    // Model an archive after preflight but before the separate failure log. The
+    // conditional INSERT checks writability atomically, with no check/write gap.
+    record_failed(&conn, &req, &analysis, &now(), "synthetic failure").unwrap();
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM import_batches"), 0);
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM import_rows"), 0);
+}

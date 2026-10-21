@@ -574,7 +574,8 @@ fn record_failed(conn: &Connection, req: &CsvImportRequest, a: &Analysis, starte
         "INSERT INTO import_batches (id, account_id, file_name, file_sha256, file_size, mapping_snapshot_json,
                                      source_timezone, source_format, status, row_count, failed_count,
                                      error_summary, created_at, completed_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'failed', ?9, ?9, ?10, ?11, ?12)",
+         SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'failed', ?9, ?9, ?10, ?11, ?12
+         WHERE EXISTS (SELECT 1 FROM accounts WHERE id = ?2 AND archived_at IS NULL)",
         params![
             new_id(),
             req.account_id,
