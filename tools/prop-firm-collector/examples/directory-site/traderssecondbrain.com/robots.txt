@@ -1,0 +1,5 @@
+# Synthetic robots.txt for the practice site.
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /go/

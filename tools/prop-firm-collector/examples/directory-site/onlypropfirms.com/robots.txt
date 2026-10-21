@@ -1,0 +1,3 @@
+# Synthetic robots.txt for the practice site.
+User-agent: *
+Disallow: /wp-admin/

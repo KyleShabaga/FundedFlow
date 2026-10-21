@@ -20,7 +20,7 @@ from fundedflow_collector.outcomes import HostRole, SourceKind
 PRESET_VERSION = "2026-10-21"
 REVIEWED_ON = "2026-10-21"
 #: Affiliate redirects, admin and API areas, deals and coupons: never in scope for any directory preset.
-COMMON_EXCLUDES = ["/go/*", "/out/*", "/recommends/*", "/visit/*", "/api/*", "/admin/*", "/wp-admin/*", "*coupon*"]
+COMMON_EXCLUDES = ["/go/*", "/out/*", "/recommends/*", "/visit/*", "/api/*", "/admin/*", "/wp-admin/*", "/*coupon*"]
 
 
 @dataclass(frozen=True)
@@ -94,7 +94,7 @@ PRESETS: dict[str, Preset] = {
             hosts=("traderssecondbrain.com",),
             seeds=(("https://traderssecondbrain.com/prop-firms", "Prop firm directory"),),
             allowed_paths=("/prop-firms", "/prop-firms/", "/prop-firms?page=*", "/prop-firm/*", "/guides/*-review*"),
-            excluded_paths=(*COMMON_EXCLUDES, "/track-prop/*", "/prop-firms/data.json", "/tools/*", "*placement=*"),
+            excluded_paths=(*COMMON_EXCLUDES, "/track-prop/*", "/prop-firms/data.json", "/tools/*", "/*placement=*"),
             capture_mode="auto",
             max_fetches=40,
             max_depth=2,
@@ -134,8 +134,8 @@ PRESETS: dict[str, Preset] = {
             ),
             excluded_paths=(
                 *COMMON_EXCLUDES,
-                "*sort=*",
-                "*extendedFilters=*",
+                "/*sort=*",
+                "/*extendedFilters=*",
                 "/_next/data/*",
                 "/decide/*",
                 "/cdn-cgi/*",

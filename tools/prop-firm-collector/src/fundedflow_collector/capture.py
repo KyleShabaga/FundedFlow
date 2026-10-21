@@ -1,7 +1,9 @@
 """D7 manual capture import: a page the operator saved in a browser, stored with zero network access.
 
 It goes through the same normalisation, hashing, deduplication and export path as a live fetch, with
-`fetch_method = manual_capture`. This works for every firm, including blocked or terms-prohibited ones.
+`fetch_method = manual_capture`. This works for every firm, including blocked or terms-prohibited ones, and for
+every comparison publisher (Build 29.25): a publisher capture is also read by the publisher's adapter into
+directory observations, still with no network access.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from fundedflow_collector.db.connection import transaction
 from fundedflow_collector.db.registry import RegistryError
 from fundedflow_collector.db.runs import AttemptRecord
 from fundedflow_collector.db.snapshots import EvidenceInput, store_evidence
+from fundedflow_collector.directory.store import extract_and_store
 from fundedflow_collector.outcomes import FetchMethod, HostRole, Outcome, SourceChannel, SourceKind
 from fundedflow_collector.parse.document import ParsedDocument
 from fundedflow_collector.parse.hashing import sha256_bytes
@@ -37,6 +40,7 @@ class CaptureResult:
     title: str | None
     text_chars: int
     warnings: list[str]
+    directory: str | None = None  # what the publisher's adapter made of the page
 
 
 def import_capture(
@@ -44,12 +48,17 @@ def import_capture(
     settings: Settings,
     clock: Clock,
     *,
-    firm_key: str,
+    firm_key: str | None = None,
     url: str,
     file: Path,
     captured_at: str | None = None,
+    publisher_key: str | None = None,
 ) -> CaptureResult:
-    firm = registry.require_firm(conn, firm_key)
+    if (firm_key is None) == (publisher_key is None):
+        raise RegistryError("choose a firm or a comparison publisher for the capture")
+    firm: registry.Owner = (
+        registry.require_firm(conn, firm_key) if firm_key is not None else registry.require_publisher(conn, str(publisher_key))
+    )
     try:
         canonical = canonicalize(url)
     except UrlRejected as exc:
@@ -57,9 +66,13 @@ def import_capture(
     host = registry.get_host(conn, firm.id, host_of(canonical))
     if host is None or host.role is HostRole.ASSET:
         raise RegistryError(
-            f"{host_of(canonical)} is not registered for {firm.firm_key}; add it with `collector host add` so the "
-            "capture stays tied to the firm's own site"
+            f"{host_of(canonical)} is not registered for {firm.owner_key}; add it first so the capture stays tied to "
+            "that site"
         )
+    if isinstance(firm, registry.Publisher):
+        reason = registry.path_outside_scope(firm, canonical)
+        if reason is not None:
+            raise RegistryError(f"--url {canonical} {reason}")
     suffix = file.suffix.lower()
     if suffix not in CONTENT_TYPES:
         raise RegistryError("capture files must be .html, .htm, .pdf or .txt")
@@ -106,7 +119,26 @@ def import_capture(
         retain_raw=settings.raw.retain,
         raw_retention_days=settings.raw.retention_days,
     )
+    directory = None
+    if isinstance(firm, registry.Publisher):
+        if suffix in (".html", ".htm"):
+            stored = extract_and_store(
+                conn,
+                publisher=firm,
+                source=source,
+                snapshot_id=snapshot_id,
+                attempt_id=attempt.id,
+                html=raw,
+                page_url=canonical,
+                capture_channel=FetchMethod.MANUAL_CAPTURE.value,
+                observed_at=when,
+                now=clock.now(),
+            )
+            directory = stored.describe()
+        else:
+            directory = "stored as a snapshot only: adapters read saved HTML pages"
     return CaptureResult(
+        directory=directory,
         outcome=outcome,
         snapshot_id=snapshot_id,
         source_id=source.id,
