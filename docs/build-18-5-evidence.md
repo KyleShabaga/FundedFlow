@@ -1,8 +1,9 @@
 # Build 18.5 — Desktop UI/UX fixes: evidence
 
 Source: [Build 18.5 card](https://app.notion.com/p/4001bd4b6bde813ba2d3fbc6b83eb0c5). Branch
-`feat/build-18-5-desktop-ux-fixes`, from `main` at `fa6aca8`, with `main` at `2a65c18` (Build 18 exact import
-attempts, #52) merged in. **Not Done:** a person must still drag a CSV from Explorer into the packaged app and the
+`feat/build-18-5-desktop-ux-fixes`, from `main` at `fa6aca8`, with `main` merged in twice: `2a65c18` (Build 18
+exact import attempts, #52) and `5f319f4` (Build 26 accessibility journeys, #53). Native QA ran on the head with #52
+merged (`a282671`); #53 arrived afterwards and is covered by the automated checks below only. **Not Done:** a person must still drag a CSV from Explorer into the packaged app and the
 product owner must sign off the UX (see "Outstanding").
 
 ## What changed
@@ -29,7 +30,8 @@ product owner must sign off the UX (see "Outstanding").
 
 ## Check results (merged head)
 
-- `npm run typecheck`: pass. `npm test`: domain 496/496, desktop 620/620 (49 files).
+- `npm run typecheck`: pass. `npm test`: domain 496/496, desktop 721/721 (56 files, including Build 26's journeys,
+  updated for the Import CSV menu, and a new Quick import journey).
 - `npm run build`, `npm run check`: pass (the existing chunk-size warning remains).
 - `cargo test`: 303 passed, 2 ignored. `cargo clippy --all-targets -- -D warnings`: clean. Before merging `main`, one
   test (`schema18_archive_restores…`) failed at the branch base; `main`'s #52 fixed it.
