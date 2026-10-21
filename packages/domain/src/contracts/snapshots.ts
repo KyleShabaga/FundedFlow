@@ -12,7 +12,7 @@ export const drawdownModes = ["static", "eod_trailing", "intraday_trailing"] as 
 export const snapshotStatuses = ["safe", "caution", "stop", "unknown", "needs_setup"] as const;
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a trading day as YYYY-MM-DD");
-const money = decimal;
+const money = decimal.nullable();
 const optionalMoney = decimal.nullish();
 
 export const snapshotInputSchema = z
@@ -36,9 +36,9 @@ export const snapshotInputSchema = z
     highWaterMark: optionalMoney,
     drawdownFloor: optionalMoney,
     drawdownHeadroom: optionalMoney,
-    drawdownLocked: z.boolean(),
+    drawdownLocked: z.boolean().nullable(),
     profitTarget: optionalMoney,
-    tradingDaysCompleted: z.int().min(0),
+    tradingDaysCompleted: z.int().min(0).nullable(),
     tradingDaysRequired: z.int().min(0).nullish(),
     status: z.enum(snapshotStatuses),
     statusReasons: z.array(z.string()),
@@ -66,8 +66,8 @@ export const snapshotSchema = z.object({
   inputsHash: z.string(),
   feesIncluded: z.boolean(),
   unrealizedIncluded: z.boolean(),
-  balance: z.string(),
-  realizedDayPnl: z.string(),
+  balance: nullableMoney,
+  realizedDayPnl: nullableMoney,
   unrealizedPnl: nullableMoney,
   dailyLossLimit: nullableMoney,
   dailyLossRemaining: nullableMoney,
@@ -75,9 +75,9 @@ export const snapshotSchema = z.object({
   highWaterMark: nullableMoney,
   drawdownFloor: nullableMoney,
   drawdownHeadroom: nullableMoney,
-  drawdownLocked: z.boolean(),
+  drawdownLocked: z.boolean().nullable(),
   profitTarget: nullableMoney,
-  tradingDaysCompleted: z.number().int(),
+  tradingDaysCompleted: z.number().int().nullable(),
   tradingDaysRequired: z.number().int().nullable(),
   status: z.enum(snapshotStatuses),
   statusReasons: z.array(z.string()),

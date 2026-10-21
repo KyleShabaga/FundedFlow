@@ -1,0 +1,85 @@
+[
+  {
+    "amount": "2000",
+    "balance": "49999.999999",
+    "expected": {
+      "drawdownFloor": "48000",
+      "drawdownHeadroom": "1999.999999",
+      "drawdownLocked": false
+    },
+    "kind": "drawdown",
+    "lockedFloor": null,
+    "method": "static",
+    "name": "static_micro",
+    "opening": "50000",
+    "peak": "50000",
+    "trigger": null
+  },
+  {
+    "amount": "2000",
+    "balance": "51000",
+    "expected": {
+      "drawdownFloor": "50500",
+      "drawdownHeadroom": "500",
+      "drawdownLocked": false
+    },
+    "kind": "drawdown",
+    "lockedFloor": null,
+    "method": "end_of_day_trailing",
+    "name": "eod_trailing",
+    "opening": "50000",
+    "peak": "52500",
+    "trigger": null
+  },
+  {
+    "amount": "2000",
+    "balance": "51200",
+    "expected": {
+      "drawdownFloor": "51000",
+      "drawdownHeadroom": "200",
+      "drawdownLocked": false
+    },
+    "kind": "drawdown",
+    "lockedFloor": null,
+    "method": "intraday_trailing",
+    "name": "intraday_checkpoint_estimate",
+    "opening": "50000",
+    "peak": "53000",
+    "trigger": null
+  },
+  {
+    "amount": "2000",
+    "balance": "53000",
+    "expected": {
+      "drawdownFloor": "50500",
+      "drawdownHeadroom": "2500",
+      "drawdownLocked": true
+    },
+    "kind": "drawdown",
+    "lockedFloor": "50500",
+    "method": "end_of_day_trailing",
+    "name": "locked_eod",
+    "opening": "50000",
+    "peak": "53000",
+    "trigger": "52500"
+  },
+  {
+    "expected": {
+      "dailyLossRemaining": "-0.000001"
+    },
+    "kind": "daily",
+    "limit": "100",
+    "name": "daily_micro_loss",
+    "net": "-100.000001"
+  },
+  {
+    "best": "150",
+    "expected": {
+      "attained": false
+    },
+    "kind": "consistency",
+    "name": "consistency_exact_share",
+    "share": "0.5",
+    "total": "299"
+  }
+]
