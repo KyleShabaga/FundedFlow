@@ -145,7 +145,7 @@ export interface RulebookRepository {
   flagSourceConflict(input: SourceConflictInput): Promise<RuleClaim>;
 }
 
-/** Non-trade money movements. Fees never change the balance the rules see; payouts, resets and corrections do. */
+/** Non-trade money movements. Fees never change the bookkeeping balance; payouts, resets and corrections do. */
 export interface LedgerRepository {
   /** Non-deleted entries, oldest first. Readable for archived accounts. */
   list(accountId: string): Promise<LedgerEntry[]>;

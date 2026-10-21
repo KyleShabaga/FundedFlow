@@ -12,6 +12,7 @@ export const riskMoney = z.string().refine(v => {
   return m !== null && canonicalDecimal(v) === v && microsToDecimal(m) === v;
 }, "Use canonical decimal text exact to six places within i64 micro-units");
 export const evidenceStateSchema = z.enum(["available", "missing", "incomplete", "stale", "conflicting", "unsupported", "manual_verification"]);
+export type EvidenceState = z.infer<typeof evidenceStateSchema>;
 export const observationKinds = ["opening_balance", "balance", "equity", "intraday_peak", "eod_settlement"] as const;
 const id = z.string().min(1).max(200);
 const instant = z.iso.datetime({ offset: true });

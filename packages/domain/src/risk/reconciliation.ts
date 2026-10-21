@@ -1,6 +1,7 @@
 import type { LedgerEntry } from "../contracts/ledger.js";
 import type { Trade } from "../contracts/trades.js";
 import { isMicros, microsToDecimal, toMicros } from "../primitives/money.js";
+import { riskMoney } from "./contracts.js";
 import type { FinancialObservation, ReconciliationRequest, ReconciliationResult } from "./contracts.js";
 
 /** Same explicit instant only. No inferred tolerance, current clock, FX or balancing entry. */
@@ -39,21 +40,21 @@ export function compareFinancialEvidence(request: ReconciliationRequest, observa
   if (baseline.confirmation !== "user_confirmed" || observation.confirmation !== "user_confirmed") result.missingInputs.push("user_confirmation");
   if (baseline.confidence !== "user_reported" || observation.confidence !== "user_reported") result.missingInputs.push("confidence");
   if (baseline.value === null || observation.value === null) result.missingInputs.push("observation_value");
-  if ([baseline.value, observation.value].some(v => v !== null && toMicros(v) === null)) return fail("unsupported", "invalid_money");
+  if ([baseline.value, observation.value].some(v => v !== null && !riskMoney.safeParse(v).success)) return fail("unsupported", "invalid_money");
   let total = baseline.value === null ? 0n : toMicros(baseline.value)!;
   for (const t of trades) {
     const end = t.exitAt === null ? null : Date.parse(t.exitAt);
     if (end !== null && end > start && end <= at) {
       result.sourceReferences.push(t.id, ...(t.importBatchId === null ? [] : [t.importBatchId]));
       if (t.realizedPnl === null) result.missingInputs.push(`pnl:${t.id}`);
-      else { const m = toMicros(t.realizedPnl); if (m === null) return fail("unsupported", "invalid_money"); total += m; } // Rust net P&L already includes trade fees.
+      else { const m = toMicros(t.realizedPnl); if (m === null || !riskMoney.safeParse(t.realizedPnl).success) return fail("unsupported", "invalid_money"); total += m; } // Rust net P&L already includes trade fees.
     }
     // A trade spanning the baseline requires a settlement allocation we do not have.
     if (Date.parse(t.entryAt) <= start && (end === null || end > start)) result.missingInputs.push(`baseline_position:${t.id}`);
   }
   for (const e of ledger) if (Date.parse(e.effectiveAt) > start && Date.parse(e.effectiveAt) <= at) {
     result.sourceReferences.push(e.id);
-    if (e.affectsBalance) { const m = toMicros(e.amount); if (m === null) return fail("unsupported", "invalid_money"); total += m; }
+    if (e.affectsBalance) { const m = toMicros(e.amount); if (m === null || !riskMoney.safeParse(e.amount).success) return fail("unsupported", "invalid_money"); total += m; }
   }
   if (result.missingInputs.length) return result;
   const difference = toMicros(observation.value!)! - total;

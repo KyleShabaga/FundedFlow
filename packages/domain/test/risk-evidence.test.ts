@@ -36,3 +36,10 @@ it("detects competing source observations independently of journal variance", ()
   const o=observationSchema.parse(f.observation);
   expect(compareFinancialEvidence(reconciliationRequestSchema.parse(f.request),o,observationSchema.parse(f.baseline),[],[],[],[{ ...o,id:"other",value:"1" }]).reconciliationStatus).toBe("conflicting");
 });
+
+it("returns unavailable money rather than throwing on malformed legacy financial records", () => {
+  const f=fixture[0]!;
+  const result=compareFinancialEvidence(reconciliationRequestSchema.parse(f.request),observationSchema.parse(f.observation),observationSchema.parse(f.baseline),
+    f.trades.map(t=>tradeSchema.parse({...t,realizedPnl:"invalid legacy amount"})),[]);
+  expect(result.reconciliationStatus).toBe("unsupported");expect(result.difference).toBeNull();
+});

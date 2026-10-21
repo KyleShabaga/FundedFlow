@@ -7,6 +7,9 @@
 import { z } from "zod";
 
 import {
+  accountRiskInputsSchema, riskInputsQuerySchema, observationInputSchema, observationSchema, observationCorrectionSchema,
+  ledgerRevisionSchema, correctionMetadataSchema, reconciliationRequestSchema, reconciliationSchema,
+  reconciliationResolutionSchema, reconciliationResolutionInputSchema,
   type JournalRepository,
   RepositoryError,
   accountHistorySchema,
@@ -84,6 +87,20 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
   const done = (command: string, args: Record<string, unknown>) => call(command, args, z.null()).then(() => undefined);
 
   return {
+    evidence: {
+      inputs: (query) => call("get_account_risk_inputs", { query: validate(riskInputsQuerySchema, query) }, accountRiskInputsSchema),
+      create: (input) => call("create_financial_observation", { input: validate(observationInputSchema, input) }, observationSchema),
+      get: (id) => call("get_financial_observation", { id }, observationSchema),
+      list: (accountId) => call("list_financial_observations", { accountId }, z.array(observationSchema)),
+      correct: (id, input) => call("correct_financial_observation", { id, input: validate(observationCorrectionSchema, input) }, observationSchema),
+      ledgerHistory: (accountId) => call("get_ledger_history", { accountId }, z.array(ledgerRevisionSchema)),
+      correctLedger: (id, input, metadata) => call("correct_ledger_entry", { id, input: validate(ledgerEntryInputSchema, input), metadata: validate(correctionMetadataSchema, metadata) }, ledgerEntrySchema),
+      removeLedger: (id, metadata) => done("remove_ledger_entry_with_reason", { id, metadata: validate(correctionMetadataSchema, metadata) }),
+      reconcile: (request) => call("reconcile_financial_balance", { request: validate(reconciliationRequestSchema, request) }, reconciliationSchema),
+      reconciliations: (accountId) => call("list_financial_reconciliations", { accountId }, z.array(reconciliationSchema)),
+      resolve: (id, input) => call("resolve_financial_reconciliation", { id, input: validate(reconciliationResolutionInputSchema, input) }, reconciliationResolutionSchema),
+      resolutions: (id) => call("list_reconciliation_resolutions", { id }, z.array(reconciliationResolutionSchema)),
+    },
     accounts: {
       list: (options) =>
         call("list_accounts", options?.includeArchived ? { includeArchived: true } : {}, z.array(accountSchema)),

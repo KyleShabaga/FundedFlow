@@ -1,5 +1,5 @@
 import type { RuleType, RuleParameters } from "../rulebook/rules.js";
-import type { AccountRiskInputs } from "./contracts.js";
+import type { AccountRiskInputs, EvidenceState } from "./contracts.js";
 
 /** Minimum evidence only. Build 16 still validates parameters, applicability and evaluates rules. */
 export const ruleEvidenceRequirements = {
@@ -30,20 +30,20 @@ export function requiredRuleEvidence<T extends RuleType>(type: T, parameters: Ru
 
 export function assessRuleEvidence<T extends RuleType>(input: AccountRiskInputs, type: T, parameters: RuleParameters<T>) {
   return requiredRuleEvidence(type, parameters).map(requirement => {
-    let state: string = requirement in input.coverage ? input.coverage[requirement as keyof typeof input.coverage] : "unsupported";
+    let state: EvidenceState = requirement in input.coverage && requirement !== "sourceReference" ? input.coverage[requirement as Exclude<keyof typeof input.coverage, "sourceReference">] : "unsupported";
     if (["openPositions", "intradayHistory", "execution_history"].includes(requirement)) state = "unsupported";
-    if (requirement === "baseline" && !input.observations.some(o => o.kind === "opening_balance" && o.value !== null && o.confirmation === "user_confirmed" && Date.parse(o.observedAt) <= Date.parse(input.asOf) && !input.observations.some(r => r.supersedesId === o.id))) state = "missing";
+    if (requirement === "baseline" && !input.observations.some(o => o.kind === "opening_balance" && o.value !== null && o.confirmation === "user_confirmed" && o.confidence === "user_reported" && o.currency === input.account.currency && Date.parse(o.observedAt) <= Date.parse(input.asOf) && !input.observations.some(r => r.supersedesId === o.id))) state = "missing";
     if (requirement === "eodHistory" && !input.observations.some(o => o.kind === "eod_settlement" && o.value !== null && Date.parse(o.observedAt) <= Date.parse(input.asOf))) state = "missing";
     if (requirement === "current_equity") {
       const replaced = new Set(input.observations.map(o => o.supersedesId));
-      const values = input.observations.filter(o => o.kind === "equity" && !replaced.has(o.id));
+      const values = input.observations.filter(o => o.kind === "equity" && o.currency === input.account.currency && !replaced.has(o.id));
       const current = values.filter(o => Date.parse(o.observedAt) === Date.parse(input.asOf) && o.value !== null);
       state = current.length > 1 && new Set(current.map(o => o.value)).size > 1 ? "conflicting"
         : current.length === 0 ? (values.length ? "stale" : "missing")
         : current[0]!.validUntil === null ? "manual_verification"
         : Date.parse(current[0]!.validUntil) < Date.parse(input.asOf) ? "stale"
-        : current[0]!.confirmation === "user_confirmed" ? "available" : "manual_verification";
+        : current[0]!.confirmation === "user_confirmed" && current[0]!.confidence === "user_reported" ? "available" : "manual_verification";
     }
-    return { requirement, state, sourceSummary: "User-reported input sufficiency only; not provider compliance", asOf: input.asOf };
+    return { requirement, state, reasonCode: `${requirement}_${state}`, nextVerificationAction: state === "available" ? "Verify rule applicability and semantics separately" : `Supply or verify sourced ${requirement}`, sourceSummary: "User-reported input sufficiency only; not provider compliance", asOf: input.asOf };
   });
 }
