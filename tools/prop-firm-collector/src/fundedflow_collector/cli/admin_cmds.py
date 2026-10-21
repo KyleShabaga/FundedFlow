@@ -180,9 +180,14 @@ def reset(
         for target in existing:
             if paths.data_dir not in target.resolve().parents:
                 raise fail(f"refusing to delete {target}: outside the collector data folder", exit_codes.DATABASE)
-            if target.is_dir():
-                shutil.rmtree(target)
-            else:
-                target.unlink()
+            try:
+                if target.is_dir():
+                    shutil.rmtree(target)
+                else:
+                    target.unlink()
+            except PermissionError as exc:
+                raise fail(
+                    f"{target} is in use; close other collector windows and try again", exit_codes.DATABASE
+                ) from exc
             typer.echo(f"  deleted {target}")
     typer.echo("Collector data reset. The FundedFlow app database was not touched.")

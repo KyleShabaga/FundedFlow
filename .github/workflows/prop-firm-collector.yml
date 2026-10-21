@@ -1,0 +1,70 @@
+name: Prop-firm collector
+
+# Build 29: the standalone Python collector in tools/prop-firm-collector. Tests run fully offline
+# (pytest-socket blocks real network access; fixtures are synthetic). The npm/Rust CI is separate and unchanged.
+
+on:
+  pull_request:
+    paths:
+      - 'tools/prop-firm-collector/**'
+      - 'docs/contracts/collector-*'
+      - '.github/workflows/prop-firm-collector.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/prop-firm-collector/**'
+      - 'docs/contracts/collector-*'
+      - '.github/workflows/prop-firm-collector.yml'
+
+concurrency:
+  group: collector-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  collector:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tools/prop-firm-collector
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.13.4'
+          enable-cache: true
+          cache-dependency-glob: tools/prop-firm-collector/uv.lock
+
+      - name: Install Python 3.12 and locked dependencies (hash-checked)
+        run: |
+          uv python install 3.12
+          uv sync --locked --all-extras --python 3.12
+
+      - name: Banned dependencies (stealth, evasion, AGPL PDF, hosted scraping)
+        run: uv run python scripts/check_lockfile.py
+
+      - name: Lint and format
+        run: |
+          uv run ruff check src tests scripts
+          uv run ruff format --check src tests scripts
+
+      - name: Types (mypy --strict)
+        run: uv run mypy src tests
+
+      - name: Install Playwright Chromium (optional [browser] extra)
+        run: uv run playwright install chromium
+
+      - name: Tests (offline; includes contract, CLI walkthrough and browser tests)
+        run: uv run pytest -ra
+
+      - name: Export schema validates the checked-in fixture
+        run: uv run collector validate tests/fixtures/collector-snapshot-v1.json
+
+      - name: Dependency audit (pip-audit)
+        shell: pwsh
+        run: |
+          uv export --format requirements-txt --frozen --all-extras --no-dev --no-emit-project -o "$env:RUNNER_TEMP\requirements.txt"
+          uv run pip-audit -r "$env:RUNNER_TEMP\requirements.txt" --require-hashes --disable-pip --progress-spinner off

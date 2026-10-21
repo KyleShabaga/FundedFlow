@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
@@ -19,13 +20,19 @@ from fundedflow_collector.db.registry import Firm
 from fundedflow_collector.net.client import Fetcher, make_client
 from fundedflow_collector.net.fixture_transport import FixtureSite
 from fundedflow_collector.outcomes import HostRole, SourceKind, TermsDecision
+from fundedflow_collector.render.browser import Renderer
 from fundedflow_collector.runner import Environment, FirmRunner, RunOptions, RunSummary
 
 PROJECT = Path(__file__).resolve().parents[1]
+#: Captured before any test isolates LOCALAPPDATA, so browser tests can find Playwright's Chromium.
+REAL_LOCALAPPDATA = os.environ.get("LOCALAPPDATA")
 FIXTURE_SITE = PROJECT / "examples" / "fixture-site"
 CAPTURES = PROJECT / "examples" / "captures"
 UA = "Mozilla/5.0 (compatible; FundedFlowCollector/0.1; +https://example.invalid/fundedflow-collector)"
-TEST_SETTINGS = Settings.model_validate({"user_agent": {"info_url": "https://example.invalid/fundedflow-collector"}})
+# Jitter off so fake-clock timestamps (and so the pinned export fixture) are deterministic.
+TEST_SETTINGS = Settings.model_validate(
+    {"user_agent": {"info_url": "https://example.invalid/fundedflow-collector"}, "pacing": {"jitter_ms": 0}}
+)
 
 
 @pytest.fixture(autouse=True)
@@ -53,27 +60,50 @@ def conn(tmp_path: Path) -> Iterator[sqlite3.Connection]:
 
 
 def add_firm(
-    conn: sqlite3.Connection, clock: FakeClock, key: str = "example-firm", *,
-    hosts: dict[str, tuple[HostRole, TermsDecision | None]] | None = None, accept_unclear: bool = False,
-    max_fetches: int | None = None, excluded: list[str] | None = None,
+    conn: sqlite3.Connection,
+    clock: FakeClock,
+    key: str = "example-firm",
+    *,
+    hosts: dict[str, tuple[HostRole, TermsDecision | None]] | None = None,
+    accept_unclear: bool = False,
+    max_fetches: int | None = None,
+    excluded: list[str] | None = None,
 ) -> Firm:
-    firm = registry.add_firm(conn, firm_key=key, display_name=f"{key} (synthetic)",
-                             homepage_url="https://www.example-firm.test/", now=clock.now(),
-                             max_fetches=max_fetches, excluded_paths=excluded or [])
-    hosts = hosts if hosts is not None else {
-        "www.example-firm.test": (HostRole.HOMEPAGE, TermsDecision.ALLOWED),
-        "help.example-firm.test": (HostRole.HELP_CENTER, TermsDecision.ALLOWED),
-    }
+    firm = registry.add_firm(
+        conn,
+        firm_key=key,
+        display_name=f"{key} (synthetic)",
+        homepage_url="https://www.example-firm.test/",
+        now=clock.now(),
+        max_fetches=max_fetches,
+        excluded_paths=excluded or [],
+    )
+    hosts = (
+        hosts
+        if hosts is not None
+        else {
+            "www.example-firm.test": (HostRole.HOMEPAGE, TermsDecision.ALLOWED),
+            "help.example-firm.test": (HostRole.HELP_CENTER, TermsDecision.ALLOWED),
+        }
+    )
     for name, (role, decision) in hosts.items():
         host = registry.add_host(conn, firm, name, role, clock.now())
         if decision is not None:
-            registry.record_terms(conn, firm, host, decision=decision, terms_url="https://www.example-firm.test/terms",
-                                  now=clock.now(), accept_unclear=accept_unclear and decision is TermsDecision.UNCLEAR)
+            registry.record_terms(
+                conn,
+                firm,
+                host,
+                decision=decision,
+                terms_url="https://www.example-firm.test/terms",
+                now=clock.now(),
+                accept_unclear=accept_unclear and decision is TermsDecision.UNCLEAR,
+            )
     return firm
 
 
-def add_seed(conn: sqlite3.Connection, firm: Firm, clock: FakeClock, url: str,
-             kind: SourceKind = SourceKind.PAGE, **kw: object) -> registry.Source:
+def add_seed(
+    conn: sqlite3.Connection, firm: Firm, clock: FakeClock, url: str, kind: SourceKind = SourceKind.PAGE, **kw: object
+) -> registry.Source:
     return registry.add_source(conn, firm, url=url, kind=kind, now=clock.now(), **kw)  # type: ignore[arg-type]
 
 
@@ -83,12 +113,20 @@ class Harness:
     clock: FakeClock
     site: FixtureSite
     settings: Settings
-    renderer: object | None = None
+    renderer: Renderer | None = None
 
     def env(self) -> Environment:
         fetcher = Fetcher(make_client(self.settings, self.site.transport(), UA), self.clock, self.settings)
-        return Environment(conn=self.conn, settings=self.settings, config_sha256="0" * 64, clock=self.clock,
-                           fetcher=fetcher, resolver=None, renderer=self.renderer, fixture=self.site)  # type: ignore[arg-type]
+        return Environment(
+            conn=self.conn,
+            settings=self.settings,
+            config_sha256="0" * 64,
+            clock=self.clock,
+            fetcher=fetcher,
+            resolver=None,
+            renderer=self.renderer,
+            fixture=self.site,
+        )
 
     def run(self, firm_key: str = "example-firm", **options: object) -> RunSummary:
         firm = registry.require_firm(self.conn, firm_key)

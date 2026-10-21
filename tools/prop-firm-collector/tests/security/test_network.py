@@ -24,7 +24,7 @@ from fundedflow_collector.net.client import (
 from fundedflow_collector.net.pinned_backend import AddressBlocked, PinnedNetworkBackend
 from fundedflow_collector.net.transport import PinnedTransport
 from fundedflow_collector.outcomes import CircuitState, Outcome
-from tests.conftest import TEST_SETTINGS, UA, mock_fetcher
+from tests.conftest import TEST_SETTINGS, UA, Handler, mock_fetcher
 
 MB = 1024 * 1024
 
@@ -44,8 +44,9 @@ class RecordingStream(httpcore.NetworkStream):
     def __init__(self) -> None:
         self.tls_server_hostname: str | None = None
 
-    def start_tls(self, ssl_context: ssl.SSLContext, server_hostname: str | None = None,
-                  timeout: float | None = None) -> httpcore.NetworkStream:
+    def start_tls(
+        self, ssl_context: ssl.SSLContext, server_hostname: str | None = None, timeout: float | None = None
+    ) -> httpcore.NetworkStream:
         self.tls_server_hostname = server_hostname
         raise httpcore.ConnectError("test stops after recording SNI")
 
@@ -58,8 +59,14 @@ class RecordingBackend(httpcore.NetworkBackend):
         self.connected: list[tuple[str, int]] = []
         self.streams: list[RecordingStream] = []
 
-    def connect_tcp(self, host: str, port: int, timeout: float | None = None, local_address: str | None = None,
-                    socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None) -> httpcore.NetworkStream:
+    def connect_tcp(
+        self,
+        host: str,
+        port: int,
+        timeout: float | None = None,
+        local_address: str | None = None,
+        socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None,
+    ) -> httpcore.NetworkStream:
         self.connected.append((host, port))
         stream = RecordingStream()
         self.streams.append(stream)
@@ -89,8 +96,16 @@ def test_connects_to_the_validated_ip_and_keeps_the_name_for_sni() -> None:
 
 @pytest.mark.parametrize(
     "answer",
-    [["127.0.0.1"], ["10.1.2.3"], ["169.254.169.254"], ["::1"], ["fe80::1"], ["93.184.216.34", "192.168.0.10"],
-     ["::ffff:127.0.0.1"], ["fd00::5"]],
+    [
+        ["127.0.0.1"],
+        ["10.1.2.3"],
+        ["169.254.169.254"],
+        ["::1"],
+        ["fe80::1"],
+        ["93.184.216.34", "192.168.0.10"],
+        ["::ffff:127.0.0.1"],
+        ["fd00::5"],
+    ],
 )
 def test_any_non_public_answer_blocks_the_connection(answer: list[str]) -> None:
     inner = RecordingBackend()
@@ -150,8 +165,9 @@ def test_redirect_hop_to_a_private_host_is_blocked_through_the_real_transport(cl
             if self._sent:
                 return b""
             self._sent = True
-            return (b"HTTP/1.1 302 Found\r\nLocation: http://intranet.example-firm.test/admin\r\n"
-                    b"Content-Length: 0\r\n\r\n")
+            return (
+                b"HTTP/1.1 302 Found\r\nLocation: http://intranet.example-firm.test/admin\r\nContent-Length: 0\r\n\r\n"
+            )
 
         def close(self) -> None:
             pass
@@ -160,15 +176,21 @@ def test_redirect_hop_to_a_private_host_is_blocked_through_the_real_transport(cl
         def __init__(self) -> None:
             self.connected: list[str] = []
 
-        def connect_tcp(self, host: str, port: int, timeout: float | None = None,
-                        local_address: str | None = None,
-                        socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None) -> httpcore.NetworkStream:
+        def connect_tcp(
+            self,
+            host: str,
+            port: int,
+            timeout: float | None = None,
+            local_address: str | None = None,
+            socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None,
+        ) -> httpcore.NetworkStream:
             self.connected.append(host)
             return RedirectStream()
 
     inner = Backend()
-    resolver = FakeResolver({"www.example-firm.test": [["93.184.216.34"]],
-                             "intranet.example-firm.test": [["10.0.0.1"]]})
+    resolver = FakeResolver(
+        {"www.example-firm.test": [["93.184.216.34"]], "intranet.example-firm.test": [["10.0.0.1"]]}
+    )
     backend = PinnedNetworkBackend(resolver, inner)
     from fundedflow_collector.net.client import Fetcher
 
@@ -187,7 +209,7 @@ def test_real_socket_round_trip_on_loopback_with_a_test_only_policy(clock: FakeC
     seen: dict[str, str] = {}
 
     class Handler(BaseHTTPRequestHandler):
-        def do_GET(self) -> None:  # noqa: N802
+        def do_GET(self) -> None:
             seen["host"] = self.headers.get("Host", "")
             seen["ua"] = self.headers.get("User-Agent", "")
             seen["cookie"] = self.headers.get("Cookie", "")
@@ -207,15 +229,22 @@ def test_real_socket_round_trip_on_loopback_with_a_test_only_policy(clock: FakeC
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
+
         class PortMapping(httpcore.NetworkBackend):
-            def connect_tcp(self, host: str, port_: int, timeout: float | None = None,
-                            local_address: str | None = None,
-                            socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None) -> httpcore.NetworkStream:
+            def connect_tcp(
+                self,
+                host: str,
+                port_: int,
+                timeout: float | None = None,
+                local_address: str | None = None,
+                socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None,
+            ) -> httpcore.NetworkStream:
                 assert host == "127.0.0.1"
                 return httpcore.SyncBackend().connect_tcp(host, port, timeout=timeout)
 
-        backend = PinnedNetworkBackend(FakeResolver({"loop.test": [["127.0.0.1"]]}), PortMapping(),
-                                       address_allowed=lambda a: a == "127.0.0.1")
+        backend = PinnedNetworkBackend(
+            FakeResolver({"loop.test": [["127.0.0.1"]]}), PortMapping(), address_allowed=lambda a: a == "127.0.0.1"
+        )
         from fundedflow_collector.net.client import Fetcher
 
         fetcher = Fetcher(make_client(TEST_SETTINGS, PinnedTransport(backend), UA), clock, TEST_SETTINGS, backend)
@@ -257,8 +286,11 @@ def test_conditional_request_and_304(clock: FakeClock) -> None:
 
     fetcher = mock_fetcher(handler, clock)
     first = fetcher.fetch(FetchRequest("https://a.test/", "text/html", MB), allow, HostRunState())
-    second = fetcher.fetch(FetchRequest("https://a.test/", "text/html", MB, etag='"v1"',
-                                        last_modified="Tue, 20 Oct 2026 10:00:00 GMT"), allow, HostRunState())
+    second = fetcher.fetch(
+        FetchRequest("https://a.test/", "text/html", MB, etag='"v1"', last_modified="Tue, 20 Oct 2026 10:00:00 GMT"),
+        allow,
+        HostRunState(),
+    )
     assert first.status == 200 and not first.conditional
     assert second.status == 304 and second.ok and second.body is None and second.conditional
 
@@ -296,8 +328,7 @@ def test_redirect_to_unsafe_scheme_is_rejected(clock: FakeClock) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(302, headers={"location": "file:///C:/Windows/win.ini"})
 
-    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow,
-                                                HostRunState())
+    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow, HostRunState())
     assert result.outcome is Outcome.URL_REJECTED
 
 
@@ -306,11 +337,11 @@ def test_byte_caps_including_decompression_bombs(clock: FakeClock) -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/bomb":
-            return httpx.Response(200, headers={"content-encoding": "gzip", "content-type": "text/html"},
-                                  content=bomb)
+            return httpx.Response(200, headers={"content-encoding": "gzip", "content-type": "text/html"}, content=bomb)
         if request.url.path == "/declared":
-            return httpx.Response(200, headers={"content-length": str(50 * MB), "content-type": "text/html"},
-                                  content=b"x")
+            return httpx.Response(
+                200, headers={"content-length": str(50 * MB), "content-type": "text/html"}, content=b"x"
+            )
         return httpx.Response(200, headers={"content-type": "text/html"}, content=b"y" * (2 * MB))
 
     fetcher = mock_fetcher(handler, clock)
@@ -324,12 +355,11 @@ def test_oversized_headers_are_refused(clock: FakeClock) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, headers=[(f"x-h{i}", "v" * 1000) for i in range(80)], content=b"x")
 
-    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow,
-                                                HostRunState())
+    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow, HostRunState())
     assert result.outcome is Outcome.TOO_LARGE
 
 
-def sequence(*responses: httpx.Response) -> tuple[list[str], object]:
+def sequence(*responses: httpx.Response) -> tuple[list[str], Handler]:
     calls: list[str] = []
     items = list(responses)
 
@@ -343,33 +373,47 @@ def sequence(*responses: httpx.Response) -> tuple[list[str], object]:
 @pytest.mark.parametrize("status", [401, 451])
 def test_401_and_451_stop_the_host_without_retry(clock: FakeClock, status: int) -> None:
     calls, handler = sequence(httpx.Response(status))
-    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow,  # type: ignore[arg-type]
-                                                HostRunState())
+    result = mock_fetcher(handler, clock).fetch(
+        FetchRequest("https://a.test/", "text/html", MB),
+        allow,
+        HostRunState(),
+    )
     assert result.outcome is Outcome.ACCESS_DENIED and result.trip is CircuitState.ACCESS_DENIED
     assert len(calls) == 1 and clock.slept == []
 
 
 def test_plain_403_gets_one_retry_after_60s_then_trips(clock: FakeClock) -> None:
     calls, handler = sequence(httpx.Response(403, content=b"Forbidden"))
-    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow,  # type: ignore[arg-type]
-                                                HostRunState())
+    result = mock_fetcher(handler, clock).fetch(
+        FetchRequest("https://a.test/", "text/html", MB),
+        allow,
+        HostRunState(),
+    )
     assert len(calls) == 2 and clock.slept == [60.0]
     assert result.outcome is Outcome.ACCESS_DENIED and result.trip is CircuitState.ACCESS_DENIED
 
 
 def test_403_that_clears_on_retry_is_fine(clock: FakeClock) -> None:
-    calls, handler = sequence(httpx.Response(403), httpx.Response(200, headers={"content-type": "text/html"},
-                                                                  content=b"ok"))
-    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow,  # type: ignore[arg-type]
-                                                HostRunState())
+    calls, handler = sequence(
+        httpx.Response(403), httpx.Response(200, headers={"content-type": "text/html"}, content=b"ok")
+    )
+    result = mock_fetcher(handler, clock).fetch(
+        FetchRequest("https://a.test/", "text/html", MB),
+        allow,
+        HostRunState(),
+    )
     assert result.ok and len(calls) == 2
 
 
 def test_challenge_page_trips_without_retry(clock: FakeClock) -> None:
-    calls, handler = sequence(httpx.Response(403, headers={"cf-mitigated": "challenge"},
-                                             content=b"<title>Just a moment...</title>"))
-    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow,  # type: ignore[arg-type]
-                                                HostRunState())
+    calls, handler = sequence(
+        httpx.Response(403, headers={"cf-mitigated": "challenge"}, content=b"<title>Just a moment...</title>")
+    )
+    result = mock_fetcher(handler, clock).fetch(
+        FetchRequest("https://a.test/", "text/html", MB),
+        allow,
+        HostRunState(),
+    )
     assert result.outcome is Outcome.BLOCKED_BOT_PROTECTION
     assert result.trip is CircuitState.BLOCKED_BOT_PROTECTION
     assert len(calls) == 1
@@ -378,17 +422,19 @@ def test_challenge_page_trips_without_retry(clock: FakeClock) -> None:
 def test_429_honours_retry_after_twice_and_third_trips(clock: FakeClock) -> None:
     calls, handler = sequence(httpx.Response(429, headers={"retry-after": "7"}))
     state = HostRunState()
-    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow, state)  # type: ignore[arg-type]
+    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow, state)
     assert clock.slept == [7.0, 7.0]
     assert len(calls) == 3
     assert result.outcome is Outcome.RATE_LIMITED and result.trip is CircuitState.RATE_LIMITED
 
 
 def test_429_count_is_per_run_across_urls(clock: FakeClock) -> None:
-    calls, handler = sequence(httpx.Response(429, headers={"retry-after": "1"}),
-                              httpx.Response(200, headers={"content-type": "text/html"}, content=b"ok"))
+    calls, handler = sequence(
+        httpx.Response(429, headers={"retry-after": "1"}),
+        httpx.Response(200, headers={"content-type": "text/html"}, content=b"ok"),
+    )
     state = HostRunState()
-    fetcher = mock_fetcher(handler, clock)  # type: ignore[arg-type]
+    fetcher = mock_fetcher(handler, clock)
     assert fetcher.fetch(FetchRequest("https://a.test/1", "text/html", MB), allow, state).ok
     assert state.rate_limited_count == 1
 
@@ -402,8 +448,11 @@ def test_retry_after_is_capped_at_five_minutes(clock: FakeClock) -> None:
 
 def test_5xx_backs_off_then_reports_server_error(clock: FakeClock) -> None:
     calls, handler = sequence(httpx.Response(503))
-    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow,  # type: ignore[arg-type]
-                                                HostRunState())
+    result = mock_fetcher(handler, clock).fetch(
+        FetchRequest("https://a.test/", "text/html", MB),
+        allow,
+        HostRunState(),
+    )
     assert clock.slept == [5.0, 15.0] and len(calls) == 3
     assert result.outcome is Outcome.SERVER_ERROR and result.trip is None
 
@@ -415,38 +464,44 @@ def test_timeouts_and_network_errors_retry_once(clock: FakeClock) -> None:
         attempts.append(1)
         raise httpx.ReadTimeout("slow", request=request)
 
-    result = mock_fetcher(timeout, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow,
-                                                HostRunState())
+    result = mock_fetcher(timeout, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow, HostRunState())
     assert result.outcome is Outcome.TIMEOUT and len(attempts) == 2 and clock.slept == [10.0]
 
     def refused(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("refused", request=request)
 
-    result = mock_fetcher(refused, FakeClock()).fetch(FetchRequest("https://a.test/", "text/html", MB), allow,
-                                                      HostRunState())
+    result = mock_fetcher(refused, FakeClock()).fetch(
+        FetchRequest("https://a.test/", "text/html", MB), allow, HostRunState()
+    )
     assert result.outcome is Outcome.NETWORK_ERROR
 
 
 def test_404_is_an_http_error_without_retry(clock: FakeClock) -> None:
     calls, handler = sequence(httpx.Response(404))
-    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow,  # type: ignore[arg-type]
-                                                HostRunState())
+    result = mock_fetcher(handler, clock).fetch(
+        FetchRequest("https://a.test/", "text/html", MB),
+        allow,
+        HostRunState(),
+    )
     assert result.outcome is Outcome.HTTP_ERROR and len(calls) == 1 and result.trip is None
 
 
 def test_robots_mode_never_retries_or_trips_on_denial(clock: FakeClock) -> None:
     calls, handler = sequence(httpx.Response(403))
-    request = FetchRequest("https://a.test/robots.txt", "text/plain", MB, retry=False, trip_on_denial=False,
-                           allow_truncate=True)
-    result = mock_fetcher(handler, clock).fetch(request, allow, HostRunState())  # type: ignore[arg-type]
+    request = FetchRequest(
+        "https://a.test/robots.txt", "text/plain", MB, retry=False, trip_on_denial=False, allow_truncate=True
+    )
+    result = mock_fetcher(handler, clock).fetch(request, allow, HostRunState())
     assert result.status == 403 and result.trip is None and len(calls) == 1
 
 
 def test_recorded_headers_are_redacted_and_allowlisted(clock: FakeClock) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, headers={"content-type": "text/html", "set-cookie": "sid=secret",
-                                            "x-internal": "1", "etag": '"e"'}, content=b"ok")
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/html", "set-cookie": "sid=secret", "x-internal": "1", "etag": '"e"'},
+            content=b"ok",
+        )
 
-    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow,
-                                                HostRunState())
+    result = mock_fetcher(handler, clock).fetch(FetchRequest("https://a.test/", "text/html", MB), allow, HostRunState())
     assert result.headers == {"content-type": "text/html", "etag": '"e"', "content-length": "2"}

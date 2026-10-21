@@ -53,7 +53,9 @@ def main(
         bool, typer.Option("--version", callback=_version, is_eager=True, help="Show the version.")
     ] = False,
 ) -> None:
-    ctx.obj = AppState(data_dir=data_dir, config_path=config)
+    state = AppState(data_dir=data_dir, config_path=config)
+    ctx.obj = state
+    ctx.call_on_close(state.close)
 
 
 app.command("doctor")(admin_cmds.doctor)

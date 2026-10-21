@@ -68,11 +68,14 @@ def test_unchanged_rerun_keeps_one_snapshot_and_adds_attempts(harness: Harness) 
         ("https://www.example-firm.test/docs/rulebook.pdf",),
     ).fetchall()
     assert [(a["outcome"], a["conditional"], a["http_status"]) for a in attempts] == [
-        ("new_snapshot", 0, 200), ("unchanged", 1, 304)]
+        ("new_snapshot", 0, 200),
+        ("unchanged", 1, 304),
+    ]
 
 
-def test_changed_page_creates_a_new_snapshot_and_reverting_matches_the_old_one(harness: Harness,
-                                                                               site_copy: Path) -> None:
+def test_changed_page_creates_a_new_snapshot_and_reverting_matches_the_old_one(
+    harness: Harness, site_copy: Path
+) -> None:
     seeded(harness)
     harness.run()
     faq = site_copy / "www.example-firm.test" / "faq.html"
@@ -91,7 +94,8 @@ def test_changed_page_creates_a_new_snapshot_and_reverting_matches_the_old_one(h
     rows = harness.conn.execute("SELECT id FROM source_snapshots WHERE requested_url LIKE '%/faq'").fetchall()
     assert len(rows) == 2
     source = harness.conn.execute(
-        "SELECT latest_snapshot_id FROM collector_sources WHERE canonical_url LIKE '%/faq'").fetchone()
+        "SELECT latest_snapshot_id FROM collector_sources WHERE canonical_url LIKE '%/faq'"
+    ).fetchone()
     assert source["latest_snapshot_id"] == first
 
 
@@ -112,14 +116,19 @@ def test_failures_keep_all_previous_snapshots(harness: Harness, site_copy: Path)
     assert result["https://www.example-firm.test/faq"] == "http_error"
     assert snapshot_count(harness.conn) == before
     source = harness.conn.execute(
-        "SELECT last_outcome, latest_snapshot_id FROM collector_sources WHERE canonical_url LIKE '%/faq'").fetchone()
+        "SELECT last_outcome, latest_snapshot_id FROM collector_sources WHERE canonical_url LIKE '%/faq'"
+    ).fetchone()
     assert source["last_outcome"] == "http_error" and source["latest_snapshot_id"] is not None
 
 
 def test_terms_gate_blocks_live_fetching_without_any_request(harness: Harness) -> None:
-    firm = add_firm(harness.conn, harness.clock, hosts={
-        "www.example-firm.test": (HostRole.HOMEPAGE, TermsDecision.PROHIBITED),
-    })
+    firm = add_firm(
+        harness.conn,
+        harness.clock,
+        hosts={
+            "www.example-firm.test": (HostRole.HOMEPAGE, TermsDecision.PROHIBITED),
+        },
+    )
     add_seed(harness.conn, firm, harness.clock, RULES)
     summary = harness.run()
     assert outcomes(summary)[RULES] == "terms_blocked"
@@ -128,8 +137,12 @@ def test_terms_gate_blocks_live_fetching_without_any_request(harness: Harness) -
 
 
 def test_unclear_terms_need_acknowledgement_and_use_5s_pacing(harness: Harness) -> None:
-    firm = add_firm(harness.conn, harness.clock, hosts={
-        "www.example-firm.test": (HostRole.HOMEPAGE, TermsDecision.UNCLEAR)}, accept_unclear=True)
+    firm = add_firm(
+        harness.conn,
+        harness.clock,
+        hosts={"www.example-firm.test": (HostRole.HOMEPAGE, TermsDecision.UNCLEAR)},
+        accept_unclear=True,
+    )
     add_seed(harness.conn, firm, harness.clock, RULES)
     add_seed(harness.conn, firm, harness.clock, "https://www.example-firm.test/faq")
     harness.run(discover=False)
@@ -145,10 +158,15 @@ def test_stale_terms_review_blocks(harness: Harness) -> None:
 
 
 def test_bot_challenge_stops_the_host_and_never_retries_another_way(harness: Harness) -> None:
-    firm = add_firm(harness.conn, harness.clock, "sample-funding", hosts={
-        "www.sample-funding.test": (HostRole.HOMEPAGE, TermsDecision.ALLOWED),
-        "support.sample-funding.test": (HostRole.HELP_CENTER, TermsDecision.ALLOWED),
-    })
+    firm = add_firm(
+        harness.conn,
+        harness.clock,
+        "sample-funding",
+        hosts={
+            "www.sample-funding.test": (HostRole.HOMEPAGE, TermsDecision.ALLOWED),
+            "support.sample-funding.test": (HostRole.HELP_CENTER, TermsDecision.ALLOWED),
+        },
+    )
     add_seed(harness.conn, firm, harness.clock, "https://support.sample-funding.test/rules")
     add_seed(harness.conn, firm, harness.clock, "https://www.sample-funding.test/program-rules")
     summary = harness.run("sample-funding")
@@ -168,8 +186,12 @@ def test_bot_challenge_stops_the_host_and_never_retries_another_way(harness: Har
 
 
 def test_product_token_robots_group_is_obeyed(harness: Harness) -> None:
-    firm = add_firm(harness.conn, harness.clock, "sample-funding", hosts={
-        "www.sample-funding.test": (HostRole.HOMEPAGE, TermsDecision.ALLOWED)})
+    firm = add_firm(
+        harness.conn,
+        harness.clock,
+        "sample-funding",
+        hosts={"www.sample-funding.test": (HostRole.HOMEPAGE, TermsDecision.ALLOWED)},
+    )
     add_seed(harness.conn, firm, harness.clock, "https://www.sample-funding.test/members/area")
     add_seed(harness.conn, firm, harness.clock, "https://www.sample-funding.test/program-rules")
     result = outcomes(harness.run("sample-funding", discover=False))
@@ -186,9 +208,12 @@ def test_budget_is_enforced(harness: Harness) -> None:
 
 def test_deadline_is_enforced(harness: Harness) -> None:
     seeded(harness)
-    harness.settings = harness.settings.model_copy(update={
-        "budget": harness.settings.budget.model_copy(update={"run_deadline_minutes": 1}),
-        "pacing": harness.settings.pacing.model_copy(update={"min_delay_seconds": 20.0})})
+    harness.settings = harness.settings.model_copy(
+        update={
+            "budget": harness.settings.budget.model_copy(update={"run_deadline_minutes": 1}),
+            "pacing": harness.settings.pacing.model_copy(update={"min_delay_seconds": 20.0}),
+        }
+    )
     summary = harness.run()
     assert summary.status == "deadline_exceeded"
     assert summary.exit_code() >= 4
@@ -196,12 +221,16 @@ def test_deadline_is_enforced(harness: Harness) -> None:
 
 def test_dry_run_makes_no_requests_and_writes_nothing(harness: Harness) -> None:
     seeded(harness)
-    counts_before = {t: harness.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]  # noqa: S608
-                     for t in ("crawl_runs", "fetch_attempts", "source_snapshots", "policy_events", "robots_cache")}
+    counts_before = {
+        t: harness.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]  # noqa: S608
+        for t in ("crawl_runs", "fetch_attempts", "source_snapshots", "policy_events", "robots_cache")
+    }
     summary = harness.run(dry_run=True)
     assert harness.site.requests == []
-    assert {t: harness.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]  # noqa: S608
-            for t in counts_before} == counts_before
+    assert {
+        t: harness.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]  # noqa: S608
+        for t in counts_before
+    } == counts_before
     assert {line[0] for line in summary.dry_run_lines} == {"allowed"}
 
 
@@ -232,7 +261,8 @@ def test_js_page_without_browser_is_stored_thin_and_requires_js_reports_unavaila
     result = outcomes(harness.run(discover=False))
     assert result["https://www.example-firm.test/funded-dashboard"] == "new_snapshot"
     warnings = harness.conn.execute(
-        "SELECT warnings FROM source_snapshots WHERE requested_url LIKE '%funded-dashboard'").fetchone()["warnings"]
+        "SELECT warnings FROM source_snapshots WHERE requested_url LIKE '%funded-dashboard'"
+    ).fetchone()["warnings"]
     assert "thin_content" in warnings
     assert result["https://www.example-firm.test/evaluation-rules"] == "render_unavailable"
 

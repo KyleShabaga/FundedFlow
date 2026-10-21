@@ -26,7 +26,8 @@ def make_pdf(pages: list[list[str]], title: str = "Synthetic document") -> bytes
             f"/Resources << /Font << /F1 {font_id} 0 R >> >> >>\nendobj\n".encode("latin-1")
         )
         objects.append(
-            f"{content_id} 0 obj\n<< /Length {len(stream)} >>\nstream\n".encode("latin-1") + stream
+            f"{content_id} 0 obj\n<< /Length {len(stream)} >>\nstream\n".encode("latin-1")
+            + stream
             + b"\nendstream\nendobj\n"
         )
     kids = " ".join(f"{pid} 0 R" for pid in page_ids)

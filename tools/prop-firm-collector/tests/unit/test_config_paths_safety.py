@@ -69,8 +69,9 @@ def test_no_setting_can_enable_evasion_or_bypass(tmp_path: Path, text: str) -> N
 def test_info_url_must_be_https_and_user_agent_is_honest(tmp_path: Path) -> None:
     with pytest.raises(ConfigError):
         load_settings(write(tmp_path, '[user_agent]\ninfo_url = "http://example.invalid/x"\n'))
-    settings, digest = load_settings(write(tmp_path, '[user_agent]\ninfo_url = "https://example.invalid/ffc"\n'
-                                                     'contact = "ops@example.invalid"\n'))
+    settings, digest = load_settings(
+        write(tmp_path, '[user_agent]\ninfo_url = "https://example.invalid/ffc"\ncontact = "ops@example.invalid"\n')
+    )
     assert len(digest) == 64
     ua = build_user_agent(settings)
     assert ua == "Mozilla/5.0 (compatible; FundedFlowCollector/0.1; +https://example.invalid/ffc; ops@example.invalid)"
@@ -89,8 +90,12 @@ def test_missing_config_file_uses_defaults(tmp_path: Path) -> None:
 
 def test_app_database_guard(isolated_env: Path) -> None:
     app_dir = Path(os.environ["APPDATA"]) / "com.fundedflow.desktop"
-    for path in (app_dir / "fundedflow.db", app_dir / "collector.db", Path("C:/anywhere/fundedflow.db"),
-                 Path("D:/x/com.fundedflow.desktop/y/collector.db")):
+    for path in (
+        app_dir / "fundedflow.db",
+        app_dir / "collector.db",
+        Path("C:/anywhere/fundedflow.db"),
+        Path("D:/x/com.fundedflow.desktop/y/collector.db"),
+    ):
         with pytest.raises(AppDatabaseGuardError):
             guard_against_app_database(path)
     guard_against_app_database(isolated_env / "collector" / "collector.db")
@@ -112,11 +117,15 @@ def test_banned_dependencies_absent_from_lockfile_and_environment() -> None:
 
 def test_banned_lockfile_check_detects_a_banned_package(tmp_path: Path) -> None:
     lock = tmp_path / "uv.lock"
-    lock.write_text('version = 1\n[[package]]\nname = "Crawl4AI"\nversion = "0.7.0"\n'
-                    '[[package]]\nname = "curl_cffi"\nversion = "0.7"\n', encoding="utf-8")
+    lock.write_text(
+        'version = 1\n[[package]]\nname = "Crawl4AI"\nversion = "0.7.0"\n'
+        '[[package]]\nname = "curl_cffi"\nversion = "0.7"\n',
+        encoding="utf-8",
+    )
     assert banned_in_lockfile(lock) == ["crawl4ai", "curl-cffi"]
-    assert {"crawl4ai", "playwright-stealth", "undetected-chromedriver", "cloudscraper", "curl-cffi",
-            "pymupdf"} <= set(BANNED_PACKAGES)
+    assert {"crawl4ai", "playwright-stealth", "undetected-chromedriver", "cloudscraper", "curl-cffi", "pymupdf"} <= set(
+        BANNED_PACKAGES
+    )
 
 
 def test_http_stack_is_pinned_to_the_tested_versions() -> None:

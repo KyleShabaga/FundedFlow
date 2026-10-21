@@ -8,7 +8,7 @@ import json
 import sqlite3
 import sys
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +31,7 @@ class AppState:
     config_path: Path | None
     _paths: CollectorPaths | None = None
     _settings: tuple[Settings, str] | None = None
+    _connections: list[sqlite3.Connection] = field(default_factory=list)
 
     @property
     def paths(self) -> CollectorPaths:
@@ -49,7 +50,15 @@ class AppState:
 
     def connect(self, *, create: bool = False) -> sqlite3.Connection:
         configure_logging(self.paths.logs)
-        return open_database(self.paths.db, create=create)
+        conn = open_database(self.paths.db, create=create)
+        self._connections.append(conn)
+        return conn
+
+    def close(self) -> None:
+        for conn in self._connections:
+            conn.close()
+        self._connections.clear()
+        configure_logging(None)
 
 
 clock = SystemClock()
