@@ -20,9 +20,9 @@ FundedFlow is a Windows-first, local-first trading journal built with Tauri 2, R
 
 The UI design system (tokens, bundled fonts, components, money formatting) is in `apps/desktop/src/design-system`; see [`docs/design-system.md`](docs/design-system.md). Screen designs, build order and per-screen specs are in [`docs/design/`](docs/design/README.md). In development, open `#/settings/developer` for the component gallery and data-model tooling. These tools are excluded from production builds.
 
-The product root supplies Today, Insights and Settings placeholders inside the desktop shell, with Accounts
+The product root supplies Today and a Settings placeholder inside the desktop shell, with Accounts
 (Build 15), the rulebook editor (Build 19), CSV import (Build 18) and the Journal with trade detail, reviews and the
-Library (Build 20; [`docs/architecture/build-20-trade-journal.md`](docs/architecture/build-20-trade-journal.md)), and the daily review with plan adherence (Build 22; [`docs/architecture/build-22-daily-review.md`](docs/architecture/build-22-daily-review.md)). Local runtime failure leaves navigation and recovery available; an already-open data screen retains
+Library (Build 20; [`docs/architecture/build-20-trade-journal.md`](docs/architecture/build-20-trade-journal.md)), the daily review with plan adherence (Build 22; [`docs/architecture/build-22-daily-review.md`](docs/architecture/build-22-daily-review.md)) and Insights with exact contributing-trade drill-down (Build 23; [`docs/architecture/build-23-insights.md`](docs/architecture/build-23-insights.md)). Local runtime failure leaves navigation and recovery available; an already-open data screen retains
 its local draft while its controls are disabled. Build 12 evidence, browser smoke instructions and pending
 Windows checks are in [`docs/build-12-verification.md`](docs/build-12-verification.md).
 
@@ -90,6 +90,11 @@ Open the developer panel, pick an account, choose a CSV under **CSV import**, re
 Full rules, field mappings and known limitations: [`docs/data-model.md#csv-import`](docs/data-model.md#csv-import). The test fixture `test_csvimport/Performance.csv` is read by the Rust tests and must stay unedited.
 
 ## Tests
+
+Build 10.5 audit baseline, fixes, verification results and retained acceptance gates:
+[`docs/build-10-5-closeout.md`](docs/build-10-5-closeout.md) and the
+[`acceptance matrix`](docs/build-10-5-acceptance-matrix.md). Automated evidence does not replace packaged
+Windows workflow verification or an explicitly approved real-journal-copy upgrade.
 
 CI (Windows) runs the same steps:
 

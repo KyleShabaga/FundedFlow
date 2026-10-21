@@ -5,7 +5,7 @@ import { useFeatureQuery } from "../../shared/hooks/use-feature-query";
 import { useFeatureMutation } from "../../shared/hooks/use-feature-mutation";
 
 // Library counts ("used by n reviews") change with reviews, so review writes refresh the library too.
-const affected = (accountId: string) => [keys.reviewsRoot(accountId), keys.library, keys.deletion(accountId)];
+const affected = (accountId: string) => [keys.reviewsRoot(accountId), keys.library, keys.deletion(accountId), keys.insightsRoot];
 const scope = (accountId: string, tradeId: string) => JSON.stringify(["review", accountId, tradeId]);
 
 export const useTradeReview = (accountId: string | null, tradeId: string | null) => useFeatureQuery({

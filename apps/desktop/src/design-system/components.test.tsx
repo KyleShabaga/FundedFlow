@@ -4,7 +4,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AccountCard, Pnl, PnlCalendar, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
+import { AccountCard, Pnl, PnlBars, PnlCalendar, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
 import { monthWeeks } from "./components/journal";
 
 afterEach(cleanup);
@@ -76,6 +76,58 @@ describe("PnlCalendar", () => {
   it("hides weekends by default", () => {
     render(<PnlCalendar year={2026} month={10} days={{}} />);
     expect(screen.queryByText("Sat")).toBeNull();
+  });
+  it("marks the selected day and week as pressed, opens a week, and shows an unknown day as a dash without a tint", async () => {
+    const onSelectWeek = vi.fn();
+    const { container } = render(
+      <PnlCalendar year={2026} month={10} selectedDay="2026-10-06" selectedWeek={2} onSelectDay={() => {}} onSelectWeek={onSelectWeek}
+        days={{ "2026-10-05": { pnl: null, trades: 2 }, "2026-10-06": { pnl: "-40", trades: 1 } }} />,
+    );
+    expect(screen.getByRole("button", { name: /Tue Oct 6/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: /Mon Oct 5/ }).getAttribute("aria-pressed")).toBe("false");
+    const unknown = screen.getByRole("button", { name: /Mon Oct 5: P&L unknown, 2 trades/ });
+    expect(unknown.className).not.toMatch(/ds-cal-(profit|loss|flat)/);
+    expect(unknown.textContent).toContain("—");
+    const week = screen.getByRole("button", { name: /^Week 2: P&L unknown, 3 trades/ });
+    expect(week.getAttribute("aria-pressed")).toBe("true");
+    await userEvent.click(week);
+    expect(onSelectWeek).toHaveBeenCalledWith(["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"], 2);
+    expect(container.querySelector(".ds-cal-week.is-selected")).toBeTruthy();
+  });
+  it("leads with trades or win rate when asked", () => {
+    const days = { "2026-10-05": { pnl: "25", trades: 3, winRate: "66.7" }, "2026-10-06": { pnl: "-5", trades: 1, winRate: null } };
+    const { rerender } = render(<PnlCalendar year={2026} month={10} days={days} display="winRate" onSelectDay={() => {}} />);
+    expect(screen.getByRole("button", { name: /Mon Oct 5: \+\$25, 3 trades, win rate 66.7%/ }).textContent).toContain("66.7%");
+    expect(screen.getByRole("button", { name: /Tue Oct 6: .*win rate unknown/ }).textContent).toContain("—");
+    rerender(<PnlCalendar year={2026} month={10} days={days} display="trades" onSelectDay={() => {}} title={<span>Custom title</span>} />);
+    expect(screen.getByText("Custom title")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Mon Oct 5/ }).querySelector(".ds-cal-pnl")?.textContent).toBe("3");
+  });
+});
+
+describe("PnlBars", () => {
+  const items = [
+    { key: "1", label: "Monday", value: "921.87", detail: "12 trades" },
+    { key: "2", label: "Tuesday", value: "-388.2" },
+    { key: "3", label: "Wednesday", value: null, detail: "1 trade with unknown P&L" },
+  ];
+  it("labels every bar with its exact amount and opens the selected row", async () => {
+    const onSelect = vi.fn();
+    const { container } = render(<PnlBars items={items} label="Net P&L by weekday" onSelect={onSelect} selectedKey="2" currency="EUR" />);
+    expect(screen.getByRole("list", { name: "Net P&L by weekday" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Monday: +€921.87, 12 trades" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Tuesday: −€388.20" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Wednesday: P&L unknown, 1 trade with unknown P&L" }).textContent).toContain("—");
+    // Unknown draws no bar; loss bars grow left of the axis.
+    expect(container.querySelectorAll(".ds-bars-bar")).toHaveLength(2);
+    expect((container.querySelector(".ds-bars-bar.is-loss") as HTMLElement).style.right).toBe("50%");
+    await userEvent.click(screen.getByRole("button", { name: /Monday/ }));
+    expect(onSelect).toHaveBeenCalledWith("1");
+  });
+  it("renders read-only rows without onSelect", () => {
+    render(<PnlBars items={items.slice(0, 1)} label="By weekday" />);
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByRole("group", { name: "Monday: +$921.87, 12 trades" })).toBeTruthy();
   });
 });
 

@@ -218,7 +218,7 @@ export type ApplicableRulebookQuery = z.infer<typeof applicableRulebookQuerySche
 
 /**
  * - `resolved`: exactly one verified version governs the phase or path;
- * - `unverified`: a version is bound but not verified, so it is not used;
+ * - `unverified`: a bound version is unverified, archived, or belongs to another provider, so it is not used;
  * - `ambiguous`: several verified versions apply; a person must choose;
  * - `none`: nothing is known. Never guessed from display names.
  */

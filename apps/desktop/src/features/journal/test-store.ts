@@ -24,6 +24,7 @@ import {
 import { createTestStore, T } from "../accounts/test-store";
 import { ACTIVE_ACCOUNT_SETTING } from "../accounts/active-account";
 import { createDailyReviewFake } from "../daily-reviews/test-store";
+import { createInsightsFake } from "../insights/test-store";
 
 const notFound = (what: string) => new RepositoryError({ kind: "notFound", message: `${what} was not found` });
 const conflict = (message: string) => new RepositoryError({ kind: "conflict", message });
@@ -86,8 +87,16 @@ export function createJournalStore(accounts: Account[], trades: Trade[] = [], ac
     trades: accountId => [...all.values()].filter(r => r.deletedAt === null && r.trade.accountId === accountId).map(r => ({ ...r.trade })),
     checklists: () => structuredClone([...checklists.values()]),
   }, { currentDay });
+  const causes = new Map<string, string | null>();
+  const insights = createInsightsFake({
+    account: accountId => base.accounts.get(accountId),
+    trades: () => [...all.values()].map(r => ({ trade: { ...r.trade }, deletedAt: r.deletedAt })),
+    review: tradeId => reviews.get(tradeId),
+    cause: accountId => causes.get(accountId) ?? null,
+  });
   const repository = {
     ...base.repository,
+    insights: insights.repository,
     journal: { list: async () => [] },
     trades: {
       list: async (accountId: string) => { account(accountId); return ordered(accountId).reverse().map(t => ({ ...t })); },
@@ -238,5 +247,5 @@ export function createJournalStore(accounts: Account[], trades: Trade[] = [], ac
       },
     },
   };
-  return { repository, calls, reviews, files, strategies, tags, checklists, all, base, daily };
+  return { repository, calls, reviews, files, strategies, tags, checklists, all, base, daily, insights, causes };
 }

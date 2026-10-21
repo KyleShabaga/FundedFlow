@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 18 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`) `0017_trade_reviews.sql` and `0018_daily_reviews.sql`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 19 (Build 10.5; Build 23 adds no migration) (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`) `0017_trade_reviews.sql` `0018_daily_reviews.sql` and `0019_rulebook_binding_provider.sql`; see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks, reviews, library, attachments),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -79,10 +79,15 @@ them into `providers`/`programme_families` and keeps them. Shipped migrations ar
 
 ## Provider catalogue
 
-Status: **schema only**. The Zod DTOs, integrity checks and phase-history derivation are in
+Status: **implemented** (Builds 9/10, PRs #27–28). The Zod DTOs, integrity checks and phase-history derivation are in
 `packages/domain/src/catalogue` (Build 9), and the synthetic fixture is `packages/domain/test/fixtures/catalogue.json`.
 The tables are migration 6 and the legacy mapping is migration 7 (Build 10; see [Storage](#catalogue-storage)).
-No command reads or writes the catalogue yet.
+Production stores are `store/catalogue.rs` (reads, review transitions, account links and phase events),
+`store/authoring.rs` (create-only sources and create/replace drafts), and `store/offers.rs` (immutable account
+offer selections). `commands.rs` exposes these through the existing `JournalRepository.catalogue` and Tauri
+adapter. Provider/family/variant/promotion creation is importer tooling, not a shipped authoring command.
+Migrations 8 and 13 add ever-verified freeze protection and account offer snapshots. The previous schema-only
+description described migration 6 before these commands shipped; it is superseded.
 
 The model keeps six layers apart:
 
@@ -200,8 +205,11 @@ erDiagram
   first, then move the version to `verified`. Deleting a draft version cascades through its contents.
 - `account_phase_events` rejects every UPDATE and DELETE. It references `accounts` with `ON DELETE RESTRICT`,
   so an account with phase history cannot be hard-deleted until Build 24 defines permanent delete. Other
-  history-to-catalogue references are RESTRICT too. Rulebook IDs on phases and paths have no foreign key until
-  the Build 9.5 tables exist.
+  history-to-catalogue references are RESTRICT too. Migration 9 adds triggers requiring phase/path rulebook
+  bindings to name an existing catalogue rulebook version; applicability ownership is checked separately.
+  Migration 19 additionally requires phase/path bindings to stay within the version's provider. Existing
+  inconsistent bindings are preserved for review; `get_applicable_rulebook` returns them as `unverified`,
+  never resolved. Archived versions or rulebooks also remain unverified when explicitly bound.
 
 **Migration 7, `map_legacy_catalogue`** (`db/steps.rs`), maps the legacy tables:
 
@@ -368,7 +376,9 @@ Repositories in `apps/desktop/src-tauri/src/store/` behind the `JournalRepositor
   `balanceAdjustment` sums only balance-affecting, non-deleted entries.
 - **Settings** (`settings`): lower-case dotted keys to JSON values up to 64 KiB, upserted. No secrets belong here.
 - **Snapshots** (`account_snapshots`): the rule engine (Build 16) computes figures; this repository stores and reads
-  them and calculates nothing. Optional unknown figures are null, never zero; balance and realizedDayPnl remain required, so Build 16 must evolve that boundary before persisting genuinely unavailable values; an `unknown` status needs reasons; an
+  them and calculates nothing. Unknown figures are null, never zero: migration 15 made balance, realizedDayPnl,
+  tradingDaysCompleted and drawdownLocked nullable. `safe`/`caution` still require known balance and daily P&L;
+  an `unknown` status needs reasons; an
   `explanation` object is required. An end-of-day save with the same account, day, engine version and inputs hash
   returns the stored row. Not built: the "commit bundle" that writes a trade or import change and a snapshot in one
   transaction, because no engine produces snapshots yet; the first engine slice owns that bundle.
@@ -502,6 +512,7 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 16 | `rulebook_events` | Rust | Build 19: the append-only [rulebook audit log](#editing-guarded-writes-and-the-audit-log-build-19) (`0016_rulebook_events.sql`, idempotent). Builds 16 and 19 were built in parallel and both numbered their migration 15; neither shipped. A journal that reached 15 on the Build 19 branch has the audit log but not the nullable snapshots, so this step first applies the migration 15 rebuild when `account_snapshots.balance_micros` is still NOT NULL, then creates the log if missing. Nothing backfilled |
 | 17 | `trade_reviews` | SQL | Build 20: append-only `trade_corrections`; `trade_reviews` gains `account_id` (filled from the trade), `revision` and strategy/checklist label snapshots; `trade_review_tags` gains label and kind snapshots; `tags.archived_at`, `checklists.description_md`; `attachments` gains `account_id`, `width`, `height`. Same-account and append-only triggers. Changes no other rows. See [Trade journal and reviews](#trade-journal-and-reviews-build-20) |
 | 18 | `daily_reviews` | SQL | Build 22: `daily_reviews` (unique per account and trading day, revision, plan with authored time and timing, reflection, no-trade day, daily checklist snapshot, completion fields), `daily_review_answers` (item label and order snapshots), `daily_review_trades` (links by trade id with the values saved), append-only `daily_review_events`. New tables only; no existing row changes and no journal entry becomes a review. See [Daily reviews](#daily-reviews-build-22) |
+| 19 | `rulebook_binding_provider` | SQL | Build 10.5: additive INSERT/UPDATE guards prevent phase/path bindings to another provider's rulebook. Existing rows and historical references remain unchanged; production applicability reads fail closed for inconsistent or archived bindings. |
 
 How an upgrade runs:
 
@@ -510,6 +521,10 @@ How an upgrade runs:
   Startup then reports `migration_failed`.
 - Before upgrading an existing journal, `open_file` writes a consistent copy with `VACUUM INTO` to
   `fundedflow.db.before-v<N>.bak` next to the database. An up-to-date journal opens without a backup or any write.
+  Before replacing an existing backup, it copies and flushes that recovery point to
+  `fundedflow.db.before-v<N>.previous-<uuid>.bak`. A retry after a partially committed upgrade therefore keeps
+  the original older-schema backup as well as the most recent retry backup. If preservation fails, migration
+  is not attempted. These retained backups are not automatically deleted.
 - A database from a newer app version is refused (`NewerSchema`) rather than modified.
 - Rule: never edit a migration that has shipped. Add the next version with a `Migration` entry. (0001 was revised
   before V1 shipped.)
@@ -812,6 +827,7 @@ Limitations:
 | Reviews | `get_trade_review(accountId, tradeId)`, `save_trade_review(input)`, `list_trade_review_summaries(accountId)`, `add_trade_screenshot(input)`, `read_trade_screenshot(accountId, id)`, `remove_trade_screenshot(accountId, id)` |
 | Library | `get_review_library()`, `save_strategy(id?, input)`, `save_tag(id?, input)`, `save_checklist(id?, input)`, `set_library_archived(input)` |
 | Daily reviews | `get_daily_review(accountId, tradingDay)`, `list_daily_reviews(accountId)`, `save_daily_review(input)`, `reopen_daily_review(input)`, `relink_daily_review_trades(input)` |
+| Insights | `get_insights_dataset(query)` (read only; Build 23) |
 | Journal | `list_journal_entries(accountId)`, `create_journal_entry(input)`, `update_journal_entry(id, input)`, `delete_journal_entry(id)` |
 | CSV | `preview_csv_import(request)`, `commit_csv_import(request)`, `list_csv_imports(accountId)`, `list_csv_import_problem_rows(batchId)` |
 | Rulebooks | `list_rulebooks(accountId?)`, `list_rulebook_versions(rulebookId)`, `get_rulebook_version(id)`, `get_applicable_rulebook(query)`, `create_rulebook_draft(input, context?)`, `update_rulebook_draft(id, expectedUpdatedAt, input, context)`, `discard_rulebook_draft(id, expectedUpdatedAt, context)`, `validate_rulebook_draft(id)`, `publish_rulebook_version(id, reviewer?, expectedUpdatedAt?, context?)`, `assign_rulebook_to_account(input, guard?)`, `list_account_rulebook_assignments(accountId)`, `flag_rulebook_source_conflict(input)`, `list_rulebook_events(query)` |
@@ -960,3 +976,21 @@ resolved in the account's zone), the current trading day, `isFuture`, `archived`
 with link status, missing trades, outcome, day state and change flags. `list_daily_reviews(accountId)` returns the
 current trading day, summaries newest first and **legacy day notes**: `journal_entries` without a trade, with the
 trading day derived from their time. They are listed apart, read only, never converted into or counted as reviews.
+
+## Insights (Build 23)
+
+Store: `store/insights.rs`; tests: `store/insights_tests.rs`; contracts and the metric engine:
+`packages/domain/src/insights`; parity mirror: `src-tauri/src/insights.rs` with `insights-metrics.json`. No migration.
+Screens and definitions: [architecture/build-23-insights.md](architecture/build-23-insights.md).
+
+`get_insights_dataset({ accountIds })` is **read only**. It names attempts by local account id (1–500, each must exist;
+archived attempts are readable) and returns `contractVersion` (1), `generatedAt`, per account its identity, status,
+archive time, currency, zone and reset, lineage root and attempt number, the status event that set the current status
+(with the user's `cause`, never inferred), soft-deleted trade count and import counts, and every **active** trade of
+those accounts with Rust-stored values (`tradingDay`, `fees`, `grossPnl`, `realizedPnl`, `reportedPnl`, `pnlStatus`),
+the instrument root, and its review's strategy, tags (recorded labels and kinds), planned risk (entered, or derived from
+the planned entry and stop as Trade detail derives it) and R multiple. Nothing is written, re-derived or matched across
+accounts: a broker account number reused by reset attempts never merges their trades.
+
+All aggregation is in `@fundedflow/domain` (`selectTrades`, `summarize`, groups). Unknown P&L is counted and left out of
+sums, never zero; a zero denominator is N/A; amounts of different currencies are never added.

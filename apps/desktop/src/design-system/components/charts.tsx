@@ -3,7 +3,7 @@
 
 import { type ReactNode, useId } from "react";
 
-import { formatInstant, moneyToNumberForDisplay } from "../format";
+import { formatInstant, formatMoney, moneySign, moneyToNumberForDisplay } from "../format";
 import { type AsyncState, type EmptyKind, hasData, LoadingState, StateBoundary } from "./async-states";
 import { cx } from "./cx";
 
@@ -117,6 +117,79 @@ export function EquityCurve({ points, floor, target, height = 200, step = true, 
         </span>
       )}
     </div>
+  );
+}
+
+/* ---------- PnlBars ---------- */
+
+export interface BarItem {
+  key: string;
+  label: string;
+  /** Decimal text; null draws no bar and reads "P&L unknown". */
+  value: string | null;
+  /** One short line after the value ("12 trades · 58.3% win"). */
+  detail?: string;
+}
+
+export interface PnlBarsProps {
+  items: readonly BarItem[];
+  /** Accessible name of the list ("Net P&L by weekday"). */
+  label: string;
+  /** Makes each row a button (drill-down to the trades behind it). */
+  onSelect?: (key: string) => void;
+  selectedKey?: string | null;
+  /** ISO 4217 code of the amounts. */
+  currency?: string | null;
+  /** Scroll inside the card past this height (long period lists). */
+  maxHeight?: number;
+}
+
+/**
+ * Diverging horizontal bars around zero, one labelled row per item, with the
+ * exact signed amount as text beside every bar. The rows are the chart's text
+ * alternative: each reads its label, amount and detail, and with `onSelect`
+ * each is a button. Bar lengths are drawing only (moneyToNumberForDisplay).
+ */
+export function PnlBars({ items, label, onSelect, selectedKey, currency, maxHeight }: PnlBarsProps) {
+  const nums = items.map((it) => moneyToNumberForDisplay(it.value));
+  const max = Math.max(0, ...nums.map((n) => (n == null ? 0 : Math.abs(n)))) || 1;
+  return (
+    <ul className="ds-bars" aria-label={label} style={maxHeight ? { maxHeight, overflowY: "auto" } : undefined}>
+      {items.map((it, i) => {
+        const n = nums[i];
+        const sign = it.value == null ? null : moneySign(it.value);
+        const pct = n == null ? 0 : (Math.abs(n) / max) * 50;
+        const amount = formatMoney(it.value, { signed: true, currency });
+        const name = `${it.label}: ${it.value == null ? "P&L unknown" : amount}${it.detail ? `, ${it.detail}` : ""}`;
+        const content = (
+          <>
+            <span className="ds-bars-label">{it.label}</span>
+            <span className="ds-bars-track" aria-hidden="true">
+              <span className="ds-bars-axis" />
+              {n != null && n !== 0 && (
+                <span className={cx("ds-bars-bar", `is-${sign}`)} style={sign === "loss" ? { right: "50%", width: `${pct}%` } : { left: "50%", width: `${pct}%` }} />
+              )}
+            </span>
+            <span className={cx("ds-bars-value", "ds-mono", sign && `ds-text-${sign}`)}>{amount}</span>
+            {it.detail && <span className="ds-bars-detail ds-faint">{it.detail}</span>}
+          </>
+        );
+        return (
+          <li key={it.key}>
+            {onSelect ? (
+              <button type="button" className={cx("ds-bars-row", "is-clickable", selectedKey === it.key && "is-selected")} aria-label={name}
+                aria-pressed={selectedKey !== undefined ? selectedKey === it.key : undefined} onClick={() => onSelect(it.key)}>
+                {content}
+              </button>
+            ) : (
+              <div className="ds-bars-row" role="group" aria-label={name}>
+                {content}
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

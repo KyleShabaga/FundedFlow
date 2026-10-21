@@ -34,3 +34,11 @@ months without trades dimmed but selectable. Picking a month closes the popover.
 
 ## Open questions
 - Should the Week column also show the week's win rate?
+
+## As built (Build 23)
+- `PnlCalendar` gained `selectedDay`, `onSelectWeek`/`selectedWeek`, `display` and `title`/`summary` slots instead of a
+  second calendar; the `MonthYearPicker` is the title. Week cells open the week's trades.
+- A day, week, month or year containing a trade with an unknown P&L shows `—` and no tint; the panel shows the known part
+  and the unknown count.
+- The selected-day panel links each attempt's daily review (`/journal/days/:day?account=`) with its status.
+- Open question resolved: the week cell shows P&L and trade count; win rate shows in the cell only in Win rate mode.

@@ -188,10 +188,13 @@ pub fn list_assignments(conn: &Connection, account_id: &str) -> AppResult<Vec<Ac
 /// the applicability rows for exactly that phase and path. Never inferred
 /// from names, and never another phase's or path's rules.
 pub fn applicable(conn: &Connection, q: &ApplicableRulebookQuery) -> AppResult<ApplicableRulebook> {
-    let phase_default: Option<Option<String>> = conn
-        .query_row("SELECT default_rulebook_version_id FROM programme_phases WHERE id = ?1", [&q.programme_phase_id], |r| r.get(0))
+    let phase: Option<(Option<String>, String)> = conn
+        .query_row("SELECT ph.default_rulebook_version_id, pv.provider_id FROM programme_phases ph
+            JOIN catalogue_versions cv ON cv.id = ph.catalogue_version_id
+            JOIN programme_variants pv ON pv.id = cv.programme_variant_id WHERE ph.id = ?1",
+            [&q.programme_phase_id], |r| Ok((r.get(0)?, r.get(1)?)))
         .optional()?;
-    let phase_default = phase_default.ok_or_else(|| AppError::not_found("programme phase", &q.programme_phase_id))?;
+    let (phase_default, provider) = phase.ok_or_else(|| AppError::not_found("programme phase", &q.programme_phase_id))?;
     let path_override = match &q.phase_path_id {
         None => None,
         Some(path) => conn
@@ -205,7 +208,10 @@ pub fn applicable(conn: &Connection, q: &ApplicableRulebookQuery) -> AppResult<A
     };
     let verified = |id: &str| -> AppResult<bool> {
         Ok(conn
-            .query_row("SELECT verification_status = 'verified' FROM rulebook_versions WHERE id = ?1", [id], |r| r.get(0))
+            .query_row("SELECT v.verification_status = 'verified' AND v.record_status = 'active'
+                AND b.record_status = 'active' AND b.owner_account_id IS NULL AND b.provider_id = ?2
+                FROM rulebook_versions v JOIN rulebooks b ON b.id = v.rulebook_id WHERE v.id = ?1",
+                [id, &provider], |r| r.get(0))
             .optional()?
             .unwrap_or(false))
     };
@@ -217,11 +223,12 @@ pub fn applicable(conn: &Connection, q: &ApplicableRulebookQuery) -> AppResult<A
         .prepare(
             "SELECT a.rulebook_version_id FROM rule_applicability a
              JOIN rulebook_versions v ON v.id = a.rulebook_version_id
+             JOIN rulebooks b ON b.id = v.rulebook_id
              WHERE a.programme_phase_id = ?1 AND a.phase_path_id IS ?2 AND v.verification_status = 'verified'
-               AND v.record_status = 'active'
+               AND v.record_status = 'active' AND b.record_status = 'active' AND b.provider_id = ?3
              ORDER BY a.rulebook_version_id",
         )?
-        .query_map(params![q.programme_phase_id, q.phase_path_id], |r| r.get(0))?
+        .query_map(params![q.programme_phase_id, q.phase_path_id, provider], |r| r.get(0))?
         .collect::<rusqlite::Result<_>>()?;
     let status = match ids.len() {
         0 => "none",
@@ -857,10 +864,9 @@ pub(crate) fn assign_in(conn: &Connection, input: AssignmentInput) -> AppResult<
         ));
     }
     if let Some(phase) = &input.programme_phase_id {
+        let resolved = applicable(conn, &ApplicableRulebookQuery { programme_phase_id: phase.clone(), phase_path_id: input.phase_path_id.clone() })?;
         let applies = detail.applicability.iter().any(|a| &a.programme_phase_id == phase && a.phase_path_id == input.phase_path_id)
-            || applicable(conn, &ApplicableRulebookQuery { programme_phase_id: phase.clone(), phase_path_id: input.phase_path_id.clone() })?
-                .rulebook_version_ids
-                .contains(&v.id);
+            || (matches!(resolved.status, "resolved" | "ambiguous") && resolved.rulebook_version_ids.contains(&v.id));
         if !applies {
             return Err(AppError::invalid("programmePhaseId", "The version does not apply to this phase or path"));
         }

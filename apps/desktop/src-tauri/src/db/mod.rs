@@ -126,6 +126,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "daily_reviews",
         step: Step::Sql(include_str!("../../migrations/0018_daily_reviews.sql")),
     },
+    Migration {
+        version: 19,
+        name: "rulebook_binding_provider",
+        step: Step::Sql(include_str!("../../migrations/0019_rulebook_binding_provider.sql")),
+    },
 ];
 
 /// Latest schema version this build understands.

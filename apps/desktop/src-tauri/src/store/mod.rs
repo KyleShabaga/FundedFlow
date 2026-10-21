@@ -8,6 +8,7 @@ pub mod attempts;
 pub mod authoring;
 pub mod catalogue;
 pub mod daily_reviews;
+pub mod insights;
 pub mod journal;
 pub mod ledger;
 pub mod library;
@@ -107,3 +108,6 @@ mod journal_review_tests;
 
 #[cfg(test)]
 mod daily_review_tests;
+
+#[cfg(test)]
+mod insights_tests;

@@ -204,6 +204,12 @@
 .ds-cal-day.is-clickable:active { background: var(--bg-300); }
 .ds-cal-profit.is-clickable:hover, .ds-cal-profit.is-clickable:active { border-color: var(--profit); background: var(--profit-soft); }
 .ds-cal-loss.is-clickable:hover, .ds-cal-loss.is-clickable:active { border-color: var(--loss); background: var(--loss-soft); }
+.ds-cal-week { color: var(--ink); text-align: left; font: inherit; }
+.ds-cal-week.is-clickable { cursor: pointer; }
+.ds-cal-week.is-clickable:hover, .ds-cal-week.is-clickable:active { border-color: var(--flow); background: var(--bg-200); }
+.ds-cal-week:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+/* Selection is a ring plus aria-pressed, never colour alone. */
+.ds-cal-day.is-selected, .ds-cal-week.is-selected { box-shadow: 0 0 0 2px var(--flow); }
 
 /* Host-independent desktop frame; its contents supply their own semantics. */
 .ds-app-frame { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; }

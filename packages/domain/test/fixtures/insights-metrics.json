@@ -1,0 +1,1165 @@
+{
+  "cases": [
+    {
+      "name": "empty selection",
+      "summary": {
+        "averageLoss": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "averageR": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "averageWin": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "breakevenIds": [],
+        "breakevens": 0,
+        "closed": 0,
+        "complete": true,
+        "eligible": 0,
+        "eligibleIds": [],
+        "expectancy": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "expectancyGross": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "fees": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "gross": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "lossIds": [],
+        "losses": 0,
+        "net": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "profitFactor": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "rIds": [],
+        "tradeIds": [],
+        "unknownIds": [],
+        "unknownPnl": 0,
+        "winIds": [],
+        "winRate": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "wins": 0
+      },
+      "trades": []
+    },
+    {
+      "name": "open trades are never included",
+      "summary": {
+        "averageLoss": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "averageR": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "averageWin": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "breakevenIds": [],
+        "breakevens": 0,
+        "closed": 0,
+        "complete": true,
+        "eligible": 0,
+        "eligibleIds": [],
+        "expectancy": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "expectancyGross": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "fees": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "gross": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "lossIds": [],
+        "losses": 0,
+        "net": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "profitFactor": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "rIds": [],
+        "tradeIds": [],
+        "unknownIds": [],
+        "unknownPnl": 0,
+        "winIds": [],
+        "winRate": {
+          "code": "no_closed_trades",
+          "state": "na"
+        },
+        "wins": 0
+      },
+      "trades": [
+        {
+          "exitAt": null,
+          "fees": "2",
+          "grossPnl": null,
+          "id": "o1",
+          "pnlStatus": "open",
+          "realizedPnl": null
+        }
+      ]
+    },
+    {
+      "name": "every closed trade has an unknown P&L",
+      "summary": {
+        "averageLoss": {
+          "code": "pnl_unknown",
+          "state": "unavailable"
+        },
+        "averageR": {
+          "code": "pnl_unknown",
+          "state": "unavailable"
+        },
+        "averageWin": {
+          "code": "pnl_unknown",
+          "state": "unavailable"
+        },
+        "breakevenIds": [],
+        "breakevens": 0,
+        "closed": 2,
+        "complete": false,
+        "eligible": 0,
+        "eligibleIds": [],
+        "expectancy": {
+          "code": "pnl_unknown",
+          "state": "unavailable"
+        },
+        "expectancyGross": {
+          "code": "pnl_unknown",
+          "state": "unavailable"
+        },
+        "fees": {
+          "code": "pnl_unknown",
+          "state": "unavailable"
+        },
+        "gross": {
+          "code": "pnl_unknown",
+          "state": "unavailable"
+        },
+        "lossIds": [],
+        "losses": 0,
+        "net": {
+          "code": "pnl_unknown",
+          "state": "unavailable"
+        },
+        "profitFactor": {
+          "code": "pnl_unknown",
+          "state": "unavailable"
+        },
+        "rIds": [],
+        "tradeIds": [
+          "u1",
+          "u2"
+        ],
+        "unknownIds": [
+          "u1",
+          "u2"
+        ],
+        "unknownPnl": 2,
+        "winIds": [],
+        "winRate": {
+          "code": "pnl_unknown",
+          "state": "unavailable"
+        },
+        "wins": 0
+      },
+      "trades": [
+        {
+          "exitAt": "2026-10-19T14:00:00.000Z",
+          "fees": "1.5",
+          "grossPnl": null,
+          "id": "u1",
+          "pnlStatus": "missing_instrument",
+          "realizedPnl": null
+        },
+        {
+          "exitAt": "2026-10-19T15:00:00.000Z",
+          "fees": "0",
+          "grossPnl": null,
+          "id": "u2",
+          "pnlStatus": "currency_mismatch",
+          "realizedPnl": null
+        }
+      ]
+    },
+    {
+      "name": "long and short with fees, a breakeven and an unknown",
+      "summary": {
+        "averageLoss": {
+          "state": "value",
+          "value": "-40.18"
+        },
+        "averageR": {
+          "code": "no_planned_risk",
+          "state": "na"
+        },
+        "averageWin": {
+          "state": "value",
+          "value": "54.19"
+        },
+        "breakevenIds": [
+          "c"
+        ],
+        "breakevens": 1,
+        "closed": 6,
+        "complete": false,
+        "eligible": 5,
+        "eligibleIds": [
+          "a",
+          "b",
+          "c",
+          "e",
+          "f"
+        ],
+        "expectancy": {
+          "state": "value",
+          "value": "5.604"
+        },
+        "expectancyGross": {
+          "state": "value",
+          "value": "7.9"
+        },
+        "fees": {
+          "state": "value",
+          "value": "11.48"
+        },
+        "gross": {
+          "state": "value",
+          "value": "39.5"
+        },
+        "lossIds": [
+          "b",
+          "f"
+        ],
+        "losses": 2,
+        "net": {
+          "state": "value",
+          "value": "28.02"
+        },
+        "profitFactor": {
+          "state": "value",
+          "value": "1.35"
+        },
+        "rIds": [],
+        "tradeIds": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f"
+        ],
+        "unknownIds": [
+          "d"
+        ],
+        "unknownPnl": 1,
+        "winIds": [
+          "a",
+          "e"
+        ],
+        "winRate": {
+          "state": "value",
+          "value": {
+            "denominator": 5,
+            "numerator": 2,
+            "percent": "40"
+          }
+        },
+        "wins": 2
+      },
+      "trades": [
+        {
+          "exitAt": "2026-10-19T14:00:00.000Z",
+          "fees": "4.12",
+          "grossPnl": "100",
+          "id": "a",
+          "pnlStatus": "calculated",
+          "realizedPnl": "95.88"
+        },
+        {
+          "exitAt": "2026-10-19T15:00:00.000Z",
+          "fees": "4.12",
+          "grossPnl": "-50",
+          "id": "b",
+          "pnlStatus": "calculated",
+          "realizedPnl": "-54.12"
+        },
+        {
+          "exitAt": "2026-10-19T16:00:00.000Z",
+          "fees": "2",
+          "grossPnl": "2",
+          "id": "c",
+          "pnlStatus": "reported",
+          "realizedPnl": "0"
+        },
+        {
+          "exitAt": "2026-10-20T14:00:00.000Z",
+          "fees": "1",
+          "grossPnl": null,
+          "id": "d",
+          "pnlStatus": "missing_instrument",
+          "realizedPnl": null
+        },
+        {
+          "exitAt": "2026-10-20T15:00:00.000Z",
+          "fees": "0",
+          "grossPnl": "12.5",
+          "id": "e",
+          "pnlStatus": "calculated",
+          "realizedPnl": "12.5"
+        },
+        {
+          "exitAt": "2026-10-20T16:00:00.000Z",
+          "fees": "1.24",
+          "grossPnl": "-25",
+          "id": "f",
+          "pnlStatus": "calculated",
+          "realizedPnl": "-26.24"
+        },
+        {
+          "exitAt": null,
+          "fees": "0",
+          "grossPnl": null,
+          "id": "g",
+          "pnlStatus": "open",
+          "realizedPnl": null
+        }
+      ]
+    },
+    {
+      "name": "no losing trades: profit factor is N/A, not infinity",
+      "summary": {
+        "averageLoss": {
+          "code": "no_losers",
+          "state": "na"
+        },
+        "averageR": {
+          "code": "no_planned_risk",
+          "state": "na"
+        },
+        "averageWin": {
+          "state": "value",
+          "value": "15"
+        },
+        "breakevenIds": [
+          "w4"
+        ],
+        "breakevens": 1,
+        "closed": 5,
+        "complete": true,
+        "eligible": 5,
+        "eligibleIds": [
+          "w1",
+          "w2",
+          "w3",
+          "w4",
+          "w5"
+        ],
+        "expectancy": {
+          "state": "value",
+          "value": "12"
+        },
+        "expectancyGross": {
+          "state": "value",
+          "value": "12"
+        },
+        "fees": {
+          "state": "value",
+          "value": "0"
+        },
+        "gross": {
+          "state": "value",
+          "value": "60.000001"
+        },
+        "lossIds": [],
+        "losses": 0,
+        "net": {
+          "state": "value",
+          "value": "60.000001"
+        },
+        "profitFactor": {
+          "code": "no_losers",
+          "state": "na"
+        },
+        "rIds": [],
+        "tradeIds": [
+          "w1",
+          "w2",
+          "w3",
+          "w4",
+          "w5"
+        ],
+        "unknownIds": [],
+        "unknownPnl": 0,
+        "winIds": [
+          "w1",
+          "w2",
+          "w3",
+          "w5"
+        ],
+        "winRate": {
+          "state": "value",
+          "value": {
+            "denominator": 5,
+            "numerator": 4,
+            "percent": "80"
+          }
+        },
+        "wins": 4
+      },
+      "trades": [
+        {
+          "exitAt": "2026-10-19T14:00:00.000Z",
+          "fees": "0",
+          "grossPnl": "10",
+          "id": "w1",
+          "pnlStatus": "calculated",
+          "realizedPnl": "10"
+        },
+        {
+          "exitAt": "2026-10-19T14:01:00.000Z",
+          "fees": "0",
+          "grossPnl": "20",
+          "id": "w2",
+          "pnlStatus": "calculated",
+          "realizedPnl": "20"
+        },
+        {
+          "exitAt": "2026-10-19T14:02:00.000Z",
+          "fees": "0",
+          "grossPnl": "30",
+          "id": "w3",
+          "pnlStatus": "calculated",
+          "realizedPnl": "30"
+        },
+        {
+          "exitAt": "2026-10-19T14:03:00.000Z",
+          "fees": "0",
+          "grossPnl": "0",
+          "id": "w4",
+          "pnlStatus": "calculated",
+          "realizedPnl": "0"
+        },
+        {
+          "exitAt": "2026-10-19T14:04:00.000Z",
+          "fees": "0",
+          "grossPnl": "0.000001",
+          "id": "w5",
+          "pnlStatus": "calculated",
+          "realizedPnl": "0.000001"
+        }
+      ]
+    },
+    {
+      "name": "no winning trades: profit factor is zero, average win is N/A",
+      "summary": {
+        "averageLoss": {
+          "state": "value",
+          "value": "-8"
+        },
+        "averageR": {
+          "code": "no_planned_risk",
+          "state": "na"
+        },
+        "averageWin": {
+          "code": "no_winners",
+          "state": "na"
+        },
+        "breakevenIds": [
+          "l3"
+        ],
+        "breakevens": 1,
+        "closed": 5,
+        "complete": true,
+        "eligible": 5,
+        "eligibleIds": [
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5"
+        ],
+        "expectancy": {
+          "state": "value",
+          "value": "-6.4"
+        },
+        "expectancyGross": {
+          "state": "value",
+          "value": "-5.4"
+        },
+        "fees": {
+          "state": "value",
+          "value": "5"
+        },
+        "gross": {
+          "state": "value",
+          "value": "-27"
+        },
+        "lossIds": [
+          "l1",
+          "l2",
+          "l4",
+          "l5"
+        ],
+        "losses": 4,
+        "net": {
+          "state": "value",
+          "value": "-32"
+        },
+        "profitFactor": {
+          "state": "value",
+          "value": "0"
+        },
+        "rIds": [],
+        "tradeIds": [
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5"
+        ],
+        "unknownIds": [],
+        "unknownPnl": 0,
+        "winIds": [],
+        "winRate": {
+          "state": "value",
+          "value": {
+            "denominator": 5,
+            "numerator": 0,
+            "percent": "0"
+          }
+        },
+        "wins": 0
+      },
+      "trades": [
+        {
+          "exitAt": "2026-10-19T14:00:00.000Z",
+          "fees": "1",
+          "grossPnl": "-9",
+          "id": "l1",
+          "pnlStatus": "calculated",
+          "realizedPnl": "-10"
+        },
+        {
+          "exitAt": "2026-10-19T14:01:00.000Z",
+          "fees": "1",
+          "grossPnl": "-19",
+          "id": "l2",
+          "pnlStatus": "calculated",
+          "realizedPnl": "-20"
+        },
+        {
+          "exitAt": "2026-10-19T14:02:00.000Z",
+          "fees": "1",
+          "grossPnl": "1",
+          "id": "l3",
+          "pnlStatus": "calculated",
+          "realizedPnl": "0"
+        },
+        {
+          "exitAt": "2026-10-19T14:03:00.000Z",
+          "fees": "1",
+          "grossPnl": "-0.5",
+          "id": "l4",
+          "pnlStatus": "calculated",
+          "realizedPnl": "-1.5"
+        },
+        {
+          "exitAt": "2026-10-19T14:04:00.000Z",
+          "fees": "1",
+          "grossPnl": "0.5",
+          "id": "l5",
+          "pnlStatus": "calculated",
+          "realizedPnl": "-0.5"
+        }
+      ]
+    },
+    {
+      "name": "rounding of thirds and midpoints, half away from zero",
+      "summary": {
+        "averageLoss": {
+          "state": "value",
+          "value": "-0.000002"
+        },
+        "averageR": {
+          "code": "no_planned_risk",
+          "state": "na"
+        },
+        "averageWin": {
+          "state": "value",
+          "value": "0.000001"
+        },
+        "breakevenIds": [],
+        "breakevens": 0,
+        "closed": 6,
+        "complete": true,
+        "eligible": 6,
+        "eligibleIds": [
+          "r1",
+          "r2",
+          "r3",
+          "r4",
+          "r5",
+          "r6"
+        ],
+        "expectancy": {
+          "state": "value",
+          "value": "0"
+        },
+        "expectancyGross": {
+          "state": "value",
+          "value": "0"
+        },
+        "fees": {
+          "state": "value",
+          "value": "0"
+        },
+        "gross": {
+          "state": "value",
+          "value": "-0.000001"
+        },
+        "lossIds": [
+          "r4",
+          "r5",
+          "r6"
+        ],
+        "losses": 3,
+        "net": {
+          "state": "value",
+          "value": "-0.000001"
+        },
+        "profitFactor": {
+          "state": "value",
+          "value": "0.8"
+        },
+        "rIds": [],
+        "tradeIds": [
+          "r1",
+          "r2",
+          "r3",
+          "r4",
+          "r5",
+          "r6"
+        ],
+        "unknownIds": [],
+        "unknownPnl": 0,
+        "winIds": [
+          "r1",
+          "r2",
+          "r3"
+        ],
+        "winRate": {
+          "state": "value",
+          "value": {
+            "denominator": 6,
+            "numerator": 3,
+            "percent": "50"
+          }
+        },
+        "wins": 3
+      },
+      "trades": [
+        {
+          "exitAt": "2026-10-19T14:00:00.000Z",
+          "fees": "0",
+          "grossPnl": "0.000001",
+          "id": "r1",
+          "pnlStatus": "calculated",
+          "realizedPnl": "0.000001"
+        },
+        {
+          "exitAt": "2026-10-19T14:01:00.000Z",
+          "fees": "0",
+          "grossPnl": "0.000001",
+          "id": "r2",
+          "pnlStatus": "calculated",
+          "realizedPnl": "0.000001"
+        },
+        {
+          "exitAt": "2026-10-19T14:02:00.000Z",
+          "fees": "0",
+          "grossPnl": "0.000002",
+          "id": "r3",
+          "pnlStatus": "calculated",
+          "realizedPnl": "0.000002"
+        },
+        {
+          "exitAt": "2026-10-19T14:03:00.000Z",
+          "fees": "0",
+          "grossPnl": "-0.000001",
+          "id": "r4",
+          "pnlStatus": "calculated",
+          "realizedPnl": "-0.000001"
+        },
+        {
+          "exitAt": "2026-10-19T14:04:00.000Z",
+          "fees": "0",
+          "grossPnl": "-0.000002",
+          "id": "r5",
+          "pnlStatus": "calculated",
+          "realizedPnl": "-0.000002"
+        },
+        {
+          "exitAt": "2026-10-19T14:05:00.000Z",
+          "fees": "0",
+          "grossPnl": "-0.000002",
+          "id": "r6",
+          "pnlStatus": "calculated",
+          "realizedPnl": "-0.000002"
+        }
+      ]
+    },
+    {
+      "name": "R multiple only where the review has a planned risk",
+      "summary": {
+        "averageLoss": {
+          "state": "value",
+          "value": "-75"
+        },
+        "averageR": {
+          "state": "value",
+          "value": "0.39"
+        },
+        "averageWin": {
+          "state": "value",
+          "value": "72"
+        },
+        "breakevenIds": [],
+        "breakevens": 0,
+        "closed": 8,
+        "complete": true,
+        "eligible": 8,
+        "eligibleIds": [
+          "p1",
+          "p2",
+          "p3",
+          "p4",
+          "p5",
+          "p6",
+          "p7",
+          "p8"
+        ],
+        "expectancy": {
+          "state": "value",
+          "value": "16.875"
+        },
+        "expectancyGross": {
+          "state": "value",
+          "value": "16.875"
+        },
+        "fees": {
+          "state": "value",
+          "value": "0"
+        },
+        "gross": {
+          "state": "value",
+          "value": "135"
+        },
+        "lossIds": [
+          "p2",
+          "p4",
+          "p7"
+        ],
+        "losses": 3,
+        "net": {
+          "state": "value",
+          "value": "135"
+        },
+        "profitFactor": {
+          "state": "value",
+          "value": "1.6"
+        },
+        "rIds": [
+          "p1",
+          "p2",
+          "p3",
+          "p5",
+          "p7",
+          "p8"
+        ],
+        "tradeIds": [
+          "p1",
+          "p2",
+          "p3",
+          "p4",
+          "p5",
+          "p6",
+          "p7",
+          "p8"
+        ],
+        "unknownIds": [],
+        "unknownPnl": 0,
+        "winIds": [
+          "p1",
+          "p3",
+          "p5",
+          "p6",
+          "p8"
+        ],
+        "winRate": {
+          "state": "value",
+          "value": {
+            "denominator": 8,
+            "numerator": 5,
+            "percent": "62.5"
+          }
+        },
+        "wins": 5
+      },
+      "trades": [
+        {
+          "exitAt": "2026-10-19T14:00:00.000Z",
+          "fees": "0",
+          "grossPnl": "200",
+          "id": "p1",
+          "pnlStatus": "calculated",
+          "realizedPnl": "200",
+          "review": {
+            "plannedRisk": "100",
+            "rMultiple": "2"
+          }
+        },
+        {
+          "exitAt": "2026-10-19T14:01:00.000Z",
+          "fees": "0",
+          "grossPnl": "-100",
+          "id": "p2",
+          "pnlStatus": "calculated",
+          "realizedPnl": "-100",
+          "review": {
+            "plannedRisk": "100",
+            "rMultiple": "-1"
+          }
+        },
+        {
+          "exitAt": "2026-10-19T14:02:00.000Z",
+          "fees": "0",
+          "grossPnl": "50",
+          "id": "p3",
+          "pnlStatus": "calculated",
+          "realizedPnl": "50",
+          "review": {
+            "plannedRisk": "150",
+            "rMultiple": "0.33"
+          }
+        },
+        {
+          "exitAt": "2026-10-19T14:03:00.000Z",
+          "fees": "0",
+          "grossPnl": "-50",
+          "id": "p4",
+          "pnlStatus": "calculated",
+          "realizedPnl": "-50",
+          "review": {
+            "plannedRisk": null,
+            "rMultiple": null
+          }
+        },
+        {
+          "exitAt": "2026-10-19T14:04:00.000Z",
+          "fees": "0",
+          "grossPnl": "25",
+          "id": "p5",
+          "pnlStatus": "calculated",
+          "realizedPnl": "25",
+          "review": {
+            "plannedRisk": "50",
+            "rMultiple": "0.5"
+          }
+        },
+        {
+          "exitAt": "2026-10-19T14:05:00.000Z",
+          "fees": "0",
+          "grossPnl": "10",
+          "id": "p6",
+          "pnlStatus": "calculated",
+          "realizedPnl": "10"
+        },
+        {
+          "exitAt": "2026-10-19T14:06:00.000Z",
+          "fees": "0",
+          "grossPnl": "-75",
+          "id": "p7",
+          "pnlStatus": "calculated",
+          "realizedPnl": "-75",
+          "review": {
+            "plannedRisk": "75",
+            "rMultiple": "-1"
+          }
+        },
+        {
+          "exitAt": "2026-10-19T14:07:00.000Z",
+          "fees": "0",
+          "grossPnl": "75",
+          "id": "p8",
+          "pnlStatus": "calculated",
+          "realizedPnl": "75",
+          "review": {
+            "plannedRisk": "50",
+            "rMultiple": "1.5"
+          }
+        }
+      ]
+    },
+    {
+      "name": "few planned risks: average R is insufficient data",
+      "summary": {
+        "averageLoss": {
+          "state": "value",
+          "value": "-10"
+        },
+        "averageR": {
+          "code": "below_min_sample",
+          "have": 1,
+          "need": 5,
+          "state": "insufficient"
+        },
+        "averageWin": {
+          "state": "value",
+          "value": "200"
+        },
+        "breakevenIds": [],
+        "breakevens": 0,
+        "closed": 2,
+        "complete": true,
+        "eligible": 2,
+        "eligibleIds": [
+          "q1",
+          "q2"
+        ],
+        "expectancy": {
+          "code": "below_min_sample",
+          "have": 2,
+          "need": 5,
+          "state": "insufficient"
+        },
+        "expectancyGross": {
+          "code": "below_min_sample",
+          "have": 2,
+          "need": 5,
+          "state": "insufficient"
+        },
+        "fees": {
+          "state": "value",
+          "value": "0"
+        },
+        "gross": {
+          "state": "value",
+          "value": "190"
+        },
+        "lossIds": [
+          "q2"
+        ],
+        "losses": 1,
+        "net": {
+          "state": "value",
+          "value": "190"
+        },
+        "profitFactor": {
+          "code": "below_min_sample",
+          "have": 2,
+          "need": 5,
+          "state": "insufficient"
+        },
+        "rIds": [
+          "q1"
+        ],
+        "tradeIds": [
+          "q1",
+          "q2"
+        ],
+        "unknownIds": [],
+        "unknownPnl": 0,
+        "winIds": [
+          "q1"
+        ],
+        "winRate": {
+          "state": "value",
+          "value": {
+            "denominator": 2,
+            "numerator": 1,
+            "percent": "50"
+          }
+        },
+        "wins": 1
+      },
+      "trades": [
+        {
+          "exitAt": "2026-10-19T14:00:00.000Z",
+          "fees": "0",
+          "grossPnl": "200",
+          "id": "q1",
+          "pnlStatus": "calculated",
+          "realizedPnl": "200",
+          "review": {
+            "plannedRisk": "100",
+            "rMultiple": "2"
+          }
+        },
+        {
+          "exitAt": "2026-10-19T14:01:00.000Z",
+          "fees": "0",
+          "grossPnl": "-10",
+          "id": "q2",
+          "pnlStatus": "calculated",
+          "realizedPnl": "-10"
+        }
+      ]
+    },
+    {
+      "name": "a total outside the micro-unit range is unavailable, never clamped",
+      "summary": {
+        "averageLoss": {
+          "state": "value",
+          "value": "-1"
+        },
+        "averageR": {
+          "code": "no_planned_risk",
+          "state": "na"
+        },
+        "averageWin": {
+          "state": "value",
+          "value": "4500000000000.75"
+        },
+        "breakevenIds": [],
+        "breakevens": 0,
+        "closed": 5,
+        "complete": true,
+        "eligible": 5,
+        "eligibleIds": [
+          "x1",
+          "x2",
+          "x3",
+          "x4",
+          "x5"
+        ],
+        "expectancy": {
+          "state": "value",
+          "value": "3600000000000.4"
+        },
+        "expectancyGross": {
+          "state": "value",
+          "value": "3600000000000.4"
+        },
+        "fees": {
+          "state": "value",
+          "value": "0"
+        },
+        "gross": {
+          "code": "too_large",
+          "state": "unavailable"
+        },
+        "lossIds": [
+          "x3"
+        ],
+        "losses": 1,
+        "net": {
+          "code": "too_large",
+          "state": "unavailable"
+        },
+        "profitFactor": {
+          "state": "value",
+          "value": "18000000000003"
+        },
+        "rIds": [],
+        "tradeIds": [
+          "x1",
+          "x2",
+          "x3",
+          "x4",
+          "x5"
+        ],
+        "unknownIds": [],
+        "unknownPnl": 0,
+        "winIds": [
+          "x1",
+          "x2",
+          "x4",
+          "x5"
+        ],
+        "winRate": {
+          "state": "value",
+          "value": {
+            "denominator": 5,
+            "numerator": 4,
+            "percent": "80"
+          }
+        },
+        "wins": 4
+      },
+      "trades": [
+        {
+          "exitAt": "2026-10-19T14:00:00.000Z",
+          "fees": "0",
+          "grossPnl": "9000000000000",
+          "id": "x1",
+          "pnlStatus": "reported",
+          "realizedPnl": "9000000000000"
+        },
+        {
+          "exitAt": "2026-10-19T14:01:00.000Z",
+          "fees": "0",
+          "grossPnl": "9000000000000",
+          "id": "x2",
+          "pnlStatus": "reported",
+          "realizedPnl": "9000000000000"
+        },
+        {
+          "exitAt": "2026-10-19T14:02:00.000Z",
+          "fees": "0",
+          "grossPnl": "-1",
+          "id": "x3",
+          "pnlStatus": "reported",
+          "realizedPnl": "-1"
+        },
+        {
+          "exitAt": "2026-10-19T14:03:00.000Z",
+          "fees": "0",
+          "grossPnl": "1",
+          "id": "x4",
+          "pnlStatus": "reported",
+          "realizedPnl": "1"
+        },
+        {
+          "exitAt": "2026-10-19T14:04:00.000Z",
+          "fees": "0",
+          "grossPnl": "2",
+          "id": "x5",
+          "pnlStatus": "reported",
+          "realizedPnl": "2"
+        }
+      ]
+    }
+  ],
+  "description": "Build 23 Insights summary parity. Humans write each case's trades; every summary is generated by apps/desktop/src-tauri/src/insights.rs (FUNDEDFLOW_UPDATE_FIXTURES=1 cargo test --lib parity) and must be reproduced by summarize() in packages/domain/src/insights/metrics.ts."
+}

@@ -16,7 +16,6 @@ export * from "./imports/view-models/import";
 export * from "./insights/view-models/snapshot";
 export * from "./shared/contracts";
 export * from "./shared/errors";
-export * from "./shared/capabilities";
 export * from "./shared/query-keys";
 export * from "./shared/presentation";
 export type { TradeFilters } from "./trades/api/trades";

@@ -207,3 +207,15 @@ fn every_command_is_registered_and_every_adapter_call_exists() {
         assert!(defined.contains(&name), "the adapter calls {name}, which is not a command");
     }
 }
+
+/// Build 23: the Insights summary over each case's trades (`crate::insights`, mirrored by `summarize` in TypeScript).
+#[test]
+fn insights_metrics_fixture_matches_rust() {
+    check("insights-metrics.json", |group, case| {
+        if group != "cases" {
+            return;
+        }
+        let trades: Vec<crate::insights::MetricTrade> = serde_json::from_value(case["trades"].clone()).unwrap();
+        case["summary"] = crate::insights::summarize(&trades);
+    });
+}
