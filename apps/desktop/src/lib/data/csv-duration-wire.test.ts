@@ -33,7 +33,7 @@ const EXPECTED: [string, bigint | null][] = [
 
 describe("durationSeconds from native preview and commit", () => {
   it("no JSON number in the native text is outside the safe-integer range", () => {
-    for (const m of raw.matchAll(/:\s*(-?\d+)\s*[,\n}]/g)) expect(Number.isSafeInteger(Number(m[1])), m[1]).toBe(true);
+    for (const m of raw.matchAll(/:\s*(-?\d+)\s*[,\s}]/g)) expect(Number.isSafeInteger(Number(m[1])), m[1]).toBe(true);
   });
 
   it.each(EXPECTED)("%s", (cell, exact) => {

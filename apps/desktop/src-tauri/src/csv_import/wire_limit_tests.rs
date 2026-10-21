@@ -217,7 +217,9 @@ fn duration_wire_is_exact_and_preview_and_commit_classify_the_same_rows() {
         std::fs::write(&path, &fixture).unwrap();
     }
     assert_eq!(
-        std::fs::read_to_string(&path).unwrap_or_default(),
+        std::fs::read_to_string(&path)
+            .unwrap_or_default()
+            .replace("\r\n", "\n"),
         fixture,
         "csv-duration-wire.json does not match native output (rerun with FUNDEDFLOW_UPDATE_FIXTURES=1 if intended)"
     );
