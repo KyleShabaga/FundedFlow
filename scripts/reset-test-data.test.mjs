@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -81,12 +81,46 @@ test('detects native processes and fails closed on process-list errors', () => {
   assert.throws(() => appIsRunning('linux', () => { throw new Error('blocked'); }), /Cannot check/);
 });
 
-test('CLI previews by default and rejects incomplete flags', t => {
+test('CLI previews all data by default and with --all, and rejects incomplete flags', t => {
   const { dataDir } = fixture(t);
   const script = fileURLToPath(new URL('./reset-test-data.mjs', import.meta.url));
   const preview = execFileSync(process.execPath, [script, '--data-dir', dataDir], { encoding: 'utf8' });
   assert.match(preview, /Preview only/);
+  assert.match(preview, /accounts, trades/);
+  const allPreview = execFileSync(process.execPath, [script, '--all', '--data-dir', dataDir], { encoding: 'utf8' });
+  assert.match(allPreview, /All local journal data: accounts, trades/);
+  assert.match(allPreview, /Preview only/);
   assert.equal(readFileSync(path.join(dataDir, 'fundedflow.db'), 'utf8'), 'accounts/imports/settings');
   // Apply behavior is tested directly above; this test never touches a user's default data directory.
   assert.throws(() => execFileSync(process.execPath, [script, '--data-dir'], { stdio: 'pipe' }), /failed/);
+});
+
+
+test('reset removes a real populated accounts/trades journal from active data and keeps its backup intact', async t => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const { dataDir } = fixture(t);
+  const databasePath = path.join(dataDir, 'fundedflow.db');
+  // Copy an existing synthetic journal written by the native app; never edit the original fixture.
+  copyFileSync(new URL('../apps/desktop/src-tauri/src/db/fixtures/fundedflow-v4.db', import.meta.url), databasePath);
+  rmSync(path.join(dataDir, 'fundedflow.db-wal'));
+  rmSync(path.join(dataDir, 'fundedflow.db-shm'));
+  const tables = ['accounts', 'trades', 'import_batches', 'journal_entries'];
+  const counts = database => Object.fromEntries(tables.map(table => [table, database.prepare(`SELECT count(*) AS n FROM ${table}`).get().n]));
+  const original = new DatabaseSync(databasePath, { readOnly: true });
+  let before;
+  try { before = counts(original); } finally { original.close(); }
+  assert.ok(before.accounts > 0);
+  assert.ok(before.trades > 0);
+  assert.ok(before.import_batches > 0);
+  assert.ok(before.journal_entries > 0);
+  const originalBytes = readFileSync(databasePath);
+  const result = resetTestData({ dataDir, identifier, apply: true, isRunning: () => false });
+  assert.equal(result.changed, true);
+  assert.match(result.reason, /including accounts and trades/);
+  assert.equal(existsSync(databasePath), false, 'no active database remains that could expose the old accounts or trades');
+  assert.deepEqual(readdirSync(dataDir), []);
+  const backupPath = path.join(result.backup, 'fundedflow.db');
+  assert.deepEqual(readFileSync(backupPath), originalBytes);
+  const backup = new DatabaseSync(backupPath, { readOnly: true });
+  try { assert.deepEqual(counts(backup), before); } finally { backup.close(); }
 });
