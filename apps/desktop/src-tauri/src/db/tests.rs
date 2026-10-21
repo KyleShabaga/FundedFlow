@@ -220,7 +220,9 @@ fn deleting_an_account_removes_everything_it_owns() {
            VALUES ('j1', 'acc1', 't1', '{T}', 'Review', '{T}', '{T}');
          INSERT INTO tags (id, name, created_at, updated_at) VALUES ('tag1', 'fomo', '{T}', '{T}');
          INSERT INTO journal_entry_tags (journal_entry_id, tag_id, created_at) VALUES ('j1', 'tag1', '{T}');
-         INSERT INTO trade_reviews (id, trade_id, created_at, updated_at) VALUES ('tr1', 't1', '{T}', '{T}');
+         INSERT INTO trade_reviews (id, trade_id, account_id, created_at, updated_at) VALUES ('tr1', 't1', 'acc1', '{T}', '{T}');
+         INSERT INTO trade_corrections (id, trade_id, account_id, kind, corrected_at, actor)
+           VALUES ('c1', 't1', 'acc1', 'edit', '{T}', 'local_user');
          INSERT INTO account_status_events (id, account_id, status, effective_at, created_at)
            VALUES ('s1', 'acc1', 'active', '{T}', '{T}');
          INSERT INTO legacy_account_rulebook_versions (id, account_id, version_number, effective_from, created_at, updated_at)
@@ -248,7 +250,7 @@ fn deleting_an_account_removes_everything_it_owns() {
     // triggers allow the cascade because the parent version is deleted first).
     conn.execute("DELETE FROM accounts WHERE id = 'acc1'", []).unwrap();
     for table in [
-        "trades", "import_batches", "import_rows", "journal_entries", "journal_entry_tags", "trade_reviews",
+        "trades", "import_batches", "import_rows", "journal_entries", "journal_entry_tags", "trade_reviews", "trade_corrections",
         "account_status_events", "legacy_account_rulebook_versions", "legacy_account_rules",
         "rulebooks", "rulebook_versions", "rule_definitions", "account_rulebook_assignments",
     ] {

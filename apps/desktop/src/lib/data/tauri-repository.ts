@@ -61,6 +61,23 @@ import {
   journalEntrySchema,
   tradeInputSchema,
   tradeSchema,
+  archiveInputSchema,
+  attachmentMetaSchema,
+  checklistInputSchema,
+  checklistSchema,
+  deletedTradeSchema,
+  librarySchema,
+  reviewInputSchema,
+  reviewSummarySchema,
+  screenshotDataSchema,
+  screenshotInputSchema,
+  strategyInputSchema,
+  strategySchema,
+  tagInputSchema,
+  tagSchema,
+  tradeChangeOptionsSchema,
+  tradeDetailSchema,
+  tradeReviewSchema,
 } from "./schemas";
 
 /** The shape of Tauri's `invoke`, injected so the adapter can be tested without a webview. */
@@ -126,8 +143,33 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
     trades: {
       list: (accountId) => call("list_trades", { accountId }, z.array(tradeSchema)),
       create: (input) => call("create_trade", { input: validate(tradeInputSchema, input) }, tradeSchema),
-      update: (id, input) => call("update_trade", { id, input: validate(tradeInputSchema, input) }, tradeSchema),
-      remove: (id) => done("delete_trade", { id }),
+      update: (id, input, options) =>
+        call(
+          "update_trade",
+          { id, input: validate(tradeInputSchema, input), ...(options ? { options: validate(tradeChangeOptionsSchema, options) } : {}) },
+          tradeSchema,
+        ),
+      remove: (id, reason) => done("delete_trade", reason ? { id, reason } : { id }),
+      restore: (accountId, id, reason) => call("restore_trade", { accountId, id, reason: reason ?? null }, tradeSchema),
+      listDeleted: (accountId) => call("list_deleted_trades", { accountId }, z.array(deletedTradeSchema)),
+      detail: (accountId, id) => call("get_trade_detail", { accountId, id }, tradeDetailSchema),
+    },
+    reviews: {
+      get: (accountId, tradeId) => call("get_trade_review", { accountId, tradeId }, tradeReviewSchema.nullable()),
+      save: (input) => call("save_trade_review", { input: validate(reviewInputSchema, input) }, tradeReviewSchema),
+      summaries: (accountId) => call("list_trade_review_summaries", { accountId }, z.array(reviewSummarySchema)),
+      addScreenshot: (input) =>
+        call("add_trade_screenshot", { input: validate(screenshotInputSchema, input) }, attachmentMetaSchema),
+      readScreenshot: (accountId, id) => call("read_trade_screenshot", { accountId, id }, screenshotDataSchema),
+      removeScreenshot: (accountId, id) => done("remove_trade_screenshot", { accountId, id }),
+    },
+    library: {
+      load: () => call("get_review_library", {}, librarySchema),
+      saveStrategy: (id, input) => call("save_strategy", { id, input: validate(strategyInputSchema, input) }, strategySchema),
+      saveTag: (id, input) => call("save_tag", { id, input: validate(tagInputSchema, input) }, tagSchema),
+      saveChecklist: (id, input) =>
+        call("save_checklist", { id, input: validate(checklistInputSchema, input) }, checklistSchema),
+      setArchived: (input) => done("set_library_archived", { input: validate(archiveInputSchema, input) }),
     },
     journal: {
       list: (accountId) => call("list_journal_entries", { accountId }, z.array(journalEntrySchema)),

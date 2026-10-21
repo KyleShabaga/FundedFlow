@@ -7,6 +7,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   Button,
   Checkbox,
+  ChipGroup,
   FieldGroup,
   FileDropzone,
   focusFirstInvalid,
@@ -183,6 +184,34 @@ describe("Checkbox, Switch and RadioGroup", () => {
     await userEvent.keyboard("{ArrowDown}");
     expect(onValueChange).toHaveBeenLastCalledWith("short");
     expect((screen.getByRole("radio", { name: "Short" }) as HTMLInputElement).checked).toBe(true);
+  });
+});
+
+describe("ChipGroup", () => {
+  it("is a labelled group of pressed/unpressed buttons that toggles values by keyboard", async () => {
+    function Demo() {
+      const [value, setValue] = useState<string[]>(["a"]);
+      return <ChipGroup label="Mistakes" tone="warn" value={value} onValueChange={setValue} options={[{ value: "a", label: "Chased" }, { value: "b", label: "Moved stop" }, { value: "c", label: "Old", note: "Archived", disabled: true }]} />;
+    }
+    render(<Demo />);
+    const group = screen.getByRole("group", { name: "Mistakes" });
+    expect(group).toBeTruthy();
+    const chased = screen.getByRole("button", { name: "Chased" });
+    const moved = screen.getByRole("button", { name: "Moved stop" });
+    expect(chased.getAttribute("aria-pressed")).toBe("true");
+    expect(moved.getAttribute("aria-pressed")).toBe("false");
+    moved.focus();
+    await userEvent.keyboard(" ");
+    expect(moved.getAttribute("aria-pressed")).toBe("true");
+    await userEvent.click(chased);
+    expect(chased.getAttribute("aria-pressed")).toBe("false");
+    const old = screen.getByRole("button", { name: "Old, Archived" }) as HTMLButtonElement;
+    expect(old.disabled).toBe(true);
+  });
+
+  it("shows the empty text when there are no options", () => {
+    render(<ChipGroup label="Setups" value={[]} onValueChange={() => {}} options={[]} empty="No setups yet" />);
+    expect(screen.getByText("No setups yet")).toBeTruthy();
   });
 });
 

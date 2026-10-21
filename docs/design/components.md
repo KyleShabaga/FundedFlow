@@ -25,6 +25,7 @@ Build 13 added the patterns below; props and usage are in [`../design-system.md`
 | Component | Used on |
 |---|---|
 | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select`, `FieldGroup`, `FormSection`, `ValidationSummary` | Accounts, rulebook editor, trade editor, Import options, Settings |
+| `ChipGroup` (Build 20) | Trade review setup, mistake and mindset tags |
 | `IconButton`, `SegmentedControl` | Pagers, row menus, Table/Cards and filter switches |
 | `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `DropdownMenu`, `Tooltip` | Editors, destructive confirmations, calculation breakdowns, column chooser, row menus |
 | `InlineNotice`, `ToastProvider`/`useToast`, `StatusIndicator` | Every screen |

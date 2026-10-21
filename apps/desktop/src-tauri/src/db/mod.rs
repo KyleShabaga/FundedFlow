@@ -116,6 +116,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "rulebook_events",
         step: Step::Rust(|tx| rulebook_events(tx)),
     },
+    Migration {
+        version: 17,
+        name: "trade_reviews",
+        step: Step::Sql(include_str!("../../migrations/0017_trade_reviews.sql")),
+    },
 ];
 
 /// Latest schema version this build understands.

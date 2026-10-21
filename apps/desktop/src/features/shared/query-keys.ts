@@ -15,6 +15,16 @@ export const featureKeys = {
   deletion: (id: string | null) => [...account(id), "deletion-preview"] as const,
   tradeDetail: (id: string | null, tradeId: string | null) => [...account(id), "trades", "detail", tradeId] as const,
   tradesRoot: (id: string | null) => [...account(id), "trades"] as const,
+  /** Build 20: one trade with provenance and corrections; soft-deleted trades. Under tradesRoot. */
+  tradeRecord: (id: string | null, tradeId: string | null) => [...account(id), "trades", "record", tradeId] as const,
+  deletedTrades: (id: string | null) => [...account(id), "trades", "deleted"] as const,
+  /** Build 20 reviews of an account's trades. Library edits invalidate every account's reviews (labels). */
+  reviewsAll: [...root, "reviews"] as const,
+  reviewsRoot: (id: string | null) => [...root, "reviews", id] as const,
+  tradeReview: (id: string | null, tradeId: string | null) => [...root, "reviews", id, "trade", tradeId] as const,
+  reviewSummaries: (id: string | null) => [...root, "reviews", id, "summaries"] as const,
+  screenshot: (id: string | null, attachmentId: string | null) => [...root, "reviews", id, "screenshot", attachmentId] as const,
+  library: [...root, "library"] as const,
   trades: (id: string | null, filters: TradeFilters = {}) => [...account(id), "trades", { from: filters.from ?? null, to: filters.to ?? null, symbol: filters.symbol ?? null, side: filters.side ?? null }] as const,
   journalDetail: (id: string | null, entryId: string | null) => [...account(id), "journal", "detail", entryId] as const,
   journalRoot: (id: string | null) => [...account(id), "journal"] as const,

@@ -356,14 +356,14 @@ fn migrations_15_and_16_upgrade_a_populated_v14_journal_in_order_and_roll_back_o
     assert_eq!(version(&conn), 15);
     assert_eq!(crate::store::accounts::get(&conn, &acc.id).unwrap(), acc);
     conn.execute_batch("DROP TABLE rulebook_events").unwrap();
-    assert_eq!(super::migrate(&mut conn).unwrap(), 16);
+    assert_eq!(super::migrate_with(&mut conn, &super::MIGRATIONS[..16]).unwrap(), 16);
     assert_eq!(count(&conn, "rulebook_events"), 0, "nothing is backfilled");
     assert_eq!(count(&conn, "account_snapshots"), 1);
     let kept = crate::store::snapshots::get(&conn, "legacy-snap").unwrap();
     assert_eq!((kept.balance.as_deref(), kept.trading_days_completed), (Some("50000"), Some(0)));
     assert_eq!(crate::store::accounts::get(&conn, &acc.id).unwrap(), acc);
     // Idempotent: a second run does nothing.
-    assert_eq!(super::migrate(&mut conn).unwrap(), 16);
+    assert_eq!(super::migrate_with(&mut conn, &super::MIGRATIONS[..16]).unwrap(), 16);
 }
 
 /// The unmerged Build 19 branch numbered the audit log 15. A journal it opened is at version 15
@@ -389,7 +389,7 @@ fn migration_16_repairs_a_journal_that_reached_15_on_the_build_19_branch() {
     }
     let events_before = count(&conn, "rulebook_events");
     assert!(!balance_nullable(&conn));
-    assert_eq!(super::migrate(&mut conn).unwrap(), 16);
+    assert_eq!(super::migrate_with(&mut conn, &super::MIGRATIONS[..16]).unwrap(), 16);
     assert!(balance_nullable(&conn), "the skipped nullable snapshot rebuild was applied");
     assert_eq!(count(&conn, "rulebook_events"), events_before, "existing audit rows kept");
     assert_eq!(crate::store::snapshots::get(&conn, "legacy-snap").unwrap().balance.as_deref(), Some("50000"));

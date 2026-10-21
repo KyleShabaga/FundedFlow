@@ -26,7 +26,11 @@ use crate::store::settings::{self, Setting};
 use crate::store::snapshots::{self, Snapshot, SnapshotInput};
 use crate::store::journal::{self, JournalEntry, JournalEntryInput};
 use crate::store::rulebooks;
-use crate::store::trades::{self, Trade, TradeInput};
+use crate::store::trades::{self, DeletedTrade, Trade, TradeChangeOptions, TradeDetail, TradeInput};
+use crate::store::attachments::{self, AttachmentMeta, ScreenshotData, ScreenshotInput};
+use crate::store::library::{self, ArchiveInput, Checklist, ChecklistInput, Library, Strategy, StrategyInput, Tag, TagInput};
+use crate::store::reviews::{self, ReviewInput, ReviewSummary, TradeReview};
+use crate::error::AppError;
 use crate::runtime::{Runtime, RuntimeStatus};
 
 #[tauri::command]
@@ -100,14 +104,99 @@ pub async fn create_trade(db: State<'_, Runtime>, input: TradeInput) -> AppResul
     db.with(|c| trades::create(c, input))
 }
 
+/// `options` (Build 20) guards against a stale edit and records a reason; without it the call behaves as before.
+/// Every change is recorded in the trade's correction history.
 #[tauri::command]
-pub async fn update_trade(db: State<'_, Runtime>, id: String, input: TradeInput) -> AppResult<Trade> {
-    db.with(|c| trades::update(c, &id, input))
+pub async fn update_trade(
+    db: State<'_, Runtime>,
+    id: String,
+    input: TradeInput,
+    options: Option<TradeChangeOptions>,
+) -> AppResult<Trade> {
+    db.with(|c| trades::update_with(c, &id, input, options.unwrap_or_default()))
 }
 
 #[tauri::command]
-pub async fn delete_trade(db: State<'_, Runtime>, id: String) -> AppResult<()> {
-    db.with(|c| trades::delete(c, &id))
+pub async fn delete_trade(db: State<'_, Runtime>, id: String, reason: Option<String>) -> AppResult<()> {
+    db.with(|c| trades::delete_with(c, &id, reason))
+}
+
+#[tauri::command]
+pub async fn restore_trade(db: State<'_, Runtime>, account_id: String, id: String, reason: Option<String>) -> AppResult<Trade> {
+    db.with(|c| trades::restore_deleted(c, &account_id, &id, reason))
+}
+
+#[tauri::command]
+pub async fn list_deleted_trades(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<DeletedTrade>> {
+    db.with(|c| trades::list_deleted(c, &account_id))
+}
+
+#[tauri::command]
+pub async fn get_trade_detail(db: State<'_, Runtime>, account_id: String, id: String) -> AppResult<TradeDetail> {
+    db.with(|c| trades::detail(c, &account_id, &id))
+}
+
+#[tauri::command]
+pub async fn get_trade_review(db: State<'_, Runtime>, account_id: String, trade_id: String) -> AppResult<Option<TradeReview>> {
+    let root = db.data_dir();
+    db.with(|c| reviews::get(c, root.as_deref(), &account_id, &trade_id))
+}
+
+#[tauri::command]
+pub async fn save_trade_review(db: State<'_, Runtime>, input: ReviewInput) -> AppResult<TradeReview> {
+    let root = db.data_dir();
+    db.with(|c| reviews::save(c, root.as_deref(), input))
+}
+
+#[tauri::command]
+pub async fn list_trade_review_summaries(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<ReviewSummary>> {
+    db.with(|c| reviews::summaries(c, &account_id))
+}
+
+fn attachment_root(db: &Runtime) -> AppResult<std::path::PathBuf> {
+    db.data_dir().ok_or_else(|| AppError::Unavailable { message: "the data folder is not available".into() })
+}
+
+#[tauri::command]
+pub async fn add_trade_screenshot(db: State<'_, Runtime>, input: ScreenshotInput) -> AppResult<AttachmentMeta> {
+    let root = attachment_root(&db)?;
+    db.with(|c| attachments::add(c, &root, input))
+}
+
+#[tauri::command]
+pub async fn read_trade_screenshot(db: State<'_, Runtime>, account_id: String, id: String) -> AppResult<ScreenshotData> {
+    let root = attachment_root(&db)?;
+    db.with(|c| attachments::read(c, &root, &account_id, &id))
+}
+
+#[tauri::command]
+pub async fn remove_trade_screenshot(db: State<'_, Runtime>, account_id: String, id: String) -> AppResult<()> {
+    db.with(|c| attachments::remove(c, &account_id, &id))
+}
+
+#[tauri::command]
+pub async fn get_review_library(db: State<'_, Runtime>) -> AppResult<Library> {
+    db.with(|c| library::load(c))
+}
+
+#[tauri::command]
+pub async fn save_strategy(db: State<'_, Runtime>, id: Option<String>, input: StrategyInput) -> AppResult<Strategy> {
+    db.with(|c| library::save_strategy(c, id.as_deref(), input))
+}
+
+#[tauri::command]
+pub async fn save_tag(db: State<'_, Runtime>, id: Option<String>, input: TagInput) -> AppResult<Tag> {
+    db.with(|c| library::save_tag(c, id.as_deref(), input))
+}
+
+#[tauri::command]
+pub async fn save_checklist(db: State<'_, Runtime>, id: Option<String>, input: ChecklistInput) -> AppResult<Checklist> {
+    db.with(|c| library::save_checklist(c, id.as_deref(), input))
+}
+
+#[tauri::command]
+pub async fn set_library_archived(db: State<'_, Runtime>, input: ArchiveInput) -> AppResult<()> {
+    db.with(|c| library::set_archived(c, input))
 }
 
 #[tauri::command]

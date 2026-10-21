@@ -43,6 +43,25 @@ import type { AppError } from "../contracts/errors.js";
 import type { JournalEntry, JournalEntryInput } from "../contracts/journal.js";
 import type { Trade, TradeInput } from "../contracts/trades.js";
 import type {
+  ArchiveInput,
+  AttachmentMeta,
+  Checklist,
+  ChecklistInput,
+  DeletedTrade,
+  Library,
+  ReviewInput,
+  ReviewSummary,
+  ScreenshotData,
+  ScreenshotInput,
+  Strategy,
+  StrategyInput,
+  Tag,
+  TagInput,
+  TradeChangeOptions,
+  TradeDetail,
+  TradeReview,
+} from "../contracts/reviews.js";
+import type {
   AccountRulebookAssignment,
   ApplicableRulebook,
   ApplicableRulebookQuery,
@@ -100,9 +119,47 @@ export interface TradeRepository {
   /** Non-deleted trades of an account, newest entry first. */
   list(accountId: string): Promise<Trade[]>;
   create(input: TradeInput): Promise<Trade>;
-  update(id: string, input: TradeInput): Promise<Trade>;
-  /** Soft delete; unlinks journal entries. Re-importing its CSV row restores the same trade. */
-  remove(id: string): Promise<void>;
+  /**
+   * Replaces every editable field and recomputes trading day and P&L. Imported source rows and fills never change.
+   * Every change is recorded in the trade's correction history; `options.expectedUpdatedAt` refuses a stale edit.
+   */
+  update(id: string, input: TradeInput, options?: TradeChangeOptions): Promise<Trade>;
+  /** Soft delete; unlinks journal entries. Re-importing its CSV row restores the same trade. The review is kept. */
+  remove(id: string, reason?: string | null): Promise<void>;
+  /** Undo a delete: the trade returns as stored, with its review and screenshots (Build 20). */
+  restore(accountId: string, id: string, reason?: string | null): Promise<Trade>;
+  /** Soft-deleted trades of the account, most recently deleted first. */
+  listDeleted(accountId: string): Promise<DeletedTrade[]>;
+  /** One active trade of the account with import provenance, correction history and neighbours. */
+  detail(accountId: string, id: string): Promise<TradeDetail>;
+}
+
+/**
+ * Per-trade reviews and screenshots (Build 20). A review belongs to one trade and its account and keeps the
+ * strategy, checklist and tag labels it was made with. Another account's trade is "not found".
+ */
+export interface ReviewRepository {
+  get(accountId: string, tradeId: string): Promise<TradeReview | null>;
+  /** Create or replace; `expectedRevision` is the revision the form started from (null: none existed). */
+  save(input: ReviewInput): Promise<TradeReview>;
+  /** One summary per active reviewed trade of the account, for the trade log. */
+  summaries(accountId: string): Promise<ReviewSummary[]>;
+  /** Stores a PNG, JPEG or WebP (type checked from the bytes). Never touches the review's text. */
+  addScreenshot(input: ScreenshotInput): Promise<AttachmentMeta>;
+  /** Verified bytes, or a missing/corrupt status. */
+  readScreenshot(accountId: string, id: string): Promise<ScreenshotData>;
+  /** Detaches it; the row and bytes stay for backups until permanent deletion (Build 24). */
+  removeScreenshot(accountId: string, id: string): Promise<void>;
+}
+
+/** Strategies (playbooks), tags and checklists (templates), shared by every account. Archived, never deleted. */
+export interface LibraryRepository {
+  load(): Promise<Library>;
+  saveStrategy(id: string | null, input: StrategyInput): Promise<Strategy>;
+  saveTag(id: string | null, input: TagInput): Promise<Tag>;
+  /** Items keep their ids when renamed; items left out are archived. */
+  saveChecklist(id: string | null, input: ChecklistInput): Promise<Checklist>;
+  setArchived(input: ArchiveInput): Promise<void>;
 }
 
 export interface JournalEntryRepository {
@@ -259,6 +316,8 @@ export interface JournalRepository {
   readonly accounts: AccountRepository;
   readonly trades: TradeRepository;
   readonly journal: JournalEntryRepository;
+  readonly reviews: ReviewRepository;
+  readonly library: LibraryRepository;
   readonly imports: ImportRepository;
   readonly rulebooks: RulebookRepository;
   readonly ledger: LedgerRepository;
