@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fixture from "./fixtures/reconciliation.json" with { type: "json" };
 import { compareFinancialEvidence, observationSchema, reconciliationRequestSchema, tradeSchema, ledgerEntrySchema, riskMoney,
-  ruleTypes, requiredRuleEvidence, ruleEvidenceRequirements, ledgerEntryInputSchema } from "../src/index.js";
+  observationInputSchema, ruleTypes, requiredRuleEvidence, ruleEvidenceRequirements, ledgerEntryInputSchema } from "../src/index.js";
 
 describe("Rust reconciliation parity", () => {
   for (const f of fixture) it(f.name, () => {
@@ -42,4 +42,11 @@ it("returns unavailable money rather than throwing on malformed legacy financial
   const result=compareFinancialEvidence(reconciliationRequestSchema.parse(f.request),observationSchema.parse(f.observation),observationSchema.parse(f.baseline),
     f.trades.map(t=>tradeSchema.parse({...t,realizedPnl:"invalid legacy amount"})),[]);
   expect(result.reconciliationStatus).toBe("unsupported");expect(result.difference).toBeNull();
+});
+
+it("records sourced EOD equity and balance peaks without conflating their basis", () => {
+  const {id: _id,recordedAt: _recordedAt,effectiveTradingDay: _day,timezone: _zone,tradingDayResetTime: _reset,supersedesId: _supersedes,correctionReason: _reason,...input}=observationSchema.parse(fixture[0]!.observation);
+  expect(observationInputSchema.safeParse({...input,kind:"eod_settlement",basis:"equity"}).success).toBe(true);
+  expect(observationInputSchema.safeParse({...input,kind:"intraday_peak",basis:"balance"}).success).toBe(true);
+  expect(observationInputSchema.safeParse({...input,kind:"balance",basis:"equity"}).success).toBe(false);
 });

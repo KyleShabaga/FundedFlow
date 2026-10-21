@@ -31,7 +31,7 @@ export const observationInputSchema = z.strictObject({
   actor: z.string().trim().min(1).max(200),
   note: z.string().max(20000).nullable(),
 }).superRefine((v, c) => {
-  if ((v.kind === "equity" || v.kind === "intraday_peak") !== (v.basis === "equity"))
+  if ((v.kind === "equity" && v.basis !== "equity") || (["opening_balance", "balance"].includes(v.kind) && v.basis !== "balance"))
     c.addIssue({ code: "custom", path: ["basis"], message: "Observation kind and basis disagree" });
   if (v.validUntil !== null && Date.parse(v.validUntil) < Date.parse(v.observedAt))
     c.addIssue({ code: "custom", path: ["validUntil"], message: "Must not precede observation" });

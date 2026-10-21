@@ -925,3 +925,28 @@ fn native_conflicting_sources_currency_edits_and_archived_reconciliation_remain_
     assert!(reconciliation::create(&mut c, req).is_err());
     assert_eq!(reconciliation::list(&c, &a.id).unwrap().len(), 3);
 }
+
+#[test]
+fn eod_and_peak_evidence_preserve_explicit_financial_basis() {
+    let mut c = db();
+    let a = accounts::create(&mut c, account_input("Basis")).unwrap();
+    let mut eod = input(
+        &a.id,
+        "eod_settlement",
+        Some("50000"),
+        "2026-10-19T20:00:00Z",
+    );
+    eod.basis = "equity".into();
+    let mut peak = input(
+        &a.id,
+        "intraday_peak",
+        Some("50100"),
+        "2026-10-19T20:00:00Z",
+    );
+    peak.basis = "balance".into();
+    assert_eq!(evidence::create(&mut c, eod).unwrap().input.basis, "equity");
+    assert_eq!(
+        evidence::create(&mut c, peak).unwrap().input.basis,
+        "balance"
+    );
+}

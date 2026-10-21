@@ -124,8 +124,11 @@ fn insert(
     {
         return Err(AppError::invalid("kind", "unsupported observation"));
     }
-    let equity = ["equity", "intraday_peak"].contains(&input.kind.as_str());
-    if input.basis != if equity { "equity" } else { "balance" } {
+    if !["balance", "equity"].contains(&input.basis.as_str())
+        || (input.kind == "equity" && input.basis != "equity")
+        || (["opening_balance", "balance"].contains(&input.kind.as_str())
+            && input.basis != "balance")
+    {
         return Err(AppError::invalid("basis", "kind and basis disagree"));
     }
     if input.currency != ctx.currency {
