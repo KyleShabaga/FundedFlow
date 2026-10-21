@@ -147,7 +147,8 @@ describe("keyboard: shell", () => {
     expect(document.activeElement).toBe(toggle);
     // Development builds add the Build 26.9 developer actions directly above Settings.
     const devTools = import.meta.env.DEV ? ["Add Fake Data", "Reset All Data"] : [];
-    const expected = ["Today", "Journal", "Insights", "Accounts", ...devTools, "Settings"];
+    // Each submenu's chevron follows its section link.
+    const expected = ["Today", "Journal", "Journal views", "Insights", "Insights views", "Accounts", ...devTools, "Settings"];
     const order: string[] = [];
     for (let i = 0; i < expected.length; i++) { await user.tab(); order.push(document.activeElement?.getAttribute("aria-label") ?? ""); }
     expect(order).toEqual(expected);

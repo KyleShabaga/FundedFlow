@@ -14,7 +14,7 @@ specification). When a spec and a card disagree, the card wins; fix the spec in 
 ## Information architecture (Build 6)
 
 - Sidebar: **Today** (default), **Journal**, **Insights**, **Accounts**, **Settings**.
-- Header: **Import CSV** is the primary action. Manual trade entry is contextual to Today and Journal.
+- Header: **Import** (text-only; opens Quick import or the full wizard) is the header action. Manual trade entry is contextual to Today and Journal.
 - Calendar is an Insights view; the library (strategies, tags, checklists, saved notes) lives under Journal; there
   is no separate Home: Today is the landing page.
 

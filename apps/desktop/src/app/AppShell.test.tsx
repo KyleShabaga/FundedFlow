@@ -150,17 +150,17 @@ it("keeps navigation and Settings available when runtime fails and never enables
   invoke.mockRejectedValue(new Error("bridge unavailable"));
   render(<App />);
   await screen.findByRole("alert");
-  // Import CSV offers Quick import and the full wizard; both stay behind the runtime gate, so nothing is read or sent.
+  // The header Import menu offers Quick import and the full wizard; both stay behind the runtime gate, so nothing is read or sent.
   const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: "Import CSV" }));
+  await user.click(screen.getByRole("button", { name: "Import" }));
   await user.click(await screen.findByRole("menuitem", { name: /Quick import/ }));
   await waitFor(() => expect(window.location.hash).toBe("#/import/quick"));
   expect(await screen.findByRole("heading", { level: 1, name: "Quick import" })).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Import CSV" }));
+  await user.click(screen.getByRole("button", { name: "Import" }));
   await user.click(await screen.findByRole("menuitem", { name: /Full wizard/ }));
   await waitFor(() => expect(window.location.hash).toBe("#/import"));
   expect(await screen.findByRole("heading", { level: 1, name: "Import trades" })).toBeTruthy();
-  expect(screen.queryByRole("link", { name: "Import CSV" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "Import" })).toBeNull();
   expect(screen.queryByRole("navigation", { name: "Primary navigation" })!.querySelector('[aria-current="page"]')).toBeNull();
   await userEvent.setup().click(screen.getByRole("link", { name: "Settings" }));
   await screen.findByRole("heading", { name: "Settings is not built yet" });
@@ -202,4 +202,73 @@ it("anchors the collapse toggle on the sidebar edge beside the logo, first in ke
   expect(collapsed.getAttribute("aria-expanded")).toBe("false");
   // Navigation and the selected route survive collapsing.
   expect(within(screen.getByRole("navigation", { name: "Primary navigation" })).getByRole("link", { name: "Today" }).getAttribute("aria-current")).toBe("page");
+});
+
+it("shows Journal and Insights views as submenus of the active section, with keyboard-operable chevrons", async () => {
+  const user = userEvent.setup();
+  window.location.hash = "/journal?view=log";
+  render(<App />);
+  await screen.findByRole("heading", { name: "Journal is not built yet" });
+  const nav = screen.getByRole("navigation", { name: "Primary navigation" });
+  const journalViews = within(nav).getByRole("list", { name: "Journal views" });
+  expect(within(journalViews).getAllByRole("link").map(l => l.textContent)).toEqual(["By day", "Trade log", "Library"]);
+  // The section stays the page-level current item; the child is marked "true", so only one item is "page".
+  expect(current()).toHaveLength(1);
+  expect(within(journalViews).getByRole("link", { name: "Trade log" }).getAttribute("aria-current")).toBe("true");
+  expect(within(journalViews).getByRole("link", { name: "By day" }).getAttribute("aria-current")).toBeNull();
+  // Sections you're not in stay closed; Accounts and Today have no submenu (their children are per-record pages).
+  expect(within(nav).queryByRole("list", { name: "Insights views" })).toBeNull();
+  expect(within(nav).queryByRole("button", { name: "Accounts views" })).toBeNull();
+  const chevron = within(nav).getByRole("button", { name: "Journal views" });
+  expect(chevron.getAttribute("aria-expanded")).toBe("true");
+  chevron.focus();
+  await user.keyboard("{Enter}");
+  expect(chevron.getAttribute("aria-expanded")).toBe("false");
+  expect(within(nav).queryByRole("list", { name: "Journal views" })).toBeNull();
+  await user.keyboard(" ");
+  expect(within(nav).getByRole("list", { name: "Journal views" })).toBeTruthy();
+  await user.click(within(nav).getByRole("link", { name: "Library" }));
+  await waitFor(() => expect(window.location.hash).toBe("#/journal?view=library"));
+  // Entering Insights opens its views; its first view is the default page.
+  await user.click(within(nav).getByRole("link", { name: "Insights" }));
+  await screen.findByRole("heading", { name: "Insights is not built yet" });
+  const insightsViews = within(nav).getByRole("list", { name: "Insights views" });
+  expect(within(insightsViews).getByRole("link", { name: "Overview" }).getAttribute("aria-current")).toBe("true");
+  await user.click(within(insightsViews).getByRole("link", { name: "Calendar" }));
+  await waitFor(() => expect(window.location.hash).toBe("#/insights?section=calendar"));
+  expect(within(insightsViews).getByRole("link", { name: "Calendar" }).getAttribute("aria-current")).toBe("true");
+  // The icon rail has no submenus.
+  await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+  expect(within(nav).queryByRole("list")).toBeNull();
+  expect(within(nav).queryByRole("button", { name: /views$/ })).toBeNull();
+});
+
+it("draws one selected-route indicator that follows the active route, not the pointer", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole("heading", { name: "Today is not built yet" });
+  const nav = screen.getByRole("navigation", { name: "Primary navigation" });
+  expect(nav.querySelectorAll(".shell-nav-indicator")).toHaveLength(1);
+  // It appears in place on first render, and slides once it moves between items.
+  expect(nav.querySelector(".shell-nav-indicator")!.classList.contains("is-sliding")).toBe(false);
+  await user.hover(within(nav).getByRole("link", { name: "Accounts" }));
+  expect(current()[0].getAttribute("aria-label")).toBe("Today");
+  expect(nav.querySelectorAll(".shell-nav-indicator")).toHaveLength(1);
+  // Pages without a sidebar item (Import) have no indicator.
+  window.location.hash = "/import/history";
+  await waitFor(() => expect(nav.querySelector(".shell-nav-indicator")).toBeNull());
+  expect(nav.classList.contains("has-indicator")).toBe(false);
+});
+
+it("uses a compact, text-only Import action that still opens the import menu", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole("heading", { name: "Today is not built yet" });
+  const button = screen.getByRole("button", { name: "Import" });
+  expect(button.textContent).toBe("Import");
+  expect(button.querySelector("svg")).toBeNull();
+  expect(button.classList.contains("ds-btn-primary")).toBe(false);
+  await user.click(button);
+  expect(await screen.findByRole("menuitem", { name: /Quick import/ })).toBeTruthy();
+  expect(screen.getByRole("menuitem", { name: /Full wizard/ })).toBeTruthy();
 });

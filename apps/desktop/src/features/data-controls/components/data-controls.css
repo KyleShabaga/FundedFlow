@@ -3,7 +3,9 @@
  * Every value comes from tokens.css; components come from the design system.
  */
 .dc-page { display: grid; gap: var(--space-6); max-width: 960px; min-width: 0; font-family: var(--font-sans); color: var(--ink); }
-.dc-sub { margin: 0; color: var(--ink-muted); max-width: 70ch; }
+/* The local-only promise: a quiet raised surface with a flow accent so it reads as reassurance, not a warning.
+   Same text size as before; ink rather than muted text for contrast on the raised surface. */
+.dc-local-notice { margin: 0 0 var(--space-2); max-width: 70ch; padding: var(--space-4); box-sizing: border-box; border: 1px solid var(--line-100); border-left: 3px solid var(--flow); border-radius: var(--radius-md); background: var(--bg-200); color: var(--ink); text-align: left; }
 .dc-working { margin: 0; color: var(--ink-muted); }
 .dc-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .dc-note { margin: 0; color: var(--ink-muted); max-width: 70ch; }

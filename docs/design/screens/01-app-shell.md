@@ -22,10 +22,22 @@ panel and Design system gallery stay reachable from Settings › Developer in de
   on narrow windows. Active item: `flow-soft` ground, `aria-current="page"`.
 - Brand row (P0-D01): `BrandLogo`, the FundedFlow mark (32 px box, decorative) beside "Funded" in `ink` and "Flow" in
   `flow`; the collapsed rail shows the mark alone. The row's text still reads "FundedFlow".
-- Toggle (Build 18.5): a 32 px round button immediately right of the FundedFlow logo, centred on the sidebar's right
-  border (`AppFrame` `sidebarEdge`), level with the logo mark, in both widths. Its 44 px hit area overlaps neither the
-  logo nor the header. `aria-label` and tooltip "Collapse sidebar" / "Expand sidebar" (tooltip adds "(Ctrl+B)"),
-  `aria-expanded`, `aria-controls="primary-navigation"`, `aria-keyshortcuts`. First in the sidebar's tab order.
+- Toggle (Build 18.5, restyled P0-D01): a quiet 28 px rounded-square button with the panel-left-close /
+  panel-left-open outline icon (hairline `line-100` border, no accent ring), immediately right of the FundedFlow logo,
+  centred on the sidebar's right border (`AppFrame` `sidebarEdge`), level with the logo mark, in both widths. Its 44 px
+  hit area overlaps neither the logo nor the header. `aria-label` and tooltip "Collapse sidebar" / "Expand sidebar"
+  (tooltip adds "(Ctrl+B)"), `aria-expanded`, `aria-controls="primary-navigation"`, `aria-keyshortcuts`. First in the
+  sidebar's tab order.
+- Submenus (P0-D01): only views a section already serves at its own URL. Journal: By day (`/journal`), Trade log
+  (`?view=log`), Library (`?view=library`). Insights: Overview (`/insights`), Calendar, Breakdowns, Attempts
+  (`?section=`); Tags stays a page tab because it only exists when the account has tags. Today, Accounts (children are
+  per-account pages) and Settings have none. A chevron button after the section link (`aria-expanded`,
+  `aria-controls`, "Journal views") opens and closes the list; the active section opens by default. The section link
+  keeps `aria-current="page"`; the current child is `aria-current="true"`. The icon rail shows no submenus.
+- Motion (P0-D01), 200 ms ease-out, no bounce: the selected `flow-soft` background and left accent is one indicator
+  that slides to the newly selected route (route changes only, never hover; it appears in place when coming from a page
+  with no sidebar item). Opening and closing animate the sidebar width; icons keep a fixed inset so they don't move,
+  and labels and the wordmark fade in once the width is mostly open. `prefers-reduced-motion` turns all of it off.
 - Below 760 px, the icon rail is enforced and the toggle is disabled with an explanatory accessible name.
   On wider windows, restore the user's locally saved collapse preference. Ctrl+B leaves editable fields alone.
 - Footer: Settings and a "Saved on this computer" status (local-first promise). No Import item in the sidebar.
@@ -36,8 +48,9 @@ panel and Design system gallery stay reachable from Settings › Developer in de
 ## Header
 - Left: page title; reserved space for the **AccountContextBar** (account selector and filters; behaviour owned
   by feature cards and Build 14).
-- Right: **Import CSV** (primary). It opens a menu (Build 18.5): Quick import (a file you've imported before) and
-  Full wizard (first-time or custom files).
+- Account selector sits `space-3` below the title (P0-D03).
+- Right: **Import**, a compact text-only ghost button (no icon or chevron; P0-D02). It opens a menu (Build 18.5):
+  Quick import (a file you've imported before) and Full wizard (first-time or custom files).
 - Reserved, not in Build 12: GlobalFreshnessIndicator (Build 21 data), day-ending timer (Triage).
 
 ## Route lifecycle

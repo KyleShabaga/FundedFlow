@@ -49,7 +49,7 @@ Skipped rows (duplicates, errors) are dimmed.
 
 ## Build 18 implementation
 Code: `apps/desktop/src/features/imports/` (`components/ImportWizardPage.tsx`, `ImportHistoryPage.tsx`,
-`ImportTarget.tsx`, `wizard-state.ts`). Routes `/import` and `/import/history`; the header Import CSV button
+`ImportTarget.tsx`, `wizard-state.ts`). Routes `/import` and `/import/history`; the header Import button
 opens the wizard, and Accounts and account detail link to it with that account preselected. All reads and
 writes go through the Build 14 hooks; every count, status, reason and P&L value shown comes from Rust.
 
@@ -88,7 +88,7 @@ replace a later one. A new file (or Remove) drops the preview, mapping, format a
 confirmation and any check still running for the old file; a preview that returns for an earlier request never
 moves the wizard on. A file dropped outside a drop zone no longer opens in the window (shell drop guard).
 
-**Quick import** (`/import/quick`, `QuickImportPage`), from the header Import CSV menu, the Accounts "Import trades"
+**Quick import** (`/import/quick`, `QuickImportPage`), from the header Import menu, the Accounts "Import trades"
 menu, each account card's menu (that attempt preselected) and the wizard's head. The trader picks the exact attempt
 (same `ImportTargetPicker`: archived refused; Rust's `targetAssessment` blocks rows outside the exact attempt
 interval and asks for the same tick for in-window non-active attempts, bound to that preview's token; shared broker

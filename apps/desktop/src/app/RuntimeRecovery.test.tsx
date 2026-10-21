@@ -107,7 +107,7 @@ it("announces availability and permits keyboard-only Retry without stealing init
   expect(document.activeElement).toBe(document.body);
   expect(screen.getByRole("alert").getAttribute("aria-live")).toBe("assertive");
   expect(screen.getByText(/Do not delete or replace your journal/)).toBeTruthy();
-  for (let index = 0; index < 12 && document.activeElement !== retry; index++) await user.tab();
+  for (let index = 0; index < 20 && document.activeElement !== retry; index++) await user.tab();
   expect(document.activeElement).toBe(retry);
   invoke.mockResolvedValue(ready);
   await user.keyboard("{Enter}");
@@ -129,8 +129,8 @@ it("keeps recovery and Settings available on safe and unknown routes", async () 
   expect(screen.getAllByRole("alert")).toHaveLength(1);
   expect(screen.getByText(/Keep your journal and pre-upgrade backup in place/)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
-  // Import CSV stays available as navigation; the import wizard itself is behind the runtime gate.
-  expect(screen.getByRole("button", { name: "Import CSV" })).toBeTruthy();
+  // The header Import menu stays available as navigation; the import wizard itself is behind the runtime gate.
+  expect(screen.getByRole("button", { name: "Import" })).toBeTruthy();
   expect(screen.queryByRole("heading", { name: /Choose a CSV file/ })).toBeNull();
 });
 

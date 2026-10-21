@@ -63,7 +63,7 @@ behaviour. Build 12, Triage and P2 patterns remain with their cards.
 - Below ~760 px wide the sidebar collapses automatically.
 
 ### Header (Build 12)
-Page title, reserved AccountContextBar (account selector, filters), primary **Import CSV**. Wraps when narrow.
+Page title, reserved AccountContextBar (account selector, filters), text-only **Import** menu. Wraps when narrow.
 Search, feedback, notifications, theme switching, DayTimer and SessionClock are **not** Build 12: see the table
 in [screens/01-app-shell.md](screens/01-app-shell.md#not-in-build-12-do-not-build-here).
 

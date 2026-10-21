@@ -7,7 +7,9 @@ The Settings page (sidebar **Settings**) opens on this page. There is no mockup;
 
 ## Layout
 
-One column, max 960 px, four `FormSection`s:
+One column, max 960 px. It opens with the local-only notice ("FundedFlow keeps your journal only on this computer…",
+wording fixed), set apart on a `bg-200` surface with a hairline border and a `flow` left accent, left-aligned, body
+text size (P0-D04); reassurance, never warning styling. Then four `FormSection`s:
 
 1. **Your data on this computer**: a `StatList` saying the journal is stored in FundedFlow's app-data folder for the
    Windows user, that there are **no automatic backups**, that backups are **not encrypted**, and the last
