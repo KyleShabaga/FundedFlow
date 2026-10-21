@@ -117,3 +117,23 @@ Numbered steps with done, current (`aria-current="step"`) and upcoming states. I
 ### Popover
 Surface on `bg-100`, `line-200` border, `shadow-pop`, `radius-lg`. Used by the picker, sessions, columns menu,
 notifications. Built on Radix (already a dependency).
+
+## P0 design patterns (Build 25.1)
+
+The P0 boards ([`mockups/p0/`](mockups/p0/), board `Patterns`) use existing components except where marked new.
+
+| Pattern | Build from | New? |
+|---|---|---|
+| Header breadcrumb on nested pages (rulebook, version, account, daily review) | `PageHeader` + `nav[aria-label=Breadcrumb]` (Journal pages already inline one) | Shell change: a `breadcrumbs` slot replacing the back links |
+| State words with icons (verification, rule support, risk, freshness) | `StatusIndicator`, `RuleStateBadge`, `Badge` | No |
+| Change marks (+ Added, − Removed, ~ Changed, = Same) | `Badge` tones with a symbol | Small: a `ChangeMark` in `features/rulebooks` or a Badge `symbol` prop |
+| Simulation frame | `InlineNotice` + a card with a dashed `flow` border | Small CSS class in `features/rulebooks` |
+| Three separate facts (process, outcome, day) | `MetricCard` ×3 in one card | No |
+| Sticky action bar | The rulebook save bar and `.dr-actions` | No (could be shared later) |
+| Typed confirmation | `DestructiveActionDialog` (Build 25) | No |
+| Option cards | `RadioGroup` | Yes: a `layout="cards"` variant with a description per option |
+| Settings section navigation | In-page links | Yes, Settings only |
+| Danger zone | `FormSection` with a loss border | No |
+| Calculation readiness strip | `StatList` inline | No |
+
+No new tokens, type sizes or icons: lucide outline icons at 16 px (UI) and 20 px (sidebar), as in the app.

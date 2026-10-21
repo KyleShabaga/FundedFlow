@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Calculation explanation</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.sim{border:2px dashed var(--flow);border-radius:14px;padding:20px;display:grid;gap:16px;background:repeating-linear-gradient(135deg,transparent 0 14px,rgba(91,157,255,.035) 14px 28px)}
+.formula{font:500 12.5px/18px var(--font-mono);background:var(--bg-200);border:1px solid var(--line-100);border-radius:8px;padding:8px 12px;color:var(--ink);overflow-x:auto;white-space:pre-wrap}
+.rc{display:grid;gap:12px;padding:16px 24px;border-top:1px solid var(--line-100)}
+.rc:first-of-type{border-top:0}
+details summary{cursor:pointer;color:var(--flow);font-size:13px;font-weight:500}
+details summary:focus-visible{outline:2px solid var(--flow);outline-offset:2px;border-radius:4px}
+.ops{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 24px;margin:0}
+.ops>div{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line-100);font-size:13px}
+.ops dt{color:var(--ink-muted)} .ops dd{margin:0;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div class="shell" data-theme="dark">
+  <dc-import name="P0Sidebar" active="accounts" hint-size="248px,100%"></dc-import>
+  <div class="shell-main">
+    <dc-import name="P0Header" title="{{title}}" here="{{here}}" crumbs="{{crumbs}}" account="Apex 100K · PA-48213" hint-size="100%,120px"></dc-import>
+    <main class="shell-content">
+      <div class="wrap">
+        <div class="mock-states" role="group" aria-label="Mockup state (review only)">
+          <span>Mockup state</span>
+          <sc-for list="{{views}}" as="v" hint-placeholder-count="5"><button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="{{tabsLabel}}">
+          <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4"><button type="button" role="tab" class="{{t.cls}}" aria-selected="{{t.on}}">{{t.label}}</button></sc-for>
+        </div>
+
+        <sc-if value="{{isEmpty}}" hint-placeholder-val="{{ false }}">
+          <section class="card state">
+            <span class="state-mark"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5zM8 7h8M8 12h2M12 12h2M8 16h2M12 16h2"></path></svg></span>
+            <h3>No calculation recorded</h3>
+            <p>Limits, room left and Safe / Stop appear here once a calculation is saved for this account. Nothing is calculated on screen.</p>
+            <button type="button" class="btn btn-sm btn-primary" style="margin-top: 8px;" onClick="{{toSaved}}">Calculate now…</button>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{isSim}}" hint-placeholder-val="{{ false }}">
+          <section class="sim" aria-labelledby="sim-h">
+            <div class="row-between">
+              <div class="row"><span class="status s-flow" style="height: 28px; font-size: 13px;"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"></path></svg>Simulation: not this account's status</span></div>
+              <span class="small muted">Nothing is assigned, published or saved.</span>
+            </div>
+            <div class="row-between">
+              <p id="sim-h" class="small" style="margin: 0;">Simulates <b>Apex 100K Evaluation v4 (draft, with your unsaved edits)</b> against this account's recorded trades, ledger and checkpoints as of <b>Oct 21, 2026, 2:31 PM ET</b>.</p>
+              <button type="button" class="btn btn-sm">Use now</button>
+            </div>
+            <fieldset class="card pad" style="margin: 0; display: grid; gap: 12px;">
+              <legend class="h3" style="padding: 0 6px;">What you state for this calculation</legend>
+              <p class="fld-desc" style="margin: 0;">Not saved as a setting and not verified. Anything left "Not stated" keeps the affected rules Unknown, with the reason.</p>
+              <div class="fgrid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+                <label class="fld"><span class="fld-label">All closed trades are imported</span><select class="input select"><option>Yes, complete</option><option>Not sure or partly</option><option>No</option></select></label>
+                <label class="fld"><span class="fld-label">Fees are complete</span><select class="input select"><option>Not sure or partly</option><option>Yes, complete</option><option>No</option></select></label>
+                <label class="fld"><span class="fld-label">Payouts, resets and corrections are recorded</span><select class="input select"><option>Yes, complete</option><option>Not sure or partly</option><option>No</option></select></label>
+                <label class="fld"><span class="fld-label">Rule amounts are in</span><select class="input select"><option>USD</option><option>Not stated</option></select></label>
+                <label class="fld"><span class="fld-label">A limit is breached when the balance</span><select class="input select"><option>touches the limit</option><option>goes below the limit</option><option>Not stated</option></select></label>
+                <label class="fld"><span class="fld-label">Personal caution buffer <span class="fld-opt">(optional)</span></span><span class="affix"><input class="input num" value="2000.00"><span>USD</span></span><span class="fld-desc">Your own warning margin, never firm policy.</span></label>
+              </div>
+            </fieldset>
+            <div class="card">
+              <div class="pad row-between" style="border-bottom: 1px solid var(--line-100);">
+                <div class="row"><span class="status s-warn" style="height: 28px; font-size: 13px;"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg>Simulated: Caution (estimate)</span><span class="small muted">Your own rules and reported data · not verified</span></div>
+                <span class="small faint">Caution comes from your buffer on Maximum drawdown. Consistency stays Unknown.</span>
+              </div>
+              <sc-for list="{{simRules}}" as="r" hint-placeholder-count="4">
+                <div class="rc"><div class="row-between"><b>{{r.name}}</b><span class="{{r.st}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{r.d}}"></path></svg>{{r.out}}</span></div><p class="small muted" style="margin: 0;">{{r.why}}</p></div>
+              </sc-for>
+            </div>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{isSaved}}" hint-placeholder-val="{{ true }}">
+          <div class="stack">
+            <sc-if value="{{isChanged}}" hint-placeholder-val="{{ false }}">
+              <div class="notice n-warn" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg><div><b>Sources changed since it was calculated</b><p>3 trades were imported for Oct 21 after this calculation's cutoff. The figures below are what was recorded at 2:14 PM; they are not current.</p><div class="notice-actions"><button type="button" class="btn btn-sm btn-primary">Calculate now…</button></div></div></div>
+            </sc-if>
+            <sc-if value="{{isEarlier}}" hint-placeholder-val="{{ false }}">
+              <div class="notice n-warn" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 7v5l3 2"></path></svg><div><b>Calculated for Tue, Oct 20, 2026, not today (Wed, Oct 21)</b><p>It describes the end of that trading day. Calculate now for today's figures.</p><div class="notice-actions"><button type="button" class="btn btn-sm btn-primary">Calculate now…</button></div></div></div>
+            </sc-if>
+
+            <section class="card" aria-labelledby="res-h">
+              <div class="pad stack" style="border-bottom: 1px solid var(--line-100);">
+                <div class="row-between">
+                  <div class="stack-s" style="gap: 6px;">
+                    <span class="overline">Latest saved calculation · as recorded, never recalculated</span>
+                    <div class="row"><span id="res-h" class="status s-unknown" style="height: 30px; font-size: 14px;"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></svg>Unknown</span><span class="small muted">Verified rules and reported data</span></div>
+                  </div>
+                  <div class="row"><span class="{{fresh.cls}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{fresh.d}}"></path></svg>{{fresh.label}}</span></div>
+                </div>
+                <div><span class="label">Why it isn't Safe</span>
+                  <ul class="small" style="margin: 4px 0 0; padding-left: 18px; display: grid; gap: 2px;"><li>Scaling plan needs setup: its steps are Unknown.</li><li>Consistency is Unknown: fees were stated as "Not sure or partly".</li></ul>
+                </div>
+              </div>
+              <div class="pad">
+                <span class="label">Calculation basis</span>
+                <dl class="facts" style="margin-top: 10px;">
+                  <div><dt>Cutoff (as of)</dt><dd class="num">Oct 21, 2:14 PM ET</dd></div>
+                  <div><dt>Newest data used</dt><dd class="num">Oct 21, 11:58 AM ET</dd></div>
+                  <div><dt>Calculated at</dt><dd class="num">Oct 21, 2:14 PM ET</dd></div>
+                  <div><dt>Trading day</dt><dd>Wed, Oct 21, 2026</dd></div>
+                  <div><dt>Rulebook version</dt><dd>Apex 100K Evaluation v3 · Verified</dd></div>
+                  <div><dt>Assignment</dt><dd>From Mon, Oct 5, 2026</dd></div>
+                  <div><dt>Balance (closed trades and ledger)</dt><dd class="num">$100,640.00</dd></div>
+                  <div><dt>Today's realized P&amp;L</dt><dd class="num pos">+$212.50</dd></div>
+                  <div><dt>Trading days with trades</dt><dd class="num">5</dd></div>
+                  <div><dt>Engine · inputs hash</dt><dd class="num" style="font-size: 12px;">1.4.0 · 9f3c…a81e</dd></div>
+                </dl>
+              </div>
+            </section>
+
+            <section class="card" aria-label="Per rule">
+              <sc-for list="{{rules}}" as="r" hint-placeholder-count="5">
+                <div class="rc">
+                  <div class="row-between"><h3 class="h3">{{r.name}}</h3><span class="{{r.st}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{r.d}}"></path></svg>{{r.out}}</span></div>
+                  <p class="small muted" style="margin: 0;">{{r.why}}</p>
+                  <sc-if value="{{r.hasFormula}}" hint-placeholder-val="{{ true }}"><div class="formula">{{r.formula}}</div></sc-if>
+                  <sc-if value="{{r.hasOps}}" hint-placeholder-val="{{ true }}">
+                    <dl class="ops"><sc-for list="{{r.ops}}" as="o" hint-placeholder-count="4"><div><dt>{{o.k}}</dt><dd class="{{o.cls}}">{{o.v}}</dd></div></sc-for></dl>
+                  </sc-if>
+                  <sc-if value="{{r.hasMissing}}" hint-placeholder-val="{{ false }}"><p class="small wrn" style="margin: 0;">Missing or unresolved: {{r.missing}}</p></sc-if>
+                  <details><summary>Sources and contributing records ({{r.nsrc}})</summary><p class="small muted" style="margin: 8px 0 0;">{{r.src}}</p></details>
+                </div>
+              </sc-for>
+            </section>
+
+            <section class="card pad stack-s">
+              <h3 class="h3">Not part of any calculation</h3>
+              <ul class="small muted" style="margin: 0; padding-left: 18px; display: grid; gap: 2px;"><li>Scaling plan · Needs setup</li><li>Trading restriction · Manual check</li></ul>
+            </section>
+            <p class="faint" style="margin: 0;">Estimates only · Verify with your firm's dashboard. Changing a version never rewrites a stored calculation.</p>
+          </div>
+        </sc-if>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startState":{"editor":"enum","options":["saved","changed","earlier","empty","simulation"],"default":"saved"},"$preview":{"width":1440,"height":1600}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: props.startState || 'saved' }; }
+  renderVals() {
+    var self = this, v = this.state.view;
+    var D = { ok: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3', unk: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01', none: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM8 12h8', warn: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01', prog: 'M3 12h4l3-8 4 16 3-8h4' };
+    var sim = v === 'simulation';
+    var views = [['saved', 'Saved · current'], ['changed', 'Sources changed'], ['earlier', 'Earlier day'], ['empty', 'No calculation'], ['simulation', 'Simulation preview']].map(function (x) {
+      return { label: x[1], on: v === x[0], cls: v === x[0] ? 'is-on' : '', pick: function () { self.setState({ view: x[0] }); } };
+    });
+    var tabs = sim ? ['Edit rules', 'Compare', 'Preview', 'Review and publish', 'Details'].map(function (l) { return { label: l, on: l === 'Preview', cls: 'tab' + (l === 'Preview' ? ' is-on' : '') }; })
+      : ['Versions and drafts', 'Assignment history', 'Activity', 'Calculation'].map(function (l) { return { label: l, on: l === 'Calculation', cls: 'tab' + (l === 'Calculation' ? ' is-on' : '') }; });
+    var fresh = v === 'changed' ? { cls: 'status s-warn', d: D.warn, label: 'Sources changed since it was calculated' } : v === 'earlier' ? { cls: 'status s-warn', d: D.warn, label: 'Calculated for Oct 20, not today' } : { cls: 'status s-ok', d: D.ok, label: 'Sources unchanged for its cutoff' };
+    return {
+      views: views, tabs: tabs, tabsLabel: sim ? 'Version' : 'Rulebook records', fresh: fresh,
+      title: sim ? 'Rulebook version' : 'Rulebook', here: sim ? 'v4 draft' : 'Rulebook',
+      crumbs: sim ? [{ label: 'Accounts', href: 'AccountDetail.dc.html' }, { label: 'Apex 100K · PA-48213', href: 'AccountDetail.dc.html' }, { label: 'Rulebook', href: 'RulebookOverview.dc.html' }] : [{ label: 'Accounts', href: 'AccountDetail.dc.html' }, { label: 'Apex 100K · PA-48213', href: 'AccountDetail.dc.html' }],
+      isSim: sim, isEmpty: v === 'empty', isSaved: v === 'saved' || v === 'changed' || v === 'earlier', isChanged: v === 'changed', isEarlier: v === 'earlier',
+      toSaved: function () { self.setState({ view: 'saved' }); },
+      rules: [
+        { name: 'Maximum drawdown', st: 'status s-flow', d: D.ok, out: 'Within limit', why: 'Balance is above the trailing floor. Room left is measured to the floor, not to zero.', hasFormula: true, formula: 'floor = min(highest balance − 3,000.00, 100,100.00)    room left = balance − floor', hasOps: true,
+          ops: [{ k: 'Highest balance', v: '$101,850.00', cls: '' }, { k: 'Floor', v: '$98,850.00', cls: '' }, { k: 'Balance', v: '$100,640.00', cls: '' }, { k: 'Room left', v: '$1,790.00', cls: '' }], hasMissing: false, missing: '', nsrc: 34, src: '32 closed trades (Oct 5 – Oct 21), 1 ledger entry (fee adjustment), checkpoint Oct 20 · confirmed by you. Source claim: Help centre, verified.' },
+        { name: 'Profit target', st: 'status s-ok', d: D.prog, out: 'In progress', why: 'Closed-trade profit since the attempt started, against the target.', hasFormula: true, formula: 'progress = balance − starting balance    to go = 6,000.00 − progress', hasOps: true,
+          ops: [{ k: 'Progress', v: '+$640.00', cls: 'pos' }, { k: 'Target', v: '$6,000.00', cls: '' }, { k: 'To go', v: '$5,360.00', cls: '' }], hasMissing: false, missing: '', nsrc: 33, src: '32 closed trades, 1 ledger entry.' },
+        { name: 'Minimum trading days', st: 'status s-ok', d: D.prog, out: 'In progress', why: 'Monday to Friday trading days with at least one closed trade.', hasFormula: false, formula: '', hasOps: true, ops: [{ k: 'Days with trades', v: '5', cls: '' }, { k: 'Required', v: '7', cls: '' }, { k: 'To go', v: '2 days', cls: '' }], hasMissing: false, missing: '', nsrc: 5, src: 'Trading days Oct 5, 7, 12, 19, 21 (America/New_York).' },
+        { name: 'Daily loss limit', st: 'status s-neutral', d: D.none, out: 'None', why: 'The version states there is no daily loss limit. Nothing is evaluated.', hasFormula: false, formula: '', hasOps: false, ops: [], hasMissing: false, missing: '', nsrc: 1, src: 'Source claim: Help centre, verified.' },
+        { name: 'Consistency', st: 'status s-unknown', d: D.unk, out: 'Unknown', why: 'Best-day share needs complete fees; you stated fees as "Not sure or partly".', hasFormula: true, formula: 'best day share = largest daily profit ÷ total profit    limit 0.30', hasOps: false, ops: [], hasMissing: true, missing: 'fees complete (stated "Not sure or partly")', nsrc: 5, src: 'Would use the same 5 trading days. No figure is shown because an input is missing.' }
+      ],
+      simRules: [
+        { name: 'Maximum drawdown', st: 'status s-warn', d: D.warn, out: 'Simulated: Caution', why: 'Room left $1,790.00 is inside your $2,000.00 caution buffer. The buffer is your own margin, not firm policy.' },
+        { name: 'Consistency (v4: 0.50)', st: 'status s-unknown', d: D.unk, out: 'Simulated: Unknown', why: 'Fees not stated as complete.' },
+        { name: 'Payout eligibility (new in v4)', st: 'status s-warn', d: D.warn, out: 'Simulated: Needs setup', why: 'Minimum balance is Unknown in the draft. Not part of the calculation.' },
+        { name: 'Profit target', st: 'status s-ok', d: D.prog, out: 'Simulated: in progress', why: '$5,360.00 to go.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

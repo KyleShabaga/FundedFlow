@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Import at 720 px</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.c2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.c2>div{padding:10px 14px;border-top:1px solid var(--line-100);display:grid;gap:2px}
+.c2>div:nth-child(odd){border-right:1px solid var(--line-100)}
+.c2 b{font:600 18px/24px var(--font-mono)}
+</style>
+</helmet>
+<div class="shell is-narrow" style="width: 720px; min-height: 1400px;">
+  <dc-import name="P0Sidebar" active="none" collapsed="{{yes}}" hint-size="72px,100%"></dc-import>
+  <div class="shell-main">
+    <dc-import name="P0Header" title="Quick import" account="Apex 100K · PA-48213" hint-size="100%,130px"></dc-import>
+    <main class="shell-content">
+      <div class="wrap">
+        <div class="row"><a class="btn btn-sm" href="Main.dc.html">Full wizard</a><a class="btn btn-sm btn-ghost" href="ImportHistory.dc.html">Import history</a></div>
+        <section class="card pad-s stack-s"><h2 class="h3">Account attempt</h2><select class="input select"><option>Apex 100K · PA-48213 · attempt 2</option></select></section>
+        <section class="card pad-s stack-s"><h2 class="h3">File</h2><div class="row" style="flex-wrap: nowrap;"><span class="drop-mark"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5"></path></svg></span><div style="flex: 1; min-width: 0;"><b>Performance (14).csv</b><div class="faint">68 rows · 9.9 KB</div></div></div><div class="row"><button type="button" class="btn btn-sm">Choose another…</button><button type="button" class="btn btn-sm btn-ghost">Remove</button></div></section>
+        <section class="card"><div class="pad-s row-between"><h2 class="h3">What would be imported</h2><span class="status s-ok">Performance export</span></div>
+          <div class="c2"><div><span class="label">Will import</span><b>64</b></div><div><span class="label">Duplicates · skipped</span><b class="muted">2</b></div><div><span class="label">Errors · left out</span><b class="neg">1</b></div><div><span class="label">Warnings</span><b class="wrn">2</b></div></div>
+          <p class="faint" style="margin: 0; padding: 10px 14px; border-top: 1px solid var(--line-100);">Six counts become a 2×3 grid; the account and file cards stack.</p>
+        </section>
+        <div class="actbar"><span class="small">Nothing is saved until you confirm.</span><div class="row"><button type="button" class="btn btn-sm">Cancel</button><button type="button" class="btn btn-sm btn-primary">Confirm import of 64 trades</button></div></div>
+        <p class="overline" style="margin: 8px 0 0;">Import details at 720 px</p>
+        <div class="drawer" style="border-radius: 12px; border: 1px solid var(--line-200);">
+          <div class="drawer-head" style="padding: 12px 16px;"><h2 class="dlg-title" style="margin: 0; font-size: 16px;">Import details</h2><button type="button" class="icon-btn" style="border: 0;" aria-label="Close"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+          <div class="drawer-body" style="padding: 12px 16px;"><p class="small muted" style="margin: 0;">The drawer takes the full window width below 760 px. The problem-rows table scrolls sideways inside its card; the raw cells wrap.</p></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":720,"height":1400}}'>
+class Component extends DCLogic {
+  renderVals() { return { yes: true }; }
+}
+</script>
+</body>
+</html>

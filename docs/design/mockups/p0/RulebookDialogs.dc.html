@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rulebook dialogs</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.cap{font:600 12px/16px var(--font-sans);color:var(--ink-faint);letter-spacing:.4px;text-transform:uppercase;margin:0 0 8px}
+.cell{display:flex;flex-direction:column;min-width:0}
+.cell .scrim{flex:1;align-items:start;place-items:start center}
+.x{width:32px;height:32px;border:0;background:transparent;color:var(--ink-muted);border-radius:8px;display:grid;place-items:center;cursor:pointer}
+</style>
+</helmet>
+<div class="shell" style="display: block; width: 1600px; min-height: 1480px; padding: 32px; box-sizing: border-box;">
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+
+    <div class="cell">
+      <p class="cap">Assign · from the overview or a version</p>
+      <div class="scrim">
+        <div class="dlg dlg-md" role="dialog" aria-modal="true" aria-labelledby="as-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="as-t" class="dlg-title">Assign a rulebook version</h2><p class="dlg-desc">Choose the version and the first trading day it governs this account.</p></div><button type="button" class="x" aria-label="Close"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+          <div class="dlg-body">
+            <label class="fld"><span class="fld-label">Version <span class="fld-req">*</span></span><select class="input select"><option>Apex 100K Evaluation · v3 · Verified</option><option>My rules for this account · v1 · Account rules (private)</option></select><span class="fld-desc">Only versions that can be assigned are listed. Drafts and versions that need review are not.</span></label>
+            <label class="fld"><span class="fld-label">Applies to <span class="fld-req">*</span></span><select class="input select"><option>Evaluation · Intraday trailing</option><option>This account only (no catalogue phase)</option></select></label>
+            <label class="fld"><span class="fld-label">First trading day <span class="fld-req">*</span></span><input class="input" type="date" value="2026-10-26"><span class="fld-desc">In America/New_York. After Mon, Oct 5 (the latest assignment). Weekdays only.</span></label>
+            <label class="fld"><span class="fld-label">Reason <span class="fld-opt">(optional)</span></span><input class="input" value="Firm updated payout consistency"></label>
+            <div class="notice n-info"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 16v-4M12 8h.01"></path></svg><div><b>What changes</b><ul class="small" style="margin: 4px 0 0; padding-left: 16px;"><li>v3's assignment ends on Fri, Oct 23.</li><li>Earlier days keep the version that governed them.</li><li>Stored calculations are not rewritten.</li></ul></div></div>
+          </div>
+          <div class="dlg-foot"><button type="button" class="btn">Cancel</button><button type="button" class="btn btn-primary">Assign from Mon, Oct 26</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cell">
+      <p class="cap">Review and publish tab · draft saved, checks pass</p>
+      <div class="card pad stack" style="flex: 1;">
+        <div class="notice n-ok"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"></path></svg><div><b>Ready</b><p>The saved draft passes every publish check.</p></div></div>
+        <div class="stack-s">
+          <h3 class="h3">Publish v4</h3>
+          <p class="small muted" style="margin: 0;">Publishing freezes v4. It doesn't assign it: v3 stays in force until you assign another version. A catalogue correction then needs a named reviewer before any account can use it.</p>
+        </div>
+        <label class="fld"><span class="fld-label">Note for the history <span class="fld-opt">(optional)</span></span><textarea class="ta" style="min-height: 60px;"></textarea></label>
+        <label class="chk"><input type="checkbox" checked="{{yes}}">I understand this version can't be edited after it is published</label>
+        <div class="row-between" style="margin-top: auto;"><button type="button" class="btn btn-danger">Discard draft…</button><button type="button" class="btn btn-primary">Publish…</button></div>
+      </div>
+    </div>
+
+    <div class="cell">
+      <p class="cap">Review and publish tab · unsaved edits, checks fail</p>
+      <div class="card pad stack" style="flex: 1;">
+        <div class="notice n-warn"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg><div><b>Save your edits first</b><p>Checks run on the saved draft. You have 3 unsaved changes.</p><div class="notice-actions"><a class="btn btn-sm" href="RulebookEditor.dc.html">Back to Edit rules</a></div></div></div>
+        <div class="vsum"><b>Fix these before publishing</b><ul><li><a href="RulebookEditor.dc.html">Payout eligibility: Needs setup rules can't be published as calculated. Choose Manual check or add the value.</a></li><li><a href="RulebookEditor.dc.html">Draft details: say what changes and why.</a></li></ul></div>
+        <div class="row-between" style="margin-top: auto;"><button type="button" class="btn btn-danger">Discard draft…</button><button type="button" class="btn btn-primary" aria-disabled="true" title="Save your edits and fix 2 issues first">Publish…</button></div>
+      </div>
+    </div>
+
+    <div class="cell">
+      <p class="cap">Publish confirmation · focus starts on Cancel</p>
+      <div class="scrim">
+        <div class="dlg dlg-sm" role="alertdialog" aria-modal="true" aria-labelledby="pb-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="pb-t" class="dlg-title">Publish Apex 100K Evaluation v4?</h2><p class="dlg-desc">v4 can't be edited afterwards. Nothing is assigned: v3 stays in force for this account.</p></div></div>
+          <div class="dlg-body"><dl class="kv"><div><dt>Rules</dt><dd>9 (1 added, 1 removed, 2 changed)</dd></div><div><dt>Becomes</dt><dd>Needs review (catalogue correction)</dd></div></dl></div>
+          <div class="dlg-foot"><button type="button" class="btn" style="outline: 2px solid var(--flow); outline-offset: 2px;">Cancel</button><button type="button" class="btn btn-primary">Publish</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cell">
+      <p class="cap">Verify a catalogue version · needs a named reviewer</p>
+      <div class="scrim">
+        <div class="dlg dlg-sm" role="alertdialog" aria-modal="true" aria-labelledby="vf-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="vf-t" class="dlg-title">Mark v4 verified by M. Rivera?</h2><p class="dlg-desc">Verifying records that a named person checked every rule against its cited source. It can then be assigned.</p></div></div>
+          <div class="dlg-body">
+            <label class="fld"><span class="fld-label">Reviewer <span class="fld-req">*</span></span><input class="input" value="M. Rivera"></label>
+            <label class="chk"><input type="checkbox" checked="{{yes}}">Every rule matches the cited sources, and no source claim conflicts</label>
+          </div>
+          <div class="dlg-foot"><button type="button" class="btn">Cancel</button><button type="button" class="btn btn-primary">Mark verified</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cell">
+      <p class="cap">Discard draft · reason required</p>
+      <div class="scrim">
+        <div class="dlg dlg-sm" role="alertdialog" aria-modal="true" aria-labelledby="dc-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="dc-t" class="dlg-title">Discard draft v4?</h2><p class="dlg-desc">It is set aside as a discarded draft and kept for the record. It can't be published later.</p></div></div>
+          <div class="dlg-body">
+            <label class="fld"><span class="fld-label">Why <span class="fld-req">*</span></span><textarea class="ta is-invalid" style="min-height: 60px;" aria-invalid="true"></textarea><span class="fld-err"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 8v4M12 16h.01"></path></svg>Say why you're discarding it.</span></label>
+          </div>
+          <div class="dlg-foot"><button type="button" class="btn">Cancel</button><button type="button" class="btn btn-danger">Discard draft</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cell">
+      <p class="cap">Leaving with unsaved edits · in-app link or day change</p>
+      <div class="scrim">
+        <div class="dlg dlg-sm" role="alertdialog" aria-modal="true" aria-labelledby="lv-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="lv-t" class="dlg-title">Leave without saving?</h2><p class="dlg-desc">You have 3 unsaved changes to draft v4. They are kept in this window for now, and FundedFlow offers them back when you reopen the draft.</p></div></div>
+          <div class="dlg-foot"><button type="button" class="btn">Stay</button><button type="button" class="btn btn-danger">Leave</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cell">
+      <p class="cap">Assign conflict · another assignment was saved</p>
+      <div class="scrim">
+        <div class="dlg dlg-md" role="dialog" aria-modal="true" aria-labelledby="cf-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="cf-t" class="dlg-title">Assign a rulebook version</h2></div></div>
+          <div class="dlg-body">
+            <div class="notice n-err" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg><div><b>Not assigned: the account's assignments changed</b><p>Another assignment was saved after this dialog opened (v3 from Mon, Oct 5 is no longer the latest). Nothing was written. Close and open Assign again to see the current history.</p></div></div>
+          </div>
+          <div class="dlg-foot"><button type="button" class="btn">Close</button><button type="button" class="btn btn-primary">Reload assignments</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cell">
+      <p class="cap">Start a draft · from a catalogue version</p>
+      <div class="scrim">
+        <div class="dlg dlg-md" role="dialog" aria-modal="true" aria-labelledby="sd-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="sd-t" class="dlg-title">Start a draft from Apex 100K Evaluation v3</h2><p class="dlg-desc">A draft is a new version. The version you start from stays exactly as it is.</p></div></div>
+          <div class="dlg-body">
+            <fieldset class="fld" style="border: 0; margin: 0; padding: 0;"><legend class="fld-label" style="margin-bottom: 6px;">Where the draft goes</legend>
+              <label class="optcard is-on"><span class="optcard-top"><input type="radio" name="sd" checked="{{yes}}">My own rules for this account</span><span class="small muted">Private, never verified. Estimates only.</span></label>
+              <label class="optcard" style="margin-top: 8px;"><span class="optcard-top"><input type="radio" name="sd">A correction to Apex 100K Evaluation</span><span class="small muted">Needs a named reviewer before any account can use it.</span></label>
+            </fieldset>
+            <label class="fld"><span class="fld-label">What changes and why <span class="fld-opt">(optional)</span></span><textarea class="ta" style="min-height: 56px;"></textarea></label>
+          </div>
+          <div class="dlg-foot"><button type="button" class="btn">Cancel</button><button type="button" class="btn btn-primary">Create draft</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":1480}}'>
+class Component extends DCLogic {
+  renderVals() { return { yes: true }; }
+}
+</script>
+</body>
+</html>

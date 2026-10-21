@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Archive, delete or erase</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.cmp3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.cmp3>section{padding:20px 24px;border-left:1px solid var(--line-100);display:grid;gap:8px;align-content:start}
+.cmp3>section:first-child{border-left:0}
+.cmp3 ul{margin:0;padding-left:16px;font-size:13px;display:grid;gap:4px;color:var(--ink-muted)}
+.cnt{display:grid;grid-template-columns:1fr auto;gap:4px 16px;font-size:13px;margin:0}
+.cnt dt{color:var(--ink-muted)} .cnt dd{margin:0;font-family:var(--font-mono);text-align:right}
+.spin{width:18px;height:18px;border-radius:50%;border:2px solid var(--line-200);border-top-color:var(--flow);animation:sp 1s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+<div class="shell" style="display: block; width: 1600px; min-height: 1600px; padding: 32px; box-sizing: border-box;">
+  <section class="card" aria-labelledby="c-h" style="margin-bottom: 24px;">
+    <div class="pad" style="border-bottom: 1px solid var(--line-100);"><h2 id="c-h" class="h3" style="font-size: 17px;">Three different actions, three different words</h2><p class="lede">The Accounts menus offer Archive… first and Delete permanently… last; Settings holds deletion and erasure. Each has its own title, button text and typed phrase.</p></div>
+    <div class="cmp3">
+      <section><div class="row"><span class="status s-neutral"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v4H3zM5 8v12h14V8M10 12h4"></path></svg>Reversible</span></div><h3 class="h3">Archive an account</h3><ul><li>Leaves the account lists and becomes read-only.</li><li>Trades, reviews, rulebooks and history are kept.</li><li>Restore from archive brings it back as it was.</li></ul><span class="small">From: Accounts row menu, account detail ⋯ menu. Simple confirmation.</span></section>
+      <section><div class="row"><span class="status s-err"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"></path></svg>Permanent</span></div><h3 class="h3">Delete one account</h3><ul><li>Removes one attempt and everything recorded for it.</li><li>Linked attempts and shared data stay.</li><li>Files you exported are never touched.</li></ul><span class="small">From: Settings, Accounts menus. Preview, then type <span class="phrase">DELETE ACCOUNT &lt;id&gt;</span>.</span></section>
+      <section><div class="row"><span class="status s-err"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 21h10M5 14l9-9 5 5-9 9H5z"></path></svg>Permanent · everything</span></div><h3 class="h3">Erase the entire journal</h3><ul><li>Every account, trade, review, rulebook and attachment.</li><li>Also FundedFlow's own recovery copies.</li><li>FundedFlow starts empty, like a new install.</li></ul><span class="small">From: Settings only. Type <span class="phrase">ERASE ENTIRE JOURNAL</span>.</span></section>
+    </div>
+  </section>
+
+  <div class="mock-states" role="group" aria-label="Mockup state (review only)" style="margin-bottom: 16px;">
+    <span>Dialog state</span>
+    <sc-for list="{{views}}" as="v" hint-placeholder-count="6"><button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for>
+  </div>
+
+  <div class="scrim" style="min-height: 1000px; place-items: start center;">
+    <div class="dlg dlg-lg" role="dialog" aria-modal="true" aria-labelledby="dl-t" style="width: 760px;">
+      <div class="dlg-head"><div><h2 id="dl-t" class="dlg-title">{{title}}</h2><p class="dlg-desc">{{desc}}</p></div></div>
+      <div class="dlg-body">
+        <sc-if value="{{isAccount}}" hint-placeholder-val="{{ true }}">
+          <dl class="kv">
+            <div><dt>Account</dt><dd>Topstep 50K · XFA-1182</dd></div>
+            <div><dt>Account ID</dt><dd class="num">acc_7f3k2q</dd></div>
+            <div><dt>Attempt</dt><dd>2 of 2</dd></div>
+            <div><dt>Current status</dt><dd><span class="badge b-loss">Failed</span> · not archived</dd></div>
+          </dl>
+        </sc-if>
+
+        <sc-if value="{{isLoading}}" hint-placeholder-val="{{ false }}"><div class="row" role="status" style="padding: 12px 0;"><span class="spin" aria-hidden="true"></span>Checking exactly what would be deleted…</div></sc-if>
+
+        <sc-if value="{{isBlocked}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-warn" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg><div><b>This account can't be deleted on its own</b><ul class="small" style="margin: 4px 0 0; padding-left: 16px;"><li>A newer attempt (acc_9m1x0d) was started from it. Deleting it would break that attempt's reset link.</li></ul><p>Archive it instead to keep it out of the lists, or erase the entire journal.</p><div class="notice-actions"><a class="btn btn-sm" href="AccountDialogs.dc.html">Archive instead</a></div></div></div>
+        </sc-if>
+
+        <sc-if value="{{showPreview}}" hint-placeholder-val="{{ true }}">
+          <div class="stack">
+            <sc-if value="{{isAccount}}" hint-placeholder-val="{{ true }}">
+              <div class="notice n-neutral"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"></path></svg><div><b>Linked attempts</b><p>acc_2b8r4w (attempt 1) is kept. Its link to this attempt is removed.</p></div></div>
+            </sc-if>
+            <div class="cols-even">
+              <div class="card pad-s stack-s" style="border-color: var(--loss);"><span class="label" style="color: var(--loss);">What will be deleted</span>
+                <dl class="cnt"><sc-for list="{{gone}}" as="g" hint-placeholder-count="5"><dt>{{g.k}}</dt><dd>{{g.v}}</dd></sc-for></dl>
+              </div>
+              <div class="card pad-s stack-s"><span class="label">What stays</span>
+                <ul class="small muted" style="margin: 0; padding-left: 16px; display: grid; gap: 4px;"><sc-for list="{{stays}}" as="s" hint-placeholder-count="3"><li>{{s}}</li></sc-for></ul>
+              </div>
+            </div>
+            <label class="fld"><span class="fld-label">Type the confirmation exactly</span><span class="fld-desc">Type <span class="phrase">{{phrase}}</span> to continue. It is case-sensitive.</span>
+              <input class="{{phraseCls}}" value="{{typed}}" onInput="{{onType}}" autocomplete="off" spellcheck="false">
+              <sc-if value="{{mismatch}}" hint-placeholder-val="{{ false }}"><span class="fld-err"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 8v4M12 16h.01"></path></svg>This doesn't match yet.</span></sc-if>
+            </label>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{isCleanup}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-warn" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg><div><b>Deleted, but some files are still on disk</b><p>The account and its records are gone. 3 attachment files couldn't be removed yet, often because another program has them open.</p><div class="notice-actions"><button type="button" class="btn btn-sm btn-primary">Retry file cleanup</button></div></div></div>
+        </sc-if>
+        <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-ok" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"></path></svg><div><b>Topstep 50K · XFA-1182 was deleted</b><p>Every page reloads its data. If it was the active account, the header asks you to choose another.</p></div></div>
+        </sc-if>
+      </div>
+      <div class="dlg-foot">
+        <sc-if value="{{showCancel}}" hint-placeholder-val="{{ true }}"><button type="button" class="btn" style="outline: 2px solid var(--flow); outline-offset: 2px;">Cancel</button></sc-if>
+        <sc-if value="{{showPreview}}" hint-placeholder-val="{{ true }}"><button type="button" class="btn btn-danger" aria-disabled="{{notMatched}}" title="{{btnTitle}}">{{btn}}</button></sc-if>
+        <sc-if value="{{isEnd}}" hint-placeholder-val="{{ false }}"><button type="button" class="btn btn-primary">Close</button></sc-if>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startState":{"editor":"enum","options":["loading","account","blocked","erase","cleanup","done"],"default":"account"},"$preview":{"width":1600,"height":1600}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: props.startState || 'account', typed: '' }; }
+  renderVals() {
+    var self = this, v = this.state.view, typed = this.state.typed;
+    var erase = v === 'erase';
+    var phrase = erase ? 'ERASE ENTIRE JOURNAL' : 'DELETE ACCOUNT acc_7f3k2q';
+    var matched = typed === phrase;
+    var views = [['loading', 'Preview loading'], ['account', 'Delete account'], ['blocked', 'Blocked'], ['erase', 'Erase journal'], ['cleanup', 'Cleanup pending'], ['done', 'Deleted']].map(function (x) {
+      return { label: x[1], on: v === x[0], cls: v === x[0] ? 'is-on' : '', pick: function () { self.setState({ view: x[0], typed: '' }); } };
+    });
+    return {
+      views: views, phrase: phrase, typed: typed,
+      onType: function (e) { self.setState({ typed: e.target.value }); },
+      mismatch: typed.length > 0 && !matched, notMatched: !matched, phraseCls: 'input num' + (typed.length > 0 && !matched ? ' is-invalid' : ''),
+      title: erase ? 'Erase the entire local journal?' : 'Permanently delete Topstep 50K · XFA-1182?',
+      desc: erase ? 'Everything FundedFlow stores on this computer is deleted, including its recovery copies. This can’t be undone. Files you exported are not touched.' : 'This removes the attempt and everything recorded for it. It can’t be undone. To keep its history out of the way instead, archive it.',
+      isAccount: !erase && v !== 'done' && v !== 'cleanup', isLoading: v === 'loading', isBlocked: v === 'blocked',
+      showPreview: v === 'account' || erase, isCleanup: v === 'cleanup', isDone: v === 'done', isEnd: v === 'cleanup' || v === 'done' || v === 'blocked',
+      showCancel: v === 'account' || erase || v === 'loading',
+      btn: erase ? 'Erase entire journal' : 'Delete account permanently', btnTitle: matched ? '' : 'Type ' + phrase + ' to continue',
+      gone: erase ? [{ k: 'Accounts (attempts)', v: '5' }, { k: 'Trades', v: '1,349' }, { k: 'Daily reviews', v: '83' }, { k: 'Rulebook versions', v: '11' }, { k: 'Attachments', v: '262 · 46.0 MB' }, { k: 'Recovery copies', v: '2' }]
+        : [{ k: 'Trades', v: '214' }, { k: 'Daily reviews', v: '19' }, { k: 'Imports', v: '6' }, { k: 'Status events', v: '3' }, { k: 'Attachments', v: '41 · 7.2 MB' }],
+      stays: erase ? ['Files you exported (backups and CSVs) wherever you saved them', 'Anything outside FundedFlow’s app-data folder'] : ['Other attempts, including acc_2b8r4w', 'Shared data: catalogue rulebooks, library checklists and tags', 'Files you exported']
+    };
+  }
+}
+</script>
+</body>
+</html>

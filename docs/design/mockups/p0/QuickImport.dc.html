@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quick import</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.qsteps{display:flex;gap:8px;flex-wrap:wrap;list-style:none;margin:0;padding:0}
+.qsteps li{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-muted)}
+.qsteps li+li::before{content:"";width:24px;height:1px;background:var(--line-200)}
+.qsteps b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:600 11px/1 var(--font-mono);background:var(--bg-300);color:var(--ink-muted)}
+.qsteps .is-done b{background:var(--profit-soft);color:var(--profit)}
+.qsteps .is-on{color:var(--ink)} .qsteps .is-on b{background:var(--flow-fill);color:var(--on-flow)}
+.cnts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0}
+.cnts>div{padding:14px 20px;border-left:1px solid var(--line-100);display:grid;gap:2px}
+.cnts>div:nth-child(3n+1){border-left:0}
+.cnts>div:nth-child(n+4){border-top:1px solid var(--line-100)}
+.cnts b{font:600 20px/26px var(--font-mono);font-variant-numeric:tabular-nums}
+.spin{width:18px;height:18px;border-radius:50%;border:2px solid var(--line-200);border-top-color:var(--flow);animation:sp 1s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+<div class="shell" data-theme="dark">
+  <dc-import name="P0Sidebar" active="none" hint-size="248px,100%"></dc-import>
+  <div class="shell-main">
+    <dc-import name="P0Header" title="Quick import" account="Apex 100K · PA-48213" hint-size="100%,96px"></dc-import>
+    <main class="shell-content" style="padding-bottom: 0;">
+      <div class="wrap" style="max-width: 1100px;">
+        <div class="mock-states" role="group" aria-label="Mockup state (review only)">
+          <span>Mockup state</span>
+          <sc-for list="{{views}}" as="v" hint-placeholder-count="9"><button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for>
+        </div>
+
+        <div class="sec-head">
+          <div><p class="lede" style="margin: 0; font-size: 14px;">For a file you've imported before. FundedFlow detects the format and date order; anything it can't decide goes to the full wizard. The file stays on this computer.</p></div>
+          <div class="row"><a class="btn btn-sm" href="Main.dc.html">Full wizard</a><a class="btn btn-sm btn-ghost" href="ImportHistory.dc.html">Import history</a></div>
+        </div>
+
+        <ol class="qsteps" aria-label="Quick import steps">
+          <li class="is-done"><b>✓</b>Account attempt</li>
+          <li class="{{s2}}"><b>{{s2n}}</b>File</li>
+          <li class="{{s3}}"><b>3</b>Confirm</li>
+        </ol>
+
+        <div class="cols-even">
+          <section class="card pad stack-s" aria-labelledby="acc-h">
+            <h2 id="acc-h" class="h3">Account attempt</h2>
+            <label class="fld"><span class="fld-label">Import into <span class="fld-req">*</span></span><select class="input select" disabled="{{locked}}"><option>Apex 100K · PA-48213 · attempt 2 · Active</option><option>Topstep 50K · XFA-1182 · Failed</option></select></label>
+            <dl class="kv" style="margin-top: 4px;">
+              <div><dt>Attempt</dt><dd>2 of 2 · from Oct 5, 2026</dd></div>
+              <div><dt>Time zone · day starts</dt><dd>America/New_York · 6:00 PM</dd></div>
+              <div><dt>Last import</dt><dd>Oct 19, 4:12 PM · Performance (13).csv</dd></div>
+            </dl>
+          </section>
+
+          <section class="card pad stack-s" aria-labelledby="file-h">
+            <h2 id="file-h" class="h3">File</h2>
+            <sc-if value="{{noFile}}" hint-placeholder-val="{{ true }}">
+              <div class="{{dropCls}}">
+                <span class="drop-mark"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path></svg></span>
+                <b>{{dropTitle}}</b>
+                <span class="small muted">One CSV up to 10 MB and 50,000 rows</span>
+                <button type="button" class="btn btn-sm" style="margin-top: 4px;">Choose a CSV file…</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{hasFile}}" hint-placeholder-val="{{ false }}">
+              <div class="drop" style="justify-items: stretch; text-align: left; padding: 16px; border-style: solid; border-color: var(--line-100);">
+                <div class="row" style="flex-wrap: nowrap;"><span class="drop-mark"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"></path></svg></span><div style="flex: 1; min-width: 0;"><b>{{fileName}}</b><div class="faint">{{fileMeta}}</div></div><button type="button" class="btn btn-sm" disabled="{{locked}}">Choose another…</button><button type="button" class="btn btn-sm btn-ghost" disabled="{{locked}}">Remove</button></div>
+              </div>
+            </sc-if>
+          </section>
+        </div>
+
+        <sc-if value="{{isChecking}}" hint-placeholder-val="{{ false }}">
+          <section class="card pad row" role="status"><span class="spin" aria-hidden="true"></span>Checking the file against this attempt… Nothing is saved while checking.</section>
+        </sc-if>
+
+        <sc-if value="{{isWizard}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-warn" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg><div><b>This file needs the full wizard</b><p>Every date fits both month/day and day/month (for example 03/04/2026), so the date order has to be chosen by you. Quick import never guesses.</p><div class="notice-actions"><a class="btn btn-sm btn-primary" href="Main.dc.html">Continue in full wizard</a><span class="small muted">The attempt and the file come with you; nothing is saved.</span></div></div></div>
+        </sc-if>
+
+        <sc-if value="{{showSummary}}" hint-placeholder-val="{{ true }}">
+          <section class="card" aria-labelledby="sum-h">
+            <div class="pad row-between" style="border-bottom: 1px solid var(--line-100);">
+              <h2 id="sum-h" class="h3">What would be imported</h2>
+              <span class="status s-ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"></path></svg>Detected: Performance export (paired fills)</span>
+            </div>
+            <dl class="facts pad" style="border-bottom: 1px solid var(--line-100);">
+              <div><dt>Into</dt><dd>Apex 100K · PA-48213 · attempt 2</dd></div>
+              <div><dt>Format</dt><dd>Performance export<span class="faint">Header row matches Tradovate's Performance report</span></dd></div>
+              <div><dt>Times read in</dt><dd>America/New_York<span class="faint">The account's own zone</span></dd></div>
+              <div><dt>Date order</dt><dd>Month / day / year<span class="faint">Only this order fits every date</span></dd></div>
+            </dl>
+            <div class="cnts" aria-label="Rows">
+              <div><span class="label">Will import</span><b>{{c.will}}</b><span class="faint">{{c.restore}}</span></div>
+              <div><span class="label">Duplicates · skipped</span><b class="muted">{{c.dup}}</b><span class="faint">Same fill pair already saved</span></div>
+              <div><span class="label">Errors · left out</span><b class="{{c.errCls}}">{{c.err}}</b><span class="faint">Fix in the file and import again</span></div>
+              <div><span class="label">Rows with warnings</span><b class="{{c.warnCls}}">{{c.warn}}</b><span class="faint">Imported, worth a look</span></div>
+              <div><span class="label">Blank rows ignored</span><b class="muted">1</b><span class="faint">Counted, not imported</span></div>
+              <div><span class="label">Rows in file</span><b class="muted">{{c.rows}}</b><span class="faint">Before duplicates and errors</span></div>
+            </div>
+            <div class="pad-s row-between" style="padding-inline: 20px; border-top: 1px solid var(--line-100);">
+              <button type="button" class="btn btn-sm btn-ghost" aria-expanded="false">View all rows and issues</button>
+              <span class="faint">Opens the wizard's row table here, read-only. Every value comes from FundedFlow's check.</span>
+            </div>
+          </section>
+          <sc-if value="{{isNothing}}" hint-placeholder-val="{{ false }}">
+            <div class="notice n-info" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 16v-4M12 8h.01"></path></svg><div><b>No new trades in this file</b><p>All 38 trades are already saved in this attempt. Nothing to import.</p></div></div>
+          </sc-if>
+        </sc-if>
+
+        <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+          <section class="card pad stack" role="status" aria-labelledby="done-h" style="border-color: var(--profit);">
+            <div class="row"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--profit);"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"></path></svg><h2 id="done-h" class="h3" style="font-size: 17px;">Imported 64 trades into Apex 100K · PA-48213</h2></div>
+            <dl class="facts"><div><dt>Imported</dt><dd class="num">64 <span class="faint" style="display: inline;">incl. 1 restore</span></dd></div><div><dt>Duplicates skipped</dt><dd class="num">2</dd></div><div><dt>Errors left out</dt><dd class="num">1</dd></div><div><dt>Import reference</dt><dd class="num">imp_4q7w</dd></div></dl>
+            <p class="small muted" style="margin: 0;">These are the counts the import returned, not the preview's. The 1 error row is listed in the import's details.</p>
+            <div class="row"><a class="btn btn-primary" href="ImportDetail.dc.html">View import details</a><a class="btn" href="DailyReview.dc.html">Review today's trades</a><button type="button" class="btn btn-ghost">Import another file</button></div>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{isUncertain}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-warn" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></svg><div><b>Couldn't confirm the import finished</b><p>The import was sent but no answer came back. It may have been saved. Verify the outcome in import history before importing this file again; FundedFlow won't retry it for you. Quick import and the wizard stay locked for this attempt until you've checked.</p><div class="notice-actions"><a class="btn btn-sm btn-primary" href="ImportHistory.dc.html">Verify in import history</a><button type="button" class="btn btn-sm">I've checked the history</button></div></div></div>
+        </sc-if>
+
+        <sc-if value="{{showBar}}" hint-placeholder-val="{{ true }}">
+          <div class="actbar" style="margin-bottom: 24px;">
+            <div class="row" style="gap: 10px;"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--flow);"><path d="M12 3l8 4v6c0 4-3.5 7-8 8c-4.5-1-8-4-8-8V7z"></path></svg><span class="small">{{barText}}</span></div>
+            <div class="row"><button type="button" class="btn" disabled="{{importing}}">Cancel</button><button type="button" class="btn btn-primary" aria-disabled="{{confirmBlocked}}" title="{{confirmTitle}}">{{confirmLabel}}</button></div>
+          </div>
+        </sc-if>
+        <div style="height: 8px;"></div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startState":{"editor":"enum","options":["empty","dragging","checking","ready","wizard","nothing","importing","imported","uncertain"],"default":"ready"},"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: props.startState || 'ready' }; }
+  renderVals() {
+    var self = this, v = this.state.view;
+    var noFile = v === 'empty' || v === 'dragging';
+    var summary = v === 'ready' || v === 'nothing' || v === 'importing';
+    var views = [['empty', 'No file'], ['dragging', 'Dragging'], ['checking', 'Checking'], ['ready', 'Ready'], ['wizard', 'Needs wizard'], ['nothing', 'Nothing new'], ['importing', 'Importing'], ['imported', 'Imported'], ['uncertain', 'Uncertain']].map(function (x) {
+      return { label: x[1], on: v === x[0], cls: v === x[0] ? 'is-on' : '', pick: function () { self.setState({ view: x[0] }); } };
+    });
+    var nothing = v === 'nothing';
+    return {
+      views: views, noFile: noFile, hasFile: !noFile,
+      dropCls: 'drop' + (v === 'dragging' ? ' is-dragging' : ''), dropTitle: v === 'dragging' ? 'Drop the CSV to check it' : 'Drag a CSV here',
+      fileName: v === 'wizard' ? 'trades-export.csv' : 'Performance (14).csv', fileMeta: v === 'wizard' ? '212 rows · 31 KB · read on this computer' : '68 rows · 9.9 KB · read on this computer',
+      s2: noFile ? 'is-on' : 'is-done', s2n: noFile ? '2' : '✓', s3: summary || v === 'imported' ? 'is-on' : '',
+      isChecking: v === 'checking', isWizard: v === 'wizard', showSummary: summary, isNothing: nothing, isDone: v === 'imported', isUncertain: v === 'uncertain',
+      locked: v === 'importing' || v === 'uncertain',
+      c: nothing ? { will: '0', restore: 'No restores', dup: '38', err: '0', errCls: 'muted', warn: '0', warnCls: 'muted', rows: '39' }
+        : { will: '64', restore: '1 of them restores a deleted trade', dup: '2', err: '1', errCls: 'neg', warn: '2', warnCls: 'wrn', rows: '68' },
+      showBar: noFile || summary || v === 'checking' || v === 'wizard',
+      importing: v === 'importing',
+      barText: v === 'importing' ? 'Importing… all 64 trades are written together, or none are. Don’t close FundedFlow.' : 'Nothing is saved until you confirm. All 64 trades are written together, or none are.',
+      confirmBlocked: v !== 'ready', confirmTitle: noFile ? 'Choose a file first' : v === 'wizard' ? 'This file needs the full wizard' : nothing ? 'Nothing new to import' : v === 'checking' ? 'Wait for the check to finish' : '',
+      confirmLabel: v === 'importing' ? 'Importing…' : nothing ? 'Nothing to import' : 'Confirm import of 64 trades'
+    };
+  }
+}
+</script>
+</body>
+</html>

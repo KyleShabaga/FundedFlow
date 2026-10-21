@@ -2,8 +2,8 @@
 
 **Card:** Build 19 (rulebook version editor and calculation-explanation UI). Needs Builds 9.5 (rulebook contracts),
 14 (hooks), 15 (accounts), 15.5 (evidence) and 16 (rules engine, PR #42; this screen is integrated on it).
-No canvas mockup exists (the design task "Design rulebook editor, version comparison and explanation UX" is in
-the backlog), so this screen follows the Accounts screens' layout and the Build 13 components.
+Mockups: [`mockups/p0/`](../mockups/p0/) boards 1A–1F (P0 design, Build 25.1; see the section at the end). The
+built screen follows the Accounts screens' layout and the Build 13 components.
 
 ## Routes and entry points
 - `/accounts/:accountId/rulebook`: overview for one account attempt.
@@ -120,3 +120,65 @@ recalculated:
   is Build 9's screens).
 - Source claims are not copied into drafts: they are evidence for the version they were recorded against.
 - Actor labels are local ("You (on this computer)"); FundedFlow has no sign-in.
+
+## P0 design (Build 25.1)
+
+Boards in [`mockups/p0/`](../mockups/p0/) (previews in `previews/`). They redraw the screens Build 19 already ships;
+no route, command or state is added. Where a board proposes a change to the built screen it is listed under
+"Changes proposed for the built screen" below.
+
+| Board | Shows | States on the board |
+|---|---|---|
+| 1A `RulebookOverview` | In force today card, rules table, readiness strip, tabs | In force, loading, no assignment, none today, unreadable, stale version, archived account |
+| 1B `RulebookEditor` | Draft identity strip, Draft details, rule list with one rule expanded, sticky save bar | Saved, unsaved changes, validation errors, conflict, restore earlier edits, published (read-only) |
+| 1C `RulebookCompare` | Field-level tables per section, change legend, version history and source/verification rail | Changed, added, removed; "Show unchanged fields" on/off; compare with v3 (in use) or v2 |
+| 1D `RulebookExplain` | Saved calculation as recorded vs Preview simulation | Saved and current, sources changed, earlier day, no calculation, simulation |
+| 1E `RulebookDialogs` | Assign, Review and publish (ready and blocked), Publish, Verify, Discard, Leave without saving, Assign conflict, Start a draft | One frame per dialog |
+| 1F `NarrowRulebook` | Overview and editor at 720 px | Rules table becomes a list; tabs and actions wrap |
+
+### Decisions
+- **Hierarchy.** The overview leads with one card: *In force today*, its verification state in words with an icon,
+  then the facts grid (provider, programme, phase · path, account type, in force from, until, provider-stated
+  from, last reviewed). A one-line **calculation readiness** strip sits between the facts and the rules ("5 of 8
+  rules can be calculated · 1 manual check · 1 none (stated) · 1 needs setup") so a trader sees what the engine can't
+  do before reading rule by rule. It is counted from the version's rule states; it is not a risk verdict.
+- **Rules table columns**: Rule (name + type), What the version states, State, Source (provider wording + claim
+  status). Values that are not values (None, Off, Unknown, Manual check) are words in muted ink, never a meter.
+- **Actions.** Page head: "Write my own rules" and primary "Assign a version…". Card head: Compare, Preview and
+  "Start a draft from v3" (secondary). Archived: all hidden, read-only notice links back to the account.
+- **Draft vs active.** A draft page always shows a dashed *Draft v4 · being edited, not in use until it is published
+  and assigned* strip and the "Started from v3, which stays in force" line. Published versions show the lock notice
+  and read-only fields; the tabs rename to Rules and Status (as built).
+- **Editor rows** are collapsed summaries (index, name, type · key, one-line summary, change mark, support state,
+  move up/down/remove). Expanding a row shows the fields. The tagged-value control is a segmented radio group
+  (Unknown, None, Off, Not applicable, Value); only Value shows the input with the unit as a suffix. Invalid rows get a
+  red inset edge plus the field error; new rows a flow edge; edited rows an "~ Changed" mark.
+- **Validation** shows `ValidationSummary` at the top with links to each field; the save bar says "fix 2 issues to
+  save". Conflict and restore-earlier-edits use the built notice copy.
+- **Compare** keeps one table per section with fixed column widths so values line up across tables. The old value is
+  struck through only for Changed rows. Change words carry a symbol (+ − ~ =) so they read without colour.
+- **Simulation** is the only thing drawn in a dashed `flow` frame with a striped ground, always labelled
+  "Simulation: not this account's status" and each outcome prefixed "Simulated:". Saved calculations never use that
+  frame. The saved explanation leads with status, assurance and "Why it isn't Safe", then the calculation basis grid,
+  then one block per rule (outcome, reason, formula, operands, missing inputs, sources). "Not part of any
+  calculation" lists manual, unsupported and needs-setup rules.
+- **Dialogs** follow the built copy. Confirmations focus Cancel first; Publish states what it does not do ("Nothing is
+  assigned"); Discard requires a reason; Verify needs a named reviewer and the checkbox.
+
+### Interaction, keyboard and narrow windows
+- Tabs are `Tabs` (arrow keys move, Enter/Space selects); the edit panel stays mounted. Rule summaries are buttons
+  with `aria-expanded`. Move/remove are icon buttons named "Move {rule} up" etc.; the first/last move buttons are
+  disabled. Save status is a `role="status"` line in the sticky bar.
+- Below 760 px: actions wrap under the title, the facts grid becomes a definition list, the rules table becomes a
+  list (name, state, value, source), the versions table scrolls inside its card, the save bar stays at the bottom.
+
+### Changes proposed for the built screen (UI only, separate PRs)
+1. Header breadcrumb (Accounts › account › Rulebook › vN) instead of the back link; shell h1 names the page.
+2. Calculation readiness strip on *In force today* (counts already known from the version's rule states).
+3. Collapsed rule rows in the editor (today every RuleCard is open).
+4. Fixed-width compare tables and +/−/~/= change marks.
+5. Dashed simulation frame for Preview.
+
+### Open questions
+- Should the readiness strip count "None" and "Off" rules as calculated (they are stated values) or apart? The board
+  counts them apart from "can be calculated".

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Import details</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.stage{position:relative;display:flex;min-height:1400px}
+.behind{flex:1;min-width:0;padding:32px;opacity:.35;pointer-events:none}
+.dim{position:absolute;inset:0;background:rgba(3,6,12,.55)}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:720px;max-width:100%;overflow:auto}
+.raw{font:500 11.5px/16px var(--font-mono);color:var(--ink-muted);white-space:normal;word-break:break-all}
+</style>
+</helmet>
+<div class="shell" data-theme="dark">
+  <dc-import name="P0Sidebar" active="none" hint-size="248px,100%"></dc-import>
+  <div class="shell-main">
+    <dc-import name="P0Header" title="Import history" account="Apex 100K · PA-48213" hint-size="100%,96px"></dc-import>
+    <div class="stage">
+      <div class="behind" aria-hidden="true">
+        <div class="dt-card"><div class="dt-toolbar"><span class="faint">Import history (behind the drawer)</span></div>
+          <div style="display: grid; gap: 10px; padding: 16px;"><span class="skel" style="height: 16px; animation: none;"></span><span class="skel" style="height: 16px;"></span><span class="skel" style="height: 16px;"></span><span class="skel" style="height: 16px;"></span></div>
+        </div>
+      </div>
+      <div class="dim" aria-hidden="true"></div>
+      <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-t" aria-describedby="dr-d">
+        <div class="drawer-head">
+          <div>
+            <div class="mock-states" role="group" aria-label="Mockup state (review only)" style="margin-bottom: 10px;">
+              <sc-for list="{{views}}" as="v" hint-placeholder-count="2"><button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for>
+            </div>
+            <h2 id="dr-t" class="dlg-title" style="margin-top: 0;">Import details</h2>
+            <p id="dr-d" class="dlg-desc">What was saved, skipped or left out, with the original cells of each problem row.</p>
+          </div>
+          <button type="button" class="icon-btn" style="border: 0;" aria-label="Close import details (Escape)"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+        </div>
+        <div class="drawer-body">
+          <a class="link small" href="ImportHistory.dc.html">← Back to import history</a>
+          <div class="row-between">
+            <div><b>{{file}}</b><div class="faint">{{acct}}</div></div>
+            <span class="{{res.cls}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{res.d}}"></path></svg>{{res.label}}</span>
+          </div>
+          <sc-if value="{{isFailed}}" hint-placeholder-val="{{ false }}">
+            <div class="notice n-err" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg><div><b>The import didn't complete</b><p>The account's settings changed while it ran (time zone), so nothing was written. Check the file again in the wizard and import it.</p><div class="notice-actions"><a class="btn btn-sm btn-primary" href="Main.dc.html">Open the full wizard</a></div></div></div>
+          </sc-if>
+          <dl class="kv">
+            <div><dt>Format</dt><dd>Performance export (paired fills)</dd></div>
+            <div><dt>Finished</dt><dd>{{finished}}</dd></div>
+            <div><dt>Rows in file</dt><dd class="num">{{c.rows}}</dd></div>
+            <div><dt>Imported</dt><dd class="num">{{c.imp}}</dd></div>
+            <div><dt>Skipped (duplicates and blank)</dt><dd class="num">{{c.skip}}</dd></div>
+            <div><dt>Errors · left out</dt><dd class="num">{{c.err}}</dd></div>
+            <div><dt>Rows with warnings</dt><dd class="num">{{c.warn}}</dd></div>
+            <div><dt>Import reference</dt><dd class="num">{{ref}}</dd></div>
+          </dl>
+
+          <section class="dt-card" aria-labelledby="pr-h">
+            <div class="dt-toolbar"><h3 id="pr-h" class="h3">Problem rows</h3>
+              <div class="seg" role="group" aria-label="Show problem rows"><sc-for list="{{filters}}" as="f" hint-placeholder-count="3"><button type="button" class="{{f.cls}}" aria-pressed="{{f.on}}" onClick="{{f.pick}}">{{f.label}} <span class="mono" style="font-size: 11px; color: var(--ink-faint);">{{f.n}}</span></button></sc-for></div>
+            </div>
+            <sc-if value="{{hasRows}}" hint-placeholder-val="{{ true }}">
+              <div class="dt-scroll"><table class="dt">
+                <thead><tr><th scope="col" class="num"><span>Line</span></th><th scope="col"><span>Status</span></th><th scope="col"><span>Reason</span></th><th scope="col"><span>From the file</span></th></tr></thead>
+                <tbody>
+                  <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+                    <tr><td class="num" style="vertical-align: top;">{{r.line}}</td><td style="vertical-align: top;"><span class="{{r.cls}}">{{r.st}}</span></td><td style="white-space: normal; vertical-align: top; min-width: 200px;">{{r.reason}}<span class="faint" style="display: block;">{{r.help}}</span></td><td style="white-space: normal; vertical-align: top;"><span class="raw">{{r.raw}}</span></td></tr>
+                  </sc-for>
+                </tbody>
+              </table></div>
+            </sc-if>
+            <sc-if value="{{noRows}}" hint-placeholder-val="{{ false }}"><div class="state" style="padding: 24px;"><h3>No problem rows</h3><p>{{noRowsText}}</p></div></sc-if>
+          </section>
+          <p class="faint" style="margin: 0;">Warnings were imported and are listed in the trade itself. There is no undo for a whole import yet. Escape or the close button returns focus to the row you opened.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startState":{"editor":"enum","options":["completed","failed"],"default":"completed"},"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: props.startState || 'completed', f: 'all' }; }
+  renderVals() {
+    var self = this, v = this.state.view, f = this.state.f, failed = v === 'failed';
+    var all = failed ? [] : [
+      { line: 3, kind: 'dup', st: 'Duplicate', cls: 'badge b-neutral', reason: 'Same as a saved trade', help: 'Fill pair …450007 / …450038, saved Oct 19 at 4:12 PM', raw: 'MNQZ6 | 1 | 7454500007 | 7454500038 | 29774.25 | 29774.25 | 0.00 | 10/21/2026 07:47:48 | 10/21/2026 07:48:10' },
+      { line: 41, kind: 'err', st: 'Error', cls: 'badge b-loss', reason: 'qty: must be greater than 0', help: 'Fix the quantity in the file and import it again; the other rows are already saved.', raw: 'MNQZ6 | 0 | 7454500811 | 7454500830 | 29840.50 | 29841.00 | 0.00 | 10/21/2026 08:21:14 | 10/21/2026 08:21:40' },
+      { line: 66, kind: 'dup', st: 'Duplicate', cls: 'badge b-neutral', reason: 'Same as a saved trade', help: 'Fill pair …451285 / …451304', raw: 'MNQZ6 | 3 | 7454501285 | 7454501304 | 29799.00 | 29805.00 | 36.00 | 10/21/2026 08:40:18 | 10/21/2026 08:41:02' },
+      { line: 68, kind: 'skip', st: 'Skipped', cls: 'badge b-neutral', reason: 'Blank row', help: '', raw: '| | | | | | | |' }
+    ];
+    var keep = function (r) { return f === 'all' || r.kind === f; };
+    var rows = all.filter(keep);
+    var filters = [['all', 'All', all.length], ['err', 'Errors', failed ? 0 : 1], ['dup', 'Duplicates', failed ? 0 : 2], ['skip', 'Skipped', failed ? 0 : 1]].map(function (x) {
+      return { label: x[1], n: x[2], on: f === x[0], cls: f === x[0] ? 'is-on' : '', pick: function () { self.setState({ f: x[0] }); } };
+    });
+    var views = [['completed', 'Completed import'], ['failed', 'Didn’t complete']].map(function (x) {
+      return { label: x[1], on: v === x[0], cls: v === x[0] ? 'is-on' : '', pick: function () { self.setState({ view: x[0], f: 'all' }); } };
+    });
+    return {
+      views: views, filters: filters, rows: rows, hasRows: rows.length > 0, noRows: rows.length === 0, isFailed: failed,
+      noRowsText: failed ? 'Nothing was written, so no rows were checked against saved trades.' : 'Nothing in this filter.',
+      file: failed ? 'Performance (12).csv' : 'Performance (14).csv', acct: 'Apex 100K · PA-48213 · attempt 2',
+      res: failed ? { cls: 'status s-err', d: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6', label: 'Didn’t complete' } : { cls: 'status s-ok', d: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3', label: 'Completed' },
+      finished: failed ? 'Oct 16, 2026, 5:30 PM' : 'Oct 21, 2026, 12:04 PM',
+      c: failed ? { rows: '40', imp: '0', skip: '—', err: '—', warn: '—' } : { rows: '68', imp: '64 (incl. 1 restore)', skip: '3 (2 duplicates, 1 blank)', err: '1', warn: '2' },
+      ref: failed ? 'imp_3m2a' : 'imp_4q7w'
+    };
+  }
+}
+</script>
+</body>
+</html>

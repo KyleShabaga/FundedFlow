@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>P0 screen map</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.fam a.art{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--line-100);color:var(--ink);text-decoration:none;font-size:13px}
+.fam a.art:hover{color:var(--flow)}
+.fam a.art:focus-visible{outline:2px solid var(--flow);outline-offset:2px}
+</style>
+</helmet>
+<div class="shell" style="display: block; padding: 48px 32px 64px;">
+  <div class="wrap" style="margin: 0 auto; max-width: 1280px;">
+    <header class="stack-s">
+      <span class="overline">Design canvas · Build 25.1 P0 design reconciliation</span>
+      <h1 style="margin: 0; font: 600 32px/40px var(--font-display); letter-spacing: -0.3px;">Five missing P0 screen families</h1>
+      <p class="lede" style="font-size: 14px; line-height: 20px;">Mockups for the screens that already work in the app but had no visual design: the account rulebook, the daily review, Settings and its data controls, the account detail page, and Quick import with import history. Each board uses the shell as built (sidebar, header, account selector, Import CSV menu) and the FundedFlow tokens.</p>
+      <div class="row" style="margin-top: 8px;">
+        <span class="status s-flow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4M12 16h.01M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z"></path></svg>Example values only</span>
+        <span class="status s-neutral"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h6"></path></svg>Dashed bars switch states for review</span>
+        <span class="status s-unknown"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9a3 3 0 1 1 4 2.8c-.6.3-1 .9-1 1.6V14M12 17h.01"></path></svg>Unknown is never zero or Safe</span>
+      </div>
+    </header>
+
+    <section aria-labelledby="fam-h" class="stack">
+      <h2 id="fam-h" class="h2" style="font-size: 18px;">Screen families</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px;">
+        <sc-for list="{{families}}" as="f" hint-placeholder-count="5">
+          <article class="card fam" style="padding: 20px 24px; display: grid; gap: 10px; align-content: start;">
+            <div class="row-between">
+              <h3 class="h3">{{f.n}} · {{f.name}}</h3>
+              <span class="badge b-neutral">{{f.build}}</span>
+            </div>
+            <p class="small muted" style="margin: 0;">{{f.blurb}}</p>
+            <p class="small" style="margin: 0;"><span class="faint">Routes</span> <span class="mono" style="font-size: 12px;">{{f.routes}}</span></p>
+            <nav aria-label="{{f.name}} artboards">
+              <sc-for list="{{f.boards}}" as="b" hint-placeholder-count="4">
+                <a class="art" href="{{b.file}}"><span>{{b.label}}</span><span class="faint">{{b.kind}} →</span></a>
+              </sc-for>
+            </nav>
+            <p class="small faint" style="margin: 0;">States: {{f.states}}</p>
+          </article>
+        </sc-for>
+      </div>
+    </section>
+
+    <section aria-labelledby="map-h" class="stack">
+      <div>
+        <h2 id="map-h" class="h2" style="font-size: 18px;">Click and route map</h2>
+        <p class="lede">Every board maps to a route that exists on main. No new sidebar items: Rulebook sits under Accounts, Daily review under Journal, Import stays in the header menu.</p>
+      </div>
+      <div class="dt-card"><div class="dt-scroll">
+        <table class="dt">
+          <caption class="sr-only" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Routes, boards and entry points</caption>
+          <thead><tr><th scope="col"><span>Route</span></th><th scope="col"><span>Board</span></th><th scope="col"><span>Sidebar item</span></th><th scope="col"><span>Opened from</span></th></tr></thead>
+          <tbody>
+            <sc-for list="{{routes}}" as="r" hint-placeholder-count="10">
+              <tr><td class="mono" style="font-size: 12px;">{{r.path}}</td><td>{{r.board}}</td><td class="muted">{{r.nav}}</td><td style="white-space: normal; color: var(--ink-muted);">{{r.from}}</td></tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div></div>
+    </section>
+
+    <section aria-labelledby="rules-h" class="cols-even">
+      <div class="card pad stack-s">
+        <h2 id="rules-h" class="h3">What every board keeps apart</h2>
+        <dl class="kv">
+          <div><dt>Process adherence</dt><dd>The trader's own record (checklist answers). Never profit, never firm compliance.</dd></div>
+          <div><dt>Recorded outcome</dt><dd>Rust's sums of known net P&amp;L; unknown trades named, never added as zero.</dd></div>
+          <div><dt>Firm-rule status</dt><dd>Only from a saved engine result that is current; estimates say "Verify with your firm's dashboard".</dd></div>
+          <div><dt>Simulation</dt><dd>Dashed frame, "Simulation: not this account's status", prefixed "Simulated:".</dd></div>
+          <div><dt>Unknown</dt><dd>"—" or "Unknown" with the reason. Dashed outline status, never green.</dd></div>
+        </dl>
+      </div>
+      <div class="card pad stack-s">
+        <h2 class="h3">Not designed here (needs engineering first)</h2>
+        <ul class="small muted" style="margin: 0; padding-left: 18px; display: grid; gap: 6px;">
+          <li>A route for one import (<span class="mono">/import/history/:id</span>): today it is a drawer. The board shows the drawer, plus a deep-link proposal.</li>
+          <li>Undo for a whole import: no command exists.</li>
+          <li>Account size label ("$100K"): no command returns <span class="mono">account_size_micros</span>.</li>
+          <li>Local data folder path: no command returns it, so Settings describes the location.</li>
+          <li>Export history beyond the last export: only the latest export is stored.</li>
+          <li>Theme, notifications and other preferences: shown as reserved, unbuilt sections.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var b = function (file, label, kind) { return { file: file, label: label, kind: kind }; };
+    return {
+      families: [
+        { n: 1, name: 'Rulebook editor and account rules', build: 'Build 19', routes: '/accounts/:id/rulebook · …/versions/:vid', blurb: 'What governs this attempt, from when, and how far it can be trusted; drafts, diffs, simulation and the stored calculation.',
+          boards: [b('RulebookOverview.dc.html', '1A Overview: in force today, versions, history, activity', 'Interactive'), b('RulebookEditor.dc.html', '1B Draft editor with validation and save bar', 'Interactive'), b('RulebookCompare.dc.html', '1C Version comparison', 'Interactive'), b('RulebookExplain.dc.html', '1D Calculation explanation vs simulation', 'Interactive'), b('RulebookDialogs.dc.html', '1E Assign, publish, verify, discard, leave, conflict', 'Dialogs'), b('NarrowRulebook.dc.html', '1F 720 px window', 'Narrow')],
+          states: 'loading, no assignment, none today, needs setup, draft, published, stale, archived, invalid, save failed, conflict, no calculation, sources changed' },
+        { n: 2, name: 'Daily review', build: 'Build 22', routes: '/journal/days/:day?account=:id', blurb: 'One page from plan to reflection, with process, outcome and the day kept in three separate facts.',
+          boards: [b('DailyReview.dc.html', '2A–C Plan, checklist, reflection, trades', 'Interactive'), b('DailyReviewStates.dc.html', '2D New, completed, edited, no-trade, changed trades, errors', 'States'), b('NarrowDailyReview.dc.html', '2E 720 px window', 'Narrow')],
+          states: 'new, draft, completed, completed · edited, no-trade day, no trades recorded, unknown P&L, changed trades, future day, archived, save failed, not confirmed, conflict, selection differs' },
+        { n: 3, name: 'Settings and local data', build: 'Build 25', routes: '/settings', blurb: 'A sectioned Settings page with room for later preferences, and data controls that are hard to trigger by accident.',
+          boards: [b('Settings.dc.html', '3A–B Overview, storage facts, export', 'Interactive'), b('SettingsRestore.dc.html', '3C Restore dialog, every state', 'Interactive'), b('SettingsDelete.dc.html', '3D Archive vs delete vs erase', 'Interactive'), b('NarrowSettings.dc.html', '3E 720 px window', 'Narrow')],
+          states: 'no export yet, exporting, saved, failed, checking, rejected, validated, installing, restored, didn’t finish, preview loading, blocked, cleanup pending' },
+        { n: 4, name: 'Account detail', build: 'Builds 15 · 15.5 · 18.5', routes: '/accounts/:id', blurb: 'Status, money with provenance, rules and next actions for one attempt at a glance; lifecycle and attempts in tabs.',
+          boards: [b('AccountDetail.dc.html', '4A Overview, activity, setup, lifecycle', 'Interactive'), b('AccountDialogs.dc.html', '4B Edit, status, archive, new attempt, menu', 'Dialogs'), b('NarrowAccount.dc.html', '4C 720 px window', 'Narrow')],
+          states: 'current result, not current, not calculated, needs setup, no rulebook, finished attempt, archived, no trades, loading' },
+        { n: 5, name: 'Quick import and import history', build: 'Builds 18 · 18.5', routes: '/import/quick · /import/history', blurb: 'The fast path for files the trader has imported before, with the wizard one click away, and a history that explains every batch.',
+          boards: [b('QuickImport.dc.html', '5A Quick import flow', 'Interactive'), b('ImportHistory.dc.html', '5B Import history', 'Interactive'), b('ImportDetail.dc.html', '5C Import details drawer', 'Interactive'), b('ImportFailures.dc.html', '5D Failure and recovery', 'States'), b('NarrowImport.dc.html', '5E 720 px window', 'Narrow')],
+          states: 'empty, dragging, reading, checking, ready, needs wizard, nothing new, importing, imported, uncertain, didn’t complete, invalid file, too large, missing account, stale preview' }
+      ],
+      routes: [
+        { path: '/accounts/:accountId', board: '4A Account detail', nav: 'Accounts', from: 'Accounts row or card "View details", account switcher "Manage accounts"' },
+        { path: '/accounts/:accountId/rulebook', board: '1A Rulebook overview', nav: 'Accounts', from: 'Account detail Rules card "Open rulebook", Setup "Set up the rulebook", row menu "Rulebook and assignment"' },
+        { path: '/accounts/:accountId/rulebook/versions/:versionId', board: '1B Editor · 1C Compare · 1D Preview', nav: 'Accounts', from: 'Versions table row, "Start a draft from vN", in-force version link' },
+        { path: '…/rulebook (Calculation tab)', board: '1D Calculation explanation', nav: 'Accounts', from: 'Account detail "How this was calculated", Today values (drawer)' },
+        { path: '/journal/days/:tradingDay?account=:id', board: '2A Daily review', nav: 'Journal', from: 'Today "Review session", Journal By day, Library Daily journals' },
+        { path: '/settings', board: '3A Settings', nav: 'Settings', from: 'Sidebar footer' },
+        { path: '/settings (dialogs)', board: '3C Restore · 3D Delete', nav: 'Settings', from: 'Settings sections; Accounts and account menus "Delete permanently…"' },
+        { path: '/import/quick', board: '5A Quick import', nav: 'none (header menu)', from: 'Header Import › Quick import, account detail "Import trades", card menu' },
+        { path: '/import/history', board: '5B History · 5C Details', nav: 'none (header menu)', from: 'Import results, account detail "Import history", uncertain outcome' },
+        { path: '/import', board: 'Existing wizard (Import.dc.html)', nav: 'none (header menu)', from: '"Continue in full wizard" from Quick import and failures' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

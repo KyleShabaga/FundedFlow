@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Header as built</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}</style>
+</helmet>
+<header class="hdr" style="font-family: var(--font-sans); color: var(--ink); background: var(--bg-000);">
+  <div style="flex: 1 1 200px; min-width: 0;">
+    <sc-if value="{{hasCrumbs}}" hint-placeholder-val="{{ true }}">
+      <nav aria-label="Breadcrumb">
+        <ol class="crumbs">
+          <sc-for list="{{crumbList}}" as="c" hint-placeholder-count="2">
+            <li><a href="{{c.href}}">{{c.label}}</a></li>
+          </sc-for>
+          <li><span aria-current="page" style="color: var(--ink);">{{here}}</span></li>
+        </ol>
+      </nav>
+    </sc-if>
+    <h1 tabindex="-1">{{title}}</h1>
+    <button type="button" class="acct-switch" aria-label="Active account: {{account}}. Change account">
+      <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path></svg>
+      <span>{{account}}</span>
+      <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--ink-muted);"><path d="M6 9l6 6 6-6"></path></svg>
+    </button>
+  </div>
+  <div style="display: grid; gap: 4px; justify-items: start;">
+    <button type="button" class="btn btn-ghost" aria-haspopup="menu">Import</button>
+  </div>
+</header>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"title":{"editor":"text","default":"Accounts"},"account":{"editor":"text","default":"Apex 100K · PA-48213"},"crumbs":{"editor":null},"here":{"editor":"text","default":""},"$preview":{"width":1192,"height":120}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var crumbs = this.props.crumbs || [];
+    return {
+      title: this.props.title ?? 'Accounts',
+      account: this.props.account ?? 'Apex 100K · PA-48213',
+      crumbList: crumbs,
+      hasCrumbs: crumbs.length > 0,
+      here: this.props.here ?? ''
+    };
+  }
+}
+</script>
+</body>
+</html>

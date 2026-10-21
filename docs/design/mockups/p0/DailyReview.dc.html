@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Daily review</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.jump{display:flex;gap:8px;flex-wrap:wrap}
+.jump a{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--line-100);border-radius:999px;background:var(--bg-100);color:var(--ink);text-decoration:none;font-size:13px}
+.jump a:hover{border-color:var(--line-200)}
+.jump a:focus-visible{outline:2px solid var(--flow);outline-offset:2px}
+.jump .n{font:500 11px/1 var(--font-mono);color:var(--ink-faint)}
+.ci{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;padding:14px 0;border-top:1px solid var(--line-100);align-items:start}
+.ci:first-child{border-top:0}
+.ci fieldset{border:0;margin:0;padding:0;display:contents}
+.ci .choices{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.ci .choice{padding:5px 10px;font-size:12.5px}
+.ci .choice input{position:absolute;opacity:0;width:1px;height:1px}
+.ci .choice svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.choice.is-on.is-ok{border-color:var(--profit);background:var(--profit-soft)}
+.choice.is-on.is-na{border-color:var(--line-200);background:var(--bg-300)}
+.plan-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.trow{white-space:nowrap;display:grid;grid-template-columns:60px 56px minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px 16px;border-top:1px solid var(--line-100);font-size:13px;color:var(--ink);text-decoration:none}
+.trow:hover{background:var(--bg-200)}
+@media (max-width:1100px){.plan-grid{grid-template-columns:minmax(0,1fr)}}
+</style>
+</helmet>
+<div class="shell" data-theme="dark">
+  <dc-import name="P0Sidebar" active="journal" sub="By day" hint-size="248px,100%"></dc-import>
+  <div class="shell-main">
+    <dc-import name="P0Header" title="Daily review" here="Wed, Oct 21, 2026" crumbs="{{crumbs}}" account="Apex 100K · PA-48213" hint-size="100%,120px"></dc-import>
+    <main class="shell-content" style="padding-bottom: 0;">
+      <div class="wrap">
+        <div class="mock-states" role="group" aria-label="Mockup state (review only)">
+          <span>Mockup state</span>
+          <sc-for list="{{views}}" as="v" hint-placeholder-count="6"><button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for>
+        </div>
+
+        <div class="sec-head" style="align-items: flex-start;">
+          <div class="stack-s" style="gap: 6px;">
+            <div class="row"><h2>{{dayTitle}}</h2><span class="{{badge.cls}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{badge.d}}"></path></svg>{{badge.label}}</span><sc-if value="{{isFuture}}" hint-placeholder-val="{{ false }}"><span class="badge b-flow">Upcoming</span></sc-if></div>
+            <p class="lede">Apex 100K · PA-48213 · trading day {{dayShort}} in America/New_York, starting at 6:00 PM · session 9:30 AM – 4:00 PM</p>
+          </div>
+          <nav class="row" aria-label="Review day">
+            <button type="button" class="btn btn-sm"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>Previous day</button>
+            <button type="button" class="btn btn-sm">Next day<svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+            <sc-if value="{{isFuture}}" hint-placeholder-val="{{ false }}"><button type="button" class="btn btn-sm">Current trading day</button></sc-if>
+            <button type="button" class="btn btn-sm btn-ghost"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v16H4zM4 9h16M8 3v4M16 3v4"></path></svg>Go to day…</button>
+          </nav>
+        </div>
+
+        <section class="card" aria-labelledby="sum-h">
+          <h3 id="sum-h" class="sr-only" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Day summary</h3>
+          <div class="split3">
+            <section aria-label="Process">
+              <span class="label">Process (plan adherence)</span>
+              <span class="big">{{proc.big}}</span>
+              <span class="small">{{proc.line}}</span>
+              <span class="faint">{{proc.counts}}</span>
+            </section>
+            <section aria-label="Outcome">
+              <span class="label">Outcome (closed trades)</span>
+              <span class="{{out.cls}}">{{out.big}}</span>
+              <span class="small">{{out.line}}</span>
+              <span class="faint">{{out.sub}}</span>
+            </section>
+            <section aria-label="Day">
+              <span class="label">Day</span>
+              <span class="big" style="font-family: var(--font-display); font-size: 20px;">{{dayKind}}</span>
+              <span class="small muted">{{dayNote}}</span>
+            </section>
+          </div>
+          <p class="faint" style="margin: 0; padding: 10px 24px; border-top: 1px solid var(--line-100);">Plan adherence is your own record of process. It is not profit, and it is not a check of your prop firm's rules or a signal to trade.</p>
+        </section>
+
+        <nav class="jump" aria-label="Review sections">
+          <a href="#plan"><span class="num" style="color: var(--flow);">1</span>Before the session <span class="n">{{planCount}}</span></a>
+          <a href="#check"><span class="num" style="color: var(--flow);">2</span>Daily checklist <span class="n">{{checkCount}}</span></a>
+          <a href="#after"><span class="num" style="color: var(--flow);">3</span>After the session <span class="n">{{afterCount}}</span></a>
+          <a href="#trades"><span class="num" style="color: var(--flow);">4</span>Trades this day <span class="n">{{tradeCount}}</span></a>
+        </nav>
+
+        <div class="cols" style="grid-template-columns: minmax(0, 1fr) 360px;">
+          <form class="card pad" aria-label="Daily review" style="padding-top: 8px;">
+            <p role="status" class="save-state" style="margin: 12px 0 8px;"><span class="{{saveDot}}" aria-hidden="true"></span>{{saveText}}</p>
+
+            <section id="plan" class="fsec" aria-labelledby="plan-h">
+              <div class="fsec-head">
+                <div><h3 id="plan-h" class="h3">1 · Before the session</h3><p class="fld-desc" style="margin-top: 2px;">Optional. These are your own intentions, not your firm's rules.</p></div>
+                <sc-if value="{{hasTiming}}" hint-placeholder-val="{{ true }}"><span class="{{timing.cls}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 7v5l3 2"></path></svg>{{timing.label}}</span></sc-if>
+              </div>
+              <div class="plan-grid">
+                <label class="fld" style="grid-column: 1 / -1;"><span class="fld-label">Focus for the session</span><input class="input" value="{{f.focus}}" disabled="{{ro}}" placeholder="One thing to get right today"></label>
+                <label class="fld"><span class="fld-label">Planned setups</span><textarea class="ta" value="{{f.setups}}" disabled="{{ro}}"></textarea></label>
+                <label class="fld"><span class="fld-label">No-trade conditions</span><textarea class="ta" value="{{f.notrade}}" disabled="{{ro}}"></textarea></label>
+                <label class="fld"><span class="fld-label">Process commitments</span><textarea class="ta" value="{{f.commit}}" disabled="{{ro}}"></textarea></label>
+                <div class="stack-s">
+                  <label class="fld"><span class="fld-label">Maximum risk for the day <span class="fld-opt">(optional)</span></span><span class="affix"><input class="input num" value="{{f.risk}}" disabled="{{ro}}" inputmode="decimal"><span>USD</span></span><span class="fld-desc">Self-imposed. Leave empty when not set; it is never assumed to be zero, and it is not your firm's limit.</span></label>
+                </div>
+                <label class="fld" style="grid-column: 1 / -1;"><span class="fld-label">Plan notes</span><textarea class="ta" value="{{f.plannotes}}" disabled="{{ro}}" style="min-height: 60px;"></textarea></label>
+              </div>
+            </section>
+
+            <sc-if value="{{isFuture}}" hint-placeholder-val="{{ false }}">
+              <div class="notice n-info" style="margin: 8px 0 24px;"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 16v-4M12 8h.01"></path></svg><div><b>This trading day hasn't started</b><p>You can write its plan now; the checklist and reflection open once the day begins.</p></div></div>
+            </sc-if>
+
+            <sc-if value="{{notFuture}}" hint-placeholder-val="{{ true }}">
+              <section id="check" class="fsec" aria-labelledby="check-h">
+                <div class="fsec-head">
+                  <div><h3 id="check-h" class="h3">2 · Daily checklist</h3><p class="fld-desc" style="margin-top: 2px;">Answer what applies. Unanswered items and items marked not applicable never count as missed.</p></div>
+                  <label class="fld" style="min-width: 240px;"><span class="fld-label">Daily checklist</span><select class="input select" disabled="{{ro}}"><option>Morning process (5 items)</option><option>No checklist</option></select></label>
+                </div>
+                <div>
+                  <sc-for list="{{items}}" as="it" hint-placeholder-count="5">
+                    <div class="ci">
+                      <div class="stack-s" style="gap: 2px;">
+                        <span id="{{it.id}}" style="font-weight: 500;">{{it.label}}</span>
+                        <span class="{{it.descCls}}">{{it.desc}}</span>
+                        <sc-if value="{{it.answered}}" hint-placeholder-val="{{ false }}">
+                          <div class="row" style="margin-top: 6px; gap: 8px; flex-wrap: nowrap;">
+                            <label class="fld" style="flex: 1;"><span class="sr-only" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Note for {{it.label}} (optional)</span><input class="input" style="height: 32px; font-size: 13px;" placeholder="Note (optional)" value="{{it.note}}" disabled="{{ro}}"></label>
+                            <button type="button" class="btn btn-sm btn-ghost" onClick="{{it.clear}}" disabled="{{ro}}">Clear answer</button>
+                          </div>
+                        </sc-if>
+                      </div>
+                      <div class="choices" role="radiogroup" aria-labelledby="{{it.id}}">
+                        <sc-for list="{{it.opts}}" as="o" hint-placeholder-count="3">
+                          <label class="{{o.cls}}"><input type="radio" name="{{it.id}}" checked="{{o.on}}" onChange="{{o.pick}}" disabled="{{ro}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{o.d}}"></path></svg>{{o.label}}</label>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <p class="faint" style="margin: 0;">Edit checklists in <a class="link" href="#library">Library → Templates</a>. A renamed or archived item keeps the label it had when you answered.</p>
+              </section>
+
+              <section id="after" class="fsec" aria-labelledby="after-h">
+                <div class="fsec-head"><div><h3 id="after-h" class="h3">3 · After the session</h3><p class="fld-desc" style="margin-top: 2px;">Leave anything blank; a draft can be finished later.</p></div></div>
+                <label class="chk"><input type="checkbox" checked="{{f.noTrade}}" disabled="{{noTradeDisabled}}">I didn't trade this day (no-trade day)</label>
+                <sc-if value="{{noTradeDisabled}}" hint-placeholder-val="{{ true }}"><p class="fld-desc" style="margin: -8px 0 0 24px;">Trades are recorded for this day, so it can't be a no-trade day.</p></sc-if>
+                <div class="plan-grid">
+                  <label class="fld" style="grid-column: 1 / -1;"><span class="fld-label">Market context</span><textarea class="ta" value="{{f.market}}" disabled="{{ro}}"></textarea></label>
+                  <label class="fld"><span class="fld-label">What went well</span><textarea class="ta ta-lg" value="{{f.well}}" disabled="{{ro}}"></textarea></label>
+                  <label class="fld"><span class="fld-label">Mistakes</span><textarea class="ta ta-lg" value="{{f.mistakes}}" disabled="{{ro}}"></textarea></label>
+                  <label class="fld"><span class="fld-label">Emotions and mindset</span><textarea class="ta" value="{{f.mind}}" disabled="{{ro}}"></textarea></label>
+                  <label class="fld"><span class="fld-label">Key lesson</span><textarea class="ta" value="{{f.lesson}}" disabled="{{ro}}"></textarea></label>
+                  <label class="fld"><span class="fld-label">One action for the next session</span><input class="input" value="{{f.action}}" disabled="{{ro}}"></label>
+                  <label class="fld"><span class="fld-label">Other notes</span><input class="input" value="{{f.other}}" disabled="{{ro}}"></label>
+                </div>
+              </section>
+            </sc-if>
+          </form>
+
+          <aside class="stack" aria-label="Day evidence">
+            <section id="trades" class="card" aria-labelledby="tr-h">
+              <div class="pad-s row-between"><h3 id="tr-h" class="h3">Trades this day</h3><span class="faint num">{{tradeCount}}</span></div>
+              <sc-if value="{{hasTrades}}" hint-placeholder-val="{{ true }}">
+                <div>
+                  <sc-for list="{{trades}}" as="t" hint-placeholder-count="5">
+                    <a class="trow" href="#trade"><span class="mono" style="color: var(--flow); font-weight: 600;">{{t.sym}}</span><span class="{{t.sideCls}}">{{t.side}}</span><span class="small muted mono">{{t.time}}</span><span class="{{t.pnlCls}}">{{t.pnl}}</span></a>
+                  </sc-for>
+                </div>
+                <p class="faint" style="margin: 0; padding: 10px 16px; border-top: 1px solid var(--line-100);">Open a trade to review or correct it; trades are edited in the Journal, not here.</p>
+              </sc-if>
+              <sc-if value="{{noTrades}}" hint-placeholder-val="{{ false }}"><p class="small muted" style="margin: 0; padding: 12px 16px 16px; border-top: 1px solid var(--line-100);">{{noTradesText}}</p></sc-if>
+            </section>
+            <details class="card pad-s">
+              <summary class="h3" style="cursor: pointer;">History <span class="faint num">({{histCount}})</span></summary>
+              <ol class="tl" style="margin-top: 12px;">
+                <sc-for list="{{history}}" as="h" hint-placeholder-count="3"><li><span class="tl-dot" aria-hidden="true"></span><div class="small"><b>{{h.what}}</b> <span class="faint">revision {{h.rev}}</span><div class="faint">{{h.when}}</div></div></li></sc-for>
+              </ol>
+            </details>
+          </aside>
+        </div>
+
+        <div class="actbar" style="margin-bottom: 24px;">
+          <span class="save-state small muted">{{barHint}}</span>
+          <div class="row">
+            <button type="button" class="btn" disabled="{{clean}}">Discard changes</button>
+            <sc-if value="{{isCompleted}}" hint-placeholder-val="{{ false }}"><button type="button" class="btn"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"></path></svg>Reopen as draft</button></sc-if>
+            <button type="button" class="btn" disabled="{{clean}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5zM8 3v5h8M8 21v-7h8v7"></path></svg>{{saveLabel}}</button>
+            <sc-if value="{{canComplete}}" hint-placeholder-val="{{ true }}"><button type="button" class="btn btn-primary" aria-disabled="{{completeBlocked}}" title="{{completeTitle}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM8 12l3 3 5-6"></path></svg>Complete review</button></sc-if>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startState":{"editor":"enum","options":["new","draft","completed","edited","notrade","future"],"default":"draft"},"$preview":{"width":1440,"height":2500}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { view: props.startState || 'draft', answers: { a1: 'followed', a2: 'followed', a3: 'missed', a4: 'na', a5: null } };
+  }
+  renderVals() {
+    var self = this, v = this.state.view;
+    var future = v === 'future', notrade = v === 'notrade', isNew = v === 'new';
+    var completed = v === 'completed' || v === 'edited';
+    var answers = isNew ? {} : (future ? {} : this.state.answers);
+    var D = { ok: 'M20 6L9 17l-5-5', miss: 'M18 6L6 18M6 6l12 12', na: 'M5 12h14' };
+    var defs = [
+      { id: 'a1', label: 'Marked key levels before the open' },
+      { id: 'a2', label: 'Waited for my A+ setup before entering' },
+      { id: 'a3', label: 'Stopped after two losing trades', note: 'Took a third trade at 11:40' },
+      { id: 'a4', label: 'Reduced size into the 2:00 PM release', desc: 'Renamed in the library: now "Reduce size into scheduled news"' },
+      { id: 'a5', label: 'Logged every trade within 10 minutes' }
+    ];
+    var counts = { followed: 0, missed: 0, na: 0, none: 0 };
+    var items = defs.map(function (d) {
+      var a = answers[d.id] || null;
+      if (a) counts[a]++; else counts.none++;
+      var mk = function (key, label, dd, extra) {
+        var on = a === key;
+        return { label: label, d: dd, on: on, cls: 'choice ' + extra + (on ? ' is-on' : ''), pick: function () { var n = Object.assign({}, self.state.answers); n[d.id] = key; self.setState({ answers: n }); } };
+      };
+      return {
+        id: d.id, label: d.label, answered: !!a, note: a ? (d.note || '') : '',
+        desc: d.desc || (a ? '' : 'Unanswered'), descCls: d.desc ? 'small wrn' : 'faint',
+        clear: function () { var n = Object.assign({}, self.state.answers); n[d.id] = null; self.setState({ answers: n }); },
+        opts: [mk('followed', 'Followed', D.ok, 'is-ok'), mk('missed', 'Missed', D.miss, 'is-miss'), mk('na', 'Not applicable', D.na, 'is-na')]
+      };
+    });
+    var applicable = counts.followed + counts.missed;
+    var proc = isNew || future ? { big: '—', line: isNew ? 'No review yet' : 'Opens once the day begins', counts: '' }
+      : applicable < 2 ? { big: '—', line: 'Unknown: not enough answers', counts: counts.followed + ' followed · ' + counts.missed + ' missed · ' + counts.na + ' not applicable · ' + counts.none + ' unanswered' }
+      : { big: Math.round(counts.followed / applicable * 100) + '%', line: counts.followed + ' of ' + applicable + ' applicable items followed', counts: counts.followed + ' followed · ' + counts.missed + ' missed · ' + counts.na + ' not applicable · ' + counts.none + ' unanswered' };
+    var out = future ? { big: '—', cls: 'big faint', line: 'The day hasn’t started', sub: '' }
+      : notrade ? { big: '—', cls: 'big faint', line: 'No trades recorded for this day', sub: 'Not $0.00: there is nothing to add up.' }
+      : { big: '+$212.50', cls: 'big pos', line: '4 of 5 trades with a known P&L', sub: '1 left out: MESZ6 at 1:12 PM has no instrument settings' };
+    var filled = !(isNew || future);
+    var f = {
+      focus: filled || future ? 'Only trade the opening range break, A+ only' : '',
+      setups: filled || future ? 'ORB long above 29,850 · VWAP reclaim after the first pullback' : '',
+      notrade: filled || future ? 'No entries 5 minutes either side of 2:00 PM. Stop after two losses.' : '',
+      commit: filled || future ? 'Size 2 MNQ max. Journal every trade before the next one.' : '',
+      risk: filled || future ? '400.00' : '', plannotes: '',
+      noTrade: notrade,
+      market: filled && !notrade ? 'Choppy open, trend from 10:30. FOMC minutes at 2:00 PM.' : (notrade ? 'Holiday-thin volume; stayed out by choice.' : ''),
+      well: filled && !notrade ? 'Waited for the first two setups and sized correctly.' : '',
+      mistakes: filled && !notrade ? 'Third trade after two losses broke my stop rule.' : '',
+      mind: filled && !notrade ? 'Impatient after the second loss.' : '',
+      lesson: completed ? 'Two losses means done, even when the next setup looks clean.' : '',
+      action: completed ? 'Set a hard stop alert after the second loss.' : '', other: ''
+    };
+    var badges = {
+      new: { cls: 'status s-neutral', d: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z', label: 'Not started' },
+      draft: { cls: 'status s-warn', d: 'M17 3l4 4L8 20H4v-4z', label: 'Draft' },
+      completed: { cls: 'status s-ok', d: 'M20 6L9 17l-5-5', label: 'Completed' },
+      edited: { cls: 'status s-ok', d: 'M20 6L9 17l-5-5', label: 'Completed · edited' }
+    };
+    var badge = future ? badges.draft : notrade ? badges.completed : badges[v];
+    var saveMap = {
+      new: ['dot dot-muted', 'Not saved yet'], draft: ['dot dot-warn', 'Unsaved changes · draft last saved 4:58 PM'],
+      completed: ['dot dot-ok', 'Completed 5:42 PM · last saved 5:42 PM'], edited: ['dot dot-ok', 'Completed 5:42 PM · edited and saved 7:15 PM'],
+      notrade: ['dot dot-ok', 'Completed 4:10 PM · last saved 4:10 PM'], future: ['dot dot-warn', 'Draft · last saved 8:05 PM yesterday']
+    };
+    var sm = saveMap[v];
+    var trades = [
+      { sym: 'MNQZ6', side: 'Long', time: '9:47–9:58', pnl: '+$96.20' },
+      { sym: 'MNQZ6', side: 'Long', time: '10:34–10:51', pnl: '+$188.40' },
+      { sym: 'MNQZ6', side: 'Short', time: '11:02–11:09', pnl: '−$41.30' },
+      { sym: 'MNQZ6', side: 'Long', time: '11:40–11:44', pnl: '−$30.80' },
+      { sym: 'MESZ6', side: 'Short', time: '13:12–13:20', pnl: 'P&L unknown' }
+    ].map(function (t) { return Object.assign(t, { sideCls: t.side === 'Short' ? 'badge b-out-loss' : 'badge b-out-profit', pnlCls: t.pnl.indexOf('+') === 0 ? 'mono pos' : t.pnl.indexOf('−') === 0 ? 'mono neg' : 'badge b-warn' }); });
+    var views = [['new', 'New'], ['draft', 'Draft'], ['completed', 'Completed'], ['edited', 'Completed · edited'], ['notrade', 'No-trade day'], ['future', 'Future day']].map(function (x) {
+      return { label: x[1], on: v === x[0], cls: v === x[0] ? 'is-on' : '', pick: function () { self.setState({ view: x[0] }); } };
+    });
+    var hist = { new: [], draft: [{ what: 'Saved', rev: 2, when: 'Oct 21, 4:58 PM' }, { what: 'Started', rev: 1, when: 'Oct 21, 8:52 AM' }],
+      completed: [{ what: 'Completed', rev: 3, when: 'Oct 21, 5:42 PM' }, { what: 'Saved', rev: 2, when: 'Oct 21, 4:58 PM' }, { what: 'Started', rev: 1, when: 'Oct 21, 8:52 AM' }],
+      edited: [{ what: 'Edited after completion', rev: 4, when: 'Oct 21, 7:15 PM' }, { what: 'Completed', rev: 3, when: 'Oct 21, 5:42 PM' }, { what: 'Started', rev: 1, when: 'Oct 21, 8:52 AM' }],
+      notrade: [{ what: 'Completed', rev: 2, when: 'Oct 21, 4:10 PM' }, { what: 'Started', rev: 1, when: 'Oct 21, 9:05 AM' }],
+      future: [{ what: 'Started', rev: 1, when: 'Oct 21, 8:05 PM' }] }[v];
+    var planFilled = filled || future ? 5 : 0, afterFilled = completed ? 7 : (filled && !notrade ? 5 : (notrade ? 1 : 0));
+    return {
+      crumbs: [{ label: 'Journal', href: 'Main.dc.html' }, { label: 'Daily reviews', href: 'Main.dc.html' }],
+      views: views, badge: badge, isFuture: future, notFuture: !future, items: items, proc: proc, out: out, f: f,
+      dayTitle: future ? 'Daily review · Thu, Oct 22, 2026' : 'Daily review · Wed, Oct 21, 2026', dayShort: future ? 'Oct 22' : 'Oct 21',
+      dayKind: future ? 'Upcoming' : notrade ? 'No-trade day (by choice)' : 'Traded',
+      dayNote: future ? 'Plan only until 6:00 PM tonight' : notrade ? 'You marked it in the review. No trades are recorded.' : '5 trades recorded in this account',
+      hasTiming: !isNew, timing: v === 'edited' || v === 'completed' || v === 'draft' || future ? { cls: 'status s-flow', label: 'Written before the session · 8:52 AM' } : { cls: 'status s-warn', label: 'Written afterwards (retrospective) · 4:05 PM' },
+      ro: completed && v === 'completed', saveDot: sm[0], saveText: sm[1],
+      noTradeDisabled: !notrade && !future, hasTrades: !notrade && !future, noTrades: notrade || future,
+      noTradesText: notrade ? 'No trades: you marked this a no-trade day.' : 'No trades are recorded for this trading day.',
+      trades: trades, tradeCount: notrade || future ? '0' : '5', histCount: hist.length, history: hist,
+      planCount: planFilled + ' of 6', checkCount: future ? 'later' : (isNew ? '0 of 5' : (5 - counts.none) + ' of 5'), afterCount: future ? 'later' : afterFilled + ' of 7',
+      isCompleted: completed || notrade, canComplete: !(completed || notrade), clean: v === 'completed' || v === 'notrade' || v === 'new',
+      saveLabel: completed || notrade ? 'Save changes' : 'Save draft',
+      completeBlocked: future, completeTitle: future ? 'A day can be completed once it has started' : '',
+      barHint: completed || notrade ? 'Saved reviews can be edited; the history keeps every revision.' : 'Nothing saves on its own. Save a draft or complete the review.'
+    };
+  }
+}
+</script>
+</body>
+</html>

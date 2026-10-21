@@ -3,7 +3,8 @@
 Card: [Build 25 — data-control screens](https://app.notion.com/p/3fe1bd4b6bde812fab6de667a70e2e59). Backend: Build 24
 ([handoff](../../handoffs/build-24-data-controls.md)). Code: `apps/desktop/src/features/data-controls`.
 
-The Settings page (sidebar **Settings**) opens on this page. There is no mockup; it uses design-system parts only.
+The Settings page (sidebar **Settings**) opens on this page. Mockups: [`mockups/p0/`](../mockups/p0/) boards 3A–3E
+(P0 design, Build 25.1; see the section at the end). It uses design-system parts only.
 
 ## Layout
 
@@ -66,3 +67,48 @@ adds FundedFlow's recovery copies. `cleanup_pending` shows a warning and "Retry 
 - The archive manifest has counts and account IDs but no per-account status, so the restore preview cannot list
   which included accounts are failed or archived; it states that they are restored exactly as saved.
 - The account deletion preview lists linked attempts by ID only (no name lookup across a pending deletion).
+
+## P0 design (Build 25.1)
+
+Boards in [`mockups/p0/`](../mockups/p0/). They redraw the page Build 25 ships and give Settings room to grow; no
+command is added.
+
+| Board | Shows | States on the board |
+|---|---|---|
+| 3A–B `Settings` | Section navigation, local-only notice, Your data on this computer, Export, Restore, Delete data, reserved section | No export yet, exporting (every data action disabled), saved (name, size, SHA-256), failed |
+| 3C `SettingsRestore` | Restore dialog | Checking, rejected (newer version, damaged, not a backup, no space), validated with typed phrase, installing, restored, didn't finish (recovery banner takes over) |
+| 3D `SettingsDelete` | Archive vs delete vs erase comparison, deletion dialog | Preview loading, delete account, blocked (archive instead), erase journal, cleanup pending, deleted |
+| 3E `NarrowSettings` | 720 px window | Section links become a scrolling row; option cards stack; dialogs full width |
+
+### Decisions
+- **Expandable structure.** A left section list (220 px): *Your data* (On this computer, Export, Restore, Delete
+  data), *App* (Appearance, Notifications: shown dimmed with a "Planned" badge and `aria-disabled`, linking to a
+  dashed "Reserved for later preferences" note; they are design concepts, not settings), *Development builds*
+  (Developer tools). New preferences become new groups; nothing else on the page moves.
+- **Export kind** is two option cards. Full backup says it is "the only file Restore accepts"; Trade CSV says, in bold,
+  "It can't be restored and isn't a backup." The account select appears only for CSV. The export button stays
+  disabled (with its reason) until the "not encrypted" box is ticked.
+- **Export history**: only the last export is shown, because only the last export is stored. A history list is a
+  backend gap, not a design.
+- **Danger zone**: one loss-outlined area with two rows, each naming its scope. Destructive buttons are loss outlines,
+  never filled red, and they open dialogs; nothing destructive happens on the page.
+- **Archive vs delete vs erase** have different titles, button words and phrases (see the comparison on 3D). Archive is
+  offered first in Accounts menus; deletion is last; erase is only in Settings.
+- **Typed confirmation**: the phrase is shown in a mono chip, the field is never prefilled, the button is disabled until
+  it matches exactly, a mismatch says "This doesn't match yet.", and Cancel holds the initial focus.
+- **Restore** shows the archive facts and a two-column count table (in the archive · replaced in this journal), the
+  "come back exactly as archived" note and the three "Before you replace" bullets, then the phrase. While installing,
+  the dialog can't be dismissed and shows no percentage.
+
+### Keyboard and narrow windows
+- Section links are in-page anchors; the current section carries `aria-current`. Dialogs trap focus; Escape closes
+  except while running.
+- Below 900 px the section list becomes a horizontally scrolling row above the content.
+
+### Changes proposed for the built screen (UI only)
+1. Settings section navigation and the reserved "App" group.
+2. Option cards for export kind (RadioGroup cards layout).
+3. The archive / delete / erase comparison as help text on the deletion section.
+
+### Gaps (unchanged)
+Folder path, export history and per-account status in archive previews still need backend support.

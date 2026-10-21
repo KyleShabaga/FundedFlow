@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rulebook draft editor</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.rhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.rsum{background:none;border:0;color:var(--ink);font:inherit;padding:0;text-align:left;cursor:pointer;display:grid;gap:2px}
+.rsum:focus-visible{outline:2px solid var(--flow);outline-offset:3px;border-radius:4px}
+.rsum b{font-weight:600}
+.tagstates{display:flex;gap:2px;padding:3px;background:var(--bg-200);border:1px solid var(--line-100);border-radius:999px;flex-wrap:wrap}
+.tagstates label{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:12px;color:var(--ink-muted);cursor:pointer}
+.tagstates label.is-on{background:var(--bg-300);color:var(--flow)}
+.tagstates input{position:absolute;opacity:0;width:1px;height:1px}
+.draftbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border:1px dashed var(--line-200);border-radius:8px;background:var(--bg-100);font-size:13px}
+</style>
+</helmet>
+<div class="shell" data-theme="dark">
+  <dc-import name="P0Sidebar" active="accounts" hint-size="248px,100%"></dc-import>
+  <div class="shell-main">
+    <dc-import name="P0Header" title="Rulebook version" here="v4 draft" crumbs="{{crumbs}}" account="Apex 100K · PA-48213" hint-size="100%,120px"></dc-import>
+    <main class="shell-content" style="padding-bottom: 0;">
+      <div class="wrap">
+        <div class="mock-states" role="group" aria-label="Mockup state (review only)">
+          <span>Mockup state</span>
+          <sc-for list="{{views}}" as="v" hint-placeholder-count="6"><button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for>
+        </div>
+
+        <div class="sec-head">
+          <div class="stack-s" style="gap: 6px;">
+            <div class="row">
+              <h2>Apex 100K Evaluation · v4</h2>
+              <sc-if value="{{isPublished}}" hint-placeholder-val="{{ false }}"><span class="status s-ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"></path></svg>Verified</span></sc-if>
+              <sc-if value="{{isDraft}}" hint-placeholder-val="{{ true }}"><span class="status s-neutral"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3l4 4L8 20H4v-4z"></path></svg>Draft</span></sc-if>
+            </div>
+            <p class="lede">for Apex 100K · PA-48213 · catalogue correction</p>
+          </div>
+          <div class="row">
+            <sc-if value="{{isPublished}}" hint-placeholder-val="{{ false }}"><button type="button" class="btn">Start a draft from this version</button><button type="button" class="btn btn-primary">Assign to this account…</button></sc-if>
+          </div>
+        </div>
+
+        <sc-if value="{{isDraft}}" hint-placeholder-val="{{ true }}">
+          <div class="draftbar" role="note">
+            <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--ink-muted);"><path d="M17 3l4 4L8 20H4v-4z"></path></svg>
+            <span><b>Draft v4</b> · being edited, not in use until it is published and assigned.</span>
+            <span class="muted">Started from <a class="link" href="RulebookOverview.dc.html">v3</a>, which stays in force and is never changed.</span>
+          </div>
+        </sc-if>
+
+        <div class="tabs" role="tablist" aria-label="Version">
+          <button type="button" role="tab" class="tab is-on" aria-selected="true">{{editTab}}</button>
+          <a role="tab" class="tab" aria-selected="false" href="RulebookCompare.dc.html">Compare <span class="tab-count">{{diffCount}}</span></a>
+          <a role="tab" class="tab" aria-selected="false" href="RulebookExplain.dc.html">Preview</a>
+          <a role="tab" class="tab" aria-selected="false" href="RulebookDialogs.dc.html">{{publishTab}}</a>
+          <button type="button" role="tab" class="tab" aria-selected="false">Details</button>
+        </div>
+
+        <sc-if value="{{isRestore}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-info" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"></path></svg><div><b>Unsaved edits from earlier</b><p>You left this draft with 3 unsaved changes on Oct 21 at 9:52 AM. The saved draft hasn't changed since, so they can be put back.</p><div class="notice-actions"><button type="button" class="btn btn-sm btn-primary">Restore them</button><button type="button" class="btn btn-sm">Discard them</button></div></div></div>
+        </sc-if>
+
+        <sc-if value="{{isConflict}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-err" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg><div><b>This draft changed somewhere else</b><p>Nothing was saved. It was saved in another window at 10:03 AM (revision 6; you opened revision 5). Your edits are still here: copy anything you need, then load the saved draft.</p><div class="notice-actions"><button type="button" class="btn btn-sm">Load the saved draft (drops your edits)</button><a class="btn btn-sm btn-ghost" href="RulebookCompare.dc.html">Compare your edits with it</a></div></div></div>
+        </sc-if>
+
+        <sc-if value="{{isInvalid}}" hint-placeholder-val="{{ false }}">
+          <div class="vsum" role="alert" tabindex="-1">
+            <b>Fix 2 issues before saving</b>
+            <ul>
+              <li><a href="#r3-amount">Profit target: enter an amount like 6000.00</a></li>
+              <li><a href="#r9-label">Rule 9 (Payout eligibility): give it a label</a></li>
+            </ul>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{isPublished}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-neutral" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><div><b>Published versions can't be changed</b><p>Start a draft to propose a new version. Accounts using this one keep it until they are reassigned.</p></div></div>
+        </sc-if>
+
+        <section class="card pad stack" aria-labelledby="dd-h">
+          <div class="row-between"><h3 id="dd-h" class="h3">Draft details</h3><span class="faint">Provider-stated dates describe the firm's terms, not the day this governs the account.</span></div>
+          <div class="fgrid" style="grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);">
+            <label class="fld"><span class="fld-label">What changes and why <span class="fld-req">*</span></span><textarea class="ta" disabled="{{ro}}">Firm added a 50% consistency rule for payouts and a payout eligibility check.</textarea><span class="fld-desc">Required: this supersedes v3.</span></label>
+            <label class="fld"><span class="fld-label">Provider-stated from <span class="fld-opt">(optional)</span></span><input class="input" type="date" value="2026-11-02" disabled="{{ro}}"></label>
+            <label class="fld"><span class="fld-label">Provider-stated until <span class="fld-opt">(optional)</span></span><input class="input" type="date" disabled="{{ro}}"></label>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="rules-h">
+          <div class="pad row-between" style="border-bottom: 1px solid var(--line-100);">
+            <div><h3 id="rules-h" class="h3">Rules <span class="faint num">({{ruleCount}})</span></h3><span class="faint">Expand a rule to edit it. Order is the order shown on the account.</span></div>
+            <sc-if value="{{isDraftEditable}}" hint-placeholder-val="{{ true }}">
+              <div class="row">
+                <label class="fld" style="grid-template-columns: auto; gap: 0;"><span class="sr-only" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Rule type</span>
+                  <select class="input select" style="width: 240px;"><option>Choose a rule type…</option><option>Profit target</option><option>Daily loss limit</option><option>Maximum drawdown</option><option>Minimum trading days</option><option>Consistency</option><option>Maximum position size</option><option>Maximum trades per day</option><option>Payout eligibility</option><option>Payouts before next phase</option><option>Scaling plan</option><option>Trading restriction</option><option>Manual check</option></select>
+                </label>
+                <button type="button" class="btn"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add rule</button>
+              </div>
+            </sc-if>
+          </div>
+
+          <sc-for list="{{rules}}" as="r" hint-placeholder-count="9">
+            <div class="{{r.cls}}">
+              <span class="rule-idx" aria-hidden="true">{{r.i}}</span>
+              <div class="stack" style="gap: 12px;">
+                <div class="rhead">
+                  <button type="button" class="rsum" aria-expanded="{{r.open}}" onClick="{{r.toggle}}">
+                    <span><b>{{r.name}}</b> <span class="faint">· {{r.type}} · key <span class="mono">{{r.key}}</span></span></span>
+                    <span class="small muted">{{r.summary}}</span>
+                  </button>
+                  <div class="row" style="gap: 6px;">
+                    <sc-if value="{{r.hasChg}}" hint-placeholder-val="{{ false }}"><span class="{{r.chgCls}}">{{r.chg}}</span></sc-if>
+                    <span class="{{r.st.cls}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{r.st.d}}"></path></svg>{{r.st.label}}</span>
+                  </div>
+                </div>
+                <sc-if value="{{r.hasNote}}" hint-placeholder-val="{{ false }}"><p class="small wrn" style="margin: 0;">Not calculated · {{r.note}}</p></sc-if>
+                <sc-if value="{{r.open}}" hint-placeholder-val="{{ false }}">
+                  <div class="stack" style="gap: 16px; padding-top: 4px;">
+                    <div class="fgrid">
+                      <label class="fld"><span class="fld-label">Your label</span><input id="{{r.labelId}}" class="{{r.labelCls}}" value="{{r.label}}" disabled="{{ro}}"><sc-if value="{{r.labelErr}}" hint-placeholder-val="{{ false }}"><span class="fld-err"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 8v4M12 16h.01"></path></svg>Give this rule a label.</span></sc-if></label>
+                      <label class="fld"><span class="fld-label">Support</span><select class="input select" disabled="{{ro}}"><option>{{r.support}}</option><option>Can be calculated</option><option>Manual check</option><option>Not tracked</option><option>Needs setup</option></select></label>
+                    </div>
+                    <fieldset class="fld" style="border: 0; padding: 0; margin: 0;">
+                      <legend class="fld-label" style="margin-bottom: 6px;">{{r.paramLabel}}</legend>
+                      <div class="tagstates" role="radiogroup" aria-label="{{r.paramLabel}} state">
+                        <sc-for list="{{r.tags}}" as="tg" hint-placeholder-count="5"><label class="{{tg.cls}}"><input type="radio" name="{{r.key}}-state" checked="{{tg.on}}" disabled="{{ro}}">{{tg.label}}</label></sc-for>
+                      </div>
+                      <sc-if value="{{r.showValue}}" hint-placeholder-val="{{ true }}">
+                        <div class="fgrid" style="margin-top: 8px;">
+                          <label class="fld"><span class="fld-label">{{r.valueLabel}}</span><span class="affix"><input id="{{r.amountId}}" class="{{r.valueCls}}" value="{{r.val}}" inputmode="decimal" disabled="{{ro}}"><span>{{r.unit}}</span></span><span class="fld-desc">{{r.valueDesc}}</span><sc-if value="{{r.valueErr}}" hint-placeholder-val="{{ false }}"><span class="fld-err"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 8v4M12 16h.01"></path></svg>Enter an amount like 6000.00. Money is stored as exact decimal text.</span></sc-if></label>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{r.unknownNote}}" hint-placeholder-val="{{ false }}"><p class="fld-desc" style="margin-top: 8px;">Unknown keeps this rule at Needs setup. It is never treated as zero.</p></sc-if>
+                    </fieldset>
+                    <div class="fgrid">
+                      <label class="fld"><span class="fld-label">Provider wording</span><textarea class="ta" disabled="{{ro}}" value="{{r.wording}}"></textarea><span class="fld-desc">Exactly as the firm writes it.</span></label>
+                      <label class="fld"><span class="fld-label">Source text</span><textarea class="ta" disabled="{{ro}}" value="{{r.source}}"></textarea><span class="fld-desc">Where it came from: page title, section, date read.</span></label>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+              <sc-if value="{{isDraftEditable}}" hint-placeholder-val="{{ true }}">
+                <div class="row" style="gap: 4px; flex-wrap: nowrap;">
+                  <button type="button" class="icon-btn" aria-label="Move {{r.name}} up" disabled="{{r.first}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"></path></svg></button>
+                  <button type="button" class="icon-btn" aria-label="Move {{r.name}} down" disabled="{{r.last}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M19 12l-7 7-7-7"></path></svg></button>
+                  <button type="button" class="icon-btn" aria-label="Remove {{r.name}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"></path></svg></button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </section>
+
+        <sc-if value="{{isDraftEditable}}" hint-placeholder-val="{{ true }}">
+          <div class="actbar" style="margin-bottom: 24px;">
+            <span class="save-state" role="status"><span class="{{saveDot}}" aria-hidden="true"></span>{{saveText}}</span>
+            <div class="row">
+              <button type="button" class="btn" disabled="{{clean}}">Undo changes</button>
+              <button type="button" class="btn btn-primary" disabled="{{clean}}">Save draft</button>
+            </div>
+          </div>
+        </sc-if>
+        <div style="height: 16px;"></div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startState":{"editor":"enum","options":["saved","dirty","invalid","conflict","restore","published"],"default":"dirty"},"$preview":{"width":1440,"height":1760}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: props.startState || 'dirty', open: { consistency: true, target: false, payout: true } }; }
+  renderVals() {
+    var self = this, v = this.state.view, open = this.state.open;
+    var published = v === 'published', invalid = v === 'invalid';
+    var S = {
+      calc: { cls: 'status s-flow', d: 'M5 3h14v18H5zM8 7h8M8 12h2M12 12h2M8 16h2M12 16h2', label: 'Can be calculated' },
+      none: { cls: 'status s-neutral', d: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM8 12h8', label: 'None' },
+      manual: { cls: 'status s-flow', d: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6z', label: 'Manual check' },
+      setup: { cls: 'status s-warn', d: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z', label: 'Needs setup' }
+    };
+    var tagset = function (on) { return ['Unknown', 'None', 'Off', 'Not applicable', 'Value'].map(function (l) { return { label: l, on: l === on, cls: l === on ? 'is-on' : '' }; }); };
+    var base = [
+      { id: 'dd', name: 'Maximum drawdown', type: 'Maximum drawdown', key: 'max_drawdown', summary: '$3,000.00 trailing, intraday · locks at $100,100.00', st: S.calc, chg: '', support: 'Can be calculated', param: 'Amount', tag: 'Value', val: '3000.00', unit: 'USD', vdesc: 'Account currency.' },
+      { id: 'dll', name: 'Daily loss limit', type: 'Daily loss limit', key: 'daily_loss', summary: 'None (stated by the source)', st: S.none, chg: '', support: 'Can be calculated', param: 'Limit', tag: 'None', val: '', unit: 'USD', vdesc: '' },
+      { id: 'target', name: 'Profit target', type: 'Profit target', key: 'profit_target', summary: invalid ? 'Value has an error' : '$6,000.00', st: S.calc, chg: invalid ? 'Changed' : '', support: 'Can be calculated', param: 'Target', tag: 'Value', val: invalid ? '6,000.5x' : '6000.00', unit: 'USD', vdesc: 'Account currency.', err: invalid },
+      { id: 'days', name: 'Minimum trading days', type: 'Minimum trading days', key: 'min_days', summary: '7 days', st: S.calc, chg: '', support: 'Can be calculated', param: 'Days', tag: 'Value', val: '7', unit: 'days', vdesc: 'Monday to Friday trading days with at least one trade.' },
+      { id: 'consistency', name: 'Consistency', type: 'Consistency', key: 'consistency', summary: published ? 'Best day at most 0.50 of total profit' : 'Best day at most 0.50 of total profit (was 0.30)', st: S.calc, chg: published ? '' : 'Changed', support: 'Can be calculated', param: 'Best day share', tag: 'Value', val: '0.50', unit: 'share', vdesc: 'Decimal share: 0.5 is 50%.' },
+      { id: 'size', name: 'Maximum position size', type: 'Maximum position size', key: 'max_contracts', summary: '10 Mini or 100 Micro', st: S.calc, chg: '', support: 'Can be calculated', param: 'Contracts', tag: 'Value', val: '10', unit: 'Mini', vdesc: 'Add a limit row per contract class.' },
+      { id: 'restrict', name: 'Trading restriction', type: 'Trading restriction', key: 'news', summary: 'Checked by you', st: S.manual, chg: '', support: 'Manual check', param: 'Restriction', tag: 'Value', val: 'Major data releases', unit: 'text', vdesc: 'Manual rule types offer only Manual check or Not tracked.' },
+      { id: 'scaling', name: 'Scaling plan', type: 'Scaling plan', key: 'scaling', summary: 'Steps unknown', st: S.setup, chg: '', support: 'Needs setup', param: 'Steps', tag: 'Unknown', val: '', unit: '', vdesc: '', note: 'A needed value is unknown' },
+      { id: 'payout', name: invalid ? '' : 'Payout eligibility', type: 'Payout eligibility', key: 'payout_eligibility', summary: 'New rule · value Unknown', st: S.setup, chg: published ? '' : 'Added', support: 'Needs setup', param: 'Minimum balance for a payout', tag: 'Unknown', val: '', unit: 'USD', vdesc: '', note: 'A needed value is unknown', isNew: true, labelErr: invalid }
+    ];
+    var rules = base.map(function (r, i) {
+      var isOpen = !!open[r.id];
+      return {
+        i: i + 1, name: r.name || 'Untitled rule', type: r.type, key: r.key, summary: r.summary, st: r.st, label: r.name,
+        cls: 'rule' + (isOpen ? ' is-open' : '') + (r.err || r.labelErr ? ' is-invalid' : (r.isNew && !published ? ' is-new' : '')),
+        open: isOpen, toggle: function () { var o = Object.assign({}, self.state.open); o[r.id] = !o[r.id]; self.setState({ open: o }); },
+        hasChg: !!r.chg, chg: r.chg, chgCls: r.chg === 'Added' ? 'chg chg-add' : 'chg chg-mod',
+        hasNote: !!r.note, note: r.note || '', support: r.support,
+        paramLabel: r.param, tags: tagset(r.tag), showValue: r.tag === 'Value', unknownNote: r.tag === 'Unknown',
+        valueLabel: r.param, val: r.val, unit: r.unit, valueDesc: r.vdesc,
+        valueCls: 'input num' + (r.err ? ' is-invalid' : ''), valueErr: !!r.err, amountId: r.id === 'target' ? 'r3-amount' : r.id + '-amount',
+        labelId: r.id === 'payout' ? 'r9-label' : r.id + '-label', labelCls: 'input' + (r.labelErr ? ' is-invalid' : ''), labelErr: !!r.labelErr,
+        wording: r.id === 'consistency' ? 'No single trading day may account for more than 50% of total profit at payout.' : (r.id === 'payout' ? '' : 'As stated on the programme page.'),
+        source: r.id === 'consistency' ? 'Apex help centre, "Payout rules", read Oct 21, 2026' : (r.id === 'payout' ? '' : 'Apex programme page, read Sep 30, 2026'),
+        first: i === 0, last: i === base.length - 1
+      };
+    });
+    var saveMap = { saved: ['dot dot-ok', 'All changes saved · revision 5 at 9:40 AM'], dirty: ['dot dot-warn', 'Unsaved changes · 2 rules changed, 1 added'], invalid: ['dot dot-err', 'Unsaved changes · fix 2 issues to save'], conflict: ['dot dot-err', 'Not saved · the draft changed elsewhere'], restore: ['dot dot-muted', 'All changes saved · revision 5'] };
+    var sm = saveMap[v] || saveMap.saved;
+    var views = [['saved', 'Saved'], ['dirty', 'Unsaved changes'], ['invalid', 'Validation errors'], ['conflict', 'Conflict'], ['restore', 'Restore earlier edits'], ['published', 'Published (read-only)']].map(function (x) {
+      return { label: x[1], on: v === x[0], cls: v === x[0] ? 'is-on' : '', pick: function () { self.setState({ view: x[0] }); } };
+    });
+    return {
+      crumbs: [{ label: 'Accounts', href: 'AccountDetail.dc.html' }, { label: 'Apex 100K · PA-48213', href: 'AccountDetail.dc.html' }, { label: 'Rulebook', href: 'RulebookOverview.dc.html' }],
+      views: views, rules: rules, ruleCount: rules.length,
+      isPublished: published, isDraft: !published, isDraftEditable: !published, ro: published,
+      isRestore: v === 'restore', isConflict: v === 'conflict', isInvalid: invalid,
+      editTab: published ? 'Rules' : 'Edit rules', publishTab: published ? 'Status' : 'Review and publish', diffCount: published ? '' : '3',
+      saveDot: sm[0], saveText: sm[1], clean: v === 'saved' || v === 'restore'
+    };
+  }
+}
+</script>
+</body>
+</html>

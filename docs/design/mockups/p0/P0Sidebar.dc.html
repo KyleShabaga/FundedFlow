@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sidebar as built</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.p0-nav a{display:flex;gap:12px;align-items:center;min-height:44px;padding:8px 12px;border-radius:8px;color:var(--ink-muted);text-decoration:none;font-weight:500;font-size:14px}
+.p0-nav a:hover{color:var(--ink);background:var(--bg-300)}
+.p0-nav a.is-on{color:var(--flow);background:var(--flow-soft);box-shadow:inset 3px 0 var(--flow)}
+.p0-nav a:focus-visible,.p0-toggle:focus-visible{outline:2px solid var(--flow);outline-offset:3px}
+.p0-collapsed .p0-nav a{justify-content:center;padding:8px}
+.p0-toggle{position:absolute;top:26px;right:-14px;width:28px;height:28px;border-radius:8px;border:1px solid var(--line-100);background:var(--bg-100);color:var(--ink-muted);display:grid;place-items:center;cursor:pointer;padding:0;z-index:3}
+.p0-toggle:hover{color:var(--ink);background:var(--bg-300)}
+.p0-sec{display:flex;align-items:center;gap:2px}
+.p0-sec>a{flex:1}
+.p0-exp{width:28px;height:28px;border:0;background:transparent;color:var(--ink-muted);border-radius:8px;display:grid;place-items:center;cursor:pointer;padding:0;flex:none}
+.p0-exp:hover{background:var(--bg-300);color:var(--ink)}
+.p0-sub{display:grid;gap:2px;margin:2px 0 4px;padding:0;list-style:none}
+.p0-sub a{min-height:32px!important;padding:4px 12px 4px 46px!important;font-size:13px!important;box-shadow:none!important;background:transparent!important;color:var(--ink-muted)!important}
+.p0-sub a:hover{color:var(--ink)!important;background:var(--bg-300)!important}
+.p0-sub a.is-cur{color:var(--flow)!important;font-weight:600}
+</style>
+</helmet>
+<aside class="{{sideCls}}" style="height: 100%; min-height: 100vh; font-family: var(--font-sans); color: var(--ink);">
+  <button type="button" class="p0-toggle" aria-label="{{toggleLabel}}" title="{{toggleLabel}} (Ctrl+B)" aria-expanded="{{expanded}}" aria-controls="primary-navigation" onClick="{{toggle}}">
+    <svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 3v18"></path><path d="{{chev}}"></path></svg>
+  </button>
+  <div style="{{brandStyle}}">
+    <svg viewBox="70 33 265 209" width="32" height="32" aria-hidden="true" style="flex: none;"><defs><linearGradient id="p0Blade" gradientUnits="userSpaceOnUse" x1="330" y1="36" x2="74" y2="238"><stop offset="0" stop-color="#5b9dff"></stop><stop offset="1" stop-color="#2563eb"></stop></linearGradient><linearGradient id="p0Arm" gradientUnits="userSpaceOnUse" x1="313" y1="106" x2="158" y2="166"><stop offset="0" stop-color="#5b9dff"></stop><stop offset="1" stop-color="#2563eb"></stop></linearGradient></defs><path fill="url(#p0Blade)" d="M74 238.8C74 238.8 73.2 238 73.2 238C73.2 238 73.9 235.3 74.4 234C75.9 230.3 77.7 226.7 79.2 223C97.1 178.7 114.3 134.2 132.4 90C133.7 86.8 135.6 83.9 137.5 81C139.4 77.9 141.5 74.8 143.8 72C146.3 68.8 149.1 65.9 152 63C153.6 61.5 155.2 60 157 58.7C159.9 56.5 162.9 54.3 166 52.4C169.5 50.3 173.2 48.5 177 46.8C180.2 45.4 183.6 44.4 187 43.4C190 42.6 193 41.8 196 41.4C201 40.7 206 40.2 211 40.1C245.3 39.7 279.7 40.4 314 40C316.2 40 318.3 39.5 320.5 39C323.7 38.3 326.8 36.9 330 36.4C330.5 36.3 331.4 37 331.4 37C331.4 37 331.7 38.3 331.6 39C331.4 40.4 331.1 41.7 330.7 43C329.4 47 328.2 51.1 326.6 55C325.5 57.8 324 60.4 322.5 63C321.3 65.1 319.8 67.1 318.3 69C317.2 70.4 316.1 71.7 314.8 73C312.6 75.2 310.4 77.4 308 79.3C306.1 80.9 304.1 82.3 302 83.5C299.4 85 296.7 86.3 294 87.5C291.7 88.4 289.4 89.2 287 89.7C283 90.5 279 91.3 275 91.4C251.3 91.9 227.7 91.2 204 91.4C201.4 91.4 198.9 91.6 196.3 92C193.2 92.5 190.2 93.2 187.2 94C185.3 94.5 183.6 95.2 181.8 96C179.8 96.9 177.8 97.9 175.9 99C173.9 100.2 171.9 101.5 170.1 103C168.6 104.1 167.3 105.4 166 106.8C164.2 108.7 162.5 110.6 161 112.8C159.1 115.5 157.3 118.4 156 121.5C152.8 128.8 150.4 136.5 147.4 144C143.5 153.7 139.6 163.4 135.3 173C135.1 173.5 134.5 173.9 134 174.2C131.7 175.5 129.2 176.4 127 177.8C123.6 179.9 120.2 182.1 117 184.6C113.5 187.2 110 189.9 106.9 193C103 196.8 99.5 200.9 96 205C94.3 206.9 92.8 208.9 91.4 211C88.2 215.6 84.9 220.2 81.9 225C79.1 229.5 74 238.8 74 238.8Z"></path><path fill="url(#p0Arm)" d="M160 165.5C159.4 165.7 158 165.8 158 165.8C158 165.8 157.8 165.2 157.9 165C159.7 160.6 161.8 156.4 163.6 152C165.8 146.4 167.5 140.6 169.7 135C170.6 132.9 171.6 130.9 172.8 129C173.7 127.6 174.7 126.2 175.8 125C177.1 123.6 178.5 122.2 180 121C181.6 119.7 183.3 118.6 185 117.6C186.9 116.5 188.9 115.5 191 114.8C193.9 113.9 197 113.2 200 112.7C202 112.3 204 112.3 206 112.3C233 112 260 112.5 287 111.8C291 111.7 295.1 111 299 110C303.5 108.8 307.5 106.4 312 105.1C312.5 105 313.3 106 313.3 106C313.3 106 312.4 110.7 311.7 113C310.4 117.1 309 121.1 307.3 125C306.3 127.4 304.9 129.7 303.5 132C302.2 134.1 300.9 136.1 299.3 138C297.4 140.4 295.2 142.6 293 144.7C291.1 146.5 289.1 148.1 287 149.7C285.7 150.6 284.4 151.6 283 152.3C280.4 153.8 277.8 155.2 275 156.2C271.8 157.4 268.4 158.4 265 159.1C261.7 159.8 258.4 160.3 255 160.5C245.7 160.8 236.3 160.7 227 160.5C210 160.3 190 160.4 176 160.7C173 161 169.9 161.6 167 162.5C164.6 163.2 162.4 164.6 160 165.5Z"></path></svg>
+    <sc-if value="{{expanded}}" hint-placeholder-val="{{ true }}"><span style="font: 600 20px/28px var(--font-display); letter-spacing: -0.2px;">Funded<span style="color: var(--flow);">Flow</span></span></sc-if>
+  </div>
+  <nav id="primary-navigation" aria-label="Primary navigation" class="p0-nav" style="display: flex; flex-direction: column; flex: 1; padding: 0 12px 16px;">
+    <div style="display: grid; gap: 8px;">
+      <sc-for list="{{main}}" as="it" hint-placeholder-count="4">
+        <div>
+          <div class="p0-sec">
+            <a href="{{it.href}}" class="{{it.cls}}" aria-current="{{it.current}}" aria-label="{{it.label}}" title="{{it.label}}">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px;"><path d="{{it.d}}"></path></svg>
+              <sc-if value="{{expanded}}" hint-placeholder-val="{{ true }}"><span>{{it.label}}</span></sc-if>
+            </a>
+            <sc-if value="{{it.hasSubBtn}}" hint-placeholder-val="{{ false }}"><button type="button" class="p0-exp" aria-expanded="{{it.open}}" aria-label="{{it.label}} views"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="{{it.chev}}"></path></svg></button></sc-if>
+          </div>
+          <sc-if value="{{it.showSub}}" hint-placeholder-val="{{ false }}">
+            <ul class="p0-sub" aria-label="{{it.label}} views">
+              <sc-for list="{{it.sub}}" as="s" hint-placeholder-count="3"><li><a href="{{it.href}}" class="{{s.cls}}" aria-current="{{s.cur}}">{{s.label}}</a></li></sc-for>
+            </ul>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <div style="margin-top: auto; padding-top: 32px; display: grid; gap: 8px;">
+      <a href="{{settings.href}}" class="{{settings.cls}}" aria-current="{{settings.current}}" aria-label="Settings" title="Settings">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px;"><path d="{{settings.d}}"></path></svg>
+        <sc-if value="{{expanded}}" hint-placeholder-val="{{ true }}"><span>Settings</span></sc-if>
+      </a>
+      <p title="Saved on this computer" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin: 0; font-size: 12px; color: var(--ink-muted);">
+        <span aria-hidden="true" style="color: var(--flow);">•</span>
+        <sc-if value="{{expanded}}" hint-placeholder-val="{{ true }}"><span>Saved on this computer</span></sc-if>
+      </p>
+    </div>
+  </nav>
+</aside>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["today","journal","insights","accounts","settings","none"],"default":"accounts"},"collapsed":{"editor":"boolean","default":false},"sub":{"editor":"text","default":""},"$preview":{"width":248,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { collapsed: null }; }
+  renderVals() {
+    var self = this;
+    var active = this.props.active ?? 'accounts';
+    var collapsed = this.state.collapsed == null ? !!this.props.collapsed : this.state.collapsed;
+    var subs = { journal: ['By day', 'Trade log', 'Library'], insights: ['Overview', 'Calendar', 'Breakdowns', 'Attempts'] };
+    var subCur = this.props.sub ?? null;
+    var mk = function (id, label, href, d) {
+      var on = id === active, list = subs[id] || [];
+      var open = on && list.length > 0;
+      return { label: label, href: href, d: d, current: on ? 'page' : null, cls: on ? 'is-on' : '',
+        hasSubBtn: !collapsed && list.length > 0, open: open, showSub: !collapsed && open, chev: open ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6',
+        sub: list.map(function (l) { var c = l === subCur; return { label: l, cls: c ? 'is-cur' : '', cur: c ? 'true' : null }; }) };
+    };
+    return {
+      sideCls: 'shell-side' + (collapsed ? ' is-collapsed p0-collapsed' : ''),
+      brandStyle: collapsed ? 'display: flex; align-items: center; min-height: 32px; padding: 24px 12px;' : 'display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 24px 32px 24px 24px;',
+      expanded: !collapsed,
+      toggleLabel: collapsed ? 'Expand sidebar' : 'Collapse sidebar',
+      chev: collapsed ? 'M14 9l3 3-3 3' : 'M16 9l-3 3 3 3',
+      toggle: function () { self.setState({ collapsed: !collapsed }); },
+      main: [
+        mk('today', 'Today', 'Main.dc.html', 'M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'),
+        mk('journal', 'Journal', 'DailyReview.dc.html', 'M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4a4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3a3 3 0 0 0-3-3z'),
+        mk('insights', 'Insights', 'Main.dc.html', 'M12 16v5M16 14v7M20 10v11M22 3l-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.707 0L2 15M4 18v3M8 14v7'),
+        mk('accounts', 'Accounts', 'AccountDetail.dc.html', 'M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4')
+      ],
+      settings: mk('settings', 'Settings', 'Settings.dc.html', 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM9 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0')
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.sec{scroll-margin-top:16px}
+.optcard input{position:static}
+</style>
+</helmet>
+<div class="shell" data-theme="dark">
+  <dc-import name="P0Sidebar" active="settings" hint-size="248px,100%"></dc-import>
+  <div class="shell-main">
+    <dc-import name="P0Header" title="Settings" account="Apex 100K · PA-48213" hint-size="100%,96px"></dc-import>
+    <main class="shell-content">
+      <div class="wrap" style="max-width: 1180px;">
+        <div class="mock-states" role="group" aria-label="Mockup state (review only)">
+          <span>Mockup state</span>
+          <sc-for list="{{views}}" as="v" hint-placeholder-count="5"><button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for>
+        </div>
+
+        <div class="set-layout">
+          <nav class="set-nav" aria-label="Settings sections">
+            <span class="set-nav-group overline">Your data</span>
+            <a href="#local" class="is-on" aria-current="true"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v10H4zM8 19h8M12 15v4"></path></svg>On this computer</a>
+            <a href="#export"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"></path></svg>Export</a>
+            <a href="#restore"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"></path></svg>Restore</a>
+            <a href="#delete"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"></path></svg>Delete data</a>
+            <span class="set-nav-group overline" style="margin-top: 12px;">App</span>
+            <a href="#future" class="is-future" aria-disabled="true" title="Planned: not built yet"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9a7 7 0 0 1-9-9z"></path></svg>Appearance <span class="badge b-neutral" style="margin-left: auto;">Planned</span></a>
+            <a href="#future" class="is-future" aria-disabled="true" title="Planned: not built yet"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"></path></svg>Notifications <span class="badge b-neutral" style="margin-left: auto;">Planned</span></a>
+            <span class="set-nav-group overline" style="margin-top: 12px;">Development builds</span>
+            <a href="#dev"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6"></path></svg>Developer tools</a>
+          </nav>
+
+          <div class="stack" style="gap: 24px;">
+            <p style="margin: 0; max-width: 70ch; padding: 16px; border: 1px solid var(--line-100); border-left: 3px solid var(--flow); border-radius: 8px; background: var(--bg-200); font-size: 14px; line-height: 20px;">FundedFlow keeps your journal only on this computer. Nothing is uploaded and nothing needs an account or internet connection.</p>
+
+            <sc-if value="{{isBusy}}" hint-placeholder-val="{{ false }}">
+              <div class="notice n-info" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9"></path></svg><div><b>Exporting…</b><p>Other data actions wait until this finishes. Every data button on this page and in Accounts is disabled meanwhile.</p></div></div>
+            </sc-if>
+
+            <section id="local" class="card pad sec" aria-labelledby="local-h">
+              <div class="row-between" style="margin-bottom: 12px;"><h2 id="local-h" class="h3" style="font-size: 17px;">Your data on this computer</h2><span class="status s-flow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v10H4zM8 19h8M12 15v4"></path></svg>Local only</span></div>
+              <dl class="kv">
+                <div><dt>Stored</dt><dd>In FundedFlow's app-data folder for your Windows user. Only this computer has it.</dd></div>
+                <div><dt>Journal version</dt><dd class="num">12 <span class="faint" style="font-family: var(--font-sans);">(backup format 1)</span></dd></div>
+                <div><dt>Automatic backups</dt><dd><span class="status s-warn" style="margin-right: 6px;"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg>None</span>Export a full backup yourself and keep it somewhere safe.</dd></div>
+                <div><dt>Backup protection</dt><dd>Not encrypted. Anyone with the file can read your journal.</dd></div>
+                <div><dt>Last export from this journal</dt><dd>{{lastExport}}</dd></div>
+              </dl>
+            </section>
+
+            <section id="export" class="card pad sec stack" aria-labelledby="exp-h">
+              <div><h2 id="exp-h" class="h3" style="font-size: 17px;">Export</h2><p class="fld-desc" style="margin-top: 2px;">Choose what to export, then where to save it. FundedFlow never chooses a location for you.</p></div>
+              <fieldset style="border: 0; margin: 0; padding: 0;">
+                <legend class="fld-label" style="margin-bottom: 8px;">What to export</legend>
+                <div class="optcards">
+                  <label class="{{kindFull}}"><span class="optcard-top"><input type="radio" name="kind" checked="{{isFull}}" onChange="{{pickFull}}">Full backup <span class="mono faint" style="font-weight: 500;">.ffj.zip</span></span><span class="small muted">Everything in the journal: accounts, trades, reviews, rulebooks, attachments. The only file Restore accepts.</span></label>
+                  <label class="{{kindCsv}}"><span class="optcard-top"><input type="radio" name="kind" checked="{{isCsv}}" onChange="{{pickCsv}}">Trade CSV <span class="mono faint" style="font-weight: 500;">.csv</span></span><span class="small muted">Closed trades for a spreadsheet. <b style="color: var(--ink);">It can't be restored and isn't a backup.</b></span></label>
+                </div>
+              </fieldset>
+              <sc-if value="{{isCsv}}" hint-placeholder-val="{{ false }}">
+                <label class="fld" style="max-width: 360px;"><span class="fld-label">Accounts</span><select class="input select"><option>All accounts</option><option>Apex 100K · PA-48213 (Active)</option><option>Topstep 50K · XFA-1182 (Failed)</option><option>Old demo · DEMO-1 (Archived)</option></select></label>
+              </sc-if>
+              <label class="chk"><input type="checkbox" checked="{{ack}}" onChange="{{toggleAck}}">I understand this file is not encrypted</label>
+              <div class="row">
+                <button type="button" class="btn btn-primary" aria-disabled="{{exportBlocked}}" title="{{exportTitle}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"></path></svg>{{exportLabel}}</button>
+                <span class="small muted">Opens the Windows save dialog. Cancelling it does nothing.</span>
+              </div>
+              <sc-if value="{{isSaved}}" hint-placeholder-val="{{ false }}">
+                <div class="notice n-ok" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"></path></svg><div><b>Saved fundedflow-2026-10-21.ffj.zip</b><p class="num" style="font-size: 12px;">48.2 MB · SHA-256 3b7e…c09d</p><p>Keep it off this computer too. FundedFlow doesn't keep track of where you saved it.</p></div></div>
+              </sc-if>
+              <sc-if value="{{isFailed}}" hint-placeholder-val="{{ false }}">
+                <div class="notice n-err" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg><div><b>Nothing was exported</b><p>The location couldn't be written to. Choose another folder, or free some space, and try again. Your journal wasn't changed.</p><div class="notice-actions"><button type="button" class="btn btn-sm">Try again</button></div></div></div>
+              </sc-if>
+            </section>
+
+            <section id="restore" class="card pad sec stack" aria-labelledby="rs-h">
+              <div><h2 id="rs-h" class="h3" style="font-size: 17px;">Restore from a full backup</h2><p class="fld-desc" style="margin-top: 2px;">Replaces the whole journal with the backup. Nothing is merged. The current journal is kept as a local safety copy first.</p></div>
+              <div class="row"><a class="btn" href="SettingsRestore.dc.html" aria-disabled="{{isBusy}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M12 18v-6M9 15l3-3 3 3"></path></svg>Choose backup to restore…</a><span class="small muted">FundedFlow checks the file before anything changes.</span></div>
+            </section>
+
+            <section id="delete" class="sec stack-s" aria-labelledby="del-h">
+              <div><h2 id="del-h" class="h3" style="font-size: 17px;">Delete data permanently</h2><p class="fld-desc" style="margin-top: 2px;">Failing or archiving an account keeps its history. Deleting removes it for good. Files you exported are never touched.</p></div>
+              <div class="danger">
+                <div class="danger-row">
+                  <div class="stack-s" style="gap: 2px; flex: 1 1 320px;"><b>Delete one trading account</b><span class="small muted">Removes one attempt, its trades, reviews and attachments. To keep it out of the way instead, archive it in Accounts.</span>
+                    <label class="fld" style="margin-top: 8px; max-width: 360px;"><span class="fld-label">Account</span><select class="input select"><option>Topstep 50K · XFA-1182 · Failed</option><option>Old demo · DEMO-1 · Archived</option><option>Apex 100K · PA-48213 · Active</option></select></label>
+                  </div>
+                  <a class="btn btn-danger" href="SettingsDelete.dc.html" aria-disabled="{{isBusy}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"></path></svg>Delete account permanently…</a>
+                </div>
+                <div class="danger-row">
+                  <div class="stack-s" style="gap: 2px; flex: 1 1 320px;"><b>Erase the entire local journal</b><span class="small muted">Every account, trade, review, rulebook and attachment on this computer, and FundedFlow's recovery copies. FundedFlow starts empty afterwards.</span></div>
+                  <a class="btn btn-danger" href="SettingsDelete.dc.html" aria-disabled="{{isBusy}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 21h10M5 14l9-9 5 5-9 9H5z"></path></svg>Erase entire journal…</a>
+                </div>
+              </div>
+            </section>
+
+            <section id="future" class="card pad sec" style="border-style: dashed;" aria-labelledby="fu-h">
+              <div class="row-between"><h2 id="fu-h" class="h3" style="font-size: 15px; color: var(--ink-muted);">Reserved for later preferences</h2><span class="badge b-neutral">Future design concept</span></div>
+              <p class="small faint" style="margin: 6px 0 0;">Appearance (P2 skins and theme) and Notifications (its own card) get their own sections here when they are built. Nothing on this page changes behaviour today except the data controls above.</p>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startState":{"editor":"enum","options":["none","exporting","saved","failed"],"default":"none"},"$preview":{"width":1440,"height":1900}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: props.startState || 'none', kind: 'full', ack: false }; }
+  renderVals() {
+    var self = this, v = this.state.view, full = this.state.kind === 'full', ack = this.state.ack || v === 'saved' || v === 'exporting' || v === 'failed';
+    var views = [['none', 'No export yet'], ['exporting', 'Exporting'], ['saved', 'Saved'], ['failed', 'Failed']].map(function (x) {
+      return { label: x[1], on: v === x[0], cls: v === x[0] ? 'is-on' : '', pick: function () { self.setState({ view: x[0] }); } };
+    });
+    var busy = v === 'exporting';
+    return {
+      views: views, isBusy: busy, isSaved: v === 'saved', isFailed: v === 'failed',
+      isFull: full, isCsv: !full, kindFull: 'optcard' + (full ? ' is-on' : ''), kindCsv: 'optcard' + (!full ? ' is-on' : ''),
+      pickFull: function () { self.setState({ kind: 'full' }); }, pickCsv: function () { self.setState({ kind: 'csv' }); },
+      ack: ack, toggleAck: function () { self.setState({ ack: !self.state.ack }); },
+      exportBlocked: !ack || busy, exportTitle: busy ? 'Exporting… other data actions wait' : (!ack ? 'Tick "I understand this file is not encrypted" first' : ''),
+      exportLabel: busy ? 'Exporting…' : 'Choose location and export…',
+      lastExport: v === 'saved' ? 'Full backup · Oct 21, 2026, 3:40 PM · 48.2 MB' : 'No export yet'
+    };
+  }
+}
+</script>
+</body>
+</html>

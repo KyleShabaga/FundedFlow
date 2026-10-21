@@ -23,20 +23,20 @@ specification). When a spec and a card disagree, the card wins; fix the spec in 
 | Spec | Card (Build) | Lane | Notes |
 |---|---|---|---|
 | [01 App shell](screens/01-app-shell.md) | 12 App shell and runtime gate; primitives in 13 | P0 | Search, feedback, notifications, theme and session clock are not in Build 12 (see below) |
-| [02 Accounts](screens/02-accounts.md) | 15 Account management UI; 15.5 risk inputs; 19 rulebook editor | P0 | Needs 14 (gateway hooks) |
+| [02 Accounts](screens/02-accounts.md) | 15 Account management UI; 15.5 risk inputs; 19 rulebook editor | P0 | Account detail mockups: `mockups/p0/` 4A–4C |
 | [03 Journal](screens/03-journal.md) | 20 Trade journal, detail and review; 22 daily review entry points | P0 | Needs 14 |
 | [04 Calendar](screens/04-calendar.md) | 23 Insights (calendar view) | P0 | Month/year picker is a Build 13 primitive |
 | [05 Day timer](screens/05-day-timer.md) | No card: proposed in Triage | — | Fits the shell's account context bar or Today |
-| [06 Import](screens/06-import.md) | 18 CSV import wizard (backend 17) | P0 | In development |
+| [06 Import](screens/06-import.md) | 18 CSV import wizard (backend 17) | P0 | Quick import and history mockups: `mockups/p0/` 5A–5E |
 | [07 Insights](screens/07-insights.md) | 23 Insights explorer and drill-down | P0 | Was "Reports" |
 | [08 Today](screens/08-today.md) | 21 Today risk dashboard | P0 | Was "Dashboard"; needs 16 (rules engine) |
 | [09 Home](screens/09-home-merged-into-today.md) | Merged into 21 | — | Kept for the all-accounts Today ideas |
 | [10 Trade detail](screens/10-trade-detail.md) | 20; candles in 42–43 | P0 / P2 | Chart is P2 |
 | [11 Library](screens/11-library.md) | 20 (strategy, tag, checklist management) and 22 | P0 | A Journal sub-view, not top-level navigation |
 | [12 Economic calendar](screens/12-economic-calendar.md) | 41 Economic calendar and market sessions | P2 | Not V1 |
-| [13 Account rulebook](screens/13-rulebook.md) | 19 Rulebook version editor and calculation explanation | P0 | Needs 16 for preview/explanation (blocked) |
-| [14 Daily review](screens/14-daily-review.md) | 22 Daily review and plan adherence | P0 | A nested Journal page; opened from Today, By day and Library |
-| [15 Settings: your data](screens/15-settings-data-controls.md) | 25 Data-control screens (backend 24) | P0 | Export, restore, permanent deletion; no mockup |
+| [13 Account rulebook](screens/13-rulebook.md) | 19 Rulebook version editor and calculation explanation | P0 | Mockups: `mockups/p0/` 1A–1F |
+| [14 Daily review](screens/14-daily-review.md) | 22 Daily review and plan adherence | P0 | A nested Journal page; mockups `mockups/p0/` 2A–2E |
+| [15 Settings: your data](screens/15-settings-data-controls.md) | 25 Data-control screens (backend 24) | P0 | Export, restore, permanent deletion; mockups `mockups/p0/` 3A–3E |
 
 Shared patterns ([components.md](components.md)) belong to **Build 13**; their visual specification to **Build 7**.
 
@@ -63,6 +63,11 @@ for light only if Build 7 says so.
 Read them for structure, states and copy; never copy their markup or `ff-app.css` into the app. Some mockups
 predate the board alignment: they show a Home page, a Dashboard label, an "Add trade" header button and
 P2 items in the top bar. The specs above are current.
+
+[`mockups/p0/`](mockups/p0/) holds the P0 design reconciliation (Build 25.1): rulebook, daily review, Settings,
+account detail, and Quick import with history, drawn on the shell as built. It has static PNG previews in
+`mockups/p0/previews/` that open without the canvas, and its own canvas ("FundedFlow P0 Screens"). The checklist that
+maps every spec section to a board is [p0-design-reconciliation.md](p0-design-reconciliation.md).
 
 ## References
 

@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Account detail</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.mark{width:48px;height:48px;border-radius:10px;background:var(--flow-soft);color:var(--flow);display:grid;place-items:center;font:600 18px/1 var(--font-display);flex:none}
+.kpi4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.kpi4 .card{padding:16px;display:grid;gap:6px;align-content:start}
+.kv-tight>div{padding:7px 0}
+.menu-wrap{position:relative}
+.setup li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line-100);font-size:13px}
+.setup li:first-child{border-top:0}
+.setup svg{width:16px;height:16px;flex:none;margin-top:1px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media (max-width:1100px){.kpi4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</helmet>
+<div class="shell" data-theme="dark">
+  <dc-import name="P0Sidebar" active="accounts" hint-size="248px,100%"></dc-import>
+  <div class="shell-main">
+    <dc-import name="P0Header" title="Account" here="{{acctName}}" crumbs="{{crumbs}}" account="Apex 100K · PA-48213" hint-size="100%,120px"></dc-import>
+    <main class="shell-content">
+      <div class="wrap">
+        <div class="mock-states" role="group" aria-label="Mockup state (review only)">
+          <span>Mockup state</span>
+          <sc-for list="{{views}}" as="v" hint-placeholder-count="6"><button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for>
+        </div>
+
+        <div class="row-between" style="align-items: flex-start;">
+          <div class="row" style="gap: 16px; align-items: flex-start; flex-wrap: nowrap;">
+            <span class="mark" aria-hidden="true">{{initial}}</span>
+            <div class="stack-s" style="gap: 6px;">
+              <span class="overline">{{eyebrow}}</span>
+              <h2 style="margin: 0; font: 600 22px/28px var(--font-display);">{{acctName}} <span class="mono faint" style="font-size: 13px; font-weight: 500;">{{masked}}</span></h2>
+              <div class="row" style="gap: 6px;">
+                <span class="badge b-neutral">{{type}}</span>
+                <span class="{{statusBadge.cls}}">{{statusBadge.label}}</span>
+                <sc-if value="{{isArchived}}" hint-placeholder-val="{{ false }}"><span class="badge b-neutral">Archived</span></sc-if>
+                <sc-if value="{{needsSetup}}" hint-placeholder-val="{{ false }}"><span class="badge b-warn">Needs setup</span></sc-if>
+                <sc-if value="{{isActiveAcct}}" hint-placeholder-val="{{ true }}"><span class="status s-flow" style="height: 20px;">Active account</span></sc-if>
+                <span class="small muted">{{phase}} · Attempt 2 of 2 · last traded {{lastTraded}}</span>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <sc-if value="{{canEdit}}" hint-placeholder-val="{{ true }}">
+              <div class="row">
+                <a class="btn" href="QuickImport.dc.html"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path></svg>Import trades<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px;"><path d="M6 9l6 6 6-6"></path></svg></a>
+                <a class="btn btn-ghost" href="ImportHistory.dc.html">Import history</a>
+                <button type="button" class="btn btn-primary"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3l4 4L8 20H4v-4z"></path></svg>Edit</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{isArchived}}" hint-placeholder-val="{{ false }}"><button type="button" class="btn btn-primary">Restore from archive</button></sc-if>
+            <div class="menu-wrap">
+              <button type="button" class="icon-btn" style="width: 36px; height: 36px;" aria-label="More account actions" aria-haspopup="menu" aria-expanded="{{menuOpen}}" onClick="{{toggleMenu}}"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.6;"><path d="M5 12h.01M12 12h.01M19 12h.01"></path></svg></button>
+              <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+                <div class="menu" role="menu" style="position: absolute; right: 0; top: 42px; z-index: 5;">
+                  <sc-for list="{{menu}}" as="m" hint-placeholder-count="7">
+                    <sc-if value="{{m.sep}}" hint-placeholder-val="{{ false }}"><hr></sc-if>
+                    <sc-if value="{{m.item}}" hint-placeholder-val="{{ true }}"><a role="menuitem" href="{{m.href}}" class="{{m.cls}}">{{m.label}}</a></sc-if>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+
+        <sc-if value="{{isArchived}}" hint-placeholder-val="{{ false }}"><div class="notice n-neutral" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><div><b>Archived: read-only</b><p>Its history, trades and reviews stay viewable. Restore it to import, edit or change its rulebook.</p></div></div></sc-if>
+        <sc-if value="{{isFinished}}" hint-placeholder-val="{{ false }}"><div class="notice n-neutral" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 16v-4M12 8h.01"></path></svg><div><b>Failed attempt</b><p>This is a finished attempt, kept for review. It never counts toward Today's active-account risk.</p><div class="notice-actions"><button type="button" class="btn btn-sm btn-primary">Start new attempt…</button></div></div></div></sc-if>
+        <sc-if value="{{needsSetup}}" hint-placeholder-val="{{ false }}"><div class="notice n-warn" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"></path></svg><div><b>1 thing left to set up</b><p>No rulebook is in force today, so limits and room left stay Unknown. Journaling and imports work without one.</p><div class="notice-actions"><a class="btn btn-sm btn-primary" href="RulebookOverview.dc.html">Set up the rulebook</a></div></div></div></sc-if>
+
+        <div class="tabs" role="tablist" aria-label="Account">
+          <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3"><button type="button" role="tab" class="{{t.cls}}" aria-selected="{{t.on}}" onClick="{{t.pick}}">{{t.label}} <span class="tab-count">{{t.count}}</span></button></sc-for>
+        </div>
+
+        <sc-if value="{{isLoading}}" hint-placeholder-val="{{ false }}">
+          <div class="kpi4" aria-busy="true"><span class="skel" style="height: 112px; border-radius: 12px;"></span><span class="skel" style="height: 112px; border-radius: 12px;"></span><span class="skel" style="height: 112px; border-radius: 12px;"></span><span class="skel" style="height: 112px; border-radius: 12px;"></span></div>
+          <span class="skel" style="height: 280px; border-radius: 12px;"></span>
+        </sc-if>
+
+        <sc-if value="{{showOverview}}" hint-placeholder-val="{{ true }}">
+          <div class="stack" style="gap: 24px;">
+            <div class="kpi4">
+              <sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+                <section class="card" aria-label="{{k.label}}">
+                  <div class="row-between"><span class="label">{{k.label}}</span><sc-if value="{{k.hasProv}}" hint-placeholder-val="{{ false }}"><span class="{{k.provCls}}" style="height: 20px; font-size: 11px;">{{k.prov}}</span></sc-if></div>
+                  <span class="{{k.cls}}">{{k.value}}</span>
+                  <sc-if value="{{k.hasMeter}}" hint-placeholder-val="{{ false }}"><div class="meter-track" role="img" aria-label="{{k.meterText}}"><div class="{{k.fillCls}}" style="{{k.fillStyle}}"></div></div></sc-if>
+                  <span class="faint">{{k.sub}}</span>
+                </section>
+              </sc-for>
+            </div>
+
+            <div class="cols" style="grid-template-columns: minmax(0, 1fr) 380px;">
+              <div class="stack" style="gap: 24px;">
+                <section class="card" aria-labelledby="rk-h">
+                  <div class="pad row-between" style="border-bottom: 1px solid var(--line-100);">
+                    <div class="stack-s" style="gap: 6px;"><h3 id="rk-h" class="h3">Rules and risk</h3>
+                      <div class="row"><span class="{{risk.cls}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{risk.d}}"></path></svg>{{risk.label}}</span><span class="small muted">{{risk.why}}</span></div>
+                    </div>
+                    <div class="row"><sc-if value="{{hasCalc}}" hint-placeholder-val="{{ true }}"><a class="btn btn-sm" href="RulebookExplain.dc.html">How this was calculated</a></sc-if><sc-if value="{{canCalc}}" hint-placeholder-val="{{ true }}"><a class="btn btn-sm" href="RulebookExplain.dc.html">Calculate now…</a></sc-if></div>
+                  </div>
+                  <div class="pad-s row-between" style="padding-inline: 24px; background: var(--bg-200);">
+                    <span class="small">{{rulebookLine}}</span>
+                    <a class="link small" href="RulebookOverview.dc.html">{{rulebookAction}} →</a>
+                  </div>
+                  <sc-if value="{{hasRules}}" hint-placeholder-val="{{ true }}">
+                    <dl class="kv" style="padding: 4px 24px 8px;">
+                      <sc-for list="{{rules}}" as="r" hint-placeholder-count="4"><div><dt>{{r.k}}</dt><dd><span class="{{r.cls}}">{{r.v}}</span> <span class="faint">{{r.note}}</span></dd></div></sc-for>
+                    </dl>
+                  </sc-if>
+                  <p class="faint" style="margin: 0; padding: 10px 24px 14px; border-top: 1px solid var(--line-100);">Estimates from your records. Verify with your firm's dashboard; FundedFlow doesn't replace it.</p>
+                </section>
+
+                <section class="dt-card" aria-labelledby="rt-h">
+                  <div class="dt-toolbar"><h3 id="rt-h" class="h3">Recent trades</h3><a class="link small" href="DailyReview.dc.html">Open in Journal →</a></div>
+                  <sc-if value="{{hasTrades}}" hint-placeholder-val="{{ true }}">
+                    <div class="dt-scroll"><table class="dt">
+                      <thead><tr><th scope="col"><span>Trading day</span></th><th scope="col"><span>Symbol</span></th><th scope="col"><span>Side</span></th><th scope="col" class="num"><span>Qty</span></th><th scope="col"><span>Closed</span></th><th scope="col" class="num"><span>Net P&amp;L</span></th></tr></thead>
+                      <tbody>
+                        <sc-for list="{{trades}}" as="t" hint-placeholder-count="5"><tr><td>{{t.day}}</td><td class="sym">{{t.sym}}</td><td><span class="{{t.sideCls}}">{{t.side}}</span></td><td class="num">{{t.qty}}</td><td class="mono" style="font-size: 12.5px;">{{t.time}}</td><td class="num"><span class="{{t.pnlCls}}">{{t.pnl}}</span></td></tr></sc-for>
+                      </tbody>
+                    </table></div>
+                  </sc-if>
+                  <sc-if value="{{noTrades}}" hint-placeholder-val="{{ false }}"><div class="state" style="padding: 24px;"><h3>No imported trades</h3><p>Import a CSV into this attempt to see its trades and activity.</p><a class="btn btn-sm btn-primary" href="QuickImport.dc.html" style="margin-top: 6px;">Import trades</a></div></sc-if>
+                </section>
+
+                <section class="dt-card" aria-labelledby="ri-h">
+                  <div class="dt-toolbar"><h3 id="ri-h" class="h3">Recent imports</h3><a class="link small" href="ImportHistory.dc.html">Import history →</a></div>
+                  <div class="dt-scroll"><table class="dt">
+                    <thead><tr><th scope="col"><span>Finished</span></th><th scope="col"><span>File</span></th><th scope="col"><span>Result</span></th><th scope="col" class="num"><span>Imported</span></th><th scope="col" class="num"><span>Skipped</span></th></tr></thead>
+                    <tbody>
+                      <tr><td class="mono" style="font-size: 12.5px;">Oct 21, 12:04 PM</td><td>Performance (14).csv</td><td><span class="status s-ok" style="height: 20px;">Completed</span></td><td class="num">5</td><td class="num">2</td></tr>
+                      <tr><td class="mono" style="font-size: 12.5px;">Oct 19, 4:12 PM</td><td>Performance (13).csv</td><td><span class="status s-ok" style="height: 20px;">Completed</span></td><td class="num">11</td><td class="num">0</td></tr>
+                      <tr><td class="mono" style="font-size: 12.5px;">Oct 16, 5:30 PM</td><td>Performance (12).csv</td><td><span class="status s-err" style="height: 20px;">Didn't complete</span></td><td class="num">0</td><td class="num">—</td></tr>
+                    </tbody>
+                  </table></div>
+                </section>
+              </div>
+
+              <aside class="stack" style="gap: 24px;" aria-label="Setup and activity">
+                <section class="card pad stack-s" aria-labelledby="su-h">
+                  <div class="row-between"><h3 id="su-h" class="h3">Setup</h3><span class="{{setupBadge.cls}}">{{setupBadge.label}}</span></div>
+                  <ul class="setup" style="list-style: none; margin: 0; padding: 0;">
+                    <li><svg viewBox="0 0 24 24" aria-hidden="true" style="color: var(--profit);"><path d="M20 6L9 17l-5-5"></path></svg><div>Prop firm<div class="faint">Apex Trader Funding</div></div></li>
+                    <li><svg viewBox="0 0 24 24" aria-hidden="true" style="{{rbIconStyle}}"><path d="{{rbIcon}}"></path></svg><div>Rulebook in force today<div class="faint">{{rbSetup}}</div></div></li>
+                    <li><svg viewBox="0 0 24 24" aria-hidden="true" style="color: var(--ink-faint);"><path d="M5 12h14"></path></svg><div>Balance checkpoint <span class="faint">(optional)</span><div class="faint">Confirmed by you · Oct 20, 5:02 PM</div></div></li>
+                  </ul>
+                  <p class="faint" style="margin: 0;">Setup is separate from risk: a complete setup isn't a Safe account.</p>
+                </section>
+
+                <section class="card pad stack-s" aria-labelledby="ac-h">
+                  <h3 id="ac-h" class="h3">Activity</h3>
+                  <dl class="kv kv-tight">
+                    <div><dt>Trades</dt><dd class="num">{{act.trades}}</dd></div>
+                    <div><dt>Net P&amp;L (known trades)</dt><dd><span class="{{act.pnlCls}}">{{act.pnl}}</span></dd></div>
+                    <div><dt>Trades without P&amp;L</dt><dd class="num">{{act.unknown}}</dd></div>
+                    <div><dt>Trading days</dt><dd class="num">{{act.days}}</dd></div>
+                    <div><dt>Last traded</dt><dd>{{lastTraded}}</dd></div>
+                    <div><dt>Imports · last</dt><dd>{{act.imports}}</dd></div>
+                  </dl>
+                </section>
+
+                <details class="card pad-s">
+                  <summary class="h3" style="cursor: pointer; padding: 4px 8px;">Account settings</summary>
+                  <dl class="kv kv-tight" style="padding: 8px;">
+                    <div><dt>Platform</dt><dd>Tradovate</dd></div><div><dt>Account number</dt><dd class="num">••••8213</dd></div><div><dt>Currency</dt><dd>USD</dd></div>
+                    <div><dt>Starting balance</dt><dd class="num">$100,000.00</dd></div><div><dt>Time zone</dt><dd>America/New_York (now 2:31 PM)</dd></div><div><dt>Trading day starts at</dt><dd>6:00 PM</dd></div><div><dt>Added</dt><dd>Oct 5, 2026</dd></div>
+                  </dl>
+                </details>
+              </aside>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{showHistory}}" hint-placeholder-val="{{ false }}">
+          <div class="cols-even">
+            <section class="card pad stack" aria-labelledby="lh-h">
+              <h3 id="lh-h" class="h3">Lifecycle</h3>
+              <ol class="tl">
+                <li><span class="tl-dot is-on" aria-hidden="true"></span><div><b>Active</b> · Evaluation phase<div class="small muted">Took effect Oct 5, 2026, 6:00 PM ET · Cause: new attempt</div><div class="faint">Recorded Oct 5, 6:04 PM</div></div></li>
+                <li><span class="tl-dot" aria-hidden="true"></span><div><b>Started as attempt 2</b> · reset of attempt 1<div class="small muted">Starting balance $100,000.00 · its own basis; nothing carried over</div></div></li>
+                <li><span class="tl-dot is-err" aria-hidden="true"></span><div><b>Attempt 1 failed</b> · <a class="link" href="#a1">view attempt 1</a><div class="small muted">Oct 2, 2026 · Cause: trailing drawdown (as you recorded it)</div></div></li>
+              </ol>
+            </section>
+            <section class="card pad stack-s">
+              <h3 class="h3">Rulebook assignments</h3>
+              <dl class="kv"><div><dt>From Mon, Oct 5</dt><dd>Apex 100K Evaluation v3 · Verified · still in force</dd></div></dl>
+              <a class="link small" href="RulebookOverview.dc.html">Assignment history →</a>
+            </section>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{showAttempts}}" hint-placeholder-val="{{ false }}">
+          <div class="dt-card"><div class="dt-scroll"><table class="dt">
+            <thead><tr><th scope="col"><span>Attempt</span></th><th scope="col"><span>Name</span></th><th scope="col"><span>Status</span></th><th scope="col" class="num"><span>Starting balance</span></th><th scope="col" class="num"><span>Trades</span></th><th scope="col" class="num"><span>Net P&amp;L</span></th><th scope="col" class="num"><span>Trading days</span></th><th scope="col"><span>Reset</span></th></tr></thead>
+            <tbody>
+              <tr class="is-on"><td class="num">2</td><td>Apex 100K · PA-48213 <span class="badge b-flow">This attempt</span></td><td><span class="badge b-flow">Active</span></td><td class="num">$100,000.00</td><td class="num">32</td><td class="num pos">+$640.00</td><td class="num">5</td><td>From attempt 1, Oct 5</td></tr>
+              <tr><td class="num">1</td><td>Apex 100K · PA-48213</td><td><span class="badge b-loss">Failed</span></td><td class="num">$100,000.00</td><td class="num">58</td><td class="num neg">−$3,012.40</td><td class="num">9</td><td class="muted">—</td></tr>
+            </tbody>
+          </table></div><div class="dt-foot">Each attempt keeps its own trades, imports, journal and history. Values never carry over.</div></div>
+        </sc-if>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startState":{"editor":"enum","options":["current","notcurrent","setup","failed","archived","loading"],"default":"current"},"$preview":{"width":1440,"height":2000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: props.startState || 'current', tab: 'overview', menu: false }; }
+  renderVals() {
+    var self = this, v = this.state.view, t = this.state.tab;
+    var D = { ok: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3', unk: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01', warn: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01', hist: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 7v5l3 2' };
+    var setup = v === 'setup', failed = v === 'failed', archived = v === 'archived', notcur = v === 'notcurrent', loading = v === 'loading';
+    var history = failed || archived;
+    var kpis;
+    if (setup) {
+      kpis = [
+        { label: 'Balance', value: '$100,412.50', cls: 'tile-v', hasProv: true, prov: 'Confirmed by you', provCls: 'status s-flow', sub: 'Checkpoint Oct 20, 5:02 PM · trades since aren’t included' },
+        { label: 'Net P&L', value: '+$640.00', cls: 'tile-v pos', sub: '32 known closed trades · 1 without P&L' },
+        { label: 'Drawdown headroom', value: '—', cls: 'tile-v faint', hasProv: true, prov: 'No rulebook', provCls: 'status s-warn', sub: 'Unknown until a rulebook governs this account' },
+        { label: 'Profit target', value: '—', cls: 'tile-v faint', sub: 'No rulebook in force today' }
+      ];
+    } else if (history) {
+      kpis = [
+        { label: 'Final balance', value: '$96,987.60', cls: 'tile-v', hasProv: true, prov: 'From your records', provCls: 'status s-neutral', sub: 'As of Oct 2, 2026 · history only' },
+        { label: 'Net P&L', value: '−$3,012.40', cls: 'tile-v neg', sub: '58 known closed trades' },
+        { label: 'Drawdown headroom', value: 'History only', cls: 'tile-v muted', sub: 'Finished attempts aren’t evaluated for risk', hasProv: false },
+        { label: 'Profit target', value: 'History only', cls: 'tile-v muted', sub: 'Target was $6,000.00' }
+      ];
+    } else {
+      kpis = [
+        { label: 'Balance', value: '$100,640.00', cls: 'tile-v', hasProv: true, prov: notcur ? 'Not current' : 'From your records', provCls: notcur ? 'status s-warn' : 'status s-neutral', sub: notcur ? 'As of 2:14 PM · 3 trades imported since' : 'Closed trades and ledger as of 2:14 PM ET' },
+        { label: 'Net P&L', value: '+$640.00', cls: 'tile-v pos', sub: '32 known closed trades · 1 without P&L' },
+        { label: 'Drawdown headroom', value: notcur ? '$1,790.00' : '$1,790.00', cls: notcur ? 'tile-v muted' : 'tile-v', hasProv: notcur, prov: 'Not current', provCls: 'status s-warn', hasMeter: !notcur, fillCls: 'meter-fill', fillStyle: 'width: 59.7%;', meterText: '$1,790.00 of $3,000.00 room left', sub: notcur ? 'Recorded before the latest import; calculate again' : 'Floor $98,850.00 · of $3,000.00 trailing' },
+        { label: 'Profit target', value: '+$640.00', cls: notcur ? 'tile-v muted' : 'tile-v', hasProv: notcur, prov: 'Not current', provCls: 'status s-warn', hasMeter: !notcur, fillCls: 'meter-fill pos', fillStyle: 'width: 10.7%;', meterText: '$640.00 of $6,000.00', sub: 'of $6,000.00 · $5,360.00 to go' }
+      ];
+    }
+    var risk = setup ? { cls: 'status s-unknown', d: D.unk, label: 'Unknown', why: 'No rulebook in force today.' }
+      : history ? { cls: 'status s-neutral', d: D.hist, label: 'History only', why: 'Finished attempts never feed Today’s risk.' }
+      : notcur ? { cls: 'status s-warn', d: D.warn, label: 'Unknown · not current', why: 'Sources changed since 2:14 PM. Calculate again for a current status.' }
+      : { cls: 'status s-unknown', d: D.unk, label: 'Unknown', why: 'Scaling plan needs setup and Consistency is Unknown, so it isn’t Safe.' };
+    var mk = function (label, href, cls) { return { label: label, href: href || '#', cls: cls || '', item: true, sep: false }; };
+    var sep = { sep: true, item: false, label: '', href: '#', cls: '' };
+    var menu = archived ? [mk('Restore from archive'), sep, mk('Delete permanently…', 'SettingsDelete.dc.html', 'is-danger')]
+      : [mk('Use as active account'), mk('Rulebook and assignment', 'RulebookOverview.dc.html'), mk('Quick import into this attempt', 'QuickImport.dc.html'), sep, mk('Change status…', 'AccountDialogs.dc.html'), mk('Mark failed…', 'AccountDialogs.dc.html'), mk('Start new attempt…', 'AccountDialogs.dc.html'), sep, mk('Archive…', 'AccountDialogs.dc.html'), mk('Delete permanently…', 'SettingsDelete.dc.html', 'is-danger')];
+    var tabs = [['overview', 'Overview', ''], ['history', 'History', '3'], ['attempts', 'Attempts', '2']].map(function (x) {
+      return { label: x[1], count: x[2], on: t === x[0], cls: 'tab' + (t === x[0] ? ' is-on' : ''), pick: function () { self.setState({ tab: x[0] }); } };
+    });
+    var views = [['current', 'Calculated'], ['notcurrent', 'Not current'], ['setup', 'Needs setup'], ['failed', 'Failed attempt'], ['archived', 'Archived'], ['loading', 'Loading']].map(function (x) {
+      return { label: x[1], on: v === x[0], cls: v === x[0] ? 'is-on' : '', pick: function () { self.setState({ view: x[0], menu: false }); } };
+    });
+    var trades = [
+      { day: 'Wed, Oct 21', sym: 'MNQZ6', side: 'Long', qty: 2, time: '11:44 AM', pnl: '−$30.80' },
+      { day: 'Wed, Oct 21', sym: 'MNQZ6', side: 'Short', qty: 2, time: '11:09 AM', pnl: '−$41.30' },
+      { day: 'Wed, Oct 21', sym: 'MESZ6', side: 'Short', qty: 1, time: '1:20 PM', pnl: '—' },
+      { day: 'Wed, Oct 21', sym: 'MNQZ6', side: 'Long', qty: 2, time: '10:51 AM', pnl: '+$188.40' },
+      { day: 'Mon, Oct 19', sym: 'MNQZ6', side: 'Long', qty: 1, time: '3:12 PM', pnl: '+$46.00' }
+    ].map(function (x) { return Object.assign(x, { sideCls: x.side === 'Short' ? 'badge b-out-loss' : 'badge b-out-profit', pnlCls: x.pnl.indexOf('+') === 0 ? 'pos' : x.pnl.indexOf('−') === 0 ? 'neg' : 'faint' }); });
+    return {
+      views: views, tabs: tabs, menu: menu, menuOpen: this.state.menu, toggleMenu: function () { self.setState({ menu: !self.state.menu }); },
+      crumbs: [{ label: 'Accounts', href: 'Main.dc.html' }], acctName: 'Apex 100K · PA-48213', masked: '••••8213', initial: 'A',
+      eyebrow: 'Apex Trader Funding · Tradovate', type: 'Evaluation',
+      statusBadge: failed ? { cls: 'badge b-loss', label: 'Failed' } : { cls: 'badge b-flow', label: archived ? 'Closed' : 'Active' },
+      phase: setup ? 'Phase not recorded' : 'Evaluation phase', lastTraded: setup ? 'Wed, Oct 21, 1:20 PM ET' : (history ? 'Fri, Oct 2, 3:58 PM ET' : 'Wed, Oct 21, 1:20 PM ET'),
+      isArchived: archived, isFinished: failed, needsSetup: setup, isActiveAcct: !history, canEdit: !archived,
+      isLoading: loading, showOverview: !loading && t === 'overview', showHistory: !loading && t === 'history', showAttempts: !loading && t === 'attempts',
+      kpis: kpis, risk: risk, hasCalc: !setup && !history, canCalc: !setup && !archived && !failed,
+      rulebookLine: setup ? 'Rulebook · Not set up' : 'Rulebook · Apex 100K Evaluation · v3 · Verified',
+      rulebookAction: setup ? 'Set up the rulebook' : (archived ? 'View' : 'Review or change'),
+      hasRules: !setup,
+      rules: [
+        { k: 'Maximum drawdown', v: '$3,000.00', cls: 'num', note: 'trailing, intraday' },
+        { k: 'Profit target', v: '$6,000.00', cls: 'num', note: '' },
+        { k: 'Minimum trading days', v: '7', cls: 'num', note: history ? '' : '5 so far' },
+        { k: 'Consistency', v: 'Best day ≤ 30% of profit', cls: '', note: 'result Unknown' },
+        { k: 'Daily loss limit', v: 'None', cls: 'muted', note: 'stated by the source' }
+      ],
+      hasTrades: true, noTrades: false, trades: trades,
+      setupBadge: setup ? { cls: 'badge b-warn', label: 'Needs setup' } : { cls: 'badge b-profit', label: 'Complete' },
+      rbIcon: setup ? 'M12 8v4M12 16h.01M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z' : 'M20 6L9 17l-5-5', rbIconStyle: setup ? 'color: var(--warn);' : 'color: var(--profit);',
+      rbSetup: setup ? 'Not set up · limits stay Unknown' : 'Apex 100K Evaluation v3 from Mon, Oct 5',
+      act: history ? { trades: '58', pnl: '−$3,012.40', pnlCls: 'num neg', unknown: '0', days: '9', imports: '9 · Oct 2, 4:30 PM' } : { trades: '33', pnl: '+$640.00', pnlCls: 'num pos', unknown: '1', days: '5', imports: '6 · Oct 21, 12:04 PM' }
+    };
+  }
+}
+</script>
+</body>
+</html>

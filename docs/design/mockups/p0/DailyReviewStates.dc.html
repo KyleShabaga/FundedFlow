@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Daily review states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.cap{font:600 12px/16px var(--font-sans);color:var(--ink-faint);letter-spacing:.4px;text-transform:uppercase;margin:0 0 8px}
+.cell{display:flex;flex-direction:column;min-width:0}
+.cell>.card,.cell>.scrim{flex:1}
+</style>
+</helmet>
+<div class="shell" style="display: block; width: 1600px; min-height: 1700px; padding: 32px; box-sizing: border-box;">
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+
+    <div class="cell"><p class="cap">Header selection is another account</p>
+      <div class="card pad stack">
+        <div class="notice n-warn" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg><div><b>This review isn't for the selected account</b><p>It belongs to Apex 100K · PA-48213. The header shows Topstep 50K · XFA-1182. The page keeps showing the account in its link.</p><div class="notice-actions"><button type="button" class="btn btn-sm">Select Apex 100K · PA-48213</button></div></div></div>
+        <p class="small muted" style="margin: 0;">The review is keyed by account and day, so switching either remounts the page; no draft from another account can show.</p>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Reopening a day with unsaved edits</p>
+      <div class="card pad stack">
+        <div class="notice n-info" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"></path></svg><div><b>You have unsaved edits from earlier</b><p>4 fields changed in this window at 5:03 PM. The stored review hasn't changed since.</p><div class="notice-actions"><button type="button" class="btn btn-sm btn-primary">Restore them</button><button type="button" class="btn btn-sm">Discard</button></div></div></div>
+        <div class="notice n-neutral"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 16v-4M12 8h.01"></path></svg><div><b>Earlier edits set aside</b><p>The review was saved somewhere else after you left, so your earlier edits weren't restored.</p></div></div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Save failed · validation · text kept</p>
+      <div class="card pad stack">
+        <div class="vsum" role="alert"><b>The review wasn't saved</b><ul><li><a href="#risk">Maximum risk for the day: enter an amount like 400.00</a></li></ul></div>
+        <label class="fld" id="risk"><span class="fld-label">Maximum risk for the day <span class="fld-opt">(optional)</span></span><span class="affix"><input class="input num is-invalid" value="four hundred" aria-invalid="true"><span>USD</span></span><span class="fld-err"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 8v4M12 16h.01"></path></svg>Enter an amount like 400.00, or leave it empty.</span></label>
+        <p class="small muted" style="margin: 0;">Focus moves to the first invalid field. Everything else you wrote stays in the form.</p>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Save not confirmed</p>
+      <div class="card pad stack">
+        <div class="notice n-warn" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></svg><div><b>It isn't certain the review was saved</b><p>The save didn't confirm. Your text is still here. Check the stored review before saving again; FundedFlow won't retry on its own.</p><div class="notice-actions"><button type="button" class="btn btn-sm btn-primary">Check the stored review</button></div></div></div>
+        <div class="actbar" style="position: static; box-shadow: none;"><span class="save-state"><span class="dot dot-err" aria-hidden="true"></span>Save not confirmed</span><div class="row"><button type="button" class="btn btn-sm" aria-disabled="true" title="Check the stored review first">Save draft</button></div></div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Conflict · changed after you opened it</p>
+      <div class="card pad stack">
+        <div class="notice n-err" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg><div><b>This review changed after you opened it</b><p>Nothing was saved. Reload to see the stored review (revision 4). Your edits are offered back after the reload so you can copy what you need.</p><div class="notice-actions"><button type="button" class="btn btn-sm btn-primary">Reload the review</button></div></div></div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">The day's trades changed since saving</p>
+      <div class="card pad stack">
+        <div class="notice n-warn" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg><div><b>The day's trades changed since this review was saved</b>
+          <ul class="small" style="margin: 4px 0 0; padding-left: 16px;"><li>2 added (import at 6:12 PM)</li><li>1 corrected (MNQZ6 11:40, fees)</li><li>MESZ6 13:12 moved to Thu, Oct 22</li></ul>
+          <p>Your notes are unchanged. The outcome above always uses the trades as they are now.</p>
+          <div class="notice-actions"><button type="button" class="btn btn-sm btn-primary">Use the current trades</button></div></div></div>
+        <div class="dt-card"><table class="dt"><thead><tr><th scope="col"><span>Symbol</span></th><th scope="col"><span>Open</span></th><th scope="col" class="num"><span>Net P&amp;L</span></th><th scope="col"><span>Review</span></th></tr></thead><tbody>
+          <tr><td class="sym">MNQZ6</td><td class="mono">9:47</td><td class="num pos">+$96.20</td><td><span class="badge b-neutral">In review</span></td></tr>
+          <tr><td class="sym">MNQZ6</td><td class="mono">11:40</td><td class="num neg">−$32.10</td><td><span class="badge b-warn">Changed since</span></td></tr>
+          <tr><td class="sym">MNQZ6</td><td class="mono">14:05</td><td class="num pos">+$54.00</td><td><span class="badge b-flow">Added since</span></td></tr>
+        </tbody></table></div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Archived account · read-only</p>
+      <div class="card pad stack">
+        <div class="notice n-neutral" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><div><b>This account is archived, so its reviews are read-only</b><p>Restore the account to edit them.</p></div></div>
+        <div class="actbar" style="position: static; box-shadow: none;"><span class="small muted">Read-only</span><div class="row"><button type="button" class="btn btn-sm" aria-disabled="true" title="Archived accounts are read-only">Save draft</button><button type="button" class="btn btn-sm btn-primary" aria-disabled="true" title="Archived accounts are read-only">Complete review</button></div></div>
+        <p class="faint" style="margin: 0;">Disabled actions stay focusable and read their reason.</p>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Loading</p>
+      <div class="card pad stack" aria-busy="true">
+        <span class="skel" style="width: 60%; height: 20px;"></span>
+        <span class="skel" style="width: 80%; height: 12px;"></span>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;"><span class="skel" style="height: 72px;"></span><span class="skel" style="height: 72px;"></span><span class="skel" style="height: 72px;"></span></div>
+        <span class="skel" style="height: 140px;"></span>
+        <span class="faint" role="status">Loading the review…</span>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Not a trading day · bad link</p>
+      <div class="card state">
+        <span class="state-mark"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v16H4zM4 9h16M8 3v4M16 3v4"></path></svg></span>
+        <h3>That isn't a trading day</h3>
+        <p>Sat, Oct 24, 2026 is a weekend. Weekend activity counts toward Monday's trading day.</p>
+        <div class="row" style="justify-content: center; margin-top: 8px;"><button type="button" class="btn btn-sm">Open Mon, Oct 26</button><button type="button" class="btn btn-sm btn-primary">Current trading day</button></div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Leaving with unsaved changes</p>
+      <div class="scrim">
+        <div class="dlg dlg-sm" role="alertdialog" aria-modal="true" aria-labelledby="lg-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="lg-t" class="dlg-title">Leave without saving the review?</h2><p class="dlg-desc">Your edits stay in this window and are offered back when you open Oct 21 again.</p></div></div>
+          <div class="dlg-foot"><button type="button" class="btn">Stay</button><button type="button" class="btn btn-danger">Leave</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Account or local data unavailable</p>
+      <div class="card stack" style="gap: 0;">
+        <div class="state" style="padding-block: 24px;"><span class="state-mark"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3"></path></svg></span><h3>This account isn't available</h3><p>It may have been deleted. Choose another account to review its days.</p><button type="button" class="btn btn-sm" style="margin-top: 6px;">Choose an account</button></div>
+        <hr class="hr">
+        <div class="state" style="padding-block: 24px;"><span class="state-mark" style="color: var(--loss);"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg></span><h3>The review couldn't be loaded</h3><p>Nothing was changed.</p><button type="button" class="btn btn-sm" style="margin-top: 6px;">Try again</button></div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">After a save · toasts and focus</p>
+      <div class="card pad stack">
+        <div class="toast" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--profit);"><path d="M20 6L9 17l-5-5"></path></svg><div><b>Review completed</b><div class="muted">Wed, Oct 21 · Apex 100K · PA-48213</div></div></div>
+        <div class="toast" role="status" style="border-color: var(--flow);"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--flow);"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"></path></svg><div><b>Review reopened as a draft</b><div class="muted">Complete it again when you're done.</div></div></div>
+        <p class="small muted" style="margin: 0;">Focus returns to the status line ("Completed 5:42 PM · last saved 5:42 PM") so a screen reader hears the result once.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":1700}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

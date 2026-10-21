@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Account dialogs</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.cap{font:600 12px/16px var(--font-sans);color:var(--ink-faint);letter-spacing:.4px;text-transform:uppercase;margin:0 0 8px}
+.cell{display:flex;flex-direction:column;min-width:0}
+.cell>.scrim{flex:1;place-items:start center}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;list-style:none;margin:0;padding:0}
+.steps li{display:grid;gap:2px;padding:8px 10px;border-radius:8px;border:1px solid var(--line-100);font-size:12px;color:var(--ink-muted)}
+.steps li.is-done{color:var(--ink)} .steps li.is-on{border-color:var(--flow);background:var(--flow-soft);color:var(--ink)}
+.steps b{font:600 11px/1 var(--font-mono);color:var(--ink-faint)}
+</style>
+</helmet>
+<div class="shell" style="display: block; width: 1600px; min-height: 1600px; padding: 32px; box-sizing: border-box;">
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+
+    <div class="cell" style="grid-row: span 2;"><p class="cap">Edit account · currency change warns before saving</p>
+      <div class="scrim">
+        <div class="dlg dlg-md" role="dialog" aria-modal="true" aria-labelledby="ed-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="ed-t" class="dlg-title">Edit Apex 100K · PA-48213</h2></div><button type="button" class="icon-btn" style="border: 0;" aria-label="Close"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+          <div class="dlg-body">
+            <section class="fsec" style="padding-top: 0;"><h3 class="h3" style="font-size: 14px;">Account</h3>
+              <div class="fgrid"><label class="fld"><span class="fld-label">Name <span class="fld-req">*</span></span><input class="input" value="Apex 100K"></label><label class="fld"><span class="fld-label">Prop firm</span><input class="input" value="Apex Trader Funding"></label><label class="fld"><span class="fld-label">Platform</span><input class="input" value="Tradovate"></label><label class="fld"><span class="fld-label">Account number</span><input class="input num" value="PA-48213"></label><label class="fld"><span class="fld-label">Type</span><select class="input select"><option>Evaluation</option><option>Sim funded</option><option>Live funded</option><option>Personal</option><option>Demo</option><option>Other</option></select></label></div>
+            </section>
+            <section class="fsec"><h3 class="h3" style="font-size: 14px;">Money and time</h3>
+              <div class="fgrid"><label class="fld"><span class="fld-label">Currency</span><select class="input select"><option>EUR</option><option>USD</option></select></label><label class="fld"><span class="fld-label">Starting balance</span><span class="affix"><input class="input num" value="100000.00"><span>EUR</span></span></label><label class="fld"><span class="fld-label">Time zone</span><select class="input select"><option>America/New_York</option></select></label><label class="fld"><span class="fld-label">Trading day starts at</span><input class="input num" value="18:00"></label></div>
+              <div class="notice n-warn" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg><div><b>This recalculates existing trades</b><p>33 trades get their trading days and P&amp;L derived again in EUR. Amounts are not converted: the numbers stay, the currency label changes.</p></div></div>
+            </section>
+            <section class="fsec"><h3 class="h3" style="font-size: 14px;">Notes</h3><textarea class="ta" style="min-height: 56px;"></textarea></section>
+          </div>
+          <div class="dlg-foot"><button type="button" class="btn">Cancel</button><button type="button" class="btn btn-primary">Save changes</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Change status · nothing inferred</p>
+      <div class="scrim">
+        <div class="dlg dlg-md" role="dialog" aria-modal="true" aria-labelledby="st-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="st-t" class="dlg-title">Change status of Apex 100K</h2><p class="dlg-desc">Records a lifecycle event. Nothing is archived, deleted or calculated.</p></div></div>
+          <div class="dlg-body">
+            <div class="fgrid"><label class="fld"><span class="fld-label">New status <span class="fld-req">*</span></span><select class="input select"><option>Passed</option><option>Paused</option><option>Failed</option><option>Closed</option></select></label><label class="fld"><span class="fld-label">Took effect <span class="fld-req">*</span></span><input class="input num" value="Oct 21, 2026 4:00 PM"><span class="fld-desc">In America/New_York.</span></label></div>
+            <label class="fld"><span class="fld-label">Cause <span class="fld-opt">(optional)</span></span><select class="input select"><option>Not recorded</option><option>Profit target reached</option><option>Trailing drawdown</option></select><span class="fld-desc">Empty means the cause is unknown; FundedFlow never guesses it.</span></label>
+            <label class="fld"><span class="fld-label">Notes or evidence <span class="fld-opt">(optional)</span></span><textarea class="ta" style="min-height: 52px;"></textarea></label>
+          </div>
+          <div class="dlg-foot"><button type="button" class="btn">Cancel</button><button type="button" class="btn btn-primary">Change status</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Archive and restore · reversible</p>
+      <div class="scrim" style="display: grid; gap: 16px;">
+        <div class="dlg dlg-sm" role="alertdialog" aria-modal="true" aria-labelledby="ar-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="ar-t" class="dlg-title">Archive Apex 100K?</h2><p class="dlg-desc">It leaves the account lists and becomes read-only. Its trades, reviews and history are kept, and you can restore it at any time.</p></div></div>
+          <div class="dlg-foot"><button type="button" class="btn" style="outline: 2px solid var(--flow); outline-offset: 2px;">Cancel</button><button type="button" class="btn btn-primary">Archive</button></div>
+        </div>
+        <div class="dlg dlg-sm" role="alertdialog" aria-modal="true" aria-labelledby="re-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="re-t" class="dlg-title">Restore Old demo?</h2><p class="dlg-desc">It returns to the account lists with the status it had. It doesn't become the active account.</p></div></div>
+          <div class="dlg-foot"><button type="button" class="btn">Cancel</button><button type="button" class="btn btn-primary">Restore</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cell" style="grid-column: span 2;"><p class="cap">Start a new attempt · step 3 of 4</p>
+      <div class="scrim">
+        <div class="dlg dlg-lg" role="dialog" aria-modal="true" aria-labelledby="na-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="na-t" class="dlg-title">Start a new attempt after Apex 100K</h2><p class="dlg-desc">A reset is a new account with its own basis. The previous attempt keeps its trades and history; nothing carries over.</p></div></div>
+          <div class="dlg-body">
+            <ol class="steps" aria-label="Steps">
+              <li class="is-done"><b>1 ✓</b>How the previous attempt ended</li>
+              <li class="is-done"><b>2 ✓</b>The new attempt</li>
+              <li class="is-on" aria-current="step"><b>3</b>Rulebook for the new attempt</li>
+              <li><b>4</b>Confirm</li>
+            </ol>
+            <fieldset class="fld" style="border: 0; margin: 0; padding: 0;"><legend class="fld-label" style="margin-bottom: 6px;">Rulebook</legend>
+              <div class="optcards">
+                <label class="optcard is-on"><span class="optcard-top"><input type="radio" name="rb" checked="{{yes}}">Apex 100K Evaluation · v3</span><span class="small muted">Verified · Evaluation · Intraday trailing · from the first trading day of the new attempt</span></label>
+                <label class="optcard"><span class="optcard-top"><input type="radio" name="rb">Decide later</span><span class="small muted">The attempt shows Needs setup and Unknown risk until you assign one.</span></label>
+              </div>
+            </fieldset>
+            <p class="faint" style="margin: 0;">Only verified, active catalogue versions are offered. Your own rules can be assigned afterwards from the rulebook page.</p>
+          </div>
+          <div class="dlg-foot"><button type="button" class="btn">Cancel</button><button type="button" class="btn">Back</button><button type="button" class="btn btn-primary">Continue</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">⋯ menu on a live attempt</p>
+      <div class="scrim" style="place-items: start end;">
+        <div class="menu" role="menu" aria-label="More account actions">
+          <a role="menuitem" href="#">Use as active account</a>
+          <a role="menuitem" href="RulebookOverview.dc.html">Rulebook and assignment</a>
+          <a role="menuitem" href="QuickImport.dc.html">Quick import into this attempt</a>
+          <hr>
+          <a role="menuitem" href="#">Change status…</a>
+          <a role="menuitem" href="#">Mark failed…</a>
+          <a role="menuitem" href="#">Start new attempt…</a>
+          <hr>
+          <a role="menuitem" href="#">Archive…</a>
+          <a role="menuitem" href="SettingsDelete.dc.html" class="is-danger">Delete permanently…</a>
+        </div>
+        <p class="small muted" style="margin: 12px 0 0; max-width: 260px; justify-self: end;">"Rulebook and assignment" and "Quick import into this attempt" are new on the detail page (today they exist only on list cards and the Setup panel).</p>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">Closing a changed form</p>
+      <div class="scrim">
+        <div class="dlg dlg-sm" role="alertdialog" aria-modal="true" aria-labelledby="dx-t" style="width: 100%;">
+          <div class="dlg-head"><div><h2 id="dx-t" class="dlg-title">Discard your changes?</h2><p class="dlg-desc">The account keeps its saved settings.</p></div></div>
+          <div class="dlg-foot"><button type="button" class="btn">Keep editing</button><button type="button" class="btn btn-danger">Discard</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cell"><p class="cap">After a status change · toast</p>
+      <div class="scrim" style="place-items: end center;">
+        <div class="toast" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--profit);"><path d="M20 6L9 17l-5-5"></path></svg><div><b>Apex 100K marked Passed</b><div class="muted">Effective Oct 21, 4:00 PM ET. It now shows as a finished attempt.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":1600}}'>
+class Component extends DCLogic {
+  renderVals() { return { yes: true }; }
+}
+</script>
+</body>
+</html>

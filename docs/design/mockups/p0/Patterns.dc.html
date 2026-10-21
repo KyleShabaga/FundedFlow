@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shared P0 patterns</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.pat{display:grid;grid-template-columns:260px minmax(0,1fr);gap:24px;padding:20px 24px;border-top:1px solid var(--line-100);align-items:start}
+.pat:first-of-type{border-top:0}
+.src{font:500 11.5px/16px var(--font-mono);color:var(--ink-faint)}
+</style>
+</helmet>
+<div class="shell" style="display: block; width: 1440px; min-height: 1700px; padding: 40px; box-sizing: border-box;">
+  <div class="stack" style="gap: 20px;">
+    <div><h1 style="margin: 0; font: 600 26px/32px var(--font-display);">Shared patterns across the five families</h1><p class="lede" style="font-size: 14px;">Every pattern is a composition of existing design-system components unless marked <span class="badge b-warn">New</span>. Left: name, where it is used, what to build it from.</p></div>
+    <section class="card">
+      <div class="pat"><div class="stack-s"><b>Header breadcrumb</b><span class="badge b-warn" style="align-self: start;">New · shell</span><span class="src">PageHeader + nav[aria-label=Breadcrumb]</span><span class="small muted">Nested pages: rulebook, version, account detail, daily review. Replaces the "← All accounts" back links; the h1 names the nested page.</span></div>
+        <div class="stack-s"><ol class="crumbs"><li><a href="#a">Accounts</a></li><li><a href="#b">Apex 100K · PA-48213</a></li><li><a href="#c">Rulebook</a></li><li><span aria-current="page" style="color: var(--ink);">v4 draft</span></li></ol><span style="font: 600 24px/32px var(--font-display);">Rulebook version</span></div></div>
+
+      <div class="pat"><div class="stack-s"><b>State words with icons</b><span class="src">StatusIndicator · RuleStateBadge · Badge</span><span class="small muted">Verification, rule support, risk and freshness. Each has a word and an icon; Unknown is a dashed outline, never green.</span></div>
+        <div class="row" style="gap: 8px;">
+          <span class="status s-ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"></path></svg>Verified</span>
+          <span class="status s-warn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></svg>Needs review</span>
+          <span class="status s-warn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 7v5l3 2"></path></svg>Stale</span>
+          <span class="status s-flow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8a4 4 0 1 0 0 8zM4 21a8 8 0 0 1 16 0"></path></svg>Account rules (private)</span>
+          <span class="status s-neutral"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3l4 4L8 20H4v-4z"></path></svg>Draft</span>
+          <span class="status s-flow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6z"></path></svg>Manual check</span>
+          <span class="status s-neutral"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM5.6 5.6l12.8 12.8"></path></svg>Not tracked</span>
+          <span class="status s-neutral"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM8 12h8"></path></svg>None</span>
+          <span class="status s-neutral"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM8 12h8"></path></svg>Off</span>
+          <span class="status s-warn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"></path></svg>Needs setup</span>
+          <span class="status s-unknown"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></svg>Unknown</span>
+          <span class="status s-warn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg>Not current</span>
+        </div></div>
+
+      <div class="pat"><div class="stack-s"><b>Change marks</b><span class="badge b-warn" style="align-self: start;">New · small</span><span class="src">Badge variant or a 20-line ChangeMark in features/rulebooks</span><span class="small muted">Compare tables and edited rules. Symbol + word + tone.</span></div>
+        <div class="row"><span class="chg chg-add">+ Added</span><span class="chg chg-rem">− Removed</span><span class="chg chg-mod">~ Changed</span><span class="chg chg-same">= Same</span><span class="was small">0.30 (30%)</span><span class="small">→ 0.50 (50%)</span></div></div>
+
+      <div class="pat"><div class="stack-s"><b>Simulation frame</b><span class="src">InlineNotice info + card with a dashed flow border</span><span class="small muted">Rulebook Preview only. Never used for saved results, so a simulated figure can't be mistaken for account status.</span></div>
+        <div style="border: 2px dashed var(--flow); border-radius: 14px; padding: 14px; display: grid; gap: 8px;"><span class="status s-flow" style="align-self: start;">Simulation: not this account's status</span><span class="status s-warn" style="align-self: start;">Simulated: Caution (estimate)</span></div></div>
+
+      <div class="pat"><div class="stack-s"><b>Three separate facts</b><span class="src">MetricCard ×3 in one card, or StatList</span><span class="small muted">Daily review summary: process, outcome, day. Never combined into a score.</span></div>
+        <div class="card split3" style="background: var(--bg-000);"><section><span class="label">Process (plan adherence)</span><span class="big">67%</span></section><section><span class="label">Outcome (closed trades)</span><span class="big pos">+$212.50</span></section><section><span class="label">Day</span><span class="small" style="font-weight: 600;">Traded</span></section></div></div>
+
+      <div class="pat"><div class="stack-s"><b>Sticky action bar</b><span class="src">existing .dr-actions / rulebook save bar</span><span class="small muted">Rulebook editor, daily review, Quick import confirm. Status (live region) left, actions right, one primary.</span></div>
+        <div class="actbar" style="position: static;"><span class="save-state"><span class="dot dot-warn" aria-hidden="true"></span>Unsaved changes</span><div class="row"><button type="button" class="btn btn-sm">Undo changes</button><button type="button" class="btn btn-sm btn-primary">Save draft</button></div></div></div>
+
+      <div class="pat"><div class="stack-s"><b>Typed confirmation</b><span class="src">DestructiveActionDialog (Build 25)</span><span class="small muted">Restore, delete account, erase journal. Phrase shown in mono, never prefilled; button disabled until it matches; Cancel focused first.</span></div>
+        <label class="fld" style="max-width: 420px;"><span class="fld-desc">Type <span class="phrase">ERASE ENTIRE JOURNAL</span> to continue. It is case-sensitive.</span><input class="input num is-invalid" value="ERASE ENTIRE"><span class="fld-err"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 8v4M12 16h.01"></path></svg>This doesn't match yet.</span></label></div>
+
+      <div class="pat"><div class="stack-s"><b>Option cards</b><span class="badge b-warn" style="align-self: start;">New · RadioGroup variant</span><span class="src">RadioGroup with a "cards" layout</span><span class="small muted">Export kind, draft destination, new-attempt rulebook. Each option carries its consequence in one line.</span></div>
+        <div class="optcards" style="max-width: 620px;"><label class="optcard is-on"><span class="optcard-top"><input type="radio" name="p" checked="{{yes}}">Full backup</span><span class="small muted">Restorable.</span></label><label class="optcard"><span class="optcard-top"><input type="radio" name="p">Trade CSV</span><span class="small muted">Not a backup.</span></label></div></div>
+
+      <div class="pat"><div class="stack-s"><b>Settings section navigation</b><span class="badge b-warn" style="align-self: start;">New · Settings only</span><span class="src">nav of in-page links; scroll row under 900 px</span><span class="small muted">Groups: Your data, App (planned, disabled), Development builds.</span></div>
+        <nav class="set-nav" style="max-width: 240px;"><a href="#x" class="is-on">On this computer</a><a href="#x">Export</a><a href="#x" class="is-future">Appearance <span class="badge b-neutral" style="margin-left: auto;">Planned</span></a></nav></div>
+
+      <div class="pat"><div class="stack-s"><b>Danger zone</b><span class="src">FormSection + loss border</span><span class="small muted">Only Settings. Each row names its scope; destructive buttons use the loss outline, never a filled red.</span></div>
+        <div class="danger" style="max-width: 620px;"><div class="danger-row"><b>Erase the entire local journal</b><button type="button" class="btn btn-danger btn-sm">Erase entire journal…</button></div></div></div>
+    </section>
+    <p class="faint" style="margin: 0;">Spacing: 32 px content padding, 24 px between page sections, 16 px card padding (24 px for wide cards), 12 px table cells. Type: 24 px page title, 18 px page section, 15 px card title, 14 px body, 12 px labels. No new tokens.</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1700}}'>
+class Component extends DCLogic {
+  renderVals() { return { yes: true }; }
+}
+</script>
+</body>
+</html>
