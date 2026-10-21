@@ -137,6 +137,13 @@ run.
   - **Exact value equality** for primitives: `money.json`, compared as strings and bigints with no tolerance.
   - **Documented differences** carry a `tsDivergence` reason.
 
+`apps/desktop/src/test/fixtures/command-wire.json` is a **wire-contract fixture** (kept with the desktop, which is
+its only reader): every read command's JSON payload, recorded by
+`src-tauri/src/wire_contract.rs` for a fresh journal and for the v3/v4 journals after upgrade (generated ids and
+run-time timestamps replaced with placeholders). `cargo test` fails when Rust output changes without regenerating it
+(`FUNDEDFLOW_UPDATE_FIXTURES=1 cargo test --lib wire_contract`), and the desktop test
+`features/shared/wire-contract.test.ts` runs every payload through the Tauri adapter and the Build 14 read operations.
+
 `catalogue.json` is a **contract fixture**, not a parity fixture. It holds synthetic, human-written catalogue
 records: providers through promotions, account links and phase events. Vitest checks that they parse unchanged
 and form a consistent graph. It has no Rust-generated outputs. `parity.rs` round-trips the file through the Rust

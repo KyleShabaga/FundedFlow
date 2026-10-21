@@ -64,3 +64,38 @@ CRUD and scoped refresh, CSV preview versus committed/failed batches, runtime lo
 and write outcome review. After Build 13 merges, map these hooks to its actual presentation contract and
 add route-level tests in a separate integration change. Do not mark live risk or missing backend capabilities
 accepted based on the mocked tests above.
+
+## Integration review follow-up (2026-10-21)
+
+Branch `feat/build-13-14-integration`: Build 14 (`feat/build-14-typed-gateways`) merged with Build 13
+(`feat/build-13-design-system-async-states`, including its review fixes), then the review's fixes. Verified on
+Windows 11 with Node and the Rust toolchain.
+
+| Command | Result |
+| --- | --- |
+| `npm run typecheck` | Passed |
+| `npm test` | Passed: domain 307 / 8 files; desktop 321 / 26 files |
+| `npm run build` | Passed |
+| `npm run check` | Passed (domain boundaries; dist OK, 143 exports) |
+| `git diff --check` | Passed |
+| `cargo test` | Passed: 154, 1 ignored (includes the new `wire_contract` test) |
+| `cargo clippy --all-targets -- -D warnings` | Passed |
+
+What changed and how it is verified:
+
+- **Presentation adapter** (`shared/presentation.ts`): `presentation.test.tsx` drives the real design-system
+  `StateBoundary`, `DataTable`, `TextField`, `ValidationSummary` and `MutationFeedback` from the real hooks:
+  loading to data, valid empty, failure never empty, startup checking as loading, runtime loss and newer schema as
+  unavailable, failed refresh as stale "last loaded", unknown P&L as unknown, currency per account, field and
+  summary errors with focus, duplicate submits (click and Enter), invalidation after a confirmed write, and an
+  uncertain write that offers only a check and unlocks after "I've checked the records".
+- **Validation messages**: our schemas' and Rust's own field messages are kept when free of paths, SQL, Rust
+  sources and line breaks (`operations.test.ts`).
+- **Runtime pending**: `checking`/`recovering` report initial loading with no error (`hooks.test.tsx`).
+- **CSV preview deadline**: 60 s instead of 10 s (`operations.test.ts`).
+- **Real Rust payloads**: `wire_contract.rs` records every read command's payload for a fresh journal and for the
+  v3/v4 journals after upgrade; `wire-contract.test.ts` passes all of them through the Tauri adapter and every
+  Build 14 read operation. This replaces the fake-invoke-only evidence for payload shapes and legacy data.
+
+Still not verified: the packaged Windows app over real Tauri IPC (WebView2), interactive keyboard use and display
+scaling. The wire check covers payload shapes, not IPC transport, timing or native cancellation.

@@ -4,7 +4,7 @@
 //! the store results gives the wire JSON. This test records those payloads for
 //! a fresh journal that exercises every frontend view model, and for the real
 //! v3 and v4 journals after upgrade, into
-//! `packages/domain/test/fixtures/command-wire.json`. The desktop test
+//! `apps/desktop/src/test/fixtures/command-wire.json`. The desktop test
 //! `features/shared/wire-contract.test.ts` then runs every record through the
 //! Build 14 view-model mappers, so a Rust payload change that the frontend
 //! would reject fails a test instead of a screen.
@@ -45,7 +45,7 @@ MNQZ6,-2,0,0.25,900000000007,900000000008,1,abc,29787.25,$26.00,10/19/2026 07:47
 const PLACEHOLDER_INSTANT: &str = "2026-01-01T00:00:00.000Z";
 
 fn fixture_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../packages/domain/test/fixtures/command-wire.json")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../src/test/fixtures/command-wire.json")
 }
 
 fn wire<T: Serialize>(value: T) -> Value {

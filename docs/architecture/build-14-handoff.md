@@ -44,16 +44,20 @@ its persisted record does not freeze currency; `accountCurrency` describes only 
 historical units or live health. History events have no backend IDs; do not use invented record IDs or array
 positions as persistent identity. Import problem-row identity is the batch ID plus row number.
 
-Build 13 owns presentation types and components. Map these plain facts in a later route integration:
+Build 13 owns presentation types and components. **Do not map these facts by hand in screens: use
+`shared/presentation.ts`** (`toAsyncState`, `toMutationState`, `fieldErrors`, `issueSentence`, `retryRead`), which
+encodes the table below and is tested against the real design-system components in `presentation.test.tsx`.
+The facts it reads:
 
 | Hook fact | Presentation meaning |
 | --- | --- |
-| `isInitialLoading` | First read while runtime is ready; no validated data yet |
+| `isInitialLoading` | No validated data yet, while the runtime is ready and the first read runs, or while the runtime is still checking/recovering |
+| `isRuntimePending` | The runtime is checking or recovering: a transient wait, not unavailable data; `error` is null |
 | `isRefreshing` | Background request with retained data |
 | `isEmpty === true` | Successful, runtime-ready empty result; `null` means emptiness is unclassified |
 | `error` | Safe FeatureDataError category/message/field issues; render error or unavailable controls |
-| `isStale`, `staleReason` | Retained data is old, refresh failed, or runtime is unavailable; show provenance/time |
-| `isUnavailable`, `isUnsupported`, `runtimeKind` | Use shell recovery/update instructions; never show an empty-success state |
+| `isStale`, `staleReason` | `refresh-error` / `runtime`: retained data could not be confirmed, show it as stale with its receipt time. `cache-age` is only TanStack refetch bookkeeping (older than 30 s); local data changes only through invalidated writes, so it is **not** a stale notice |
+| `isUnavailable`, `isUnsupported`, `runtimeKind` | Settled unavailability or a newer journal: use shell recovery/update instructions; never show an empty-success state |
 | `isUsable` | Successful current query with ready runtime; still inspect freshness/provenance before risk display |
 | snapshot `status: "unknown"` / nullable metrics | Preserve unknown/absent, distinct from safe/zero |
 | capability `available: false` | Explicit unsupported feature with reason and owning-build dependency; no metric data |
@@ -64,7 +68,8 @@ risk. Errors are never substituted with empty arrays. Raw SQL, Rust paths and im
 `backendKind` preserves known repository categories; `diagnosticReference` is null because the native contract
 has no correlation identifier.
 
-Reads use a 30-second stale window, a 10-second deadline per repository step, and at most one retry (500 ms)
+Reads use a 30-second stale window, a 10-second deadline per repository step (60 seconds for CSV previews, which
+parse up to 10 MB / 50,000 rows), and at most one retry (500 ms)
 for timeout/unexpected failures while ready. Validation/conflict/unavailable/invalid-response do not retry.
 No feature focus poll or recovery manager is installed. Unavailable responses ask the existing runtime to
 check itself. Runtime loss cancels consumption and invalidates cached reads without refetching until ready.
@@ -108,10 +113,12 @@ Query refresh failure after a confirmed write never reclassifies that write as f
 
 ## Integration and backend dependencies
 
-After Build 13 merges, wire route consumers to these hooks and map the plain flags above into Build 13's
-actual presentation contract. Add UI form/toast/error/uncertainty interactions and route-level integration
-tests in a separate coordinated change. Keep AppProviders and RuntimeProvider as the existing owners.
-No unfinished Build 13 exports are imported here.
+Build 13 is integrated through `shared/presentation.ts` (type-only imports of the design system). Route
+consumers render `StateBoundary`/`ChartPanel`/`DataTable` fallbacks from `toAsyncState`, and `MutationFeedback`
+from `toMutationState`, passing the account's `currency` to every money component. For uncertain writes, put an
+"I've checked the records" button in `MutationFeedback`'s `actions` that calls `acknowledgeUncertainOutcome`
+once `canAcknowledgeUncertainOutcome` is true. Keep AppProviders and RuntimeProvider as the existing owners.
+Field-level contract details are in [build-14-contracts.md](build-14-contracts.md).
 
 Missing contracts remain explicit: live Today summary/risk, aggregate Insights and structured reviews;
 historical snapshot currency; stable history-event IDs; native cancellation/correlation IDs; durable
