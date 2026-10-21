@@ -59,7 +59,7 @@ at 16, idempotent rerun, the divergent-15 repair, restart persistence through `o
   unchanged (`canAssign` still gates it; a test proves an assigned draft is refused).
 - Desktop (`lib/data/calculate-risk.ts`, on #42): `loadRiskCalculation`, `evaluateRisk`.
 - Desktop (`features/rulebooks/api/risk.ts`): `readCalculationInputs`, `readFreshness`, `calculateNow`,
-  `recordedEngineResult`, `priorBreachesFrom`; hooks `useCalculationInputs`, `useCalculationFreshness`,
+  `recordedEngineResult`, `priorBreachesFrom` (P0-02: moved natively into `capture_account_risk`); hooks `useCalculationInputs`, `useCalculationFreshness`,
   `useCalculateRisk`. Preview and freshness queries sit under the account's `snapshotsRoot` key, which trade,
   import, ledger and (now) rulebook writes already invalidate.
 - Rust: publishing an account-private draft sets `user_confirmed_at` (the engine refuses unconfirmed private
