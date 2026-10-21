@@ -22,6 +22,7 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Per-user data directory, e.g. %APPDATA%\com.fundedflow.desktop\ on
             // Windows; never the install directory. Opening, backing up and

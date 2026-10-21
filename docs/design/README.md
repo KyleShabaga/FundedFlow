@@ -36,6 +36,7 @@ specification). When a spec and a card disagree, the card wins; fix the spec in 
 | [12 Economic calendar](screens/12-economic-calendar.md) | 41 Economic calendar and market sessions | P2 | Not V1 |
 | [13 Account rulebook](screens/13-rulebook.md) | 19 Rulebook version editor and calculation explanation | P0 | Needs 16 for preview/explanation (blocked) |
 | [14 Daily review](screens/14-daily-review.md) | 22 Daily review and plan adherence | P0 | A nested Journal page; opened from Today, By day and Library |
+| [15 Settings: your data](screens/15-settings-data-controls.md) | 25 Data-control screens (backend 24) | P0 | Export, restore, permanent deletion; no mockup |
 
 Shared patterns ([components.md](components.md)) belong to **Build 13**; their visual specification to **Build 7**.
 

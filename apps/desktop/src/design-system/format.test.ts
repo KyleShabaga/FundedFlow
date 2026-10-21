@@ -4,6 +4,7 @@ import {
   UNKNOWN,
   compareMoney,
   currencySymbol,
+  formatBytes,
   formatInstant,
   formatMoney,
   formatMoneyCompact,
@@ -144,5 +145,17 @@ describe("compareMoney", () => {
     expect([...values].sort((a, b) => compareMoney(a, b))).toEqual(["-2.5", "0", "10", "9007199254740.993", null]);
     expect([...values].sort((a, b) => compareMoney(a, b, "descending"))).toEqual(["9007199254740.993", "10", "0", "-2.5", null]);
     expect(compareMoney("9007199254740.993", "9007199254740.992")).toBe(1);
+  });
+});
+
+describe("formatBytes", () => {
+  it("scales by 1024 and keeps unknown as unknown", () => {
+    expect(formatBytes(0)).toBe("0 B");
+    expect(formatBytes(1023)).toBe("1023 B");
+    expect(formatBytes(1536)).toBe("1.5 KB");
+    expect(formatBytes(12.3 * 1024 * 1024)).toBe("12 MB");
+    expect(formatBytes(1090519040)).toBe("1.0 GB");
+    expect(formatBytes(null)).toBe(UNKNOWN);
+    expect(formatBytes(-1)).toBe(UNKNOWN);
   });
 });
