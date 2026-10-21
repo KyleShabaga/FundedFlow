@@ -147,6 +147,8 @@ runs only when collector files change).
 ## Known limitations
 
 - Zendesk is the only platform adapter. Intercom, Help Scout and GitBook need their documentation reviewed first.
+- robots.txt applies to Zendesk API URLs exactly as to pages, so a help center whose robots.txt disallows `/api/`
+  is `robots_blocked` by design; use manual capture for it.
 - A page that renders its text with JavaScript, behind an unchanged HTML shell, answers 304 and is reported
   `unchanged`; use `--force` to re-render it.
 - MHTML ("single file") captures are not supported; save as HTML, PDF or text.

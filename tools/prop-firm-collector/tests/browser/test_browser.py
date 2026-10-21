@@ -140,3 +140,21 @@ def test_short_static_page_keeps_the_http_version_and_js_page_uses_304_next_time
     forced = harness.run(discover=False, force=True)
     assert {r.outcome.value for r in forced.results} == {"unchanged"}
     assert {r.reason for r in forced.results} == {None}
+
+
+@pytest.mark.browser
+@pytest.mark.enable_socket
+def test_in_browser_redirect_to_a_robots_disallowed_page_is_refused(
+    chromium: None, harness: Harness, site_copy: Path
+) -> None:
+    page = site_copy / "www.example-firm.test" / "moved.html"
+    page.write_text(
+        '<html><head><script>location.replace("/private/internal")</script></head><body>Moving</body></html>',
+        encoding="utf-8",
+    )
+    harness.renderer = renderer()
+    firm = add_firm(harness.conn, harness.clock)
+    add_seed(harness.conn, firm, harness.clock, "https://www.example-firm.test/moved", requires_js=True)
+    summary = harness.run(discover=False)
+    assert [r.outcome.value for r in summary.results] == ["robots_blocked"]
+    assert harness.conn.execute("SELECT COUNT(*) FROM source_snapshots").fetchone()[0] == 0

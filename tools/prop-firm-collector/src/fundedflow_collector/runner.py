@@ -912,6 +912,11 @@ class FirmRunner:
                 target, source, result, Outcome.NOT_ALLOWLISTED, f"browser ended on unauthorised host {final_host}"
             )
             return
+        if rendered.final_url != target.url:
+            block = self.check(rendered.final_url)
+            if block is not None:
+                self._fail(target, source, result, block.outcome, f"browser redirect: {block.reason}")
+                return
         try:
             doc = parse_html(
                 html, max_bytes=self.settings.limits.max_html_bytes, min_text_chars=self.settings.browser.min_text_chars
