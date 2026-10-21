@@ -14,6 +14,8 @@ repository, Tauri `invoke` and native dialog), **native** (Rust tests on file jo
 
 **Rust archive regression (main and #53 red).** `data_controls::current_schema_tests::
 schema18_archive_restores_reviews_daily_history_corrections_screenshots_and_null_snapshots` failed `20 != 18`.
+(#52 then landed the same `latest_version()` comparison on main and renamed the test to
+`current_schema_archive_restores_…`; merging main kept that name and these extra schema-object checks.)
 Root cause: Build 10.5 (#50) merged migrations 19 (`rulebook_binding_provider`) and 20 (`source_fact_immutability`)
 after Build 24's test was written. Both are trigger-only (no tables or columns). The test creates its source journal
 at the latest schema, so the archive manifest correctly said 20; the literal 18 was stale, not the data. The test
@@ -148,7 +150,7 @@ Audit of other forms (not changed; distinct decisions recorded):
 
 ## 3. Build 26.7: test reliability
 
-Protocol (unchanged from Build 26): two full desktop Vitest runs at once, three rounds, six separate logs, default
+Protocol (unchanged from Build 26; run before main's #52 merge): two full desktop Vitest runs at once, three rounds, six separate logs, default
 timeouts (5 s test, 1 s `findBy`), on the owner's Windows 11 machine.
 
 | | Runs | Timeouts | Tests |
@@ -167,17 +169,17 @@ No retries, skips, timeout changes, weakened assertions or worker caps.
 
 ## 4. Checks
 
-Local, Windows 11 Pro 10.0.26200, on the code of the final commit (only this document changed after):
+Local, Windows 11 Pro 10.0.26200, on the merged head (main `2a65c18` with #52 merged in):
 
 | Command | Result |
 |---|---|
 | `npm run typecheck` | pass |
-| `npm test` | 496 domain + 663 desktop passed |
+| `npm test` | 496 domain + 674 desktop passed (674 includes main's new import tests) |
 | `npm run build` | pass |
 | `npm run check` | pass (dist 299 exports) |
 | `git diff --check origin/main` | pass |
-| `cargo test --lib schema18_archive` | 1 passed |
-| `cargo test` | 293 passed, 0 failed, 2 ignored |
+| `cargo test --lib current_schema_archive` | 1 passed |
+| `cargo test` | 303 passed, 0 failed, 2 ignored |
 | `cargo clippy --all-targets -- -D warnings` | pass |
 
 Windows CI for the pushed head is recorded in the PR description.
