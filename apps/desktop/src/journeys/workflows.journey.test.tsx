@@ -42,6 +42,26 @@ async function saveSafe(store: AppStore, accountId: string) {
 }
 
 describe("import to every view", () => {
+  it("quick-imports a platform export from the header menu, and Journal shows it", async () => {
+    const store = createAppStore({ accounts: [makeAccount({ id: "acct-a", name: "Eval A" })], activeId: "acct-a" });
+    const { user } = renderApp("/journal", store);
+    expect(await screen.findByText(/No trades in this account yet/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Import CSV" }));
+    await user.click(await screen.findByRole("menuitem", { name: /Quick import/ }));
+    await waitFor(() => expect(currentPath()).toBe("/import/quick"));
+    await screen.findByRole("group", { name: "Choose a CSV file" });
+    const golden = goldenCase("paired-short-warning");
+    await user.upload(document.querySelector('input[type="file"]') as HTMLInputElement, new File([golden.request.content], "Performance.csv", { type: "text/csv" }));
+    expect(await screen.findByRole("heading", { name: "What would be imported" })).toBeTruthy();
+    expect(store.imports.repository.commit).not.toHaveBeenCalled();
+    await user.click(await screen.findByRole("button", { name: "Confirm import of 1 trade" }));
+    expect(await screen.findByRole("heading", { name: "Imported 1 trade into Eval A" })).toBeTruthy();
+    expect(store.imports.repository.commit).toHaveBeenCalledTimes(1);
+    expect(store.imports.repository.commit.mock.calls[0][0]).toMatchObject({ accountId: "acct-a", targetAcknowledgement: { historicalConfirmed: false } });
+    await go(user, "Journal");
+    expect(await screen.findByText("MNQZ6")).toBeTruthy();
+  });
+
   it("imports a CSV into the active attempt, and Journal, Today and Insights show it without a reload", async () => {
     const store = createAppStore({ accounts: [makeAccount({ id: "acct-a", name: "Eval A" })], activeId: "acct-a" });
     const { user } = renderApp("/journal", store);
@@ -50,8 +70,11 @@ describe("import to every view", () => {
     await go(user, "Insights");
     expect(await screen.findByText(/No closed trades in these attempts/)).toBeTruthy();
 
+    // Import CSV offers Quick import and the full wizard (Build 18.5); a generic CSV belongs in the wizard.
     await user.click(screen.getByRole("button", { name: "Import CSV" }));
+    await user.click(await screen.findByRole("menuitem", { name: /Full wizard/ }));
     await waitFor(() => expect(currentPath()).toBe("/import"));
+    await screen.findByRole("group", { name: "Choose a CSV file" });
     const golden = goldenCase("generic-fees-and-duplicate");
     await user.upload(document.querySelector('input[type="file"]') as HTMLInputElement, new File([golden.request.content], "statement.csv", { type: "text/csv" }));
     await user.click(await screen.findByRole("button", { name: "Check the file" }));
