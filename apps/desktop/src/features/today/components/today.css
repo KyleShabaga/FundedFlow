@@ -1,0 +1,53 @@
+/*
+ * Today (Build 21). Structure follows docs/design/screens/08-today.md; every value comes from tokens.css and the
+ * components from the design system.
+ */
+.td-page { display: grid; gap: var(--space-4); max-width: 1600px; min-width: 0; grid-template-columns: minmax(0, 1fr); font-family: var(--font-sans); color: var(--ink); }
+.td-intro { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.td-disclaimer-lead { margin: 0; color: var(--ink-muted); max-width: 100ch; }
+.td-disclaimer-lead strong { color: var(--ink); }
+.td-panel { display: grid; gap: var(--space-3); padding: var(--space-4); min-width: 0; }
+.td-panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); flex-wrap: wrap; }
+.td-panel-head .ds-title { margin: 0; }
+.td-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: flex-end; }
+.td-actions-left { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; margin: 0; }
+.td-list { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.td-hash { overflow-wrap: anywhere; font-size: 12px; }
+
+/* Selected account */
+.td-account-name { margin: 0 0 2px; font: 600 20px/28px var(--font-display); overflow-wrap: anywhere; }
+.td-headline { display: grid; gap: var(--space-1); justify-items: start; }
+.td-status { font-size: 15px; }
+.td-headline-detail { margin: 0; max-width: 100ch; }
+.td-disclaimer { display: flex; gap: 6px; align-items: center; margin: 0; color: var(--ink-muted); font-size: 12.5px; }
+.td-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: var(--space-3); }
+.td-metric { display: grid; min-width: 0; }
+.td-action-grid { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.td-days { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr)); gap: var(--space-3); }
+
+/* All accounts */
+.td-overview { display: grid; gap: var(--space-3); min-width: 0; }
+.td-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: var(--space-3); }
+.td-card { display: grid; gap: var(--space-2); padding: var(--space-4); align-content: start; height: 100%; box-sizing: border-box; }
+.td-card.is-selected { border-color: var(--flow); box-shadow: inset 0 0 0 1px var(--flow); }
+.td-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2); flex-wrap: wrap; }
+.td-card-title { margin: 0; font: 600 15px/22px var(--font-display); overflow-wrap: anywhere; }
+.td-card-line { margin: 0; display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.td-card-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); margin-top: auto; }
+
+/* Explanations and the checkpoint dialog */
+.td-explain { display: grid; gap: var(--space-3); min-width: 0; }
+.td-explain-value { display: grid; gap: 4px; justify-items: start; }
+.td-trades { list-style: none; padding: 0; }
+.td-form { display: grid; gap: var(--space-3); min-width: 0; }
+.td-form-footer { display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap; }
+.td-assert { display: grid; gap: var(--space-2); border: 1px solid var(--line-100); border-radius: var(--radius-md); padding: var(--space-3); margin: 0; min-width: 0; }
+.td-inline-fields { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: flex-end; }
+.td-inline-fields > * { flex: 1 1 180px; min-width: 0; }
+.td-compare { display: grid; gap: var(--space-2); }
+.td-compare .ds-title { margin: 0; display: flex; gap: var(--space-2); align-items: center; }
+.td-compare p { margin: 0; }
+
+.td-history summary { cursor: pointer; font-weight: 600; }
+.td-history summary:focus-visible, .td-page a:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; border-radius: var(--radius-sm); }
+.td-page a { color: var(--flow); font-weight: 600; }

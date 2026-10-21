@@ -6,6 +6,7 @@ export * from "./imports/hooks/imports";
 export * from "./insights/hooks/insights";
 export * from "./today/hooks/today";
 export * from "./ledger/hooks/ledger";
+export * from "./evidence/hooks/evidence";
 export * from "./settings/hooks/settings";
 export * from "./references/hooks/references";
 export * from "./accounts/view-models/account";

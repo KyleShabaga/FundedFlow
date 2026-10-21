@@ -44,7 +44,7 @@ it("rejects unknown statuses, missing values, invalid times, dates and cross-acc
 it("sanitizes stored import diagnostics and exposes unsupported capabilities without data", () => {
   const failed = toImportViewModel({ ...batch, status: "failed", errorSummary: "SQL /private/path" });
   expect(failed.failureMessage).toContain("not completed"); expect(failed).not.toHaveProperty("errorSummary");
-  for (const feature of ["today-summary", "insights-aggregates", "structured-reviews"] as const) {
+  for (const feature of ["insights-aggregates", "structured-reviews"] as const) {
     const capability = getCapability(feature);
     expect(capability.available).toBe(false); expect(capability).not.toHaveProperty("data");
   }

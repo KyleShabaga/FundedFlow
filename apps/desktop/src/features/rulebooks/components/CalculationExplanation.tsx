@@ -123,7 +123,8 @@ export function ManualRulesList({ version }: { version: RulebookVersionDetail })
   );
 }
 
-function CalculateNow({ accountId, currency, current }: { accountId: string; currency: string; current: RulebookVersionDetail | null }) {
+/** The explicit "calculate and save" action (also Today's Calculate estimate, Build 21). Never runs on its own. */
+export function CalculateNow({ accountId, currency, current, onSaved }: { accountId: string; currency: string; current: RulebookVersionDetail | null; onSaved?: () => void }) {
   const settings = useCalculationSettings(accountId, currency, current);
   const calculate = useCalculateRisk(accountId);
   const toast = useToast();
@@ -131,6 +132,7 @@ function CalculateNow({ accountId, currency, current }: { accountId: string; cur
     try {
       const saved = await calculate.submit({ query: { accountId, asOf: new Date().toISOString(), coverage: settings.coverage }, policy: settings.policy });
       toast.show({ tone: "success", title: "Calculation saved", description: `Status ${saved.status}. Earlier calculations are kept.` });
+      onSaved?.();
     } catch { /* MutationFeedback shows it. */ }
   };
   return (
