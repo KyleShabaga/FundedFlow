@@ -273,6 +273,11 @@ pub fn risk_inputs(
     if !observations.iter().any(|o| {
         o.input.kind == "eod_settlement"
             && o.input.value.is_some()
+            && o.input.confirmation == "user_confirmed"
+            && o.input.confidence == "user_reported"
+            && !observations
+                .iter()
+                .any(|r| r.supersedes_id.as_deref() == Some(&o.id))
             && o.input.currency == account.currency
             && o.input.observed_at <= format_instant(at)
     }) {

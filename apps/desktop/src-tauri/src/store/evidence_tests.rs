@@ -950,3 +950,43 @@ fn eod_and_peak_evidence_preserve_explicit_financial_basis() {
         "balance"
     );
 }
+
+#[test]
+fn corrected_unavailable_eod_does_not_promote_original_to_available_history() {
+    let mut c = db();
+    let a = accounts::create(&mut c, account_input("EOD correction")).unwrap();
+    let old = evidence::create(
+        &mut c,
+        input(
+            &a.id,
+            "eod_settlement",
+            Some("50000"),
+            "2026-10-19T20:00:00Z",
+        ),
+    )
+    .unwrap();
+    let mut replacement = old.input.clone();
+    replacement.value = None;
+    evidence::correct(
+        &mut c,
+        &old.id,
+        ObservationCorrection {
+            replacement,
+            reason: "Statement value could not be verified".into(),
+        },
+    )
+    .unwrap();
+    let mut cov = coverage();
+    cov.eod_history = "available".into();
+    let result = evidence::risk_inputs(
+        &mut c,
+        evidence::RiskInputsQuery {
+            account_id: a.id,
+            as_of: "2026-10-20T20:00:00Z".into(),
+            coverage: cov,
+        },
+    )
+    .unwrap();
+    assert_eq!(result["coverage"]["eodHistory"], "missing");
+    assert_eq!(result["observations"].as_array().unwrap().len(), 2);
+}

@@ -31,9 +31,10 @@ export function requiredRuleEvidence<T extends RuleType>(type: T, parameters: Ru
 export function assessRuleEvidence<T extends RuleType>(input: AccountRiskInputs, type: T, parameters: RuleParameters<T>) {
   return requiredRuleEvidence(type, parameters).map(requirement => {
     let state: EvidenceState = requirement in input.coverage && requirement !== "sourceReference" ? input.coverage[requirement as Exclude<keyof typeof input.coverage, "sourceReference">] : "unsupported";
+    if (requirement === "manual_policy_verification") state = "manual_verification";
     if (["openPositions", "intradayHistory", "execution_history"].includes(requirement)) state = "unsupported";
     if (requirement === "baseline" && !input.observations.some(o => o.kind === "opening_balance" && o.value !== null && o.confirmation === "user_confirmed" && o.confidence === "user_reported" && o.currency === input.account.currency && Date.parse(o.observedAt) <= Date.parse(input.asOf) && !input.observations.some(r => r.supersedesId === o.id))) state = "missing";
-    if (requirement === "eodHistory" && !input.observations.some(o => o.kind === "eod_settlement" && o.value !== null && Date.parse(o.observedAt) <= Date.parse(input.asOf))) state = "missing";
+    if (requirement === "eodHistory" && !input.observations.some(o => o.kind === "eod_settlement" && o.value !== null && o.currency === input.account.currency && o.confirmation === "user_confirmed" && o.confidence === "user_reported" && !input.observations.some(r => r.supersedesId === o.id) && Date.parse(o.observedAt) <= Date.parse(input.asOf))) state = "missing";
     if (requirement === "current_equity") {
       const replaced = new Set(input.observations.map(o => o.supersedesId));
       const values = input.observations.filter(o => o.kind === "equity" && o.currency === input.account.currency && !replaced.has(o.id));

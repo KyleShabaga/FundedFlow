@@ -88,7 +88,7 @@ Instants are normalized by Rust to UTC milliseconds. Trading day uses the existi
 | scaling_plan | Baseline/live positions plus manual verified schedule/capacity policy |
 | trading_restriction / manual_check / unknown | Manual policy verification; no automated sufficiency claim |
 
-Missing, incomplete, stale, conflicting, unsupported and manual_verification are distinct states. Explicit-none/disabled/not-applicable rule parameters retain Build 9.5 meaning; this build does not substitute zero or decide aggregate risk.
+Missing, incomplete, stale, conflicting, unsupported and manual_verification are distinct states. Superseded EOD records cannot satisfy history requirements when their replacement is unavailable; manual policy prerequisites return manual_verification. Explicit-none/disabled/not-applicable rule parameters retain Build 9.5 meaning; this build does not substitute zero or decide aggregate risk.
 
 ## Scenario evidence
 
@@ -163,10 +163,10 @@ Native tests are in `store/evidence_tests.rs`; existing Build 10/9.5/attempt/upg
 ## Verification recorded before draft PR
 
 - `npm run typecheck`: passed.
-- `npm test`: passed (369 domain + 335 desktop at full-suite run); the final added basis case and exact-input checks passed the focused domain rerun (370 domain total) and the adapter rerun (14 cases). Current total: 705 Vitest tests across the two packages.
+- `npm test`: passed after final review (370 domain + 336 desktop; 706 tests total), including the regression for a superseded EOD value corrected to unknown.
 - `npm run build`, `npm run check`, `git diff --check`: passed after final domain changes.
 - `cargo test --locked -- --test-threads=4`: 183 passed, 4 failed, 2 ignored at full-suite run. The failures are the pre-existing Linux temporary-Journal lifetime issue in legacy rulebook fixture tests (SQLite IO 1802); see [existing Triage](https://app.notion.com/p/3ff1bd4b6bde819499abc89a9f2f9795). The legacy test files are untouched. No native regressions were observed.
-- Final `cargo test --locked evidence_tests -- --test-threads=4`: 17 passed, including the added explicit EOD/peak basis case, all without fixture-update mode.
+- Final `cargo test --locked evidence_tests -- --test-threads=4`: 18 passed, including the explicit EOD/peak basis and superseded-to-unavailable EOD cases, all without fixture-update mode.
 - `cargo clippy --locked --all-targets -- -D warnings`: passed after final backend changes.
 - 26 Rust-generated reconciliation parity cases and 12 native command payloads are checked in and tested by both hosts; unchanged money/trade parity remains in the existing suite.
 - Linux native tests used the provisioned Rust/WebKit runtime runner. This is native SQLite/backend evidence, not packaged Windows/Tauri UI acceptance. Windows CI evidence is recorded in the PR when available. Human acceptance and actual Build 16 consumption remain pending.

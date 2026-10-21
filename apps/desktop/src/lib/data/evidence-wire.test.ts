@@ -57,3 +57,12 @@ it("keeps stale, unconfirmed and conflicting equity distinct", () => {
   input.observations[0]!.observedAt=input.asOf;input.observations[0]!.confirmation="unconfirmed";expect(check()).toBe("manual_verification");
   input.observations[0]!.confirmation="user_confirmed";input.observations.push({...input.observations[0]!,id:"competing",value:"1"});expect(check()).toBe("conflicting");
 });
+
+it("does not count superseded EOD values as sufficient after a correction to unknown", () => {
+  const input=accountRiskInputsSchema.parse(fixture.find(f=>f.command==="get_account_risk_inputs")!.output);
+  const original={...input.observations[0]!,id:"eod-original",kind:"eod_settlement" as const};
+  input.observations=[original,{...original,id:"eod-correction",supersedesId:original.id,value:null}];input.coverage.eodHistory="available";
+  const p={amount:{state:"unknown"},method:"end_of_day_trailing",basis:"realized",lock:{state:"unknown"}} as const;
+  expect(assessRuleEvidence(input,"max_drawdown",p).find(r=>r.requirement==="eodHistory")!.state).toBe("missing");
+  expect(assessRuleEvidence(input,"manual_check",{description:"Check sourced provider policy"})[0]!.state).toBe("manual_verification");
+});
