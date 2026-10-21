@@ -114,6 +114,8 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
   open with a safe message if it fails. It never claims "nothing changed"; pass `describeError` when the data layer
   knows. The destructive actions themselves belong to later cards. The developer panel keeps its own
   `components/ConfirmDialog.tsx` until those cards move to this one.
+- `DropdownMenu` runs an item's action just after the menu closes, so an item can open a `Dialog` without the menu's
+  focus return dismissing it.
 - `Popover` (non-modal, anchored by CSS) for the month picker, column chooser and similar; `DropdownMenu` for
   actions on one object; `Tooltip` names or explains a focusable control and is never the only place for
   essential information.
@@ -125,6 +127,7 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
 | A view or card could not load | `ErrorState` (through `StateBoundary`), with Retry for reads |
 | A problem that is still true (file unreadable, rules missing) | `InlineNotice` next to it; never only a toast |
 | A finished action whose result is visible | Toast (`useToast().show`), success or info; closes after 5 s, paused on hover or focus |
+| (Toasts) | `ToastProvider` is mounted once in `AppProviders`. Its stacks are `aria-live` regions without a status/alert role, so they never compete with a page's own alerts |
 | A failed background action with nothing to show inline | Error toast (stays until dismissed) |
 | A save, import or delete in progress or finished | `MutationFeedback` beside the action |
 | Old data still on screen | `StaleDataNotice` (through `StateBoundary` `stale`) |

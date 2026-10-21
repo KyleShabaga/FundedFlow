@@ -259,3 +259,27 @@ describe("StatusIndicator", () => {
     expect(screen.getByText("Safe").parentElement!.className).toContain("ds-status-success");
   });
 });
+
+describe("DropdownMenu opening a dialog", () => {
+  it("keeps a dialog opened from a menu item open, with focus inside it", async () => {
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <DropdownMenu trigger={<Button>Actions</Button>} items={[{ label: "Edit…", onSelect: () => setOpen(true) }]} />
+          <Dialog open={open} onOpenChange={setOpen} title="Edit account"><input aria-label="Name" /></Dialog>
+        </>
+      );
+    }
+    render(<Harness />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Edit…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit account" });
+    await act(async () => new Promise(r => setTimeout(r, 50)));
+    expect(screen.getByRole("dialog", { name: "Edit account" })).toBe(dialog);
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Actions" })));
+  });
+});

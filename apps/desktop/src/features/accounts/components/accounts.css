@@ -11,9 +11,10 @@
 .acct-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); }
 
 /* Table cells */
-.acct-cell-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.acct-cell-name { display: flex; align-items: center; gap: 10px; min-width: 240px; max-width: 360px; }
 .acct-cell-text { display: grid; min-width: 0; text-align: left; }
-.acct-cell-title { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.acct-cell-title { display: flex; align-items: center; gap: var(--space-2); font-weight: 600; min-width: 0; }
+.acct-cell-label, .acct-cell-text > .ds-faint { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .acct-mark { width: 28px; height: 28px; flex: none; border-radius: var(--radius-md); background: var(--flow-soft); color: var(--flow); display: grid; place-items: center; font: 600 13px/1 var(--font-display); }
 .acct-badges { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .acct-badge-icon { margin-right: 4px; }

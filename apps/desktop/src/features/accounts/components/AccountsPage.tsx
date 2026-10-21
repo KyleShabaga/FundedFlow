@@ -140,10 +140,10 @@ export function AccountsPage() {
           <AccountMark account={a} />
           <span className="acct-cell-text">
             <span className="acct-cell-title">
-              {a.propFirm ?? a.name}
+              <span className="acct-cell-label" title={a.propFirm ? undefined : a.name}>{a.propFirm ?? a.name}</span>
               {active.activeId === a.id && <span className="acct-active-pill">Active account</span>}
             </span>
-            {a.propFirm && <span className="ds-faint">{a.name}</span>}
+            {a.propFirm && <span className="ds-faint" title={a.name}>{a.name}</span>}
           </span>
         </span>
       ),
