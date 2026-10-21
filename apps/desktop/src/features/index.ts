@@ -1,4 +1,4 @@
-// Build 14 public data-layer surface. No Build 13 UI exports or second provider composition.
+// Build 14 public data-layer surface. presentation.ts maps it to Build 13 states with type-only imports; no UI code or second provider here.
 export * from "./accounts/hooks/accounts";
 export * from "./trades/hooks/trades";
 export * from "./journal/hooks/journal";
@@ -17,6 +17,7 @@ export * from "./shared/contracts";
 export * from "./shared/errors";
 export * from "./shared/capabilities";
 export * from "./shared/query-keys";
+export * from "./shared/presentation";
 export type { TradeFilters } from "./trades/api/trades";
 export type { JournalFilters } from "./journal/api/journal";
 export type { SnapshotFilters } from "./insights/api/snapshots";
