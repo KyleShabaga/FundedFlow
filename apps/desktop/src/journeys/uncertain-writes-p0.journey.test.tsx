@@ -312,7 +312,52 @@ const locked = (surface: Surface, scope: HTMLElement) => {
   return control === null || isDisabled(control);
 };
 
+/** A refusal the data layer knows changed nothing (validation), shown as an ordinary failure. */
+const refused = () => new RepositoryError({ kind: "validation", message: "refused", issues: [{ field: "row", message: "refused by the test" }] });
+/** Dismisses a confirmation left open by a failed write, if any. */
+async function closeConfirm(user: User) {
+  const confirm = screen.queryByRole("alertdialog");
+  if (!confirm) return;
+  await user.click(within(confirm).getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+}
+
 describe.each(SURFACES)("uncertain $name", surface => {
+  it("a definite failure unlocks at once without a review, and the trader's next save is sent once", async () => {
+    const { store, user, scope } = await setup(surface);
+    const hold = store.hold(surface.write);
+    await surface.submit(user, scope);
+    await waitFor(() => expect(hold.calls).toHaveLength(1));
+    await act(() => hold.fail(refused()));
+    await closeConfirm(user);
+    expect(screen.queryByText("Couldn't confirm it saved")).toBeNull();
+    expect(surface.stored(store, A)).toBe(0);
+    await waitFor(() => expect(locked(surface, scope)).toBe(false));
+    surface.edited(scope);
+    const next = store.hold(surface.write);
+    await surface.submit(user, scope);
+    await waitFor(() => expect(next.calls).toHaveLength(1));
+    await act(() => next.release());
+    await waitFor(() => expect(surface.stored(store, A)).toBe(1));
+    expect(hold.calls).toHaveLength(1);
+  });
+
+  it("a second press while the write is pending sends nothing, and the one answer is the only write", async () => {
+    const { store, user, scope } = await setup(surface);
+    const hold = store.hold(surface.write);
+    await surface.submit(user, scope);
+    await waitFor(() => expect(hold.calls).toHaveLength(1));
+    expect(locked(surface, scope)).toBe(true);
+    // Whatever the trader can still reach (a disabled control, or one behind the open confirmation) sends nothing.
+    await surface.submit(user, scope).catch(() => {});
+    expect(hold.calls).toHaveLength(1);
+    await act(() => hold.release());
+    await waitFor(() => expect(surface.stored(store, A)).toBe(1));
+    expect(hold.calls).toHaveLength(1);
+    expect(screen.queryByText("Couldn't confirm it saved")).toBeNull();
+  });
+
+
   it("did save but the answer was lost: Check result shows it stored, and acknowledging saves nothing", async () => {
     const { store, user, scope } = await setup(surface);
     const { hold, at } = await uncertain(surface, store, user, scope, true);

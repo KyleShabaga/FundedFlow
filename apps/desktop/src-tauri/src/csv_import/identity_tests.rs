@@ -1,5 +1,6 @@
 //! P0-01 fill-pair identity regressions. All CSV values here are synthetic.
 use super::*;
+use std::collections::HashMap;
 
 const PAIRS: &str = "symbol,qty,buyPrice,sellPrice,buyFillId,sellFillId,boughtTimestamp,soldTimestamp";
 /// Two distinct pairs whose unversioned keys were both `fills:a:b:c`.
@@ -239,4 +240,102 @@ fn broker_id_and_fallback_keys_are_unchanged() {
     use normalize::Identity;
     assert_eq!(dedup::key(&Identity::TradeId("T:17".into())), "id:T:17");
     assert_eq!(dedup::key(&Identity::Composite("x".into())), format!("rt:{}", dedup::sha256_hex(b"x")));
+}
+
+#[test]
+fn version_2_keys_are_injective_over_every_short_colon_heavy_pair() {
+    // Every string of length 1-3 over {a, :, 1} as buy and as sell: no two distinct pairs share a key.
+    let alphabet = ['a', ':', '1'];
+    let mut ids = Vec::new();
+    for len in 1..=3u32 {
+        for n in 0..3usize.pow(len) {
+            let mut x = n;
+            ids.push((0..len).map(|_| { let c = alphabet[x % 3]; x /= 3; c }).collect::<String>());
+        }
+    }
+    let mut seen: HashMap<String, (String, String)> = HashMap::new();
+    let mut legacy_collisions = 0;
+    let mut legacy: HashMap<String, (String, String)> = HashMap::new();
+    for buy in &ids {
+        for sell in &ids {
+            let pair = (buy.clone(), sell.clone());
+            let key = dedup::fill_pair_key(buy, sell);
+            assert_eq!(key, dedup::fill_pair_key(buy, sell), "deterministic");
+            if let Some(other) = seen.insert(key.clone(), pair.clone()) {
+                panic!("{key} is shared by {other:?} and {pair:?}");
+            }
+            legacy_collisions += usize::from(legacy.insert(dedup::legacy_fill_pair_key(buy, sell), pair).is_some());
+        }
+    }
+    assert_eq!(seen.len(), ids.len() * ids.len());
+    assert!(legacy_collisions > 0, "the unversioned encoding does collide on this set");
+}
+
+#[test]
+fn identity_vectors_match_the_versioned_contract() {
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../test_csvimport/identity/fill-pair-v2.json");
+    let fixture: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    assert_eq!(fixture["identityVersion"], 2);
+    let vectors = fixture["vectors"].as_array().unwrap();
+    assert!(!vectors.is_empty());
+    let (conn, account) = setup();
+    for v in vectors {
+        let (buy, sell) = (v["buy"].as_str().unwrap(), v["sell"].as_str().unwrap());
+        assert_eq!(dedup::fill_pair_key(buy, sell), v["key"].as_str().unwrap(), "{v}");
+        assert_eq!(dedup::legacy_fill_pair_key(buy, sell), v["legacyKey"].as_str().unwrap(), "{v}");
+        // Each vector is a fill ID pair the importer accepts, so the key is one it can store.
+        let p = preview(&conn, &request(&account, &csv(&[&format!("MNQ,1,21000,21001,{buy},{sell},10/19/2026 09:30:00,10/19/2026 09:31:00")])))
+            .unwrap();
+        assert_eq!(p.rows[0].status, "new", "{v}: {:?}", p.rows[0].errors);
+    }
+}
+
+#[test]
+fn fill_ids_outside_ascii_are_rejected_so_byte_and_utf16_lengths_agree() {
+    // The key's length prefix counts UTF-8 bytes; a JS/TS port would count UTF-16 units. Only ASCII IDs are
+    // accepted, where both are equal, so the prefix cannot differ between implementations.
+    let (conn, account) = setup();
+    for (buy, sell) in [("é1", "s"), ("b", "😀"), ("ｂ", "s")] {
+        let p = preview(&conn, &request(&account, &csv(&[&format!("MNQ,1,21000,21001,{buy},{sell},10/19/2026 09:30:00,10/19/2026 09:31:00")]))).unwrap();
+        assert_eq!(p.rows[0].status, "invalid", "{buy} / {sell}");
+        assert!(fields(&p.rows[0].errors).iter().any(|f| *f == "buyFillId" || *f == "sellFillId"));
+    }
+}
+
+#[test]
+fn legacy_trades_keep_their_record_and_review_through_reimport_delete_and_restore() {
+    use crate::store::reviews;
+    let file = regressions::JournalFile::new();
+    let (account, legacy_colon, before, review_before);
+    {
+        let mut conn = file.open();
+        account = accounts::create(&mut conn, account_input("Preserve")).unwrap().id;
+        (legacy_colon, _) = legacy_journal(&mut conn, &account);
+        let input = reviews::ReviewInput {
+            account_id: account.clone(), trade_id: legacy_colon.clone(), expected_revision: None, strategy_id: None, checklist_id: None,
+            planned_entry_price: None, planned_stop_price: None, planned_target_price: None, planned_risk: None, execution_rating: Some(4),
+            thesis: Some("Opening drive".into()), reflection: Some("Held to target".into()), reviewed: true, tag_ids: vec![], checklist_results: vec![],
+        };
+        review_before = reviews::save(&mut conn, None, input).unwrap();
+        before = trade_store::get(&conn, &legacy_colon).unwrap();
+    }
+    let reimport = csv(&[COLON_IN_BUY, COLON_IN_SELL]);
+    {
+        let mut conn = file.open();
+        assert_eq!(commit(&mut conn, &request(&account, &reimport)).unwrap().imported_count, 1, "only (a, b:c) is new");
+        assert_eq!(trade_store::get(&conn, &legacy_colon).unwrap(), before, "the legacy trade is not touched");
+        assert_eq!(reviews::get(&conn, None, &account, &legacy_colon).unwrap().as_ref(), Some(&review_before));
+        trade_store::delete(&mut conn, &legacy_colon).unwrap();
+    }
+    let mut conn = file.open();
+    let p = preview(&conn, &request(&account, &reimport)).unwrap();
+    assert_eq!(row(&p, 2).restores.as_ref().unwrap().trade_id, legacy_colon);
+    assert_eq!(row(&p, 3).duplicate.as_ref().unwrap().of, "saved", "(a, b:c) is now its own saved trade");
+    commit(&mut conn, &request(&account, &reimport)).unwrap();
+    let restored = trade_store::get(&conn, &legacy_colon).unwrap();
+    assert_eq!((restored.id.as_str(), &restored.entry_at, &restored.realized_pnl), (before.id.as_str(), &before.entry_at, &before.realized_pnl));
+    let review = reviews::get(&conn, None, &account, &legacy_colon).unwrap().unwrap();
+    assert_eq!((review.id.as_str(), review.thesis.as_deref(), review.reflection.as_deref()), (review_before.id.as_str(), Some("Opening drive"), Some("Held to target")));
+    let key: String = conn.query_row("SELECT dedup_key FROM trades WHERE id = ?1", [&legacy_colon], |r| r.get(0)).unwrap();
+    assert_eq!(key, "fills:a:b:c", "the stored legacy key is never rewritten");
 }

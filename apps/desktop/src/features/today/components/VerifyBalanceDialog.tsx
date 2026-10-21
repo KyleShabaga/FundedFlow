@@ -75,7 +75,11 @@ function EvidenceWriteReview({ write, account, entered }: {
   const money = (v: string | null, currency: string) => (v === null ? "—" : formatMoney(v, { signed: false, currency }));
   const checkpoints = [...(observations.data ?? [])].sort((a, b) => (a.recordedAt < b.recordedAt ? 1 : -1));
   const compared = [...(comparisons.data ?? [])].sort((a, b) => (a.recordedAt < b.recordedAt ? 1 : -1));
-  const match = entered ? checkpoints.find(o => o.kind === entered.kind && o.value === entered.value && o.observedAt === entered.observedAt) : undefined;
+  // Compared as amounts and instants, so text formatting can never turn a stored checkpoint into "not saved".
+  const same = (a: string | null, b: string | null) => (a === null || b === null ? a === b : canonicalDecimal(a) === canonicalDecimal(b));
+  const match = entered
+    ? checkpoints.find(o => o.kind === entered.kind && same(o.value, entered.value) && Date.parse(o.observedAt) === Date.parse(entered.observedAt))
+    : undefined;
   return (
     <UncertainOutcomeReview write={write} what="your checkpoints and comparisons"
       reviewReady={[observations, comparisons].every(q => q.data !== undefined && !q.error)}
