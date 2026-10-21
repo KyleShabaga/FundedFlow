@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - 'scripts/reset-test-data*.mjs'
+      - 'scripts/dev-*.mjs'
       - '.github/workflows/dev-tools.yml'
   push:
     branches: [main]
     paths:
       - 'scripts/reset-test-data*.mjs'
+      - 'scripts/dev-*.mjs'
       - '.github/workflows/dev-tools.yml'
 
 jobs:
@@ -22,4 +24,4 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-      - run: node --test scripts/reset-test-data.test.mjs
+      - run: node --test scripts/reset-test-data.test.mjs scripts/dev-reset-handoff.test.mjs

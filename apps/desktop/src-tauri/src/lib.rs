@@ -6,6 +6,9 @@ mod data_controls;
 mod commands;
 mod csv_import;
 mod db;
+// Build 26.9 developer tools: absent from release builds (no code, no commands).
+#[cfg(any(debug_assertions, test))]
+mod dev_tools;
 mod domain;
 mod error;
 #[cfg(test)]
@@ -20,27 +23,11 @@ mod store;
 
 use tauri::Manager;
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_dialog::init())
-        .setup(|app| {
-            // Per-user data directory, e.g. %APPDATA%\com.fundedflow.desktop\ on
-            // Windows; never the install directory. Opening, backing up and
-            // migrating the journal run on a background thread, so neither a
-            // failure nor a slow upgrade keeps the window from opening: the
-            // frontend polls the runtime status and shows progress or recovery.
-            let path = app
-                .path()
-                .app_data_dir()
-                .map(|dir| dir.join(db::DB_FILE_NAME))
-                .map_err(|e| e.to_string());
-            app.manage(runtime::Runtime::new(path));
-            commands::initialize_in_background(app.handle().clone());
-            Ok(())
-        })
-        .invoke_handler(tauri::generate_handler![
+/// Every command the window may invoke. Debug builds add the Build 26.9 developer commands; a
+/// release build never registers them, so they cannot be invoked even by a modified frontend.
+macro_rules! app_commands {
+    ($($extra:path),* $(,)?) => {
+        tauri::generate_handler![
             commands::get_account_risk_inputs,
             commands::create_financial_observation,
             commands::get_financial_observation,
@@ -146,7 +133,64 @@ pub fn run() {
             commands::reopen_daily_review,
             commands::relink_daily_review_trades,
             commands::get_insights_dataset,
-        ])
+            $($extra),*
+        ]
+    };
+}
+
+#[cfg(debug_assertions)]
+macro_rules! all_commands {
+    () => {
+        app_commands![
+            dev_tools::dev_tools_status,
+            dev_tools::dev_seed_fake_data,
+            dev_tools::dev_reset_preview,
+            dev_tools::dev_reset_handoff,
+            dev_tools::dev_dismiss_reset_report,
+        ]
+    };
+}
+
+#[cfg(not(debug_assertions))]
+macro_rules! all_commands {
+    () => {
+        app_commands![]
+    };
+}
+
+/// The command-line seeder behind `cargo run --example seed-demo-journal` (debug builds only).
+#[cfg(debug_assertions)]
+pub fn dev_seed_cli(args: &[String]) -> Result<String, String> {
+    dev_tools::cli(args)
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            // Per-user data directory, e.g. %APPDATA%\com.fundedflow.desktop\ on
+            // Windows; never the install directory. Opening, backing up and
+            // migrating the journal run on a background thread, so neither a
+            // failure nor a slow upgrade keeps the window from opening: the
+            // frontend polls the runtime status and shows progress or recovery.
+            let dir = app.path().app_data_dir().map_err(|e| e.to_string());
+            // Debug builds only: FUNDEDFLOW_DEV_DATA_DIR opens an isolated test journal instead
+            // (Build 26.9). A refused value fails startup rather than falling back to the real journal.
+            #[cfg(debug_assertions)]
+            let dir = {
+                let dev = dev_tools::DevEnvironment::from_env(dir.clone().ok(), &app.config().identifier);
+                let dir = dev.data_dir(dir);
+                app.manage(dev_tools::DevState::new(dev));
+                dir
+            };
+            let path = dir.map(|dir| dir.join(db::DB_FILE_NAME));
+            app.manage(runtime::Runtime::new(path));
+            commands::initialize_in_background(app.handle().clone());
+            Ok(())
+        })
+        .invoke_handler(all_commands!())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

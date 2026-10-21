@@ -107,7 +107,7 @@ it("announces availability and permits keyboard-only Retry without stealing init
   expect(document.activeElement).toBe(document.body);
   expect(screen.getByRole("alert").getAttribute("aria-live")).toBe("assertive");
   expect(screen.getByText(/Do not delete or replace your journal/)).toBeTruthy();
-  for (let index = 0; index < 12 && document.activeElement !== retry; index++) await user.tab();
+  for (let index = 0; index < 20 && document.activeElement !== retry; index++) await user.tab();
   expect(document.activeElement).toBe(retry);
   invoke.mockResolvedValue(ready);
   await user.keyboard("{Enter}");
@@ -139,7 +139,9 @@ it("explains unsupported schema without exposing a retry, reset or downgrade act
   render(<App />);
   await screen.findByRole("alert");
   expect(screen.getByText(/Install a FundedFlow version that supports this journal/)).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /retry|reset|restore|downgrade/i })).toBeNull();
+  // The Build 26.9 developer tools group exists only in development builds and sits outside recovery.
+  const offered = screen.queryAllByRole("button", { name: /retry|reset|restore|downgrade/i }).filter(b => !b.closest('[aria-label="Developer tools"]'));
+  expect(offered).toEqual([]);
   expect(screen.queryByRole("heading", { name: "Today is not built yet" })).toBeNull();
 });
 

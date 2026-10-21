@@ -11,7 +11,7 @@ pub mod detect;
 pub mod normalize;
 pub mod parse;
 pub mod values;
-mod target;
+pub(crate) mod target;
 
 use rusqlite::{params, Connection, OptionalExtension, Row};
 use serde::{Deserialize, Serialize};

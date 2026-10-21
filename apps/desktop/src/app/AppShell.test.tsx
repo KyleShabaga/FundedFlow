@@ -240,7 +240,7 @@ it("shows Journal and Insights views as submenus of the active section, with key
   // The icon rail has no submenus.
   await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
   expect(within(nav).queryByRole("list")).toBeNull();
-  expect(within(nav).queryByRole("button")).toBeNull();
+  expect(within(nav).queryByRole("button", { name: /views$/ })).toBeNull();
 });
 
 it("draws one selected-route indicator that follows the active route, not the pointer", async () => {

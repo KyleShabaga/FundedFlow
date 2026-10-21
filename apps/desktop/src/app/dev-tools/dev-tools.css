@@ -1,0 +1,16 @@
+/* Build 26.9 developer tools (debug builds only). Sidebar actions reuse .shell-nav-link. */
+.dev-sidebar-tools { display: grid; gap: var(--space-2); margin-bottom: var(--space-2); }
+.dev-sidebar-action { width: 100%; border: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.dev-sidebar-action:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.dev-dialog-stack { display: grid; gap: var(--space-4); }
+.dev-dialog-stack p { margin: 0; }
+.dev-dialog-stack .ds-notice p + p { margin-top: var(--space-2); }
+.dev-target { display: grid; gap: var(--space-1); }
+.dev-path, .dev-dialog-stack code { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+.dev-path { padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--bg-300); color: var(--ink); }
+.dev-recovery { display: grid; gap: var(--space-2); font-size: 13px; color: var(--ink-muted); }
+.dev-dialog-stack .ds-notice-body { min-width: 0; flex: 1; }
+.dev-report-list li { min-width: 0; }
+.dev-report-list { margin: var(--space-2) 0 0; padding-left: var(--space-4); display: grid; gap: var(--space-1); }
+.dev-report-name { display: inline-block; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.dev-progress { color: var(--ink-muted); }

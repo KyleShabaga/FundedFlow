@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "npm run build:domain && vite",
     "build": "npm run build:domain && npm run build:app",
-    "build:app": "tsc && vite build",
+    "build:app": "tsc && vite build && node scripts/check-no-dev-tools.mjs",
     "build:domain": "npm run build --prefix ../../packages/domain",
     "typecheck": "tsc --noEmit",
     "test": "npm run build:domain && vitest run",

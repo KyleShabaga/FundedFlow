@@ -41,6 +41,9 @@ panel and Design system gallery stay reachable from Settings › Developer in de
 - Below 760 px, the icon rail is enforced and the toggle is disabled with an explanatory accessible name.
   On wider windows, restore the user's locally saved collapse preference. Ctrl+B leaves editable fields alone.
 - Footer: Settings and a "Saved on this computer" status (local-first promise). No Import item in the sidebar.
+  Development builds only (Build 26.9): **Add Fake Data** and **Reset All Data** directly above Settings, same
+  height, icon size and focus style, icon-only with tooltips when collapsed; absent from production builds
+  ([`docs/development/dev-tools.md`](../../development/dev-tools.md)).
 
 ## Header
 - Left: page title; reserved space for the **AccountContextBar** (account selector and filters; behaviour owned

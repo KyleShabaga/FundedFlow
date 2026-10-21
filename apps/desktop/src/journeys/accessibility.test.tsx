@@ -145,12 +145,15 @@ describe("keyboard: shell", () => {
     await user.tab();
     const toggle = screen.getByRole("button", { name: "Collapse sidebar" });
     expect(document.activeElement).toBe(toggle);
-    const order: string[] = [];
-    for (let i = 0; i < 7; i++) { await user.tab(); order.push(document.activeElement?.getAttribute("aria-label") ?? ""); }
+    // Development builds add the Build 26.9 developer actions directly above Settings.
+    const devTools = import.meta.env.DEV ? ["Add Fake Data", "Reset All Data"] : [];
     // Each submenu's chevron follows its section link.
-    expect(order).toEqual(["Today", "Journal", "Journal views", "Insights", "Insights views", "Accounts", "Settings"]);
+    const expected = ["Today", "Journal", "Journal views", "Insights", "Insights views", "Accounts", ...devTools, "Settings"];
+    const order: string[] = [];
+    for (let i = 0; i < expected.length; i++) { await user.tab(); order.push(document.activeElement?.getAttribute("aria-label") ?? ""); }
+    expect(order).toEqual(expected);
     await user.tab({ shift: true });
-    expect(document.activeElement?.getAttribute("aria-label")).toBe("Accounts");
+    expect(document.activeElement?.getAttribute("aria-label")).toBe(expected[expected.length - 2]);
     await user.keyboard("{Control>}b{/Control}");
     expect(screen.getByRole("button", { name: "Expand sidebar" }).getAttribute("aria-expanded")).toBe("false");
   });
