@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Daily review at 720 px</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.ci{display:grid;gap:8px;padding:12px 0;border-top:1px solid var(--line-100)}
+.ci .choice{padding:5px 10px;font-size:12.5px}
+</style>
+</helmet>
+<div class="shell is-narrow" style="width: 720px; min-height: 1700px;">
+  <dc-import name="P0Sidebar" active="journal" collapsed="{{yes}}" hint-size="72px,100%"></dc-import>
+  <div class="shell-main">
+    <dc-import name="P0Header" title="Daily review" here="Wed, Oct 21" crumbs="{{crumbs}}" account="Apex 100K · PA-48213" hint-size="100%,150px"></dc-import>
+    <main class="shell-content">
+      <div class="wrap">
+        <div class="stack-s">
+          <div class="row"><h2 class="h3" style="font-size: 18px;">Daily review · Wed, Oct 21, 2026</h2><span class="status s-warn">Draft</span></div>
+          <p class="small muted" style="margin: 0;">Apex 100K · PA-48213 · trading day Oct 21 in America/New_York</p>
+          <nav class="row" aria-label="Review day"><button type="button" class="btn btn-sm">Previous day</button><button type="button" class="btn btn-sm">Next day</button><button type="button" class="btn btn-sm btn-ghost">Go to day…</button></nav>
+        </div>
+        <section class="card">
+          <div class="split3">
+            <section><span class="label">Process (plan adherence)</span><span class="big">67%</span><span class="small">2 of 3 applicable items followed</span></section>
+            <section><span class="label">Outcome (closed trades)</span><span class="big pos">+$212.50</span><span class="small">4 of 5 trades with a known P&amp;L</span></section>
+            <section><span class="label">Day</span><span class="small" style="font-weight: 600;">Traded</span></section>
+          </div>
+          <p class="faint" style="margin: 0; padding: 10px 16px; border-top: 1px solid var(--line-100);">Plan adherence is not profit, and not a check of your firm's rules.</p>
+        </section>
+        <section class="card pad stack">
+          <h3 class="h3">1 · Before the session</h3>
+          <span class="status s-flow" style="align-self: start;">Written before the session · 8:52 AM</span>
+          <label class="fld"><span class="fld-label">Focus for the session</span><input class="input" value="Only trade the opening range break, A+ only"></label>
+          <label class="fld"><span class="fld-label">Planned setups</span><textarea class="ta" value="ORB long above 29,850 · VWAP reclaim after the first pullback"></textarea></label>
+          <p class="faint" style="margin: 0;">Two-column field grids become one column; textareas keep their full height.</p>
+        </section>
+        <section class="card pad">
+          <h3 class="h3">2 · Daily checklist</h3>
+          <div class="ci" style="border-top: 0;"><span id="n1" style="font-weight: 500;">Stopped after two losing trades</span><div class="radio-row" role="radiogroup" aria-labelledby="n1"><label class="choice">Followed</label><label class="choice is-miss is-on">Missed</label><label class="choice">Not applicable</label></div></div>
+          <div class="ci"><span id="n2" style="font-weight: 500;">Logged every trade within 10 minutes</span><span class="faint">Unanswered</span><div class="radio-row" role="radiogroup" aria-labelledby="n2"><label class="choice">Followed</label><label class="choice">Missed</label><label class="choice">Not applicable</label></div></div>
+        </section>
+        <section class="card">
+          <div class="pad-s"><h3 class="h3">Trades this day <span class="faint num">5</span></h3></div>
+          <p class="faint" style="margin: 0; padding: 0 16px 12px;">The trades rail moves below the form.</p>
+        </section>
+        <div class="actbar"><span class="save-state small"><span class="dot dot-warn" aria-hidden="true"></span>Unsaved changes</span><div class="row"><button type="button" class="btn btn-sm">Discard</button><button type="button" class="btn btn-sm">Save draft</button><button type="button" class="btn btn-sm btn-primary">Complete review</button></div></div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":720,"height":1700}}'>
+class Component extends DCLogic {
+  renderVals() { return { yes: true, crumbs: [{ label: 'Journal', href: 'Main.dc.html' }, { label: 'Daily reviews', href: 'Main.dc.html' }] }; }
+}
+</script>
+</body>
+</html>
