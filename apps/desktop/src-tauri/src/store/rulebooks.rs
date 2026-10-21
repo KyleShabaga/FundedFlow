@@ -235,6 +235,13 @@ pub fn applicable(conn: &Connection, q: &ApplicableRulebookQuery) -> AppResult<A
 // Drafts
 // ---------------------------------------------------------------------------
 
+fn require_writable_owner(conn: &Connection, rulebook: &Rulebook) -> AppResult<()> {
+    if let Some(owner) = &rulebook.owner_account_id {
+        super::account_ctx(conn, owner)?;
+    }
+    Ok(())
+}
+
 fn check_instant(issues: &mut Issues, field: &str, value: Option<&str>) {
     if value.is_some_and(|v| parse_instant(v).is_none()) {
         issues.add(field, "Use an ISO 8601 instant with an offset");
@@ -401,6 +408,10 @@ pub fn create_draft_with(
     };
     let private: bool =
         tx.query_row("SELECT owner_account_id IS NOT NULL FROM rulebooks WHERE id = ?1", [&rulebook_id], |r| r.get(0))?;
+    let owner: Option<String> = tx.query_row("SELECT owner_account_id FROM rulebooks WHERE id = ?1", [&rulebook_id], |r| r.get(0))?;
+    if let Some(owner) = owner {
+        super::account_ctx(&tx, &owner)?;
+    }
     if private && !input.applicability.is_empty() {
         return Err(AppError::invalid("applicability", "An account-private rulebook does not apply to catalogue phases"));
     }
@@ -555,6 +566,7 @@ pub fn publish_with(
     check_context(&context)?;
     let tx = conn.transaction()?;
     let detail = get_version(&tx, id)?;
+    require_writable_owner(&tx, &detail.rulebook)?;
     check_revision(&detail, expected_updated_at)?;
     let issues = publish_issues(&detail, reviewer.as_deref());
     if !issues.is_empty() {
@@ -614,6 +626,7 @@ pub fn update_draft(
     check_context(&context)?;
     let tx = conn.transaction()?;
     let detail = get_version(&tx, id)?;
+    require_writable_owner(&tx, &detail.rulebook)?;
     if detail.version.verification_status != "draft" || detail.version.verified_at.is_some() {
         return Err(AppError::Conflict {
             message: format!(
@@ -669,6 +682,7 @@ pub fn discard_draft(
     }
     let tx = conn.transaction()?;
     let detail = get_version(&tx, id)?;
+    require_writable_owner(&tx, &detail.rulebook)?;
     if detail.version.verification_status != "draft" {
         return Err(AppError::Conflict {
             message: format!(
@@ -742,6 +756,8 @@ pub fn flag_conflict(conn: &mut Connection, input: SourceConflictInput) -> AppRe
     let at = now();
     let id = new_id();
     let tx = conn.transaction()?;
+    let detail = get_version(&tx, &version_id)?;
+    require_writable_owner(&tx, &detail.rulebook)?;
     tx.execute(
         "INSERT INTO rule_claims (id, rule_definition_id, source_id, field, origin, provider_text, claim_status, note, created_at)
          VALUES (?1, ?2, ?3, ?4, 'observed', ?5, 'conflicting', ?6, ?7)",

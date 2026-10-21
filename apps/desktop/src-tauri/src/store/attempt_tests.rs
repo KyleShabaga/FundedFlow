@@ -244,6 +244,33 @@ fn an_attempt_resets_once_and_an_archived_one_must_be_restored_first() {
 }
 
 #[test]
+fn same_day_resets_across_the_dst_overlap_keep_distinct_instants_and_attempts() {
+    let mut conn = db();
+    let a = accounts::create(&mut conn, with_ref("Before", "dst-number")).unwrap();
+    let first = attempts::reset(&mut conn, ResetInput {
+        effective_at: "2026-11-01T01:30:00-04:00".into(), external_ref: Some("dst-number".into()),
+        ..reset_input(&a.id, "First 01:30")
+    }).unwrap();
+    let second = attempts::reset(&mut conn, ResetInput {
+        effective_at: "2026-11-01T01:30:00-05:00".into(), external_ref: Some("dst-number".into()),
+        ..reset_input(&first.successor.id, "Second 01:30")
+    }).unwrap();
+    assert_eq!(first.link.effective_at, "2026-11-01T05:30:00.000Z");
+    assert_eq!(second.link.effective_at, "2026-11-01T06:30:00.000Z");
+    let chain = attempts::lineage(&conn, &second.successor.id).unwrap();
+    assert_eq!(chain.len(), 3);
+    assert!(chain.iter().all(|a| a.trade_count == 0 && a.net_pnl.is_none()));
+    assert_ne!(first.successor.id, second.successor.id);
+    let before = count(&conn, "SELECT COUNT(*) FROM account_status_events");
+    assert!(attempts::reset(&mut conn, ResetInput {
+        effective_at: "2026-11-01T01:30:00".into(), ..reset_input(&second.successor.id, "Missing offset")
+    }).is_err());
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM account_status_events"), before);
+    assert_eq!(accounts::get(&conn, &second.successor.id).unwrap().status, "active");
+    assert_eq!(attempts::lineage(&conn, &a.id).unwrap().len(), 3);
+}
+
+#[test]
 fn lineage_lists_attempts_in_order_from_any_member_with_per_attempt_figures() {
     let mut conn = db();
     let a1 = accounts::create(&mut conn, account_input("A1")).unwrap();
