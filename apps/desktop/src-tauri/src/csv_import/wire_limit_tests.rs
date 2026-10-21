@@ -118,7 +118,7 @@ fn duration_wire_is_exact_and_preview_and_commit_classify_the_same_rows() {
     let (mut conn, account) = setup();
     let csv = duration_file();
     let p = preview(&conn, &request(&account, &csv)).unwrap();
-    assert!(p.file_issues.is_empty(), "{:?}", p.file_issues);
+    assert!(p.file_issues.is_empty(), "the file itself has no issues");
     let preview_json = serde_json::to_value(&p).unwrap();
     let batch = commit(&mut conn, &request(&account, &csv)).unwrap();
     let records: Vec<(String, Vec<FieldIssue>, Vec<String>)> = conn
