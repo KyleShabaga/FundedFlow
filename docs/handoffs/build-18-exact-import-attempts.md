@@ -1,8 +1,9 @@
 # Exact import-attempt boundaries and preview acknowledgement
 
 Card: [Triage — Exact import-attempt boundaries and preview acknowledgement (Build 18/15)](https://app.notion.com/p/4001bd4b6bde8167b3f0dcfc2e371439).
-Engineering implementation for Build 18, coordinated with Build 15. Stacked on Build 10.5 PR #50;
-its audit fixes are dependencies. No migration or new visual pattern.
+Engineering implementation for Build 18, coordinated with Build 15. Build 10.5 PR #50 is merged;
+[PR #52](https://github.com/KyleShabaga/FundedFlow/pull/52) now targets `main`. Its audit fixes are dependencies.
+No migration or new visual pattern.
 
 ## Result and boundary policy for review
 
@@ -51,7 +52,7 @@ changes clear confirmation; native commit rejection requires another preview. Th
 deprecated and has no production caller. The developer importer also requires a token and directs non-active
 review to the production wizard.
 
-## Verification
+## Original implementation verification
 
 - Domain boundaries/plain Node package import: passed (282 exports).
 - TypeScript typecheck: passed.
@@ -68,6 +69,19 @@ review to the production wizard.
   placeholder; economics and dedup expectations remain unchanged.
 - Existing attempt/isolation, upgrade, review/source preservation and restart regressions pass. The Insights
   synthetic chain now uses each attempt's valid times while retaining reused broker IDs and economics.
+
+## Recheck against main
+
+PR #52 includes `main` at `fa6aca8e7351a607a52fc4a5a93e66b6ba70f8ef`, including the newer data controls.
+The merge had no conflicts and preserves the archive/restore/deletion implementation unchanged. The archive
+round-trip test on main still asserted schema 18; it now checks `db::latest_version()` (currently 20), with its
+full data/history/attachment equality assertions retained. This is a test correction, not a migration.
+
+Fresh dependency installation, typecheck, frontend build, domain boundaries and plain Node import passed
+(299 exports). The combined suites passed 496 domain tests, 574 desktop tests and 303 native tests, with
+2 native tests intentionally ignored. Clippy passed with all targets and warnings denied. The initial desktop
+run had timing failures while native dependencies compiled; the isolated four-worker rerun passed with the
+existing test timeouts. No application-code integration change was required.
 
 ## Separate acceptance gates
 
