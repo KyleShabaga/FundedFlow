@@ -3,6 +3,11 @@
 Card: [Add frontend accessibility and critical-journey tests](https://app.notion.com/p/3fe1bd4b6bde81898d52e4350670566a)
 (Build 26, P0 V1). Branch `feat/build-26-accessibility-journeys` from main `7709d29` (Builds 24/25, PR #43).
 
+Follow-up work in the same PR (Builds 26.5 recovery diagnostics, 26.6 uncertain writes, 26.7 test reliability, and
+the CI fixes for the schema-20 archive test and Node 20 actions) is in
+[build-26.5-26.7-recovery-reliability.md](build-26.5-26.7-recovery-reliability.md). Where §6 and §10 below describe
+remaining contention timeouts and the uncertain account-save lock, that document supersedes them.
+
 This document separates three things:
 
 - **Implemented and verified here:** jsdom/Vitest component, cross-feature journey and axe tests; design-system fixes

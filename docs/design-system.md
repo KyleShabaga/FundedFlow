@@ -179,6 +179,11 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
 - `RuleStateBadge` follows the RuleState table in [design/components.md](design/components.md#rulestate): unknown
   presence or `needs_setup` shows "Needs setup", never a meter at zero.
 
+### Diagnostics (Build 26.5)
+- `DiagnosticDetails` shows a collapsed, selectable, copyable support summary with a polite copy result and a
+  fallback when the clipboard refuses. Pass text built only from allowlisted fields (`lib/diagnostics.ts`), never
+  from an error message, path or record. It sends nothing anywhere.
+
 ### Page outline (Build 26)
 - The shell's page title is the only `h1`. `DataTable`, `ChartPanel` and `FormSection` render an `h3` title by
   default; pass `headingLevel={2}` when one is a page's top-level section. `TabPanel heading="…"` adds a visually
