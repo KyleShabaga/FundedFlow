@@ -758,7 +758,11 @@ RFC 4180 CSV via the `csv` crate: quoted fields with embedded commas, newlines a
 a leading UTF-8 BOM is ignored. Line numbers are computed from byte offsets (header = line 1). Empty files,
 a missing header row, header-only files, records with the wrong number of fields and unreadable records are
 reported with clear messages. Limits: **10 MB and 50,000 data rows per file**; the preview lists every row up to
-2,000 and, beyond that, every row with a finding.
+2,000 and, beyond that, every row with a finding. The 10 MB cap is inclusive and counts the **UTF-8 bytes of the
+submitted text** (10,485,760), not characters or UTF-16 units; a leading U+FEFF in the submitted text counts as its
+3 bytes. The desktop reads files as strict UTF-8, which drops a BOM, so a file with a BOM may be 3 bytes larger.
+Other encodings are refused, not guessed. The shared schema counts bytes the same way (`utf8ByteLength`); see
+[P0-04](architecture/p0-04-csv-contracts.md).
 
 ### Formats and mapping
 
@@ -775,7 +779,7 @@ and `soldTimestamp` are present (e.g. Tradovate's Performance report). Each row 
 | Buy / sell time | `boughtTimestamp`, `soldTimestamp` | Required; stored as parsed UTC **and** as the original text. |
 | Fill IDs | `buyFillId`, `sellFillId` | Optional; the pair is the duplicate key. |
 | Realized P&L | `pnl` | Optional; `$26.00`, `$0.00`, `$(36.00)`, `-$36.00`. |
-| Duration | `duration` | Optional; `32sec`, `1min 17sec`, `1hr 2min`, `1:02:03`. |
+| Duration | `duration` | Optional; `32sec`, `1min 17sec`, `1hr 2min`, `1:02:03`. Whole seconds, 0 to 2^63 − 1; larger values are a row error. On the wire `durationSeconds` is a JSON number up to 2^53 − 1 and a decimal string above it, so every value arrives exactly ([P0-04](architecture/p0-04-csv-contracts.md)). |
 | Contract metadata | `_priceFormat`, `_priceFormatType`, `_tickSize` | Optional; stored as supplied. |
 
 *Entry side (assumption, shown in the preview):* the fill that happened first opened the trade. Buy first ⇒
