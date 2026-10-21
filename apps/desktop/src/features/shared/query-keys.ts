@@ -37,5 +37,9 @@ export const featureKeys = {
   rulebookVersions: (id: string | null) => [...root, "rulebook-versions", id] as const,
   rulebookVersion: (id: string | null) => [...root, "rulebook-version", id] as const,
   assignments: (id: string | null) => [...account(id), "rulebook-assignments"] as const,
+  rulebookEvents: (id: string | null) => [...account(id), "rulebook-events"] as const,
+  /** Build 15.5 risk inputs read for a rulebook preview; read-only, keyed by the explicit cutoff. */
+  riskInputs: (id: string | null, asOf: string | null) => [...account(id), "risk-inputs", asOf] as const,
+  rulebookRoots: [[...root, "rulebooks"], [...root, "rulebook-versions"], [...root, "rulebook-version"], [...root, "applicable-rulebook"]] as const,
   capability: (name: string) => [...root, "capability", name] as const,
 };

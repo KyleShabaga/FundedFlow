@@ -5,6 +5,8 @@ import { AppShell, NotFound, RoutePlaceholder } from "./app/AppShell";
 import { RuntimeGate } from "./components/RuntimeGate";
 import { AccountDetailPage } from "./features/accounts/components/AccountDetailPage";
 import { AccountsPage } from "./features/accounts/components/AccountsPage";
+import { RulebookPage } from "./features/rulebooks/components/RulebookPage";
+import { RulebookVersionPage } from "./features/rulebooks/components/RulebookVersionPage";
 import { ImportHistoryPage } from "./features/imports/components/ImportHistoryPage";
 import { ImportWizardPage } from "./features/imports/components/ImportWizardPage";
 import "./App.css";
@@ -23,6 +25,8 @@ export default function App() {
           <Route path="insights" element={<RuntimeGate showStatus={false}><RoutePlaceholder name="Insights" /></RuntimeGate>} />
           <Route path="accounts" element={<RuntimeGate showStatus={false}><AccountsPage /></RuntimeGate>} />
           <Route path="accounts/:accountId" element={<RuntimeGate showStatus={false}><AccountDetailPage /></RuntimeGate>} />
+          <Route path="accounts/:accountId/rulebook" element={<RuntimeGate showStatus={false}><RulebookPage /></RuntimeGate>} />
+          <Route path="accounts/:accountId/rulebook/versions/:versionId" element={<RuntimeGate showStatus={false}><RulebookVersionPage /></RuntimeGate>} />
           <Route path="import" element={<RuntimeGate showStatus={false}><ImportWizardPage /></RuntimeGate>} />
           <Route path="import/history" element={<RuntimeGate showStatus={false}><ImportHistoryPage /></RuntimeGate>} />
           <Route path="settings" element={<>

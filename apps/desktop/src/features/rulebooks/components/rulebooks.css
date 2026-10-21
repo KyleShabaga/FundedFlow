@@ -1,0 +1,60 @@
+/*
+ * Rulebook screens (Build 19). Built on the account page layout (accounts.css) and design-system
+ * components; every value comes from tokens.css.
+ */
+.rb-page { max-width: 1280px; }
+.rb-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); flex-wrap: wrap; }
+.rb-title { margin: 0 0 4px; font: 600 20px/28px var(--font-display); overflow-wrap: anywhere; }
+.rb-panel { display: grid; gap: var(--space-3); padding: var(--space-4); min-width: 0; }
+.rb-panel-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.rb-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: flex-end; }
+.rb-form { display: grid; gap: var(--space-3); min-width: 0; }
+.rb-inline-fields { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: flex-end; }
+.rb-inline-fields > * { flex: 1 1 180px; min-width: 0; }
+.rb-inline-fields > .ds-icon-btn, .rb-inline-fields > button { flex: 0 0 auto; }
+.rb-footnote { margin: 0; max-width: 100ch; }
+.rb-plain-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.rb-catalogue { display: grid; gap: var(--space-3); margin-top: var(--space-4); }
+
+/* Editor */
+.rb-editor { display: grid; gap: var(--space-4); min-width: 0; }
+.rb-rule { display: grid; gap: var(--space-3); padding: var(--space-4); min-width: 0; }
+.rb-rule-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); flex-wrap: wrap; }
+.rb-rule-head .ds-title { margin: 0 0 2px; }
+.rb-rule-actions { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; }
+.rb-rule-note { margin: 0; color: var(--ink-muted); }
+.rb-params { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); }
+.rb-presence-row { display: flex; gap: var(--space-2); align-items: flex-start; flex-wrap: wrap; }
+.rb-presence-row > * { flex: 1 1 140px; min-width: 0; }
+.rb-rows { display: grid; gap: var(--space-2); }
+.rb-add-rule { display: flex; gap: var(--space-2); align-items: flex-end; flex-wrap: wrap; }
+.rb-add-rule > :first-child { flex: 0 1 320px; }
+.rb-save-bar {
+  position: sticky; bottom: 0; z-index: 1; display: flex; gap: var(--space-3); align-items: center; justify-content: flex-end; flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4); background: var(--bg-100); border: 1px solid var(--line-200); border-radius: var(--radius-lg);
+}
+.rb-save-bar > [role="status"] { margin-right: auto; }
+
+/* Comparison and evidence tables */
+.rb-compare { display: grid; gap: var(--space-3); min-width: 0; }
+.rb-compare-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.rb-compare-count { margin: 0; font-weight: 600; }
+.rb-compare-table { width: 100%; border-collapse: collapse; font: 500 13px/18px var(--font-sans); display: block; overflow-x: auto; }
+.rb-compare-table caption { text-align: left; font: 600 14px/20px var(--font-sans); padding: var(--space-2) 0; color: var(--ink); }
+.rb-compare-table th, .rb-compare-table td { text-align: left; vertical-align: top; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--line-200); }
+.rb-compare-table thead th { color: var(--ink-muted); font-weight: 600; white-space: nowrap; }
+.rb-compare-table tbody th { font-weight: 600; min-width: 160px; }
+.rb-compare-changed td, .rb-compare-added td, .rb-compare-removed td { background: var(--warn-soft); }
+.rb-compare-added td { background: var(--profit-soft); }
+.rb-compare-removed td { background: var(--loss-soft); }
+
+/* Preview and explanation */
+.rb-preview, .rb-explain { display: grid; gap: var(--space-4); min-width: 0; }
+.rb-assert { border: 1px solid var(--line-200); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-2); margin: 0; }
+.rb-assert p { margin: 0; }
+.rb-recorded { margin: 0; padding-left: var(--space-3); display: grid; gap: 4px; }
+.rb-recorded > div { display: grid; grid-template-columns: minmax(120px, max-content) 1fr; gap: var(--space-2); }
+.rb-recorded dt { color: var(--ink-muted); font-weight: 600; }
+.rb-recorded dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.rb-hash { overflow-wrap: anywhere; }
+.rb-manual { display: grid; gap: var(--space-2); }
