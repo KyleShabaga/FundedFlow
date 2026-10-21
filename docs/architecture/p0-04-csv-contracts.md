@@ -107,8 +107,8 @@ above 2^53 − 1. So there is no stored-data migration and no new version field.
 ## 4. Portable normalization for V1: deferred (option A)
 
 **Decision (owner, 2026-10-21): option A.** Rust stays the only CSV normalizer for V1. Portable extraction and
-Rust↔TypeScript algorithm parity move to a tracked post-V1 card, *Extract the CSV normalizer to `packages/domain`
-with Rust↔TypeScript parity* (Stage 2, a prerequisite of Build 36 cloud CSV import). This is the explicit
+Rust↔TypeScript algorithm parity move to a tracked post-V1 card, [Extract the CSV normalizer to `packages/domain`
+with Rust↔TypeScript parity](https://app.notion.com/p/4001bd4b6bde81159e97f9cd4e29e401) (Stage 2, Build 35.5, a prerequisite of Build 36 cloud CSV import). This is the explicit
 "Rust authoritative for V1" record that Build 17 asks for. P0-04's parity criterion is met by this deferral, not by
 a second implementation; no TypeScript normalizer exists or is claimed.
 
@@ -166,7 +166,7 @@ trades.rs 20, csv_import/mod.rs and tests.rs 0).
 
 ## 7. Remaining gates
 
-- Normalization: deferred past V1 (§4). Create the post-V1 card and link it from Build 17 and P0-04.
+- Normalization: deferred past V1 (§4), tracked by the [post-V1 extraction card](https://app.notion.com/p/4001bd4b6bde81159e97f9cd4e29e401) and recorded on Build 17 and P0-04.
 - P0-05 source cohort: synthetic fixtures don't certify any real exporter version.
 - Windows CI on the PR, plus packaged Tauri and manual import acceptance on an isolated profile.
 - Import, account and Today UX changes belong to PR 4.
