@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import sqlite3
 import tomllib
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
@@ -203,12 +205,15 @@ class _FirmFile(BaseModel):
 @handle_errors
 def firm_import(ctx: typer.Context, file: Annotated[Path, typer.Option("--file", exists=True, dir_okay=False)]) -> None:
     """Create or update a firm, its hosts, terms reviews and sources from a TOML file."""
+    import_firm_spec(state(ctx).connect(), file, clock.now(), echo=typer.echo)
+
+
+def import_firm_spec(conn: sqlite3.Connection, file: Path, now: datetime, echo: Callable[[str], None]) -> str:
+    """Create or update a firm from a TOML definition (shared with the GUI). Returns the firm key."""
     try:
         spec = _FirmFile.model_validate(tomllib.loads(file.read_text(encoding="utf-8-sig")))
     except (tomllib.TOMLDecodeError, ValidationError) as exc:
         raise RegistryError(f"{file}: {exc}") from exc
-    conn = state(ctx).connect()
-    now = clock.now()
     f = spec.firm
     firm = registry.get_firm(conn, f.key)
     if firm is None:
@@ -222,7 +227,7 @@ def firm_import(ctx: typer.Context, file: Annotated[Path, typer.Option("--file",
             max_depth=f.max_depth,
             excluded_paths=f.excluded_paths,
         )
-        typer.echo(f"Added firm {firm.firm_key}.")
+        echo(f"Added firm {firm.firm_key}.")
     else:
         firm = registry.update_firm(
             conn,
@@ -234,7 +239,7 @@ def firm_import(ctx: typer.Context, file: Annotated[Path, typer.Option("--file",
             max_depth=f.max_depth,
             excluded_paths=f.excluded_paths,
         )
-        typer.echo(f"Updated firm {firm.firm_key}.")
+        echo(f"Updated firm {firm.firm_key}.")
     for h in spec.hosts:
         try:
             name = normalise_host(h.host)
@@ -262,7 +267,7 @@ def firm_import(ctx: typer.Context, file: Annotated[Path, typer.Option("--file",
                     min_delay_seconds=t.min_delay,
                     accept_unclear=t.accept_unclear,
                 )
-        typer.echo(f"  host {name} ({h.role.value})")
+        echo(f"  host {name} ({h.role.value})")
     for s in spec.sources:
         try:
             source = registry.add_source(
@@ -292,7 +297,8 @@ def firm_import(ctx: typer.Context, file: Annotated[Path, typer.Option("--file",
                 requires_js=s.requires_js,
                 js_disabled=s.no_js,
             )
-        typer.echo(f"  source {source.canonical_url} ({source.kind.value})")
+        echo(f"  source {source.canonical_url} ({source.kind.value})")
+    return firm.firm_key
 
 
 # ---------------------------------------------------------------- host

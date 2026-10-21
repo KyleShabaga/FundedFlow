@@ -9,6 +9,8 @@ mod db;
 mod domain;
 mod error;
 #[cfg(test)]
+mod insights;
+#[cfg(test)]
 mod parity;
 #[cfg(test)]
 mod wire_contract;
@@ -139,6 +141,7 @@ pub fn run() {
             commands::save_daily_review,
             commands::reopen_daily_review,
             commands::relink_daily_review_trades,
+            commands::get_insights_dataset,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

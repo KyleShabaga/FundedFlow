@@ -646,3 +646,12 @@ pub async fn reopen_daily_review(db: State<'_, Runtime>, input: DailyReviewRef) 
 pub async fn relink_daily_review_trades(db: State<'_, Runtime>, input: DailyReviewRef) -> AppResult<DailyReviewDay> {
     db.with(|c| daily_reviews::relink_trades(c, input))
 }
+
+use crate::store::insights::{self, InsightsDataset, InsightsQuery};
+
+/// Build 23: read-only Insights snapshot of exactly the requested attempts (archived included), with their active
+/// trades and review facts. Aggregation happens in the shared domain package.
+#[tauri::command]
+pub async fn get_insights_dataset(db: State<'_, Runtime>, query: InsightsQuery) -> AppResult<InsightsDataset> {
+    db.with(|c| insights::dataset(c, query))
+}

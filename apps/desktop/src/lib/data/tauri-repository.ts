@@ -12,6 +12,8 @@ import {
   ledgerRevisionSchema, correctionMetadataSchema, reconciliationRequestSchema, reconciliationSchema,
   reconciliationResolutionSchema, reconciliationResolutionInputSchema,
   type JournalRepository,
+  insightsDatasetSchema,
+  insightsQuerySchema,
   RepositoryError,
   accountHistorySchema,
   accountLinkInputSchema,
@@ -175,6 +177,9 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
       save: (input) => call("save_daily_review", { input: validate(dailyReviewInputSchema, input) }, dailyReviewDaySchema),
       reopen: (ref) => call("reopen_daily_review", { input: validate(dailyReviewRefSchema, ref) }, dailyReviewDaySchema),
       relinkTrades: (ref) => call("relink_daily_review_trades", { input: validate(dailyReviewRefSchema, ref) }, dailyReviewDaySchema),
+    },
+    insights: {
+      dataset: (query) => call("get_insights_dataset", { query: validate(insightsQuerySchema, query) }, insightsDatasetSchema),
     },
     library: {
       load: () => call("get_review_library", {}, librarySchema),

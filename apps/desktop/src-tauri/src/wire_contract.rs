@@ -29,7 +29,7 @@ use serde_json::{from_value, json, Value};
 use crate::csv_import;
 use crate::db::open_file;
 use crate::store::tests::db;
-use crate::store::{accounts, attempts, daily_reviews, journal, ledger, settings, snapshots, trades};
+use crate::store::{accounts, attempts, daily_reviews, insights, journal, ledger, settings, snapshots, trades};
 
 const V3: &[u8] = include_bytes!("db/fixtures/fundedflow-v3.db");
 const V4: &[u8] = include_bytes!("db/fixtures/fundedflow-v4.db");
@@ -91,7 +91,14 @@ fn payloads(conn: &mut Connection) -> Value {
             })
         })
         .collect();
-    json!({ "accounts": wire(accounts), "perAccount": per_account, "settings": wire(settings::list(conn).unwrap()) })
+    // Build 23: the Insights snapshot of every account (archived included), as one request.
+    let all_ids = accounts.iter().map(|a| a.id.clone()).collect::<Vec<_>>();
+    let insights = if all_ids.is_empty() {
+        Value::Null
+    } else {
+        wire(insights::dataset_at(conn, insights::InsightsQuery { account_ids: all_ids }, PLACEHOLDER_INSTANT).unwrap())
+    };
+    json!({ "accounts": wire(accounts), "perAccount": per_account, "settings": wire(settings::list(conn).unwrap()), "insights": insights })
 }
 
 /// A new journal with every kind of record the frontend models.

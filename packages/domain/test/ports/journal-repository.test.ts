@@ -34,6 +34,7 @@ describe("JournalRepository", () => {
       journal: { list: none, create: fail, update: fail, remove: fail },
       reviews: { get: fail, save: fail, summaries: none, addScreenshot: fail, readScreenshot: fail, removeScreenshot: fail },
       dailyReviews: { getDay: fail, list: fail, save: fail, reopen: fail, relinkTrades: fail },
+      insights: { dataset: fail },
       library: { load: fail, saveStrategy: fail, saveTag: fail, saveChecklist: fail, setArchived: fail },
       imports: { preview: fail, commit: fail, list: none, problemRows: none },
       ledger: { list: none, create: fail, update: fail, remove: fail, balanceAdjustment: fail },

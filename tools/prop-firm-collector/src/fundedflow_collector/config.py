@@ -119,3 +119,64 @@ def _describe(exc: ValidationError) -> str:
         loc = ".".join(str(p) for p in err["loc"])
         parts.append(f"{loc}: {err['msg']}")
     return "; ".join(parts)
+
+
+EXAMPLE_CONFIG = """# FundedFlow collector settings. Every value has a safe default; see the README for the full list.
+
+[user_agent]
+# Required before live fetching: a page that explains this collector (your repository or a page you control).
+# info_url = "https://github.com/KyleShabaga/FundedFlow"
+# Optional contact shown in the User-Agent, e.g. an email address.
+# contact = "you@example.com"
+
+[pacing]
+# min_delay_seconds = 2.0            # floor 1.0
+# unclear_terms_delay_seconds = 5.0  # floor 5.0
+
+[budget]
+# fetches_per_firm_run = 75          # ceiling 300
+
+[browser]
+# enabled = "auto"                   # "auto" uses the optional [browser] extra when installed; "off" never does
+
+[raw]
+# retain = false                     # keep raw response bytes (default off)
+# retention_days = 90
+"""
+
+
+def update_user_agent(path: Path, info_url: str | None, contact: str | None) -> Settings:
+    """Rewrite only the [user_agent] section of a settings file, keeping every other line, and validate the result."""
+    info = (info_url or "").strip() or None
+    who = (contact or "").strip() or None
+    candidate = UserAgentSettings(info_url=info, contact=who)  # validates before anything is written
+    original = path.read_text(encoding="utf-8-sig") if path.exists() else EXAMPLE_CONFIG
+    kept: list[str] = []
+    in_section = False
+    for line in original.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            in_section = stripped == "[user_agent]"
+            if in_section:
+                continue
+        if not in_section:
+            kept.append(line)
+    section = ["[user_agent]"]
+    section.append(f"info_url = {_toml_string(candidate.info_url)}" if candidate.info_url else '# info_url = ""')
+    if candidate.contact:
+        section.append(f"contact = {_toml_string(candidate.contact)}")
+    lines = kept
+    insert_at = next((n for n, line in enumerate(lines) if line.strip().startswith("[")), len(lines))
+    new_text = "\n".join([*lines[:insert_at], *section, "", *lines[insert_at:]]).rstrip("\n") + "\n"
+    try:
+        Settings.model_validate(tomllib.loads(new_text))
+    except (tomllib.TOMLDecodeError, ValidationError) as exc:
+        raise ConfigError(f"could not update {path}: {exc}") from exc
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(new_text, encoding="utf-8")
+    settings, _ = load_settings(path)
+    return settings
+
+
+def _toml_string(value: str) -> str:
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'

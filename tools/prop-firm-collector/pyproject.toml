@@ -29,6 +29,9 @@ browser = ["playwright>=1.48"]
 [project.scripts]
 collector = "fundedflow_collector.cli.main:run"
 
+[project.gui-scripts]
+collector-gui = "fundedflow_collector.gui.app:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

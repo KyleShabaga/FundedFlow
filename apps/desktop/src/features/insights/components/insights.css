@@ -1,0 +1,61 @@
+/*
+ * Insights (Build 23). Layout follows docs/design/screens/07-insights.md and 04-calendar.md; every value comes from
+ * tokens.css and the components from the design system. Same page rhythm as the Journal (jr-page).
+ */
+.in-page { display: grid; gap: var(--space-4); max-width: 1600px; min-width: 0; grid-template-columns: minmax(0, 1fr); font-family: var(--font-sans); color: var(--ink); }
+.in-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; }
+.in-head-actions { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.in-body, .in-section { display: grid; gap: var(--space-4); min-width: 0; }
+.in-prov { margin: 0; font-size: 12.5px; }
+.in-note { margin: 0; font-size: 12.5px; }
+
+.in-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); }
+.in-filters > * { min-width: 150px; }
+.in-filters-title { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-weight: 600; color: var(--ink-muted); align-self: center; }
+
+.in-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: var(--space-4); }
+.in-months { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); }
+.in-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: var(--space-4); align-items: start; min-width: 0; }
+.in-card { display: grid; gap: var(--space-3); min-width: 0; align-content: start; }
+.in-card h3, .in-card-plain h3 { margin: 0; }
+.in-card-plain { display: grid; gap: var(--space-3); min-width: 0; }
+.in-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+.in-group-table { display: grid; gap: var(--space-2); min-width: 0; }
+
+/* A figure that opens its trades: a link-styled button that keeps the value's own colour and mono. */
+.in-drill-btn { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: inherit; text-decoration: underline dotted var(--line-200); text-underline-offset: 3px; }
+.in-drill-btn:hover { text-decoration-color: var(--flow); color: var(--flow); }
+.in-drill-btn:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; border-radius: var(--radius-sm); }
+.ds-metric-action .in-drill-btn, .ds-tile-sub .in-drill-btn { color: var(--flow); font-weight: 600; font-size: 12.5px; }
+.in-metric { display: inline-flex; flex-direction: column; align-items: inherit; gap: 0; }
+.in-metric-reason { font-size: 11px; white-space: normal; max-width: 28ch; }
+
+.in-cal-bar { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.in-cal { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: var(--space-4); align-items: start; }
+.in-cal-side { display: grid; gap: var(--space-3); min-width: 0; }
+.in-cal-sum { display: inline-flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
+.in-period { display: grid; gap: var(--space-3); }
+.in-period h3 { margin: 0; }
+.in-review-link { margin: 0; font-size: 13px; }
+.in-review-link a { color: var(--flow); font-weight: 600; }
+.in-yearly-scroll { overflow-x: auto; }
+.in-yearly td, .in-yearly th { padding: 8px var(--space-2); }
+.in-cell-btn { display: inline-grid; justify-items: end; background: none; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 2px 4px; font: inherit; color: inherit; cursor: pointer; }
+.in-cell-btn:hover { border-color: var(--line-200); }
+.in-cell-btn:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.in-cell-sub { font-size: 11px; }
+
+.in-attempt { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.in-reasons { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+
+.in-picker { display: grid; gap: var(--space-3); padding: var(--space-2); max-height: 70vh; overflow-y: auto; }
+.in-picker fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.in-picker-statuses { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.in-picker-statuses legend { grid-column: 1 / -1; margin-bottom: var(--space-1); }
+.in-picker-row { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.in-picker-actions { display: flex; gap: var(--space-2); }
+
+.in-drill { display: grid; gap: var(--space-3); min-width: 0; }
+.in-drill-prov { margin: 0; font-size: 12.5px; }
+
+@media (max-width: 1100px) { .in-cal { grid-template-columns: minmax(0, 1fr); } }

@@ -13,6 +13,7 @@ import {
   DayCard,
   EquityCurve,
   Pnl,
+  PnlBars,
   PnlCalendar,
   RuleMeter,
   StatTile,
@@ -78,6 +79,8 @@ const FLOOR = ["97000", "97250", "97250", "97250", "98400", "98400", "99300", "9
 export function DesignSystemGallery() {
   const [theme, setTheme] = useState<Theme>("system");
   const [day, setDay] = useState("2026-10-19");
+  const [week, setWeek] = useState<number | null>(null);
+  const [bar, setBar] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   return (
     <ToastProvider>
@@ -204,6 +207,20 @@ export function DesignSystemGallery() {
                   onClick={() => setDay(d)}
                 />
               ))}
+            </div>
+          </div>
+        </Section>
+
+        <Section title="Selectable PnlCalendar and PnlBars (Build 23)" note="Selected day and week are ringed and pressed; a day with an unknown P&L shows a dash without a tint. Every bar is a labelled row with its exact amount, so the chart reads as text.">
+          <div className="dsg-cal">
+            <PnlCalendar year={2026} month={10} days={{ ...DAYS, "2026-10-14": { pnl: null, trades: 2 } }} today="2026-10-19" display="pnl"
+              onSelectDay={setDay} selectedDay={day} onSelectWeek={(_, w) => setWeek(w)} selectedWeek={week} />
+            <div className="ds-card">
+              <PnlBars label="Example net P&L by weekday" selectedKey={bar} onSelect={setBar} items={[
+                { key: "1", label: "Monday", value: "921.87", detail: "12 trades" }, { key: "2", label: "Tuesday", value: "214.5", detail: "9 trades" },
+                { key: "3", label: "Wednesday", value: "-388.2", detail: "11 trades" }, { key: "4", label: "Thursday", value: null, detail: "1 trade with unknown P&L" },
+                { key: "5", label: "Friday", value: "-1282", detail: "14 trades" },
+              ]} />
             </div>
           </div>
         </Section>

@@ -20,6 +20,8 @@ export * from "./contracts/settings.js";
 export * from "./contracts/ledger.js";
 export * from "./contracts/snapshots.js";
 
+export * from "./insights/index.js";
+
 export * from "./catalogue/index.js";
 export * from "./rulebook/index.js";
 

@@ -30,6 +30,7 @@ import type {
 } from "../catalogue/index.js";
 import type { SourceReference } from "../catalogue/index.js";
 import type { DailyReviewDay, DailyReviewIndex, DailyReviewInput, DailyReviewRef } from "../contracts/daily-reviews.js";
+import type { InsightsDataset, InsightsQuery } from "../insights/contracts.js";
 import type { LedgerEntry, LedgerEntryInput } from "../contracts/ledger.js";
 import type { Setting } from "../contracts/settings.js";
 import type { Snapshot, SnapshotInput, SnapshotQuery } from "../contracts/snapshots.js";
@@ -170,6 +171,14 @@ export interface DailyReviewRepository {
   reopen(ref: DailyReviewRef): Promise<DailyReviewDay>;
   /** Accept the day's trades as they are now without changing the review's text or status. */
   relinkTrades(ref: DailyReviewRef): Promise<DailyReviewDay>;
+}
+
+/**
+ * Insights (Build 23): a read-only snapshot of exactly the requested account attempts (archived ones included) with
+ * their active trades and review facts. No writes; aggregation is the domain package's `insights` module.
+ */
+export interface InsightsRepository {
+  dataset(query: InsightsQuery): Promise<InsightsDataset>;
 }
 
 /** Strategies (playbooks), tags and checklists (templates), shared by every account. Archived, never deleted. */
@@ -348,6 +357,7 @@ export interface JournalRepository {
   readonly journal: JournalEntryRepository;
   readonly reviews: ReviewRepository;
   readonly dailyReviews: DailyReviewRepository;
+  readonly insights: InsightsRepository;
   readonly library: LibraryRepository;
   readonly imports: ImportRepository;
   readonly rulebooks: RulebookRepository;

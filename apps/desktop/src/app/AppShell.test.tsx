@@ -11,6 +11,7 @@ vi.mock("../features/accounts/components/AccountsPage", () => ({ AccountsPage: (
 vi.mock("../features/journal/components/JournalPage", () => ({ JournalPage: () => <h2>Journal is not built yet</h2> }));
 vi.mock("../features/daily-reviews/components/DailyReviewPage", () => ({ DailyReviewPage: () => <h2>Daily review stub</h2> }));
 vi.mock("../features/today/components/TodayPage", () => ({ TodayPage: () => <h2>Today is not built yet</h2> }));
+vi.mock("../features/insights/components/InsightsPage", () => ({ InsightsPage: () => <h2>Insights is not built yet</h2> }));
 vi.mock("../features/accounts/components/AccountSwitcher", () => ({ AccountSwitcher: () => null }));
 vi.mock("../features/data-controls/components/DataControlsPage", () => ({ DataControlsPage: () => <h2>Settings is not built yet</h2> }));
 import App from "../App";
