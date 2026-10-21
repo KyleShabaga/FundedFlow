@@ -168,7 +168,8 @@ fn every_named_scenario_covers_its_edge_case() {
             let at_risk = find(&all, "at_risk");
             let dd = at_risk.rules.as_ref().unwrap().drawdown_cents.unwrap();
             let headroom = at_risk.ending_cents() - at_risk.floor_cents().unwrap();
-            assert!(headroom > 0 && headroom <= dd / 4, "{ctx}: at-risk headroom {headroom}");
+            // Messages name the case, never the money values (CodeQL: cleartext logging of journal figures).
+            assert!(headroom > 0 && headroom <= dd / 4, "{ctx}: at-risk headroom within a quarter of the drawdown");
             assert!(never_breached(at_risk, None));
             assert_eq!(at_risk.watch_days.len(), 3);
             assert!(at_risk.account.name.chars().count() > 60);
@@ -265,7 +266,7 @@ fn the_seeded_journal_reconciles_with_the_plan_and_uses_existing_models() {
         let stored = trades::list(&conn, &r.account_id).unwrap();
         assert_eq!(stored.len(), r.trades);
         let micros: i64 = stored.iter().map(|t| crate::domain::to_micros(crate::domain::parse_decimal(t.realized_pnl.as_deref().unwrap()).unwrap()).unwrap()).sum();
-        assert_eq!(micros, p.net_cents() * 10_000, "{}", r.scenario);
+        assert!(micros == p.net_cents() * 10_000, "stored realized P&L equals the plan");
         assert_eq!(r.ending_balance, plan::cents(p.account.start_cents + p.net_cents()));
         assert!(stored.iter().all(|t| t.pnl_status == "calculated"));
         assert_eq!(r.winners + r.losers + r.breakeven, r.trades);
