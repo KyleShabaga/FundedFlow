@@ -1,0 +1,13 @@
+import type { ApplicableRulebookQuery } from "@fundedflow/domain";
+import * as api from "../api/references";
+import { featureKeys as keys } from "../../shared/query-keys";
+import { useFeatureQuery } from "../../shared/hooks/use-feature-query";
+export const useCatalogue = () => useFeatureQuery({ key: keys.catalogue, read: api.readCatalogue, isEmpty: () => false });
+export const useAccountCatalogueLink = (id: string | null) => useFeatureQuery({ key: keys.accountLink(id), enabled: id !== null, read: signal => api.readAccountLink(id!, signal), isEmpty: () => false });
+export const useAccountPhaseEvents = (id: string | null) => useFeatureQuery({ key: keys.phaseEvents(id), enabled: id !== null, read: signal => api.readPhaseEvents(id!, signal) });
+export const useAccountOfferSelections = (id: string | null) => useFeatureQuery({ key: keys.offers(id), enabled: id !== null, read: signal => api.readOfferSelections(id!, signal) });
+export const useRulebooks = (id: string | null = null) => useFeatureQuery({ key: keys.rulebooks(id), read: signal => api.readRulebooks(id, signal) });
+export const useRulebookVersions = (id: string | null) => useFeatureQuery({ key: keys.rulebookVersions(id), enabled: id !== null, read: signal => api.readRulebookVersions(id!, signal) });
+export const useRulebookVersion = (id: string | null) => useFeatureQuery({ key: keys.rulebookVersion(id), enabled: id !== null, read: signal => api.readRulebookVersion(id!, signal), isEmpty: () => false });
+export const useApplicableRulebook = (query: ApplicableRulebookQuery | null) => useFeatureQuery({ key: [...keys.root, "applicable-rulebook", query], enabled: query !== null, read: signal => api.readApplicableRulebook(query!, signal), isEmpty: () => false });
+export const useAccountRulebookAssignments = (id: string | null) => useFeatureQuery({ key: keys.assignments(id), enabled: id !== null, read: signal => api.readRulebookAssignments(id!, signal) });

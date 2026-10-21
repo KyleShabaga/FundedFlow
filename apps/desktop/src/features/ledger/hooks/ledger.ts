@@ -1,0 +1,12 @@
+import type { LedgerEntryInput } from "@fundedflow/domain";
+import * as api from "../api/ledger";
+import { featureKeys as keys } from "../../shared/query-keys";
+import { useFeatureQuery } from "../../shared/hooks/use-feature-query";
+import { useFeatureMutation } from "../../shared/hooks/use-feature-mutation";
+const affected = (id: string) => [keys.ledger(id), keys.ledgerBalance(id), keys.snapshotsRoot(id), keys.deletion(id)];
+const scope = (id: string) => JSON.stringify(["ledger", id]);
+export const useLedger = (id: string | null) => useFeatureQuery({ key: keys.ledger(id), enabled: id !== null, read: signal => api.readLedger(id!, signal) });
+export const useLedgerBalanceAdjustment = (id: string | null) => useFeatureQuery({ key: keys.ledgerBalance(id), enabled: id !== null, read: signal => api.readLedgerBalance(id!, signal), isEmpty: () => false });
+export const useCreateLedgerEntry = (id: string) => useFeatureMutation({ scope: scope(id), run: (input: LedgerEntryInput, guard) => api.saveLedgerEntry(id, input, undefined, guard), invalidate: () => affected(id) });
+export const useUpdateLedgerEntry = (accountId: string, id: string) => useFeatureMutation({ scope: scope(accountId), run: (input: LedgerEntryInput, guard) => api.saveLedgerEntry(accountId, input, id, guard), invalidate: () => affected(accountId) });
+export const useDeleteLedgerEntry = (accountId: string, id: string) => useFeatureMutation({ scope: scope(accountId), run: (_: void, guard) => api.removeLedgerEntry(accountId, id, guard), invalidate: () => affected(accountId) });

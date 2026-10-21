@@ -99,3 +99,19 @@ describe("TradeTable", () => {
     expect(within(row).getByText("+$71.26")).toBeTruthy();
   });
 });
+
+describe("currency on Build 7 components", () => {
+  it("uses the account currency for Pnl, AccountCard and PnlCalendar", () => {
+    const { container } = render(
+      <>
+        <Pnl value="-275.73" currency="EUR" />
+        <AccountCard name="PA-1" phase="Evaluation" balance="100100" startingBalance="100000" currency="GBP" rules={[{ label: "Daily loss", used: "100", limit: "1000" }]} />
+        <PnlCalendar year={2026} month={10} days={{ "2026-10-05": { pnl: "12000", trades: 1 } }} currency="EUR" />
+      </>,
+    );
+    expect(screen.getByText("−€275.73")).toBeTruthy();
+    expect(screen.getByText("£100,100.00")).toBeTruthy();
+    expect(container.querySelector(".ds-rule-amt")?.textContent).toBe("£100 / £1,000");
+    expect(container.textContent).not.toContain("$");
+  });
+});

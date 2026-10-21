@@ -20,8 +20,39 @@ export interface MoneyOptions {
   dp?: number;
   /** "+" on positive amounts. Default true. Negatives always get a minus. */
   signed?: boolean;
-  /** Prefix for the amount. Default "$". */
+  /** Prefix for the amount. Default "$". Ignored when `currency` is set. */
   symbol?: string;
+  /**
+   * ISO 4217 code of the account ("USD", "EUR"). Sets the prefix from the code,
+   * so a non-dollar account never shows "$". Omitted means USD.
+   */
+  currency?: string | null;
+}
+
+const symbolCache = new Map<string, string>();
+
+/**
+ * Display prefix for a currency code: "$" for USD, "€" for EUR, "CA$" for CAD,
+ * "CHF " for codes whose symbol is letters. An unrecognised code shows itself
+ * ("XYZ "), never "$". Null or undefined means USD.
+ */
+export function currencySymbol(currency: string | null | undefined): string {
+  const code = (currency ?? "USD").trim().toUpperCase();
+  const cached = symbolCache.get(code);
+  if (cached !== undefined) return cached;
+  let symbol = `${code} `;
+  if (/^[A-Z]{3}$/.test(code)) {
+    try {
+      const part = new Intl.NumberFormat("en-US", { style: "currency", currency: code, currencyDisplay: "symbol" })
+        .formatToParts(0)
+        .find((p) => p.type === "currency")?.value;
+      if (part) symbol = /[A-Za-z]$/.test(part) ? `${part} ` : part;
+    } catch {
+      // Not a currency Intl knows: keep the code.
+    }
+  }
+  symbolCache.set(code, symbol);
+  return symbol;
 }
 
 function groupThousands(digits: string): string {
@@ -51,7 +82,8 @@ export function moneySign(value: string | null | undefined): Sign {
  * `number`.
  */
 export function formatMoney(value: string | null | undefined, options: MoneyOptions = {}): string {
-  const { dp = 2, signed = true, symbol = "$" } = options;
+  const { dp = 2, signed = true } = options;
+  const symbol = options.currency !== undefined ? currencySymbol(options.currency) : (options.symbol ?? "$");
   if (dp < 0 || dp > 6 || !Number.isInteger(dp)) throw new RangeError("dp must be an integer from 0 to 6");
   const micros = value == null ? null : toMicros(value);
   if (micros == null) return UNKNOWN;
@@ -80,6 +112,18 @@ export function formatMoneyCompact(value: string | null | undefined, symbol = "$
   }
   const { whole } = roundMicros(abs, 0);
   return `${abs === 0n ? "" : sign}${symbol}${groupThousands(whole.toString())}`;
+}
+
+/**
+ * Orders two money texts exactly, for table sorting. Unknown (null or
+ * unparseable) sorts last in both directions, so it is never mixed in with zero.
+ */
+export function compareMoney(a: string | null | undefined, b: string | null | undefined, direction: "ascending" | "descending" = "ascending"): number {
+  const x = a == null ? null : toMicros(a);
+  const y = b == null ? null : toMicros(b);
+  if (x == null || y == null) return x == null && y == null ? 0 : x == null ? 1 : -1;
+  const order = x < y ? -1 : x > y ? 1 : 0;
+  return direction === "ascending" ? order : -order;
 }
 
 /** Adds decimal texts exactly. Null if any part is unknown (unknown is never zero). */
@@ -172,4 +216,32 @@ export function zonedWallTimeToInstant(local: string, timeZone: string): string 
   const second = asUtc - offsetAt(first);
   const instant = zonedWallTime(second, timeZone) === local ? second : Math.max(first, second);
   return new Date(instant).toISOString();
+}
+
+export interface InstantOptions {
+  /** IANA zone to show the time in: the account's zone. Default: the computer's. */
+  timeZone?: string;
+  /** Adds the year ("Oct 19, 2026, 16:12"). */
+  year?: boolean;
+  /** Adds the zone's short name ("EDT") so a time cannot be read in the wrong zone. */
+  zoneName?: boolean;
+}
+
+/**
+ * "Oct 19, 16:12" from an ISO instant, in 24-hour time. Unknown or malformed
+ * instants are "—", never the current time or the epoch.
+ */
+export function formatInstant(instant: string | null | undefined, options: InstantOptions = {}): string {
+  const ms = instant == null ? NaN : Date.parse(instant);
+  if (Number.isNaN(ms)) return UNKNOWN;
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: options.timeZone,
+    month: "short",
+    day: "numeric",
+    year: options.year ? "numeric" : undefined,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZoneName: options.zoneName ? "short" : undefined,
+  }).format(new Date(ms));
 }

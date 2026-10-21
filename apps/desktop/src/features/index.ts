@@ -1,0 +1,23 @@
+// Build 14 public data-layer surface. presentation.ts maps it to Build 13 states with type-only imports; no UI code or second provider here.
+export * from "./accounts/hooks/accounts";
+export * from "./trades/hooks/trades";
+export * from "./journal/hooks/journal";
+export * from "./imports/hooks/imports";
+export * from "./insights/hooks/insights";
+export * from "./today/hooks/today";
+export * from "./ledger/hooks/ledger";
+export * from "./settings/hooks/settings";
+export * from "./references/hooks/references";
+export * from "./accounts/view-models/account";
+export * from "./trades/view-models/trade";
+export * from "./journal/view-models/journal";
+export * from "./imports/view-models/import";
+export * from "./insights/view-models/snapshot";
+export * from "./shared/contracts";
+export * from "./shared/errors";
+export * from "./shared/capabilities";
+export * from "./shared/query-keys";
+export * from "./shared/presentation";
+export type { TradeFilters } from "./trades/api/trades";
+export type { JournalFilters } from "./journal/api/journal";
+export type { SnapshotFilters } from "./insights/api/snapshots";

@@ -1,10 +1,12 @@
 # FundedFlow design system
 
-Status: tokens, fonts, 12 components and display formatting, in `apps/desktop/src/design-system`. No product
-feature screen uses them yet; the app root uses the tokens and surface styles. In development,
-`#/settings/developer` opens a reference page
-(`DesignSystemGallery.tsx`) with every component on example data. The gallery never calls feature commands;
-the shared app runtime provider still checks local runtime availability.
+Status: tokens, fonts, display formatting and the shared components in `apps/desktop/src/design-system`:
+the 12 Build 7 components plus the Build 13 form, overlay, feedback, async-state and data-display components.
+No product feature screen uses them yet; the app root uses the tokens and surface styles. In development,
+`#/settings/developer` opens a reference page (`DesignSystemGallery.tsx`, `GallerySections.tsx`) with every
+component on labelled example data. The gallery never calls feature commands; the shared app runtime provider
+still checks local runtime availability. Every component renders in a plain React browser environment: none
+imports Tauri, SQLite or a data gateway.
 
 The system is dark-first (traders keep the app open beside their charts) with a light theme. It follows the OS
 setting; `data-theme="dark"` or `data-theme="light"` on any element forces a theme for that subtree.
@@ -15,7 +17,7 @@ setting; `data-theme="dark"` or `data-theme="light"` on any element forces a the
 import { AccountCard, Pnl, PnlCalendar, TradeTable, formatMoney } from "../design-system";
 ```
 
-Importing the folder loads the bundled fonts, `tokens.css` and `design-system.css` once. Put screens inside an
+Importing the folder loads the bundled fonts, `tokens.css` and the component stylesheets once. Put screens inside an
 element with the `ds-surface` class (page ground, ink, body font). Classes use the `ds-` prefix to stay separate
 from the developer panel's `ff-` classes. The product root does not define another token or primitive system.
 
@@ -25,14 +27,23 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 |---|---|
 | `tokens.css` | Colour tokens per theme (with the role of each), spacing, radii, font stacks |
 | `tokens.test.ts` | Fails if any text/background pair drops below 4.5:1, or control borders below 3:1, in either theme |
-| `format.ts` | Money, compact money, percentage and trading-day formatting; exact money sums |
+| `format.ts` | Money, compact money, percentage, trading-day and instant (`formatInstant`) formatting; exact money sums |
 | `components/primitives.tsx` | `Button`, `Badge`, `Pnl`, `StatTile`, `Tabs` + `TabPanel` (Radix Tabs) |
 | `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots; Build 12 supplies navigation and routing |
 | `components/rules.tsx` | `RuleMeter`, `ruleState`, `AccountCard` |
 | `components/charts.tsx` | `WinGauge`, `Sparkline`, `EquityCurve` |
 | `components/journal.tsx` | `PnlCalendar`, `monthWeeks`, `DayCard`, `TradeTable`, `tradeResult` |
-| `design-system.css` | Component styles |
-| `DesignSystemGallery.tsx`, `gallery.css` | The reference page |
+| `components/forms.tsx` | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select` (Radix), `FieldGroup`, `FormSection`, `FieldError`, `ValidationSummary`, `focusFirstInvalid`, `FileDropzone`, `formatFileSize` |
+| `components/overlays.tsx` | `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `OverlayClose`, `DropdownMenu`, `Tooltip` (Radix Dialog, Dropdown Menu, Tooltip) |
+| `components/feedback.tsx` | `InlineNotice`, `ToastProvider` + `useToast`, `StatusIndicator` |
+| `components/async-states.tsx` | `AsyncState`, `StateBoundary`, `Skeleton`, `LoadingState`, `EmptyState`, `ErrorState`, `UnavailableState`, `StaleDataNotice`, `RefreshingIndicator`, `MutationState`, `MutationFeedback`, `isMutationBusy`, `hasData` |
+| `components/data.tsx` | `DataTable`, `MetricCard`, `MetricValue` + `MetricValueView`, `MoneyCell`, `UnknownValue`, `LabeledValue`, `StatList`, `Stepper`, `MonthYearPicker` |
+| `components/primitives.tsx` (Build 13 additions) | `Button` `loading` and `disabledReason`, `IconButton`, `SegmentedControl` |
+| `components/rules.tsx` (Build 13 additions) | `MiniMeter`, `RuleStateBadge`, `RulebookLine` |
+| `components/charts.tsx` (Build 13 addition) | `ChartPanel` |
+| `design-system.css`, `controls.css`, `states.css`, `data.css` | Component styles (Build 7 components; controls, overlays and feedback; async states; data display) |
+| `*.test.tsx` | Component tests (Vitest + Testing Library, jsdom) |
+| `DesignSystemGallery.tsx`, `GallerySections.tsx`, `gallery.css` | The reference page |
 
 ## Rules the components follow
 
@@ -41,6 +52,10 @@ from the developer panel's `ff-` classes. The product root does not define anoth
   `@fundedflow/domain` (`toMicros`, `microsToDecimal`), so `sumMoney(["0.1", "0.2"])` is `"0.3"`. Floats appear
   only for drawing (`moneyToNumberForDisplay`: chart coordinates, bar widths) and for ratios (win rate,
   percent change). Display sums do not replace values Rust computes and stores.
+- **Money shows the account's currency.** Every money component (`Pnl`, `MetricValue` money, `MoneyCell`,
+  `RuleMeter`, `MiniMeter`, `AccountCard`, `PnlCalendar`, `DayCard`, `TradeTable`, `MonthYearPicker`) takes
+  `currency` (ISO 4217). `currencySymbol` turns it into "$", "€", "CA$" or "CHF "; an unrecognised code shows
+  itself, never "$". Omitting `currency` means USD, so feature screens always pass the account's currency.
 - **Unknown is not zero.** `null` money renders as "—" in ink-faint; a sum with an unknown part is unknown.
 - **Every P&L is signed**: `+$1,792.68`, `−$275.73` (U+2212), `$0.00`. In light theme profit and loss sit at
   similar lightness, so the sign is what tells them apart for colour-blind readers.
@@ -75,3 +90,77 @@ Cards are set off by hairlines, not shadows; `shadow-pop` is for menus, popovers
 
 The same system is kept as a browsable reference (brand book, tokens and live previews) in the FundedFlow
 Design System artifact on claude.ai. When a token changes, change `tokens.css` here and keep the two in step.
+
+## Build 13: forms, feedback, async states and data display
+
+### Forms
+- Every control has a visible label (or `hideLabel` for toolbar search and table checkboxes; it is still the
+  accessible name). `description` and `error` are linked through `aria-describedby`; `error` sets `aria-invalid`.
+  Required fields show `*` and set `required`; mark the odd optional field with `optional` instead.
+- Controls render native elements (`input`, `textarea`, radios, a `role="switch"` checkbox), so keyboard behaviour
+  is the browser's. `Select` is Radix Select: no option is chosen for the user unless the screen passes one.
+- On submit: collect issues, render `ValidationSummary` at the top of the form, pass each control its `error`, then
+  call `focusFirstInvalid(form)`. Error text has its own slot under the control.
+- `Button loading` keeps focus and ignores clicks, so one click is one write. `disabledReason` keeps a disabled
+  button focusable and reads the reason.
+- `FileDropzone` only hands `File` objects (or an `onBrowse` request for a native dialog) to the caller. Reading,
+  size limits, parsing and staging belong to the CSV import and attachment cards.
+
+### Overlays
+- `Dialog` and `Drawer` are modal: focus moves in and is trapped, Escape and the overlay close them, and focus
+  returns to what opened them (also when opened from a menu or a controlled `open`). Use `dismissible={false}`
+  while a write runs.
+- `ConfirmDialog` focuses Cancel first, runs `onConfirm` once per click, cannot be dismissed while it runs and stays
+  open with a safe message if it fails. It never claims "nothing changed"; pass `describeError` when the data layer
+  knows. The destructive actions themselves belong to later cards. The developer panel keeps its own
+  `components/ConfirmDialog.tsx` until those cards move to this one.
+- `Popover` (non-modal, anchored by CSS) for the month picker, column chooser and similar; `DropdownMenu` for
+  actions on one object; `Tooltip` names or explains a focusable control and is never the only place for
+  essential information.
+
+### Which message to use
+
+| Situation | Use |
+|---|---|
+| A view or card could not load | `ErrorState` (through `StateBoundary`), with Retry for reads |
+| A problem that is still true (file unreadable, rules missing) | `InlineNotice` next to it; never only a toast |
+| A finished action whose result is visible | Toast (`useToast().show`), success or info; closes after 5 s, paused on hover or focus |
+| A failed background action with nothing to show inline | Error toast (stays until dismissed) |
+| A save, import or delete in progress or finished | `MutationFeedback` beside the action |
+| Old data still on screen | `StaleDataNotice` (through `StateBoundary` `stale`) |
+| A consequential action | `ConfirmDialog` |
+| Risk, freshness or provenance of a value | `StatusIndicator` (text, icon and tone) |
+| The local runtime is down for the whole app | Not here: the shell's runtime gate (Build 12) |
+
+### Async states
+- Screens get one `AsyncState<T>` (`loading`, `success`, `refreshing`, `stale`, `empty` with a kind, `error`,
+  `unavailable`) from their Build 14 hook and pass it to `StateBoundary`, `ChartPanel` or a `DataTable` `fallback`.
+  There are no `isLoading`/`isError` flags to contradict each other, and the switch is exhaustive.
+- A failed or timed-out request is `error`, never `empty`. `empty` has three kinds: `no-records`, `no-matches`
+  (offer Clear filters) and `not-configured` (offer setup). `unavailable` is a known missing dependency with a
+  resolution, such as an account without a rulebook.
+- Loading shows skeletons only: no example values and no `$0.00`. A background refresh keeps data on screen with a
+  silent "Updating" mark; stale data says when it is from (in the account zone) and never says live. Set
+  `asOfBasis: "loaded"` when the time is only when the screen last received the data (a client receipt time),
+  so the notice says "last loaded" instead of implying the figures were calculated then.
+- `StateBoundary` announces a finished first load once, lets errors announce themselves and moves focus to the
+  error heading when a load the user was waiting for fails.
+- `MutationState` covers `idle`, `validating`, `submitting`, `success`, `validation-error`, `uncertain` and
+  `failed`. An uncertain outcome offers "Check result", never "Retry"; `failed` offers Retry only when
+  `nothingChanged` is true. `actions` adds the screen's own buttons, such as "I've checked the records" to
+  release a write lock. Nothing in the design system retries or replays a write on its own.
+
+### Data display
+- `DataTable` is controlled: the screen sorts, filters and pages; the table renders `aria-sort` (one sort at a
+  time), selection with a mixed select-all, a bulk-action toolbar, a `rowHeader` column, right-aligned mono numbers,
+  sideways scrolling inside the card and a pager. Pass a `LoadingState`, `EmptyState` or `ErrorState` as `fallback`
+  to keep the toolbar and headers in place. Put it in a grid or flex child with `min-width: 0`.
+- Sort money columns with `compareMoney(a, b, direction)`: exact micro-unit comparison, unknown last in both
+  directions.
+- `MetricCard`, `LabeledValue` and `StatList` take a `MetricValue` (`money`, `percent`, `count`, `text`,
+  `unavailable`). `null` renders as "—", read as "Unknown"; zero renders as zero.
+- `MonthYearPicker` follows [screens/04-calendar.md](design/screens/04-calendar.md#monthyearpicker). Year totals
+  come from `yearPnl` when Rust supplies them, otherwise from a display sum of the supplied months (unknown if any
+  month is unknown or none was supplied).
+- `RuleStateBadge` follows the RuleState table in [design/components.md](design/components.md#rulestate): unknown
+  presence or `needs_setup` shows "Needs setup", never a meter at zero.

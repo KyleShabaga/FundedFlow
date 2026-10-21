@@ -1,0 +1,49 @@
+/*
+ * Asynchronous presentation states (Build 13). Skeletons are flat bg-200
+ * shapes with a slow sheen that stops under reduced motion; state panels are
+ * centred text on the card ground with a 40 px icon mark.
+ */
+.ds-skel { display: block; border-radius: var(--radius-sm); background: var(--bg-200); position: relative; overflow: hidden; }
+.ds-skel-block { border-radius: var(--radius-md); }
+.ds-skel-circle { border-radius: 50%; }
+.ds-skel::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--bg-300), transparent); transform: translateX(-100%); animation: ds-sheen 1.6s ease-in-out infinite; }
+@keyframes ds-sheen { to { transform: translateX(100%); } }
+
+.ds-loading { display: grid; gap: var(--space-2); min-width: 0; }
+.ds-loading-inline { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--ink-muted); font: 400 13px/18px var(--font-sans); }
+.ds-loading-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-4); }
+.ds-loading-tile { display: grid; gap: var(--space-2); }
+.ds-loading-table { display: grid; gap: var(--space-3); }
+.ds-loading-row { display: flex; gap: var(--space-4); padding: 0 var(--space-3); }
+.ds-loading-panel { display: grid; gap: var(--space-3); }
+
+.ds-state { display: grid; justify-items: center; text-align: center; gap: var(--space-2); color: var(--ink); font: 400 14px/20px var(--font-sans); min-width: 0; }
+.ds-state-panel { padding: var(--space-8) var(--space-4); }
+.ds-state-compact { padding: var(--space-4); gap: var(--space-1); }
+.ds-state-mark { width: 40px; height: 40px; border-radius: var(--radius-md); background: var(--bg-200); color: var(--ink-muted); display: grid; place-items: center; margin-bottom: var(--space-1); }
+.ds-state-compact .ds-state-mark { width: 32px; height: 32px; }
+.ds-state-title { margin: 0; font: 600 15px/20px var(--font-display); overflow-wrap: anywhere; }
+.ds-state-title:focus { outline: none; }
+.ds-state-title:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.ds-state-text { max-width: 52ch; color: var(--ink-muted); font-size: 13px; line-height: 18px; overflow-wrap: anywhere; }
+.ds-state-text > p { margin: 0; }
+.ds-state-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-2); }
+.ds-error-state .ds-state-mark { background: var(--loss-soft); color: var(--loss); }
+.ds-error-operation { justify-items: start; text-align: left; }
+.ds-error-operation .ds-state-actions { justify-content: flex-start; }
+.ds-error-route { padding: 64px var(--space-4); }
+.ds-unavailable .ds-state-mark { background: var(--bg-300); }
+
+.ds-stale { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--warn); background: var(--warn-soft); font: 400 13px/18px var(--font-sans); color: var(--ink); margin-bottom: var(--space-3); }
+.ds-stale-text { flex: 1 1 240px; min-width: 0; }
+.ds-refreshing { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-muted); font: 500 12px/16px var(--font-sans); }
+.ds-boundary { min-width: 0; }
+.ds-boundary-bar { display: flex; justify-content: flex-end; margin-bottom: var(--space-2); }
+
+.ds-mutation { margin: 0; display: inline-flex; align-items: center; gap: var(--space-2); font: 500 13px/18px var(--font-sans); }
+.ds-mutation-busy { color: var(--ink-muted); }
+.ds-mutation-success { color: var(--profit); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-skel::after { animation: none; display: none; }
+}
