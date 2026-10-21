@@ -49,7 +49,10 @@ def get_snapshot(conn: sqlite3.Connection, snapshot_id: str) -> sqlite3.Row | No
 
 
 def list_snapshots(
-    conn: sqlite3.Connection, firm_id: str | None = None, url: str | None = None, limit: int = 50,
+    conn: sqlite3.Connection,
+    firm_id: str | None = None,
+    url: str | None = None,
+    limit: int = 50,
 ) -> list[sqlite3.Row]:
     sql = (
         "SELECT s.id, s.captured_at, s.title, s.content_hash, s.fetch_method, s.content_type, s.final_url,"
@@ -57,7 +60,8 @@ def list_snapshots(
         " FROM source_snapshots s JOIN collector_sources c ON c.id = s.source_id"
         " JOIN collector_firms f ON f.id = s.firm_id"
     )
-    clauses, params = [], []
+    clauses: list[str] = []
+    params: list[object] = []
     if firm_id is not None:
         clauses.append("s.firm_id = ?")
         params.append(firm_id)
@@ -72,8 +76,15 @@ def list_snapshots(
 
 
 def store_evidence(
-    conn: sqlite3.Connection, *, firm: Firm, source: Source, attempt: AttemptRecord, evidence: EvidenceInput,
-    now: datetime, retain_raw: bool = False, raw_retention_days: int = 90,
+    conn: sqlite3.Connection,
+    *,
+    firm: Firm,
+    source: Source,
+    attempt: AttemptRecord,
+    evidence: EvidenceInput,
+    now: datetime,
+    retain_raw: bool = False,
+    raw_retention_days: int = 90,
 ) -> tuple[Outcome, str]:
     """Record an attempt that produced a document, creating a snapshot only for content not seen before.
 
@@ -95,16 +106,35 @@ def store_evidence(
             if previous_raw is not None and evidence.raw_sha256 == previous_raw and source.latest_snapshot_id:
                 warnings.append("normalization_changed")
             conn.execute(
-                "INSERT INTO source_snapshots (id, source_id, firm_id, content_hash, normalization_version, captured_at,"
-                " first_attempt_id, requested_url, final_url, redirect_chain, http_status, title, text, structure,"
-                " content_type, fetch_method, source_channel, parser_name, parser_version, warnings, raw_sha256,"
-                " platform_metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (sid, source.id, firm.id, digest, NORMALIZATION_VERSION, evidence.captured_at, attempt.id,
-                 evidence.requested_url, evidence.final_url, json.dumps(evidence.redirect_chain), evidence.http_status,
-                 doc.title, doc.text, json.dumps(doc.structure(), ensure_ascii=False, sort_keys=True),
-                 evidence.content_type, evidence.fetch_method.value, evidence.source_channel, doc.parser_name,
-                 doc.parser_version, json.dumps(sorted(set(warnings))), evidence.raw_sha256,
-                 json.dumps(evidence.platform_metadata, sort_keys=True) if evidence.platform_metadata else None),
+                "INSERT INTO source_snapshots (id, source_id, firm_id, content_hash, normalization_version,"
+                " captured_at, first_attempt_id, requested_url, final_url, redirect_chain, http_status, title,"
+                " text, structure, content_type, fetch_method, source_channel, parser_name, parser_version,"
+                " warnings, raw_sha256, platform_metadata)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    sid,
+                    source.id,
+                    firm.id,
+                    digest,
+                    NORMALIZATION_VERSION,
+                    evidence.captured_at,
+                    attempt.id,
+                    evidence.requested_url,
+                    evidence.final_url,
+                    json.dumps(evidence.redirect_chain),
+                    evidence.http_status,
+                    doc.title,
+                    doc.text,
+                    json.dumps(doc.structure(), ensure_ascii=False, sort_keys=True),
+                    evidence.content_type,
+                    evidence.fetch_method.value,
+                    evidence.source_channel,
+                    doc.parser_name,
+                    doc.parser_version,
+                    json.dumps(sorted(set(warnings))),
+                    evidence.raw_sha256,
+                    json.dumps(evidence.platform_metadata, sort_keys=True) if evidence.platform_metadata else None,
+                ),
             )
             outcome = Outcome.NEW_SNAPSHOT
         attempt.outcome = outcome
@@ -113,8 +143,10 @@ def store_evidence(
         attempt.parser_version = doc.parser_version
         insert_attempt(conn, attempt)
         state: dict[str, object] = {
-            "last_attempt_at": attempt.started_at, "last_success_at": attempt.started_at,
-            "last_outcome": outcome.value, "latest_snapshot_id": sid,
+            "last_attempt_at": attempt.started_at,
+            "last_success_at": attempt.started_at,
+            "last_outcome": outcome.value,
+            "latest_snapshot_id": sid,
         }
         if evidence.fetch_method is not FetchMethod.MANUAL_CAPTURE:
             state["etag"] = evidence.etag
@@ -124,8 +156,13 @@ def store_evidence(
             conn.execute(
                 "INSERT OR IGNORE INTO raw_payloads (sha256, bytes, content_type, stored_at, expires_at)"
                 " VALUES (?, ?, ?, ?, ?)",
-                (evidence.raw_sha256, evidence.raw_bytes, evidence.content_type, format_instant(now),
-                 format_instant(now + timedelta(days=raw_retention_days))),
+                (
+                    evidence.raw_sha256,
+                    evidence.raw_bytes,
+                    evidence.content_type,
+                    format_instant(now),
+                    format_instant(now + timedelta(days=raw_retention_days)),
+                ),
             )
     return outcome, sid
 
@@ -138,26 +175,41 @@ def _latest_raw_sha(conn: sqlite3.Connection, source: Source) -> str | None:
 
 
 def record_unchanged(
-    conn: sqlite3.Connection, *, source: Source, attempt: AttemptRecord, now: datetime,
+    conn: sqlite3.Connection,
+    *,
+    source: Source,
+    attempt: AttemptRecord,
+    now: datetime,
 ) -> None:
     """A 304 Not Modified: record the attempt against the latest snapshot without a body."""
     with transaction(conn):
         attempt.outcome = Outcome.UNCHANGED
         attempt.snapshot_id = source.latest_snapshot_id
         insert_attempt(conn, attempt)
-        update_source_state(conn, source.id, now, last_attempt_at=attempt.started_at,
-                            last_success_at=attempt.started_at, last_outcome=Outcome.UNCHANGED.value)
+        update_source_state(
+            conn,
+            source.id,
+            now,
+            last_attempt_at=attempt.started_at,
+            last_success_at=attempt.started_at,
+            last_outcome=Outcome.UNCHANGED.value,
+        )
 
 
 def record_failure(
-    conn: sqlite3.Connection, *, attempt: AttemptRecord, now: datetime, source: Source | None = None,
+    conn: sqlite3.Connection,
+    *,
+    attempt: AttemptRecord,
+    now: datetime,
+    source: Source | None = None,
 ) -> None:
     """Record a blocked or failed attempt. Existing snapshots are never touched."""
     with transaction(conn):
         insert_attempt(conn, attempt)
         if source is not None:
-            update_source_state(conn, source.id, now, last_attempt_at=attempt.started_at,
-                                last_outcome=attempt.outcome.value)
+            update_source_state(
+                conn, source.id, now, last_attempt_at=attempt.started_at, last_outcome=attempt.outcome.value
+            )
 
 
 def observations(conn: sqlite3.Connection, snapshot_id: str) -> tuple[str | None, str | None, int]:

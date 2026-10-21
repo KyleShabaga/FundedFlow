@@ -28,7 +28,13 @@ def parser_version() -> str:
 
 
 def parse_pdf(
-    raw: bytes, *, max_bytes: int, timeout_seconds: float, max_pages: int, max_memory_mib: int, max_text_chars: int,
+    raw: bytes,
+    *,
+    max_bytes: int,
+    timeout_seconds: float,
+    max_pages: int,
+    max_memory_mib: int,
+    max_text_chars: int,
     worker_command: list[str] | None = None,
 ) -> ParsedDocument:
     if len(raw) > max_bytes:
@@ -54,14 +60,18 @@ def parse_pdf(
         warnings.append("thin_content")
     title_raw = result.get("title")
     title = normalise_inline(str(title_raw))[:300] if title_raw else None
-    return ParsedDocument(title=title or None, text=text, parser_name=PARSER_NAME, parser_version=parser_version(),
-                          warnings=warnings)
+    return ParsedDocument(
+        title=title or None, text=text, parser_name=PARSER_NAME, parser_version=parser_version(), warnings=warnings
+    )
 
 
 def _run_limited(argv: list[str], *, timeout_seconds: float, max_memory_bytes: int) -> str:
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-    proc = subprocess.Popen(  # noqa: S603 - fixed argument list, no shell
-        argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+    proc = subprocess.Popen(
+        argv,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
         creationflags=creationflags,
     )
     deadline = time.monotonic() + timeout_seconds

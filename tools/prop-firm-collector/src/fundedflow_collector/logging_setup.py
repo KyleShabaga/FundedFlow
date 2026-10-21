@@ -17,7 +17,9 @@ LOGGER_NAME = "fundedflow_collector"
 SENSITIVE_QUERY_KEYS = re.compile(
     r"(token|key|sig|signature|session|sess|auth|code|password|passwd|secret|credential|jwt|access|ticket)", re.I
 )
-SECRET_VALUE = re.compile(r"^(?:[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+|[0-9a-fA-F]{32,}|[A-Za-z0-9+/_-]{40,}=*)$")
+SECRET_VALUE = re.compile(
+    r"^(?:[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+|[0-9a-fA-F]{32,}|[A-Za-z0-9+/_-]{40,}=*)$"
+)
 SENSITIVE_HEADERS = frozenset({"authorization", "proxy-authorization", "cookie", "set-cookie"})
 REDACTED = "REDACTED"
 

@@ -75,19 +75,30 @@ class Source:
 
 def _firm(row: sqlite3.Row) -> Firm:
     return Firm(
-        id=row["id"], firm_key=row["firm_key"], display_name=row["display_name"], homepage_url=row["homepage_url"],
-        enabled=bool(row["enabled"]), disabled_reason=row["disabled_reason"], max_fetches=row["max_fetches"],
-        max_depth=row["max_depth"], excluded_paths=list(json.loads(row["excluded_paths"])),
-        created_at=row["created_at"], updated_at=row["updated_at"],
+        id=row["id"],
+        firm_key=row["firm_key"],
+        display_name=row["display_name"],
+        homepage_url=row["homepage_url"],
+        enabled=bool(row["enabled"]),
+        disabled_reason=row["disabled_reason"],
+        max_fetches=row["max_fetches"],
+        max_depth=row["max_depth"],
+        excluded_paths=list(json.loads(row["excluded_paths"])),
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
     )
 
 
 def _host(row: sqlite3.Row) -> Host:
     return Host(
-        id=row["id"], firm_id=row["firm_id"], host=row["host"], role=HostRole(row["role"]),
+        id=row["id"],
+        firm_id=row["firm_id"],
+        host=row["host"],
+        role=HostRole(row["role"]),
         terms_url=row["terms_url"],
         terms_decision=TermsDecision(row["terms_decision"]) if row["terms_decision"] else None,
-        terms_reviewed_at=row["terms_reviewed_at"], terms_notes=row["terms_notes"],
+        terms_reviewed_at=row["terms_reviewed_at"],
+        terms_notes=row["terms_notes"],
         terms_min_delay_seconds=row["terms_min_delay_seconds"],
         unclear_terms_accepted_at=row["unclear_terms_accepted_at"],
     )
@@ -95,13 +106,24 @@ def _host(row: sqlite3.Row) -> Host:
 
 def _source(row: sqlite3.Row) -> Source:
     return Source(
-        id=row["id"], firm_id=row["firm_id"], canonical_url=row["canonical_url"], kind=SourceKind(row["kind"]),
-        source_channel=SourceChannel(row["source_channel"]), requires_js=bool(row["requires_js"]),
-        js_disabled=bool(row["js_disabled"]), enabled=bool(row["enabled"]), priority=row["priority"],
-        label=row["label"], etag=row["etag"], last_modified=row["last_modified"],
-        sitemap_lastmod=row["sitemap_lastmod"], last_attempt_at=row["last_attempt_at"],
-        last_success_at=row["last_success_at"], last_outcome=row["last_outcome"],
-        latest_snapshot_id=row["latest_snapshot_id"], zendesk_cursor=row["zendesk_cursor"],
+        id=row["id"],
+        firm_id=row["firm_id"],
+        canonical_url=row["canonical_url"],
+        kind=SourceKind(row["kind"]),
+        source_channel=SourceChannel(row["source_channel"]),
+        requires_js=bool(row["requires_js"]),
+        js_disabled=bool(row["js_disabled"]),
+        enabled=bool(row["enabled"]),
+        priority=row["priority"],
+        label=row["label"],
+        etag=row["etag"],
+        last_modified=row["last_modified"],
+        sitemap_lastmod=row["sitemap_lastmod"],
+        last_attempt_at=row["last_attempt_at"],
+        last_success_at=row["last_success_at"],
+        last_outcome=row["last_outcome"],
+        latest_snapshot_id=row["latest_snapshot_id"],
+        zendesk_cursor=row["zendesk_cursor"],
     )
 
 
@@ -123,8 +145,15 @@ def _check_patterns(patterns: list[str]) -> list[str]:
 
 
 def add_firm(
-    conn: sqlite3.Connection, *, firm_key: str, display_name: str, homepage_url: str, now: datetime,
-    max_fetches: int | None = None, max_depth: int | None = None, excluded_paths: list[str] | None = None,
+    conn: sqlite3.Connection,
+    *,
+    firm_key: str,
+    display_name: str,
+    homepage_url: str,
+    now: datetime,
+    max_fetches: int | None = None,
+    max_depth: int | None = None,
+    excluded_paths: list[str] | None = None,
 ) -> Firm:
     if not FIRM_KEY.match(firm_key):
         raise RegistryError("firm key must be 2-64 characters: lowercase letters, digits and hyphens")
@@ -139,8 +168,17 @@ def add_firm(
         conn.execute(
             "INSERT INTO collector_firms (id, firm_key, display_name, homepage_url, max_fetches, max_depth,"
             " excluded_paths, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (ids.new_id("firm"), firm_key, display_name.strip(), homepage, max_fetches, max_depth,
-             json.dumps(_check_patterns(excluded_paths or [])), stamp, stamp),
+            (
+                ids.new_id("firm"),
+                firm_key,
+                display_name.strip(),
+                homepage,
+                max_fetches,
+                max_depth,
+                json.dumps(_check_patterns(excluded_paths or [])),
+                stamp,
+                stamp,
+            ),
         )
     firm = get_firm(conn, firm_key)
     assert firm is not None
@@ -178,9 +216,16 @@ def list_firms(conn: sqlite3.Connection) -> list[Firm]:
 
 
 def update_firm(
-    conn: sqlite3.Connection, firm: Firm, *, now: datetime, display_name: str | None = None,
-    homepage_url: str | None = None, max_fetches: int | None = None, max_depth: int | None = None,
-    excluded_paths: list[str] | None = None, clear_limits: bool = False,
+    conn: sqlite3.Connection,
+    firm: Firm,
+    *,
+    now: datetime,
+    display_name: str | None = None,
+    homepage_url: str | None = None,
+    max_fetches: int | None = None,
+    max_depth: int | None = None,
+    excluded_paths: list[str] | None = None,
+    clear_limits: bool = False,
 ) -> Firm:
     _check_limits(max_fetches, max_depth)
     name = display_name.strip() if display_name is not None else firm.display_name
@@ -207,8 +252,13 @@ def set_firm_enabled(conn: sqlite3.Connection, firm: Firm, enabled: bool, reason
             "UPDATE collector_firms SET enabled = ?, disabled_reason = ?, updated_at = ? WHERE id = ?",
             (int(enabled), None if enabled else reason, format_instant(now), firm.id),
         )
-        record_event(conn, now=now, kind="firm_enabled" if enabled else "firm_disabled", firm_id=firm.id,
-                     detail={"reason": reason})
+        record_event(
+            conn,
+            now=now,
+            kind="firm_enabled" if enabled else "firm_disabled",
+            firm_id=firm.id,
+            detail={"reason": reason},
+        )
     return require_firm(conn, firm.firm_key)
 
 
@@ -261,8 +311,16 @@ def list_hosts(conn: sqlite3.Connection, firm_id: str | None = None) -> list[Hos
 
 
 def record_terms(
-    conn: sqlite3.Connection, firm: Firm, host: Host, *, decision: TermsDecision, terms_url: str, now: datetime,
-    notes: str | None = None, min_delay_seconds: float | None = None, accept_unclear: bool = False,
+    conn: sqlite3.Connection,
+    firm: Firm,
+    host: Host,
+    *,
+    decision: TermsDecision,
+    terms_url: str,
+    now: datetime,
+    notes: str | None = None,
+    min_delay_seconds: float | None = None,
+    accept_unclear: bool = False,
 ) -> Host:
     """Record the operator's terms review. The collector never makes this decision itself."""
     url = _check_url(terms_url, "terms URL")
@@ -278,12 +336,28 @@ def record_terms(
             " terms_min_delay_seconds = ?, unclear_terms_accepted_at = ?, updated_at = ? WHERE id = ?",
             (url, decision.value, stamp, notes, min_delay_seconds, accepted, stamp, host.id),
         )
-        record_event(conn, now=now, kind="terms_recorded", firm_id=firm.id, host=host.host,
-                     detail={"decision": decision.value, "terms_url": url, "notes": notes,
-                             "min_delay_seconds": min_delay_seconds})
+        record_event(
+            conn,
+            now=now,
+            kind="terms_recorded",
+            firm_id=firm.id,
+            host=host.host,
+            detail={
+                "decision": decision.value,
+                "terms_url": url,
+                "notes": notes,
+                "min_delay_seconds": min_delay_seconds,
+            },
+        )
         if accept_unclear:
-            record_event(conn, now=now, kind="unclear_terms_accepted", firm_id=firm.id, host=host.host,
-                         detail={"accepted_at": stamp})
+            record_event(
+                conn,
+                now=now,
+                kind="unclear_terms_accepted",
+                firm_id=firm.id,
+                host=host.host,
+                detail={"accepted_at": stamp},
+            )
     result = get_host(conn, firm.id, host.host)
     assert result is not None
     return result
@@ -293,9 +367,17 @@ def record_terms(
 
 
 def add_source(
-    conn: sqlite3.Connection, firm: Firm, *, url: str, kind: SourceKind, now: datetime,
-    channel: SourceChannel = SourceChannel.SEED, requires_js: bool = False, js_disabled: bool = False,
-    label: str | None = None, priority: int = 0,
+    conn: sqlite3.Connection,
+    firm: Firm,
+    *,
+    url: str,
+    kind: SourceKind,
+    now: datetime,
+    channel: SourceChannel = SourceChannel.SEED,
+    requires_js: bool = False,
+    js_disabled: bool = False,
+    label: str | None = None,
+    priority: int = 0,
 ) -> Source:
     canonical = _check_url(url, "source URL")
     if requires_js and js_disabled:
@@ -316,8 +398,19 @@ def add_source(
         conn.execute(
             "INSERT INTO collector_sources (id, firm_id, canonical_url, kind, source_channel, requires_js, js_disabled,"
             " priority, label, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (sid, firm.id, canonical, kind.value, channel.value, int(requires_js), int(js_disabled), priority, label,
-             stamp, stamp),
+            (
+                sid,
+                firm.id,
+                canonical,
+                kind.value,
+                channel.value,
+                int(requires_js),
+                int(js_disabled),
+                priority,
+                label,
+                stamp,
+                stamp,
+            ),
         )
     result = get_source(conn, sid)
     assert result is not None
@@ -325,7 +418,12 @@ def add_source(
 
 
 def ensure_source(
-    conn: sqlite3.Connection, firm: Firm, canonical_url: str, kind: SourceKind, channel: SourceChannel, now: datetime,
+    conn: sqlite3.Connection,
+    firm: Firm,
+    canonical_url: str,
+    kind: SourceKind,
+    channel: SourceChannel,
+    now: datetime,
 ) -> Source:
     """Get or create a source row for a discovered URL. Must be called inside a transaction."""
     sid = ids.source_id(firm.firm_key, canonical_url)
@@ -368,8 +466,15 @@ def list_sources(conn: sqlite3.Connection, firm_id: str | None = None, *, seeds_
 
 
 def update_source(
-    conn: sqlite3.Connection, source: Source, *, now: datetime, label: str | None = None, priority: int | None = None,
-    requires_js: bool | None = None, js_disabled: bool | None = None, enabled: bool | None = None,
+    conn: sqlite3.Connection,
+    source: Source,
+    *,
+    now: datetime,
+    label: str | None = None,
+    priority: int | None = None,
+    requires_js: bool | None = None,
+    js_disabled: bool | None = None,
+    enabled: bool | None = None,
 ) -> Source:
     req = source.requires_js if requires_js is None else requires_js
     nojs = source.js_disabled if js_disabled is None else js_disabled
@@ -382,16 +487,31 @@ def update_source(
         conn.execute(
             "UPDATE collector_sources SET label = ?, priority = ?, requires_js = ?, js_disabled = ?, enabled = ?,"
             " updated_at = ? WHERE id = ?",
-            (label if label is not None else source.label, prio, int(req), int(nojs),
-             int(source.enabled if enabled is None else enabled), format_instant(now), source.id),
+            (
+                label if label is not None else source.label,
+                prio,
+                int(req),
+                int(nojs),
+                int(source.enabled if enabled is None else enabled),
+                format_instant(now),
+                source.id,
+            ),
         )
     return require_source(conn, source.id)
 
 
 def update_source_state(conn: sqlite3.Connection, source_id: str, now: datetime, **fields: object) -> None:
     """Update a source's last-fetch state columns. Must be called inside a transaction."""
-    allowed = {"etag", "last_modified", "sitemap_lastmod", "last_attempt_at", "last_success_at", "last_outcome",
-               "latest_snapshot_id", "zendesk_cursor"}
+    allowed = {
+        "etag",
+        "last_modified",
+        "sitemap_lastmod",
+        "last_attempt_at",
+        "last_success_at",
+        "last_outcome",
+        "latest_snapshot_id",
+        "zendesk_cursor",
+    }
     unknown = set(fields) - allowed
     if unknown:
         raise ValueError(f"not source state columns: {sorted(unknown)}")

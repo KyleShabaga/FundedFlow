@@ -68,7 +68,7 @@ class RunLock:
 
     def __enter__(self) -> RunLock:
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        handle = open(self._path, "a+b")  # noqa: SIM115 - held for the lifetime of the lock
+        handle = open(self._path, "a+b")
         try:
             _lock_file(handle)
         except OSError as exc:

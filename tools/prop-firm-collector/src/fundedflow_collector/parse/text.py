@@ -25,5 +25,10 @@ def parse_text(raw: bytes, *, max_bytes: int, charset: str | None = None) -> Par
     text = normalise_text(decoded)
     first_line = next((line for line in text.split("\n") if line.strip()), "")
     warnings = ["thin_content"] if len(text) < 50 else []
-    return ParsedDocument(title=normalise_inline(first_line)[:200] or None, text=text, parser_name=PARSER_NAME,
-                          parser_version=f"fundedflow-collector {__version__}", warnings=warnings)
+    return ParsedDocument(
+        title=normalise_inline(first_line)[:200] or None,
+        text=text,
+        parser_name=PARSER_NAME,
+        parser_version=f"fundedflow-collector {__version__}",
+        warnings=warnings,
+    )

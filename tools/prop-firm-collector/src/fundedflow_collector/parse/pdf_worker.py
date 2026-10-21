@@ -43,8 +43,13 @@ def extract(in_path: str, max_pages: int, max_chars: int) -> dict[str, object]:
             title = str(info.title)
     except Exception:
         title = None
-    return {"title": title, "pages": pages, "page_count": page_count, "truncated": truncated,
-            "pypdf_version": metadata.version("pypdf")}
+    return {
+        "title": title,
+        "pages": pages,
+        "page_count": page_count,
+        "truncated": truncated,
+        "pypdf_version": metadata.version("pypdf"),
+    }
 
 
 def main(argv: list[str]) -> int:

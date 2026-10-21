@@ -41,16 +41,30 @@ class AttemptRecord:
 
 
 def start_run(
-    conn: sqlite3.Connection, *, firm_id: str, batch_id: str, command: str, now: datetime,
-    options: dict[str, Any], config_sha256: str,
+    conn: sqlite3.Connection,
+    *,
+    firm_id: str,
+    batch_id: str,
+    command: str,
+    now: datetime,
+    options: dict[str, Any],
+    config_sha256: str,
 ) -> str:
     run_id = ids.new_id("run")
     with transaction(conn):
         conn.execute(
             "INSERT INTO crawl_runs (id, batch_id, firm_id, command, started_at, status, options, config_sha256,"
             " collector_version) VALUES (?, ?, ?, ?, ?, 'running', ?, ?, ?)",
-            (run_id, batch_id, firm_id, command, format_instant(now), json.dumps(options, sort_keys=True),
-             config_sha256, __version__),
+            (
+                run_id,
+                batch_id,
+                firm_id,
+                command,
+                format_instant(now),
+                json.dumps(options, sort_keys=True),
+                config_sha256,
+                __version__,
+            ),
         )
     return run_id
 
@@ -70,23 +84,65 @@ def insert_attempt(conn: sqlite3.Connection, a: AttemptRecord) -> None:
         " fetch_method, started_at, duration_ms, resolved_ip, conditional, http_status, response_headers, bytes,"
         " raw_sha256, outcome, policy_reason, error_detail, parser_name, parser_version, snapshot_id)"
         " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (a.id, a.run_id, a.firm_id, a.source_id, a.requested_url, a.final_url, json.dumps(a.redirect_chain),
-         a.fetch_method.value, a.started_at, a.duration_ms, a.resolved_ip, int(a.conditional), a.http_status,
-         json.dumps(a.response_headers, sort_keys=True), a.bytes, a.raw_sha256, a.outcome.value, a.policy_reason,
-         a.error_detail, a.parser_name, a.parser_version, a.snapshot_id),
+        (
+            a.id,
+            a.run_id,
+            a.firm_id,
+            a.source_id,
+            a.requested_url,
+            a.final_url,
+            json.dumps(a.redirect_chain),
+            a.fetch_method.value,
+            a.started_at,
+            a.duration_ms,
+            a.resolved_ip,
+            int(a.conditional),
+            a.http_status,
+            json.dumps(a.response_headers, sort_keys=True),
+            a.bytes,
+            a.raw_sha256,
+            a.outcome.value,
+            a.policy_reason,
+            a.error_detail,
+            a.parser_name,
+            a.parser_version,
+            a.snapshot_id,
+        ),
     )
 
 
 def insert_discovered_link(
-    conn: sqlite3.Connection, *, run_id: str, firm_id: str, url: str, via: str, depth: int, decision: str,
-    now: datetime, relevance: int = 0, anchor_text: str | None = None, sitemap_lastmod: str | None = None,
+    conn: sqlite3.Connection,
+    *,
+    run_id: str,
+    firm_id: str,
+    url: str,
+    via: str,
+    depth: int,
+    decision: str,
+    now: datetime,
+    relevance: int = 0,
+    anchor_text: str | None = None,
+    sitemap_lastmod: str | None = None,
     from_attempt_id: str | None = None,
 ) -> None:
     conn.execute(
         "INSERT INTO discovered_links (id, run_id, firm_id, url, via, from_attempt_id, anchor_text, sitemap_lastmod,"
         " depth, relevance, decision, discovered_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (ids.new_id("lnk"), run_id, firm_id, url, via, from_attempt_id, (anchor_text or "")[:300] or None,
-         sitemap_lastmod, depth, relevance, decision, format_instant(now)),
+        (
+            ids.new_id("lnk"),
+            run_id,
+            firm_id,
+            url,
+            via,
+            from_attempt_id,
+            (anchor_text or "")[:300] or None,
+            sitemap_lastmod,
+            depth,
+            relevance,
+            decision,
+            format_instant(now),
+        ),
     )
 
 

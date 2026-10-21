@@ -1,0 +1,11 @@
+"""Stable exit codes (architecture doc §5.3)."""
+
+OK = 0
+INTERNAL = 1
+USAGE = 2
+CONFIG = 3
+POLICY_BLOCKED = 4
+FETCH_FAILED = 5
+SCHEMA_INVALID = 6
+DATABASE = 7
+INTERRUPTED = 130

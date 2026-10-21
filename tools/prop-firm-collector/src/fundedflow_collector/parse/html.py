@@ -16,8 +16,21 @@ from fundedflow_collector.parse.document import Heading, Link, ParsedDocument, P
 from fundedflow_collector.parse.hashing import normalise_inline, normalise_text
 
 PARSER_NAME = "trafilatura+bs4"
-STRIP_TAGS = ("script", "style", "noscript", "template", "iframe", "object", "embed", "svg", "canvas",
-              "button", "select", "textarea", "input")
+STRIP_TAGS = (
+    "script",
+    "style",
+    "noscript",
+    "template",
+    "iframe",
+    "object",
+    "embed",
+    "svg",
+    "canvas",
+    "button",
+    "select",
+    "textarea",
+    "input",
+)
 MAX_TABLES = 50
 MAX_ROWS = 200
 MAX_COLS = 30
@@ -27,7 +40,11 @@ MAX_HEADINGS = 500
 
 
 def parser_version() -> str:
-    return f"trafilatura {metadata.version('trafilatura')}; bs4 {metadata.version('beautifulsoup4')}; lxml {metadata.version('lxml')}"
+    versions = [
+        f"{name} {metadata.version(dist)}"
+        for name, dist in (("trafilatura", "trafilatura"), ("bs4", "beautifulsoup4"), ("lxml", "lxml"))
+    ]
+    return "; ".join(versions)
 
 
 def decode_html(raw: bytes, charset: str | None = None) -> str:
@@ -38,7 +55,11 @@ def decode_html(raw: bytes, charset: str | None = None) -> str:
 
 
 def parse_html(
-    raw: bytes | str, *, max_bytes: int, charset: str | None = None, min_text_chars: int = 300,
+    raw: bytes | str,
+    *,
+    max_bytes: int,
+    charset: str | None = None,
+    min_text_chars: int = 300,
     title_override: str | None = None,
 ) -> ParsedDocument:
     size = len(raw.encode("utf-8")) if isinstance(raw, str) else len(raw)
@@ -70,8 +91,15 @@ def parse_html(
     extracted = None
     try:
         extracted = trafilatura.extract(
-            markup, output_format="txt", include_tables=True, include_comments=False, include_links=False,
-            include_images=False, favor_recall=True, deduplicate=False, with_metadata=False,
+            markup,
+            output_format="txt",
+            include_tables=True,
+            include_comments=False,
+            include_links=False,
+            include_images=False,
+            favor_recall=True,
+            deduplicate=False,
+            with_metadata=False,
         )
     except Exception:  # trafilatura is defensive but not exhaustive on malformed markup
         warns.append("trafilatura_failed")
@@ -88,8 +116,16 @@ def parse_html(
     headings = _headings(soup, text)
     tables = _tables(soup)
     links = _links(soup)
-    return ParsedDocument(title=title, text=text, parser_name=PARSER_NAME, parser_version=parser_version(),
-                          headings=headings, tables=tables, links=links, warnings=sorted(set(warns)))
+    return ParsedDocument(
+        title=title,
+        text=text,
+        parser_name=PARSER_NAME,
+        parser_version=parser_version(),
+        headings=headings,
+        tables=tables,
+        links=links,
+        warnings=sorted(set(warns)),
+    )
 
 
 def _headings(soup: BeautifulSoup, text: str) -> list[Heading]:
@@ -138,8 +174,7 @@ def _tables(soup: BeautifulSoup) -> list[Table]:
             elif len(rows) < MAX_ROWS:
                 rows.append(values)
         if headers or rows:
-            result.append(Table(caption=caption or None, preceding_heading=heading or None, headers=headers,
-                                rows=rows))
+            result.append(Table(caption=caption or None, preceding_heading=heading or None, headers=headers, rows=rows))
     return result
 
 

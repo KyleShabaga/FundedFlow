@@ -116,7 +116,5 @@ def backup(conn: sqlite3.Connection, target: Path) -> None:
 def recover_interrupted_runs(conn: sqlite3.Connection) -> int:
     """Mark runs left `running` by a crash or Ctrl+C as `aborted`. Their attempts and snapshots are kept."""
     now = format_instant(SystemClock().now())
-    cur = conn.execute(
-        "UPDATE crawl_runs SET status = 'aborted', finished_at = ? WHERE status = 'running'", (now,)
-    )
+    cur = conn.execute("UPDATE crawl_runs SET status = 'aborted', finished_at = ? WHERE status = 'running'", (now,))
     return cur.rowcount
