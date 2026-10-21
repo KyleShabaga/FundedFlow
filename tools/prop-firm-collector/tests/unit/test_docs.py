@@ -22,10 +22,11 @@ SECTIONS = [
     "## 11. Network and VPN guidance",
     "## 12. Troubleshooting and reset",
     "## 13. Suggested routine",
+    "## 14. The desktop window",
 ]
 
 
-def test_user_guide_has_all_thirteen_sections_in_order() -> None:
+def test_user_guide_has_all_sections_in_order() -> None:
     text = GUIDE.read_text(encoding="utf-8")
     positions = [text.index(heading) for heading in SECTIONS]
     assert positions == sorted(positions)

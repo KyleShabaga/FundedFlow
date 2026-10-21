@@ -66,6 +66,10 @@ uv sync --extra browser
 uv run playwright install chromium
 ```
 
+Prefer a window? `uv run collector-gui` (or `.\scripts\create-shortcut.ps1` for a desktop shortcut) opens a desktop
+window with the same functions: Setup, Firms, Fetch, Manual capture, Results and Export. It is plain tkinter (part of
+Python), adds no dependencies or network services, and calls the same code as the commands below.
+
 Data lives in `%LOCALAPPDATA%\FundedFlow\Collector\` (`collector.db`, `collector.toml`, `logs\`, `exports\`).
 Override with `--data-dir` or `FFC_DATA_DIR`. The collector refuses any path inside the FundedFlow app's data folder
 (`%APPDATA%\com.fundedflow.desktop\`) or named `fundedflow.db`.
@@ -89,6 +93,7 @@ Run as `uv run collector <command>`; every command has `--help`.
 | `export` / `validate` | Write / check the v1 evidence envelope (`--csv` adds a diagnostic CSV without page text) |
 | `prune-raw` | Delete expired raw bytes (only when `raw.retain = true`; snapshots are never deleted) |
 | `reset --yes` | Delete the collector's own database, logs and exports |
+| `gui` | Open the desktop window (same as `collector-gui`) |
 
 `--fixture-site DIR` (on `discover` and `fetch`) replays a local folder instead of the network. The synthetic
 fixture in [`examples/fixture-site`](examples/fixture-site) is what the tests and the user guide use; anything

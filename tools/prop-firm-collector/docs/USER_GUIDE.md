@@ -4,6 +4,10 @@ This guide is for people who are comfortable with PowerShell but don't need to k
 (apart from opening Notepad) was run on Windows 11 with PowerShell 7 against the synthetic practice firms that ship
 with the tool. The output is real but trimmed, and folder paths are shortened to `C:\Users\<you>\...`.
 
+> **Prefer clicking to typing?** After installing (section 2), run `uv run collector-gui` or create a desktop
+> shortcut. The desktop window does everything in this guide with buttons and forms: see
+> [section 14](#14-the-desktop-window).
+
 ## 1. What this tool does and doesn't do
 
 **It does:**
@@ -666,3 +670,52 @@ Collector data reset. The FundedFlow app database was not touched.
   days).
 - **Whenever a site blocks you:** switch that firm to manual capture and leave the host stopped.
 - Run `uv run collector doctor` now and then to see expiring reviews and stopped hosts.
+
+## 14. The desktop window
+
+Everything in this guide can also be done in a window, with no commands to type. The window uses exactly the same
+safety rules as the commands (approved hosts only, terms reviews, robots.txt, pacing, stopping when a site says no),
+and it adds no setting that could weaken them.
+
+**Open it** from the collector folder (section 2):
+
+```powershell
+uv run collector-gui
+```
+
+Or make a desktop shortcut once, then double-click **FundedFlow Collector** on your desktop:
+
+```powershell
+.\scripts\create-shortcut.ps1
+```
+
+```text
+Created C:\Users\Kyle\Desktop\FundedFlow Collector.lnk
+```
+
+The first time it opens, it creates the data folder, database and settings file by itself (what `init-db` does).
+
+| Tab | What you do there | Same as |
+|---|---|---|
+| **Setup** | See the health checks; enter and **Save** the info URL and optional contact | `doctor`, editing `collector.toml` |
+| **Firms** | **Add firm…** or **Import from file…**; select a firm, then **Add host…**, **Record terms review…**, **Re-enable stopped host…**, **Add source…**, enable/disable sources | `firm`, `host`, `source` |
+| **Fetch** | Choose a firm (or all), tick **Preview only** to check first, untick it to fetch; **Start**, and **Stop** if you need to | `fetch`, `fetch --dry-run` |
+| **Manual capture** | Pick the firm, paste the page's original address, **Browse…** to the saved file, **Import** | `import-capture` |
+| **Results** | Click a run to see every request; click a request to see what its outcome means and what to do; click a snapshot to read its text | `runs`, `snapshots` |
+| **Export** | All firms or one, optional request log and CSV, **Export**; **Validate a file…** | `export`, `validate` |
+
+![Setup tab](images/gui-setup.png)
+
+![Firms tab](images/gui-firms.png)
+
+A live fetch asks you to confirm before contacting any website. **Practice mode** on the Fetch tab replays the
+synthetic practice sites instead of the internet (the same as `--fixture-site`), which is a safe way to learn the
+window. Progress lines appear as each page is checked. **Stop** finishes the current request, saves what it has,
+and marks the run `aborted`.
+
+![Fetch tab](images/gui-fetch.png)
+
+![Results tab](images/gui-results.png)
+
+Only one fetch or import runs at a time, whether it was started from the window or from PowerShell. If a command
+says "another collector command is running", wait for the window's run to finish.
