@@ -7,6 +7,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   Button,
   ConfirmDialog,
+  DiagnosticDetails,
   Dialog,
   Drawer,
   DropdownMenu,
@@ -311,5 +312,23 @@ describe("DropdownMenu opening a dialog", () => {
     expect(dialog.contains(document.activeElement)).toBe(true);
     await user.keyboard("{Escape}");
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Actions" })));
+  });
+});
+
+describe("DiagnosticDetails", () => {
+  it("shows selectable text, copies it, and keeps it visible with a fallback when copying fails", async () => {
+    const user = userEvent.setup();
+    const summary = ["FundedFlow diagnostic summary", "Incident: FF-ABC"].join("\n");
+    render(<DiagnosticDetails text={summary} />);
+    const writeText = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("denied"));
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    await user.click(screen.getByText("Diagnostic summary"));
+    expect(screen.getByLabelText("Diagnostic summary").textContent).toContain("Incident: FF-ABC");
+    await user.click(screen.getByRole("button", { name: "Copy summary" }));
+    expect(writeText).toHaveBeenCalledWith(summary);
+    expect(screen.getByRole("status").textContent).toBe("Copied.");
+    await user.click(screen.getByRole("button", { name: "Copy summary" }));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toMatch(/Couldn't copy/));
+    expect(screen.getByLabelText("Diagnostic summary").textContent).toContain("FF-ABC");
   });
 });

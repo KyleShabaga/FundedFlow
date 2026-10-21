@@ -36,6 +36,7 @@ import { fieldErrors, toMutationState } from "../../shared/presentation";
 import { featureKeys } from "../../shared/query-keys";
 import { useArchiveAccount, useChangeAccountStatus, useRestoreAccount, useResetAccountAttempt } from "../hooks/accounts";
 import type { AccountViewModel } from "../view-models/account";
+import { AccountWriteReview } from "./AccountWriteReview";
 import { accountLabel } from "./presentation";
 
 type Status = AccountViewModel["status"];
@@ -123,7 +124,9 @@ function StatusDialogBody({ account, initialStatus, open, onOpenChange }: Status
       }
     >
       <form id={`${base}-form`} ref={form} onSubmit={submit} noValidate className="acct-form">
-        <MutationFeedback state={toMutationState(change, { success: "Status changed." })} onCheck={() => onOpenChange(false)} />
+        {change.outcome === "uncertain-outcome"
+          ? <AccountWriteReview write={change} accountId={account.id} />
+          : <MutationFeedback state={toMutationState(change, { success: "Status changed." })} />}
         <RadioGroup<Status>
           label="New status"
           required
@@ -393,7 +396,9 @@ function ResetDialogBody({ account, attemptNumber, open, onOpenChange, onCreated
       <form id={`${base}-form`} ref={form} onSubmit={submit} noValidate className="acct-form">
         <Stepper label="New attempt steps" steps={STEPS} current={step} />
         <ValidationSummary issues={summary} />
-        <MutationFeedback state={toMutationState(reset, { success: "New attempt started.", fieldId: f => `${base}-${f}` })} onCheck={close} />
+        {reset.outcome === "uncertain-outcome"
+          ? <AccountWriteReview write={reset} accountId={account.id} />
+          : <MutationFeedback state={toMutationState(reset, { success: "New attempt started.", fieldId: f => `${base}-${f}` })} />}
 
         {step === 0 && (
           <FormSection title="How did the previous attempt end?" description="Confirm the real result. It is recorded on the old attempt; nothing is inferred from its trades.">

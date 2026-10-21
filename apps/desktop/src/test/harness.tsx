@@ -44,11 +44,13 @@ export function resetHarness() {
  * Seeds the store and renders the whole app at `path` (a hash route such as "/journal"). `strict` adds the
  * StrictMode wrapper main.tsx uses (doubled effects make call counts noisier, so it is off by default).
  */
-export function renderApp(path = "/", seed: AppStoreSeed | ReturnType<typeof createAppStore> = {}, { strict = false } = {}) {
+export function renderApp(path = "/", seed: AppStoreSeed | ReturnType<typeof createAppStore> = {},
+  { strict = false, fakeTimers = false }: { strict?: boolean; fakeTimers?: boolean } = {}) {
   const store = "repository" in seed ? seed : createAppStore(seed);
   boundary.repository = store.repository;
   window.location.hash = path;
-  const user = userEvent.setup();
+  // With vi.useFakeTimers(), user-event must advance the fake clock for its own delays.
+  const user = userEvent.setup(fakeTimers ? { advanceTimers: vi.advanceTimersByTime } : {});
   const view = render(strict ? <StrictMode><App /></StrictMode> : <App />);
   return { store, user, view };
 }

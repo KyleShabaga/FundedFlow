@@ -121,10 +121,8 @@ describe("first run to a configured account", () => {
     expect((within(dialog).getByRole("textbox", { name: /Account name/ }) as HTMLInputElement).value).toBe("Eval 50K");
     await user.click(within(dialog).getByRole("button", { name: "Add account" }));
     expect(lost.calls).toHaveLength(1);
-    // Check result closes the form and shows what the journal actually holds.
-    await user.click(within(alert).getByRole("button", { name: "Check result" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(await screen.findByText("Add your first trading account")).toBeTruthy();
+    // Checking and releasing the lock: uncertain-writes.journey.test.tsx (Build 26.6).
+    expect(within(alert).getByRole("button", { name: "Check result" })).toBeTruthy();
   });
 });
 

@@ -55,6 +55,8 @@ export interface Hold {
   release(): Promise<void>;
   /** Fails every held call with `error` instead (a failed or uncertain write). */
   fail(error: unknown): Promise<void>;
+  /** Runs every held call (the write happens), then answers with `error` (the answer was lost). */
+  lose(error: unknown): Promise<void>;
 }
 
 export function createAppStore(seed: AppStoreSeed = {}) {
@@ -190,7 +192,7 @@ export function createAppStore(seed: AppStoreSeed = {}) {
   } as never;
 
   /* ---------- Holds: pending calls resolved by the test ---------- */
-  const holds: { path: string; when: (args: unknown[]) => boolean; gate: Promise<void>; done: Promise<unknown>[]; hold: Hold }[] = [];
+  const holds: { path: string; when: (args: unknown[]) => boolean; gate: Promise<void>; done: Promise<unknown>[]; lost: { error: unknown } | null; hold: Hold }[] = [];
   for (const [ns, methods] of Object.entries(repository)) {
     if (!methods || typeof methods !== "object") continue;
     const wrapped: Record<string, unknown> = {};
@@ -201,7 +203,11 @@ export function createAppStore(seed: AppStoreSeed = {}) {
         const entry = holds.find(h => h.path === path && h.when(args));
         if (!entry) return (fn as (...a: unknown[]) => unknown)(...args);
         entry.hold.calls.push(structuredClone(args));
-        const result = entry.gate.then(() => (fn as (...a: unknown[]) => unknown)(...args));
+        const result = entry.gate.then(async () => {
+          const value = await (fn as (...a: unknown[]) => unknown)(...args);
+          if (entry.lost) throw entry.lost.error;
+          return value;
+        });
         entry.done.push(result.catch(() => {}));
         return result;
       };
@@ -220,11 +226,12 @@ export function createAppStore(seed: AppStoreSeed = {}) {
       return Promise.all(entry.done).then(() => {});
     };
     const entry = {
-      path, when, gate, done: [] as Promise<unknown>[],
+      path, when, gate, done: [] as Promise<unknown>[], lost: null as { error: unknown } | null,
       hold: {
         path, calls: [] as unknown[][],
         release: () => settle(open),
         fail: (error: unknown) => settle(() => reject(error)),
+        lose: (error: unknown) => settle(() => { entry.lost = { error }; open(); }),
       },
     };
     holds.push(entry);

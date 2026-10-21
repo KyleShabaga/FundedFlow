@@ -27,6 +27,7 @@ import {
   focusFirstInvalid,
   FormSection,
   IconButton,
+  DiagnosticDetails,
   InlineNotice,
   LabeledValue,
   LoadingState,
@@ -233,6 +234,7 @@ export function FeedbackSection() {
     <Section title="Notices, toasts and status" note="Blocking problems stay inline; toasts confirm finished actions. Status always pairs text and icon with colour; Unknown is never Safe.">
       <div className="dsg-grid-2">
         <InlineNotice tone="info" title="Saved on this computer">Your journal is stored locally. Nothing is sent anywhere.</InlineNotice>
+        <DiagnosticDetails text={["FundedFlow diagnostic summary", "Incident: FF-1A2B3C4D5E6F", "Code: open_failed", "Stage: open", "Contains no trades, notes, account names, file paths or error text."].join("\n")} />
         <InlineNotice tone="success">Imported 64 trades into Apex $100K (example).</InlineNotice>
         <InlineNotice tone="warning" title="2 rows need a look">They were imported, but their fees look unusual.</InlineNotice>
         <InlineNotice tone="error" title="Couldn't read the file" actions={<Button size="sm">Choose another file</Button>} live="off">

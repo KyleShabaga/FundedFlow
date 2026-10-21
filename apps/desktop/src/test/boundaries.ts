@@ -74,3 +74,11 @@ export const dialogPluginMock = {
   save: (options: unknown) => dialogAnswer("save", options),
   open: (options: unknown) => dialogAnswer("open", options),
 };
+
+/** A promise the test resolves or rejects itself (a native command still running). */
+export function deferredFor<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}

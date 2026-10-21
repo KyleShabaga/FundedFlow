@@ -26,6 +26,8 @@ import { useCatalogue } from "../../references/hooks/references";
 import { fieldErrors, toMutationState } from "../../shared/presentation";
 import { useCreateAccount, useUpdateAccount } from "../hooks/accounts";
 import type { AccountViewModel } from "../view-models/account";
+import { RuntimeInlineRecovery } from "../../../components/RuntimeGate";
+import { AccountWriteReview } from "./AccountWriteReview";
 import { ACCOUNT_TYPE_LABELS } from "./presentation";
 
 export interface AccountFormValues {
@@ -271,10 +273,11 @@ function AccountFormDialogBody({ mode, account, tradeCount, open, onOpenChange, 
         }
       >
         <form id={fieldId(base, "form")} ref={form} onSubmit={submit} noValidate className="acct-form" aria-label={mode === "create" ? "New account" : "Edit account"}>
+          <RuntimeInlineRecovery />
           <ValidationSummary issues={summary} title={summary.length === 1 ? "Fix 1 problem before saving" : undefined} />
-          {feedback.status !== "idle" && feedback.status !== "submitting" && feedback.status !== "success" && (
-            <MutationFeedback state={feedback} onCheck={() => onOpenChange(false)} />
-          )}
+          {mutation.outcome === "uncertain-outcome"
+            ? <AccountWriteReview write={mutation} {...(mode === "create" ? { created: values.name } : { accountId: account?.id })} />
+            : feedback.status !== "idle" && feedback.status !== "submitting" && feedback.status !== "success" && <MutationFeedback state={feedback} />}
           <FormSection title="Account" description="How you recognise this account. Never your broker password or keys.">
             <TextField id={fieldId(base, "name")} label={FIELD_LABELS.name} required value={values.name} onChange={e => set("name")(e.target.value)} error={errorFor("name")} maxLength={100} placeholder="PA-48213 or Eval #2" autoFocus />
             <Select<AccountViewModel["accountType"]>
