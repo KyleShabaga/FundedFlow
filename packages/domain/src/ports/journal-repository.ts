@@ -1,3 +1,4 @@
+import type { AccountRiskInputs, RiskInputsQuery, ObservationInput, ObservationCorrection, FinancialObservation, LedgerRevision, ReconciliationRequest, Reconciliation, ReconciliationResolutionInput, ReconciliationResolution } from "../risk/contracts.js";
 // The JournalRepository port: every read and write of the local journal goes
 // through this interface. It names only domain contracts, never a host type
 // (no Tauri, SQLite or HTTP), so the desktop Tauri/SQLite adapter
@@ -214,8 +215,26 @@ export interface CatalogueRepository {
 
 export type CatalogueTransitionTarget = (typeof catalogueTransitionTargets)[number];
 
+/** Raw evidence and review operations (Build 15.5). No UI, rule evaluation or live feed. */
+export interface FinancialEvidenceRepository {
+  inputs(query: RiskInputsQuery): Promise<AccountRiskInputs>;
+  create(input: ObservationInput): Promise<FinancialObservation>;
+  get(id: string): Promise<FinancialObservation>;
+  /** Includes originals and superseding revisions, oldest recording first. */
+  list(accountId: string): Promise<FinancialObservation[]>;
+  correct(id: string, input: ObservationCorrection): Promise<FinancialObservation>;
+  ledgerHistory(accountId: string): Promise<LedgerRevision[]>;
+  correctLedger(id: string, input: LedgerEntryInput, metadata: { actor: string; reason: string }): Promise<LedgerEntry>;
+  removeLedger(id: string, metadata: { actor: string; reason: string }): Promise<void>;
+  reconcile(request: ReconciliationRequest): Promise<Reconciliation>;
+  reconciliations(accountId: string): Promise<Reconciliation[]>;
+  resolve(id: string, input: ReconciliationResolutionInput): Promise<ReconciliationResolution>;
+  resolutions(id: string): Promise<ReconciliationResolution[]>;
+}
+
 /** The local journal. */
 export interface JournalRepository {
+  readonly evidence: FinancialEvidenceRepository;
   readonly accounts: AccountRepository;
   readonly trades: TradeRepository;
   readonly journal: JournalEntryRepository;

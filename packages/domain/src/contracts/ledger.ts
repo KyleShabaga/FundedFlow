@@ -4,6 +4,7 @@
 // the rules see; payouts, resets and corrections always do.
 
 import { z } from "zod";
+import { canonicalDecimal, toMicros } from "../primitives/money.js";
 
 import { decimal, optionalText } from "./fields.js";
 
@@ -23,14 +24,14 @@ const feeKinds: readonly LedgerKind[] = ["evaluation_fee", "activation_fee", "re
 export const ledgerEntryInputSchema = z.strictObject({
   accountId: z.string().min(1),
   kind: z.enum(ledgerKinds),
-  amount: decimal.refine((v) => Number(v) !== 0, "Must not be zero"),
+  amount: decimal.refine((v) => toMicros(v) !== null && canonicalDecimal(v) !== "0", "Must not be zero"),
   /** Omit to use the kind's rule; required for `other`. */
   affectsBalance: z.boolean().nullish(),
   effectiveAt: z.iso.datetime({ offset: true, message: "Enter a date and time" }),
   note: optionalText(20_000),
 }).superRefine((e, ctx) => {
   const negative = e.kind === "payout" || feeKinds.includes(e.kind);
-  if (negative && Number(e.amount) > 0) {
+  if (negative && !e.amount.startsWith("-") && canonicalDecimal(e.amount) !== "0") {
     ctx.addIssue({ code: "custom", path: ["amount"], message: `A ${e.kind.replace("_", " ")} is negative` });
   }
   if (e.kind === "other" && (e.affectsBalance === null || e.affectsBalance === undefined)) {
