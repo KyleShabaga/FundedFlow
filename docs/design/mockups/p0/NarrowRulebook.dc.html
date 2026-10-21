@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rulebook at 720 px</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.nlist{list-style:none;margin:0;padding:0}
+.nlist li{display:grid;gap:4px;padding:12px 16px;border-top:1px solid var(--line-100)}
+.nlist li:first-child{border-top:0}
+</style>
+</helmet>
+<div class="shell is-narrow" style="width: 720px; min-height: 1500px;">
+  <dc-import name="P0Sidebar" active="accounts" collapsed="{{yes}}" hint-size="72px,100%"></dc-import>
+  <div class="shell-main">
+    <dc-import name="P0Header" title="Rulebook" here="Rulebook" crumbs="{{crumbs}}" account="Apex 100K · PA-48213" hint-size="100%,150px"></dc-import>
+    <main class="shell-content">
+      <div class="wrap">
+        <div class="stack-s">
+          <h2 class="h3" style="font-size: 18px;">Apex 100K · PA-48213</h2>
+          <div class="row"><button type="button" class="btn btn-sm">Write my own rules</button><button type="button" class="btn btn-sm btn-primary">Assign a version…</button></div>
+        </div>
+        <section class="card">
+          <div class="pad-s stack-s" style="border-bottom: 1px solid var(--line-100);">
+            <span class="overline">In force today</span>
+            <b>Apex 100K Evaluation · v3</b>
+            <span class="status s-ok" style="align-self: start;"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"></path></svg>Verified</span>
+            <div class="row"><button type="button" class="btn btn-sm">Compare</button><button type="button" class="btn btn-sm">Preview</button><button type="button" class="btn btn-sm">Start a draft</button></div>
+          </div>
+          <dl class="kv" style="padding: 0 16px;">
+            <div><dt>Provider</dt><dd>Apex Trader Funding</dd></div>
+            <div><dt>Phase · path</dt><dd>Evaluation · Intraday trailing</dd></div>
+            <div><dt>In force from</dt><dd>Mon, Oct 5, 2026 (America/New_York)</dd></div>
+            <div><dt>Last reviewed</dt><dd>Oct 2, 2026 · M. Rivera</dd></div>
+          </dl>
+          <h3 class="small" style="margin: 0; padding: 12px 16px 4px; font-weight: 600;">Rules in force</h3>
+          <p class="faint" style="margin: 0; padding: 0 16px 8px;">The table becomes a list below 760 px; nothing is hidden.</p>
+          <ul class="nlist">
+            <li><div class="row-between"><b>Maximum drawdown</b><span class="status s-flow">Calculated</span></div><span class="small">$3,000.00 · trailing, intraday · locks at $100,100.00</span><span class="faint">Help centre · claim verified</span></li>
+            <li><div class="row-between"><b>Daily loss limit</b><span class="status s-neutral">None</span></div><span class="small muted">None (stated by the source)</span></li>
+            <li><div class="row-between"><b>Profit target</b><span class="status s-flow">Calculated</span></div><span class="small num">$6,000.00</span></li>
+            <li><div class="row-between"><b>Scaling plan</b><span class="status s-warn">Needs setup</span></div><span class="small faint">Unknown · add the steps in a draft</span></li>
+          </ul>
+        </section>
+        <div class="tabs" role="tablist" aria-label="Rulebook records"><button type="button" role="tab" class="tab is-on" aria-selected="true">Versions</button><button type="button" role="tab" class="tab" aria-selected="false">Assignments</button><button type="button" role="tab" class="tab" aria-selected="false">Activity</button><button type="button" role="tab" class="tab" aria-selected="false">Calculation</button></div>
+        <div class="dt-card"><div class="dt-scroll"><table class="dt" style="min-width: 560px;"><thead><tr><th scope="col"><span>Version</span></th><th scope="col"><span>State</span></th><th scope="col"><span>Reason</span></th><th scope="col"><span>Last saved</span></th></tr></thead><tbody><tr><td><b>v4</b></td><td><span class="status s-neutral">Draft</span></td><td>Firm added a 50% consistency…</td><td class="mono">Oct 21</td></tr><tr><td><b>v3</b> <span class="badge b-flow">In use</span></td><td><span class="status s-ok">Verified</span></td><td>Firm raised the profit target</td><td class="mono">Oct 2</td></tr></tbody></table></div><div class="dt-foot">Wide tables scroll inside the card.</div></div>
+
+        <p class="cap overline" style="margin: 8px 0 0;">Editor at 720 px</p>
+        <section class="card">
+          <div class="rule is-open" style="grid-template-columns: 24px minmax(0, 1fr);">
+            <span class="rule-idx" aria-hidden="true">5</span>
+            <div class="stack" style="gap: 10px;">
+              <div class="row-between"><b>Consistency</b><span class="chg chg-mod">~ Changed</span></div>
+              <label class="fld"><span class="fld-label">Best day share</span><span class="affix"><input class="input num" value="0.50"><span>share</span></span><span class="fld-desc">Decimal share: 0.5 is 50%.</span></label>
+              <div class="row" style="gap: 4px;"><button type="button" class="icon-btn" aria-label="Move Consistency up"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"></path></svg></button><button type="button" class="icon-btn" aria-label="Move Consistency down"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M19 12l-7 7-7-7"></path></svg></button><button type="button" class="icon-btn" aria-label="Remove Consistency"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"></path></svg></button></div>
+            </div>
+          </div>
+        </section>
+        <div class="actbar" style="position: static;"><span class="save-state"><span class="dot dot-warn" aria-hidden="true"></span>Unsaved changes</span><div class="row"><button type="button" class="btn btn-sm">Undo changes</button><button type="button" class="btn btn-sm btn-primary">Save draft</button></div></div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":720,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() { return { yes: true, crumbs: [{ label: 'Accounts', href: 'AccountDetail.dc.html' }, { label: 'Apex 100K · PA-48213', href: 'AccountDetail.dc.html' }] }; }
+}
+</script>
+</body>
+</html>

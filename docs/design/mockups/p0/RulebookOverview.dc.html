@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rulebook overview</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.vrow{cursor:pointer}
+.vrow a{color:var(--ink);text-decoration:none;font-weight:600}
+.vrow:hover a{color:var(--flow)}
+</style>
+</helmet>
+<div class="shell" data-theme="dark">
+  <dc-import name="P0Sidebar" active="accounts" hint-size="248px,100%"></dc-import>
+  <div class="shell-main">
+    <dc-import name="P0Header" title="Rulebook" here="Rulebook" crumbs="{{crumbs}}" account="Apex 100K · PA-48213" hint-size="100%,120px"></dc-import>
+    <main class="shell-content">
+      <div class="wrap">
+        <div class="mock-states" role="group" aria-label="Mockup state (review only)">
+          <span>Mockup state</span>
+          <sc-for list="{{views}}" as="v" hint-placeholder-count="6"><button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for>
+        </div>
+
+        <div class="sec-head">
+          <div>
+            <h2>Apex 100K · PA-48213</h2>
+            <p class="lede">Which rules govern this attempt, from when, and how far they can be trusted. Every version is kept; changes are new versions.</p>
+          </div>
+          <sc-if value="{{canEdit}}" hint-placeholder-val="{{ true }}">
+            <div class="row">
+              <button type="button" class="btn"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3l4 4L8 20H4v-4z"></path></svg>Write my own rules</button>
+              <button type="button" class="btn btn-primary">Assign a version…</button>
+            </div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{isArchived}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-neutral" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><div><b>Archived: read-only</b><p>Restore the account to change its rulebook. Versions, history and calculations stay viewable.</p><div class="notice-actions"><a class="btn btn-sm" href="AccountDetail.dc.html">Go to the account</a></div></div></div>
+        </sc-if>
+
+        <sc-if value="{{isStale}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-warn" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg><div><b>Stale: a source contradicts this version</b><p>The firm's help page changed on Oct 14, 2026 and now states a different daily loss limit. Calculations keep using v3 until you assign another version.</p><div class="notice-actions"><button type="button" class="btn btn-sm">Start a draft from v3</button><a class="btn btn-sm btn-ghost" href="RulebookCompare.dc.html">See the source difference</a></div></div></div>
+        </sc-if>
+
+        <sc-if value="{{isLoading}}" hint-placeholder-val="{{ false }}">
+          <section class="card pad stack" aria-busy="true" aria-label="Loading the rulebook">
+            <span class="skel" style="width: 180px; height: 18px;"></span>
+            <span class="skel" style="width: 60%; height: 14px;"></span>
+            <div class="facts"><span class="skel" style="height: 36px;"></span><span class="skel" style="height: 36px;"></span><span class="skel" style="height: 36px;"></span><span class="skel" style="height: 36px;"></span></div>
+            <span class="skel" style="height: 160px; border-radius: 8px;"></span>
+            <span class="faint" role="status">Loading the rulebook…</span>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{isError}}" hint-placeholder-val="{{ false }}">
+          <section class="card state" role="alert">
+            <span class="state-mark" style="color: var(--loss);"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg></span>
+            <h3 tabindex="-1">The rulebook assignment couldn't be read</h3>
+            <p>Nothing was changed. The account's limits stay Unknown until the assignment can be read. If this keeps happening, restart FundedFlow.</p>
+            <button type="button" class="btn btn-sm" style="margin-top: 8px;">Try again</button>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{isEmpty}}" hint-placeholder-val="{{ false }}">
+          <section class="card state">
+            <span class="state-mark"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h12l4 4v12H4zM8 10h8M8 14h5"></path></svg></span>
+            <h3>No rulebook assigned</h3>
+            <p>Limits and room left stay Unknown until a rulebook governs this account. Journaling and imports work without one.</p>
+            <div class="row" style="justify-content: center; margin-top: 8px;">
+              <button type="button" class="btn btn-sm">Write my own rules</button>
+              <button type="button" class="btn btn-sm btn-primary">Assign a verified version…</button>
+            </div>
+            <p class="faint" style="margin-top: 4px;">Personal and demo accounts see: "Personal, demo and other accounts don't need a rulebook, but you can keep your own rules."</p>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{isNoneToday}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-warn" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 7v5l3 2"></path></svg><div><b>No rulebook in force today</b><p>This account has assignments, but none covers today (Wed, Oct 21, 2026 in America/New_York). The last one ended on Oct 16. Limits stay Unknown for today.</p><div class="notice-actions"><button type="button" class="btn btn-sm btn-primary">Assign a version…</button><button type="button" class="btn btn-sm" onClick="{{toHistory}}">See assignment history</button></div></div></div>
+        </sc-if>
+
+        <sc-if value="{{showInForce}}" hint-placeholder-val="{{ true }}">
+          <section class="card" aria-labelledby="inforce-h">
+            <div class="pad row-between" style="border-bottom: 1px solid var(--line-100);">
+              <div class="stack-s" style="gap: 6px;">
+                <span class="overline">In force today</span>
+                <h3 id="inforce-h" class="h3" style="font-size: 18px;">Apex 100K Evaluation · <a class="link" href="RulebookEditor.dc.html">v3</a></h3>
+                <div class="row">
+                  <span class="{{ver.cls}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{ver.d}}"></path></svg>{{ver.label}}</span>
+                  <span class="small muted">{{ver.sentence}}</span>
+                </div>
+              </div>
+              <sc-if value="{{canEdit}}" hint-placeholder-val="{{ true }}">
+                <div class="row">
+                  <a class="btn btn-sm" href="RulebookCompare.dc.html"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v12M18 9v12M6 15a3 3 0 1 0 0 6a3 3 0 1 0 0-6zM18 3a3 3 0 1 0 0 6a3 3 0 1 0 0-6z"></path></svg>Compare</a>
+                  <a class="btn btn-sm" href="RulebookExplain.dc.html"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"></path></svg>Preview</a>
+                  <a class="btn btn-sm" href="RulebookEditor.dc.html">Start a draft from v3</a>
+                </div>
+              </sc-if>
+            </div>
+            <div class="pad">
+              <dl class="facts">
+                <div><dt>Provider</dt><dd>Apex Trader Funding</dd></div>
+                <div><dt>Programme</dt><dd>100K Evaluation</dd></div>
+                <div><dt>Phase · path</dt><dd>Evaluation · Intraday trailing</dd></div>
+                <div><dt>Account type</dt><dd>Evaluation</dd></div>
+                <div><dt>In force from</dt><dd>Mon, Oct 5, 2026<span class="faint">trading day, America/New_York</span></dd></div>
+                <div><dt>Until</dt><dd>Still in force</dd></div>
+                <div><dt>Provider-stated from</dt><dd>Sep 1, 2026</dd></div>
+                <div><dt>Last reviewed</dt><dd>Oct 2, 2026, 10:14 AM<span class="faint">verified by M. Rivera</span></dd></div>
+              </dl>
+            </div>
+            <div class="pad-s" style="padding-inline: 24px; border-top: 1px solid var(--line-100); background: var(--bg-200);">
+              <div class="row-between">
+                <div class="row" style="gap: 16px;">
+                  <span class="label">Calculation readiness</span>
+                  <span class="small"><b class="num">5</b> of 8 rules can be calculated</span>
+                  <span class="small muted"><b class="num">1</b> manual check</span>
+                  <span class="small muted"><b class="num">1</b> none (stated)</span>
+                  <span class="small wrn"><b class="num">1</b> needs setup</span>
+                </div>
+                <span class="faint">Rules that can't be calculated are never shown as within limit.</span>
+              </div>
+            </div>
+            <div class="dt-scroll">
+              <table class="dt">
+                <caption style="text-align: left; padding: 14px 24px 8px; font: 600 13px/18px var(--font-sans); color: var(--ink);">Rules in force</caption>
+                <thead><tr><th scope="col" style="padding-left: 12px;"><span style="padding-left: 12px;">Rule</span></th><th scope="col"><span>What the version states</span></th><th scope="col"><span>State</span></th><th scope="col"><span>Source</span></th></tr></thead>
+                <tbody>
+                  <sc-for list="{{rules}}" as="r" hint-placeholder-count="8">
+                    <tr>
+                      <th scope="row" style="text-align: left; padding: 10px 12px 10px 24px; font: 500 13px/18px var(--font-sans); text-transform: none; letter-spacing: 0; background: transparent; color: var(--ink); border-bottom: 1px solid var(--line-100);"><div>{{r.name}}</div><div class="faint" style="font-weight: 400;">{{r.type}}</div></th>
+                      <td style="white-space: normal;"><span class="{{r.valCls}}">{{r.value}}</span></td>
+                      <td><span class="{{r.st.cls}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{r.st.d}}"></path></svg>{{r.st.label}}</span></td>
+                      <td style="white-space: normal; max-width: 360px;"><span class="small">{{r.src}}</span><span class="faint" style="display: block;">{{r.srcMeta}}</span></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{showTabs}}" hint-placeholder-val="{{ true }}">
+          <section class="stack" aria-label="Rulebook records">
+            <div class="tabs" role="tablist" aria-label="Rulebook records">
+              <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4"><button type="button" role="tab" class="{{t.cls}}" aria-selected="{{t.on}}" onClick="{{t.pick}}">{{t.label}} <span class="tab-count">{{t.count}}</span></button></sc-for>
+            </div>
+
+            <sc-if value="{{tabVersions}}" hint-placeholder-val="{{ true }}">
+              <div class="stack">
+                <div class="dt-card">
+                  <div class="dt-toolbar"><div><h3 class="h3">Apex 100K Evaluation</h3><span class="faint">Catalogue rulebook · versions in order</span></div><span class="faint">Rows open the version</span></div>
+                  <div class="dt-scroll"><table class="dt">
+                    <thead><tr><th scope="col"><span>Version</span></th><th scope="col"><span>State</span></th><th scope="col" class="num"><span>Rules</span></th><th scope="col"><span>Reason</span></th><th scope="col"><span>Provider-stated from</span></th><th scope="col"><span>Last saved</span></th></tr></thead>
+                    <tbody>
+                      <sc-for list="{{versions}}" as="v" hint-placeholder-count="4">
+                        <tr class="vrow"><td><a href="{{v.href}}">v{{v.n}}</a> <sc-if value="{{v.inUse}}" hint-placeholder-val="{{ false }}"><span class="badge b-flow" style="margin-left: 6px;">In use</span></sc-if></td><td><span class="{{v.st.cls}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{v.st.d}}"></path></svg>{{v.st.label}}</span></td><td class="num">{{v.rules}}</td><td style="white-space: normal; color: var(--ink-muted);">{{v.reason}}</td><td class="mono" style="font-size: 12.5px;">{{v.from}}</td><td class="mono" style="font-size: 12.5px; color: var(--ink-muted);">{{v.saved}}</td></tr>
+                      </sc-for>
+                    </tbody>
+                  </table></div>
+                </div>
+                <div class="cols-even">
+                  <div class="card pad stack-s">
+                    <div class="row-between"><h3 class="h3">My rules for this account</h3><span class="status s-flow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8a4 4 0 1 0 0 8zM4 21a8 8 0 0 1 16 0"></path></svg>Account rules (private)</span></div>
+                    <p class="small muted" style="margin: 0;">Your own limits. Estimates only: never checked against the firm's published terms.</p>
+                    <a class="art link small" href="RulebookEditor.dc.html">v1 · Draft · 3 rules · saved Oct 20, 6:02 PM →</a>
+                  </div>
+                  <div class="card pad stack-s">
+                    <h3 class="h3">Other catalogue rulebooks</h3>
+                    <p class="small muted" style="margin: 0;">Only verified versions can be assigned. Copy one into your own rules to keep personal limits.</p>
+                    <span class="small">Apex 100K Performance account · v2 <span class="status s-ok" style="margin-left: 6px;"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"></path></svg>Verified</span></span>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{tabAssign}}" hint-placeholder-val="{{ false }}">
+              <div class="dt-card">
+                <div class="dt-scroll"><table class="dt">
+                  <thead><tr><th scope="col"><span>Version</span></th><th scope="col"><span>From (trading day)</span></th><th scope="col"><span>Until</span></th><th scope="col"><span>Applies to</span></th><th scope="col"><span>Assigned</span></th><th scope="col"><span>Reason</span></th></tr></thead>
+                  <tbody>
+                    <tr><td><b>v3</b> <span class="badge b-flow">In use</span></td><td class="mono" style="font-size: 12.5px;">Mon, Oct 5, 2026</td><td class="muted">Still in force</td><td>Evaluation · Intraday trailing</td><td class="mono" style="font-size: 12.5px;">Oct 2, 10:20 AM</td><td class="muted">Firm raised the profit target</td></tr>
+                    <tr><td><b>v2</b></td><td class="mono" style="font-size: 12.5px;">Mon, Sep 14, 2026</td><td class="mono" style="font-size: 12.5px;">Fri, Oct 2, 2026</td><td>Evaluation · Intraday trailing</td><td class="mono" style="font-size: 12.5px;">Sep 13, 8:41 PM</td><td class="muted">None given</td></tr>
+                  </tbody>
+                </table></div>
+                <div class="dt-foot">Assignments are history: a new one ends the previous one, nothing is moved or rewritten. Earlier days keep the version that governed them.</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{tabActivity}}" hint-placeholder-val="{{ false }}">
+              <div class="card pad">
+                <ol class="tl">
+                  <sc-for list="{{activity}}" as="a" hint-placeholder-count="5">
+                    <li><span class="{{a.dot}}" aria-hidden="true"></span><div><b>{{a.what}}</b> <span class="faint">· {{a.ver}}</span><div class="small muted">{{a.when}} · By You (on this computer)</div><sc-if value="{{a.hasWhy}}" hint-placeholder-val="{{ false }}"><div class="small" style="margin-top: 2px;">"{{a.why}}"</div></sc-if></div></li>
+                  </sc-for>
+                </ol>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{tabCalc}}" hint-placeholder-val="{{ false }}">
+              <div class="card pad stack">
+                <div class="row-between">
+                  <div class="stack-s" style="gap: 4px;">
+                    <span class="overline">Latest saved calculation</span>
+                    <div class="row"><span class="status s-unknown"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></svg>Unknown</span><span class="small muted">Scaling plan needs setup, so the account can't be called Safe.</span></div>
+                  </div>
+                  <a class="btn btn-sm" href="RulebookExplain.dc.html">How this was calculated →</a>
+                </div>
+                <dl class="facts">
+                  <div><dt>Calculated for</dt><dd>Wed, Oct 21, 2026</dd></div>
+                  <div><dt>Cutoff</dt><dd>2:14 PM ET</dd></div>
+                  <div><dt>Rulebook version</dt><dd>Apex 100K Evaluation v3</dd></div>
+                  <div><dt>Freshness</dt><dd><span class="status s-ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"></path></svg>Sources unchanged for its cutoff</span></dd></div>
+                </dl>
+                <p class="faint" style="margin: 0;">Estimates only · Verify with your firm's dashboard. Changing a version never rewrites a stored calculation.</p>
+              </div>
+            </sc-if>
+          </section>
+        </sc-if>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startState":{"editor":"enum","options":["populated","loading","no-assignment","none-today","error","stale","archived"],"default":"populated"},"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: props.startState || 'populated', tab: 'versions' }; }
+  renderVals() {
+    var self = this, v = this.state.view, t = this.state.tab;
+    var I = {
+      ok: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3', warn: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',
+      unk: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01', calc: 'M5 3h14v18H5zM8 7h8M8 12h2M12 12h2M8 16h2M12 16h2',
+      eye: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6z', none: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM8 12h8',
+      slash: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM5.6 5.6l12.8 12.8', wrench: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z',
+      draft: 'M17 3l4 4L8 20H4v-4z', clock: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 7v5l3 2', arch: 'M3 4h18v4H3zM5 8v12h14V8M10 12h4'
+    };
+    var S = {
+      calc: { cls: 'status s-flow', d: I.calc, label: 'Calculated' }, manual: { cls: 'status s-flow', d: I.eye, label: 'Manual check' },
+      none: { cls: 'status s-neutral', d: I.none, label: 'None' }, nt: { cls: 'status s-neutral', d: I.slash, label: 'Not tracked' },
+      setup: { cls: 'status s-warn', d: I.wrench, label: 'Needs setup' },
+      verified: { cls: 'status s-ok', d: I.ok, label: 'Verified' }, stale: { cls: 'status s-warn', d: I.clock, label: 'Stale' },
+      draft: { cls: 'status s-neutral', d: I.draft, label: 'Draft' }, superseded: { cls: 'status s-neutral', d: I.arch, label: 'Superseded' },
+      review: { cls: 'status s-warn', d: I.unk, label: 'Needs review' }
+    };
+    var populatedLike = v === 'populated' || v === 'stale' || v === 'archived';
+    var ver = v === 'stale' ? { cls: S.stale.cls, d: S.stale.d, label: 'Stale', sentence: 'A newer source contradicts it. Still in force until you assign another version.' }
+      : { cls: S.verified.cls, d: S.verified.d, label: 'Verified', sentence: 'Checked against the provider’s published source by M. Rivera.' };
+    var views = [['populated', 'In force'], ['loading', 'Loading'], ['no-assignment', 'No assignment'], ['none-today', 'None today'], ['error', 'Unreadable'], ['stale', 'Stale version'], ['archived', 'Archived account']].map(function (x) {
+      return { label: x[1], on: v === x[0], cls: v === x[0] ? 'is-on' : '', pick: function () { self.setState({ view: x[0] }); } };
+    });
+    var tabs = [['versions', 'Versions and drafts', '5'], ['assign', 'Assignment history', '2'], ['activity', 'Activity', ''], ['calc', 'Calculation', '']].map(function (x) {
+      return { label: x[1], count: x[2], on: t === x[0], cls: 'tab' + (t === x[0] ? ' is-on' : ''), pick: function () { self.setState({ tab: x[0] }); } };
+    });
+    return {
+      crumbs: [{ label: 'Accounts', href: 'AccountDetail.dc.html' }, { label: 'Apex 100K · PA-48213', href: 'AccountDetail.dc.html' }],
+      views: views, tabs: tabs, ver: ver,
+      isLoading: v === 'loading', isError: v === 'error', isEmpty: v === 'no-assignment', isNoneToday: v === 'none-today',
+      isStale: v === 'stale', isArchived: v === 'archived', canEdit: v !== 'archived' && v !== 'loading' && v !== 'error',
+      showInForce: populatedLike, showTabs: populatedLike || v === 'none-today',
+      tabVersions: t === 'versions', tabAssign: t === 'assign', tabActivity: t === 'activity', tabCalc: t === 'calc',
+      toHistory: function () { self.setState({ tab: 'assign' }); },
+      rules: [
+        { name: 'Maximum drawdown', type: 'Trailing, intraday', value: '$3,000.00 · trails the highest balance · locks at $100,100.00', valCls: '', st: S.calc, src: '"Trailing threshold of $3,000, stops trailing at starting balance + $100."', srcMeta: 'Help centre · claim verified' },
+        { name: 'Daily loss limit', type: 'Per trading day', value: 'None (stated by the source)', valCls: 'muted', st: S.none, src: '"There is no daily loss limit on evaluation accounts."', srcMeta: 'Help centre · claim verified' },
+        { name: 'Profit target', type: 'Balance gain', value: '$6,000.00', valCls: 'num', st: S.calc, src: '"Reach a $6,000 profit."', srcMeta: 'Programme page · claim verified' },
+        { name: 'Minimum trading days', type: 'Days with trades', value: '7 days', valCls: 'num', st: S.calc, src: '"Trade at least 7 days."', srcMeta: 'Programme page · claim verified' },
+        { name: 'Consistency', type: 'Best day share of profit', value: 'Best day at most 0.30 of total profit (30%)', valCls: '', st: S.calc, src: '"No single day may exceed 30% of total profit."', srcMeta: 'Payout policy · claim verified' },
+        { name: 'Maximum position size', type: 'Contracts open', value: '10 Mini or 100 Micro', valCls: '', st: S.calc, src: '"Up to 10 contracts."', srcMeta: 'Programme page · claim verified' },
+        { name: 'Trading restriction', type: 'News and holidays', value: 'Checked by you', valCls: 'muted', st: S.manual, src: '"No trading during major data releases."', srcMeta: 'Rules page · candidate claim' },
+        { name: 'Scaling plan', type: 'Contracts by balance', value: 'Unknown', valCls: 'faint', st: S.setup, src: 'No source recorded', srcMeta: 'Add the steps in a draft' }
+      ],
+      versions: [
+        { n: 4, href: 'RulebookEditor.dc.html', st: S.draft, rules: 8, reason: 'Firm added a 50% consistency rule for payouts', from: 'Nov 2, 2026', saved: 'Oct 21, 9:40 AM', inUse: false },
+        { n: 3, href: 'RulebookEditor.dc.html', st: v === 'stale' ? S.stale : S.verified, rules: 8, reason: 'Firm raised the profit target', from: 'Sep 1, 2026', saved: 'Oct 2, 10:14 AM', inUse: true },
+        { n: 2, href: 'RulebookCompare.dc.html', st: S.superseded, rules: 7, reason: 'Added the scaling plan', from: 'Aug 1, 2026', saved: 'Sep 13, 8:40 PM', inUse: false },
+        { n: 1, href: 'RulebookCompare.dc.html', st: S.superseded, rules: 6, reason: 'None given', from: 'Jun 1, 2026', saved: 'Jun 3, 4:12 PM', inUse: false }
+      ],
+      activity: [
+        { dot: 'tl-dot', what: 'Draft saved', ver: 'v4', when: 'Oct 21, 2026, 9:40 AM', hasWhy: false, why: '' },
+        { dot: 'tl-dot', what: 'Draft started', ver: 'v4 from v3', when: 'Oct 21, 2026, 9:12 AM', hasWhy: true, why: 'Firm added a 50% consistency rule for payouts' },
+        { dot: 'tl-dot is-on', what: 'Assigned to the account', ver: 'v3 from Mon, Oct 5', when: 'Oct 2, 2026, 10:20 AM', hasWhy: false, why: '' },
+        { dot: 'tl-dot is-ok', what: 'Verified', ver: 'v3 by M. Rivera', when: 'Oct 2, 2026, 10:14 AM', hasWhy: false, why: '' },
+        { dot: 'tl-dot', what: 'Published', ver: 'v3', when: 'Oct 1, 2026, 7:55 PM', hasWhy: false, why: '' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
