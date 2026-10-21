@@ -152,7 +152,7 @@ pub(super) fn assess(
             format!("{m:?}"),
             saved
         ]));
-        if matches!(m, Match::Duplicate(_)) {
+        if matches!(m, Match::Duplicate(_) | Match::Ambiguous(_)) {
             continue;
         }
         assessment.candidate_count += 1;

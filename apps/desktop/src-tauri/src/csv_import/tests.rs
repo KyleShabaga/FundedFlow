@@ -170,7 +170,7 @@ fn fixture_import_persists_and_reimport_flags_fill_pairs() {
     assert!(p.file_previously_imported);
     assert_eq!((p.new_count, p.duplicate_count), (0, 67));
     let dup = row(&p, 2).duplicate.as_ref().unwrap();
-    assert_eq!((dup.of, dup.key.as_str()), ("saved", "fills:707776450007:707776450023"));
+    assert_eq!((dup.of, dup.key.as_str()), ("saved", "fills2:12:707776450007:707776450023"));
     assert!(dup.reason.contains("buy/sell fill IDs (707776450007 / 707776450023)"), "{}", dup.reason);
     assert!(dup.reason.contains("'Performance.csv'"));
 

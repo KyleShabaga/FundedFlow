@@ -263,7 +263,7 @@
         },
         "commitError": null,
         "dedupKeys": [
-          "fills:buy17:sell17"
+          "fills2:5:buy17:sell17"
         ],
         "preview": {
           "blankCount": 0,
@@ -2118,7 +2118,7 @@
         },
         "commitError": null,
         "dedupKeys": [
-          "fills:buy17:sell17"
+          "fills2:5:buy17:sell17"
         ],
         "preview": {
           "blankCount": 0,
@@ -2791,30 +2791,30 @@
           "accountId": "<account-id>",
           "completedAt": "2026-01-01T00:00:00.000Z",
           "createdAt": "2026-01-01T00:00:00.000Z",
-          "duplicateCount": 1,
+          "duplicateCount": 0,
           "errorSummary": null,
           "failedCount": 0,
           "fileName": "synthetic-known-fill-id-delimiter-collision.csv",
           "fileSha256": "ebed58ccc31f1b21910c57512ca088a016aa7ddd7a70fc85002f070d1728fba4",
           "fileSize": 209,
           "id": "<batch-id>",
-          "importedCount": 1,
+          "importedCount": 2,
           "rowCount": 2,
-          "skippedCount": 1,
+          "skippedCount": 0,
           "sourceFormat": "performance",
           "status": "committed",
           "warningCount": 0
         },
         "commitError": null,
         "dedupKeys": [
-          "fills:a:b:c",
-          "fills:a:b:c"
+          "fills2:3:a:b:c",
+          "fills2:1:a:b:c"
         ],
         "preview": {
           "blankCount": 0,
           "dateFormat": "mdy",
           "dateFormatReason": "every timestamp fits M/D/YYYY HH:MM:SS",
-          "duplicateCount": 1,
+          "duplicateCount": 0,
           "fileIssues": [],
           "filePreviouslyImported": false,
           "fileWarnings": [],
@@ -2903,7 +2903,7 @@
               "required": false
             }
           ],
-          "newCount": 1,
+          "newCount": 2,
           "restoreCount": 0,
           "rowCount": 2,
           "rows": [
@@ -2949,13 +2949,7 @@
               "warnings": []
             },
             {
-              "duplicate": {
-                "key": "fills:a:b:c",
-                "lineNumber": 2,
-                "of": "file",
-                "reason": "Same buy/sell fill IDs (a / b:c) as line 2 of this file.",
-                "tradeId": null
-              },
+              "duplicate": null,
               "errors": [],
               "lineNumber": 3,
               "raw": [
@@ -2970,7 +2964,7 @@
               ],
               "restores": null,
               "rowNumber": 2,
-              "status": "duplicate",
+              "status": "new",
               "trade": {
                 "boughtAtSource": "10/19/2026 09:30:00",
                 "brokerTradeId": null,
@@ -2999,7 +2993,7 @@
           "rowsOmitted": 0,
           "targetAssessment": {
             "blocked": null,
-            "candidateCount": 1,
+            "candidateCount": 2,
             "confirmations": [],
             "endExclusive": null,
             "previewToken": "<preview-token>",
@@ -3008,7 +3002,6 @@
           "warningCount": 0
         }
       },
-      "knownLimitation": "Existing fills:<buy>:<sell> encoding collides for (a:b,c) and (a,b:c). This is a recorded defect, not accepted behavior; changing persisted keys needs a coordinated version/migration decision.",
       "name": "known-fill-id-delimiter-collision",
       "request": {
         "accountId": "<account-id>",
@@ -3018,7 +3011,8 @@
         "fileName": "synthetic-known-fill-id-delimiter-collision.csv",
         "format": "auto",
         "timezone": "America/New_York"
-      }
+      },
+      "resolution": "P0-01: fill pairs are keyed fills2:<buy byte length>:<buy>:<sell>, so (a:b,c) and (a,b:c) are two trades. This case recorded the earlier fills:<buy>:<sell> collision as a known defect; legacy keys are matched only through their stored fill pair (docs/architecture/p0-01-p0-03.md)."
     }
   ],
   "fixtureVersion": 1,
