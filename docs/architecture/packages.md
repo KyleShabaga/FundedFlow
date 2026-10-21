@@ -157,7 +157,7 @@ reported-P&L fallback, missing instrument, currency mismatch, the weekend roll a
 
 **Still Rust-only**, each moving later under its owning card with its own fixtures: trade validation, instrument
 resolution, realized P&L, trading-day derivation (Build 16), CSV parsing/date detection/row warnings and dedup
-keys (Build 17), and persistence (SQLite behind the `JournalRepository` port; see Build 10 in `data-model.md`).
+keys (Build 17; deferred past V1, see [P0-04 §4](p0-04-csv-contracts.md)), and persistence (SQLite behind the `JournalRepository` port; see Build 10 in `data-model.md`).
 
 **When parity fails:**
 
