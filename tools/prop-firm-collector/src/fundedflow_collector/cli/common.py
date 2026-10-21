@@ -88,7 +88,7 @@ def table(headers: Sequence[str], rows: Sequence[Sequence[Any]], max_width: int 
     def cell(value: Any) -> str:
         text = "-" if value is None or value == "" else str(value)
         text = text.replace("\n", " ")
-        return text if len(text) <= max_width else text[: max_width - 1] + "…"
+        return text if len(text) <= max_width else text[: max_width - 3] + "..."
 
     body = [[cell(v) for v in row] for row in rows]
     widths = [len(h) for h in headers]

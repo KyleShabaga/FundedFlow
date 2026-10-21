@@ -1,0 +1,6 @@
+User-agent: FundedFlowCollector
+Allow: /
+Disallow: /members/
+
+User-agent: *
+Disallow: /

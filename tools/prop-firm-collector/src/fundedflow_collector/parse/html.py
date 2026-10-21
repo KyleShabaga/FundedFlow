@@ -91,7 +91,7 @@ def parse_html(
     extracted = None
     try:
         extracted = trafilatura.extract(
-            markup,
+            str(soup),
             output_format="txt",
             include_tables=True,
             include_comments=False,

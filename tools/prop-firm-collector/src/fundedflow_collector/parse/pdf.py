@@ -86,7 +86,7 @@ def _run_limited(argv: list[str], *, timeout_seconds: float, max_memory_bytes: i
             break
         if watched is not None:
             try:
-                if watched.memory_info().rss > max_memory_bytes:
+                if _tree_rss(watched) > max_memory_bytes:
                     reason = f"PDF extraction exceeded {max_memory_bytes // (1024 * 1024)} MiB"
                     break
             except psutil.Error:
@@ -97,6 +97,17 @@ def _run_limited(argv: list[str], *, timeout_seconds: float, max_memory_bytes: i
         raise ParseTimeout(reason)
     _, err = proc.communicate()
     return err.decode("utf-8", "replace").strip()[:500]
+
+
+def _tree_rss(process: psutil.Process) -> int:
+    """Resident memory of the worker and its children (a venv python.exe on Windows is a launcher process)."""
+    total = process.memory_info().rss
+    for child in process.children(recursive=True):
+        try:
+            total += child.memory_info().rss
+        except psutil.Error:
+            continue
+    return total
 
 
 def _kill_tree(proc: subprocess.Popen[bytes]) -> None:

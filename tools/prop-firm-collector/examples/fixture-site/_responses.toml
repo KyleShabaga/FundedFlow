@@ -1,0 +1,20 @@
+# support.sample-funding.test behaves like a site behind bot protection: every
+# request gets a challenge page, so the collector must stop that host and not work around it.
+
+[[response]]
+url = "https://support.sample-funding.test/robots.txt"
+status = 403
+headers = { "content-type" = "text/html", "cf-mitigated" = "challenge" }
+body = "<html><head><title>Just a moment...</title></head><body>Checking your browser before accessing.</body></html>"
+
+[[response]]
+url = "https://support.sample-funding.test/"
+status = 403
+headers = { "content-type" = "text/html", "cf-mitigated" = "challenge" }
+body = "<html><head><title>Just a moment...</title></head><body>Checking your browser before accessing.</body></html>"
+
+[[response]]
+url = "https://support.sample-funding.test/rules"
+status = 403
+headers = { "content-type" = "text/html", "cf-mitigated" = "challenge" }
+body = "<html><head><title>Just a moment...</title></head><body>Checking your browser before accessing.</body></html>"

@@ -96,13 +96,20 @@ def build_user_agent(settings: Settings, *, required: bool = True) -> str:
     return f"Mozilla/5.0 (compatible; {USER_AGENT_PRODUCT}; +{info}{contact})"
 
 
+def _strip_cookies(request: httpx.Request) -> None:
+    """Belt and braces: no Cookie header ever leaves the collector."""
+    request.headers.pop("cookie", None)
+
+
 def make_client(settings: Settings, transport: httpx.BaseTransport, user_agent: str) -> httpx.Client:
     limits = settings.limits
     return httpx.Client(
         transport=transport,
         trust_env=False,
         follow_redirects=False,
-        cookies=httpx.Cookies(http.cookiejar.CookieJar(policy=NoCookiesPolicy())),
+        # A plain CookieJar is used as-is by httpx (an httpx.Cookies would be copied into a default jar).
+        cookies=http.cookiejar.CookieJar(policy=NoCookiesPolicy()),
+        event_hooks={"request": [_strip_cookies]},
         timeout=httpx.Timeout(
             connect=limits.connect_timeout_seconds,
             read=limits.read_timeout_seconds,
@@ -303,6 +310,8 @@ class Fetcher:
         chain: list[str] = []
         deadline = time.monotonic() + self._settings.limits.total_timeout_seconds
         for hop in range(MAX_REDIRECTS + 1):
+            result.redirect_chain = list(chain)
+            result.final_url = url
             if hop > 0:
                 block = hop_check(url)
                 if block is not None:

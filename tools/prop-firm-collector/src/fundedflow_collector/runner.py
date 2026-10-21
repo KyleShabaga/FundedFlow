@@ -113,7 +113,8 @@ class RunSummary:
     message: str | None = None
 
     def counts(self) -> Counter[str]:
-        return Counter(r.outcome.value for r in self.results)
+        """Outcome counts, leaving out uncounted probes such as a guessed /sitemap.xml that does not exist."""
+        return Counter(r.outcome.value for r in self.results if r.counted)
 
     def exit_code(self) -> int:
         categories = {OUTCOME_INFO[r.outcome].category for r in self.results if r.counted}
@@ -184,6 +185,12 @@ class FirmRunner:
         self.seen: set[str] = set()
         self.queue: list[_Target] = []
         self.pending: dict[str, _Target] = {}
+        # Sitemap and Zendesk source URLs are entry points for discovery, never fetched as pages.
+        self.special_sources = {
+            s.canonical_url
+            for s in registry.list_sources(self.conn, firm.id)
+            if s.kind in (SourceKind.SITEMAP, SourceKind.ZENDESK)
+        }
         self._counter = itertools.count()
         self.run_id: str | None = None
         self.summary = RunSummary(firm_key=firm.firm_key, run_id=None, status="running")
@@ -456,7 +463,7 @@ class FirmRunner:
             decision = Outcome.NOT_ALLOWLISTED.value
         elif matches_excluded(url, self.firm.excluded_paths):
             decision = Outcome.EXCLUDED_PATH.value
-        elif url in self.seen:
+        elif (url in self.seen and url not in self.pending) or url in self.special_sources:
             return
         else:
             decision = "queued"
@@ -587,8 +594,8 @@ class FirmRunner:
                 continue
             if source.source_channel is SourceChannel.MANUAL_CAPTURE:
                 continue
-            if source.source_channel is SourceChannel.PLATFORM_API and source.canonical_url in self.seen:
-                continue
+            if source.source_channel is SourceChannel.PLATFORM_API:
+                continue  # refreshed only through the platform API, never by fetching the article page
             priority = 100 + source.priority if source.source_channel is SourceChannel.SEED else source.priority
             self._push(
                 source.canonical_url,

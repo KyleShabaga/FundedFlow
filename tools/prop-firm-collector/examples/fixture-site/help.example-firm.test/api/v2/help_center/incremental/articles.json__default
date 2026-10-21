@@ -1,0 +1,18 @@
+{
+  "articles": [
+    {
+      "id": 1001,
+      "html_url": "https://help.example-firm.test/hc/en-us/articles/1001-What-is-the-daily-loss-limit",
+      "title": "What is the daily loss limit?",
+      "locale": "en-us",
+      "draft": false,
+      "section_id": 50,
+      "updated_at": "2026-10-01T09:00:00Z",
+      "edited_at": "2026-10-01T09:00:00Z",
+      "body": "<p>The daily loss limit is measured from the previous day's closing balance in this synthetic help center.</p><h2>When does it reset?</h2><p>At the start of each trading day.</p>"
+    }
+  ],
+  "next_page": null,
+  "end_time": 1792000000,
+  "count": 1
+}

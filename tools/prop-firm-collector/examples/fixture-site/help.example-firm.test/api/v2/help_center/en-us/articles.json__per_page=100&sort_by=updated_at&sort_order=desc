@@ -1,0 +1,50 @@
+{
+  "articles": [
+    {
+      "id": 1001,
+      "html_url": "https://help.example-firm.test/hc/en-us/articles/1001-What-is-the-daily-loss-limit",
+      "title": "What is the daily loss limit?",
+      "locale": "en-us",
+      "draft": false,
+      "section_id": 50,
+      "updated_at": "2026-10-01T09:00:00Z",
+      "edited_at": "2026-10-01T09:00:00Z",
+      "body": "<p>The daily loss limit is measured from the previous day's closing balance in this synthetic help center.</p><h2>When does it reset?</h2><p>At the start of each trading day.</p>"
+    },
+    {
+      "id": 1002,
+      "html_url": "https://help.example-firm.test/hc/en-us/articles/1002-Payout-eligibility",
+      "title": "Payout eligibility",
+      "locale": "en-us",
+      "draft": false,
+      "section_id": 51,
+      "updated_at": "2026-09-20T12:00:00Z",
+      "edited_at": "2026-09-20T12:00:00Z",
+      "body": "<p>Synthetic article: payouts require eight trading days in the simulated funded phase.</p><table><tr><th>Plan</th><th>Split</th></tr><tr><td>Standard</td><td>80/20</td></tr></table>"
+    },
+    {
+      "id": 1003,
+      "html_url": "https://help.example-firm.test/hc/fr/articles/1003-Regles",
+      "title": "Règles",
+      "locale": "fr",
+      "draft": false,
+      "section_id": 52,
+      "updated_at": "2026-09-20T12:00:00Z",
+      "edited_at": null,
+      "body": "<p>Article en français (filtré par la locale).</p>"
+    },
+    {
+      "id": 1004,
+      "html_url": "https://help.example-firm.test/hc/en-us/articles/1004-Draft",
+      "title": "Draft",
+      "locale": "en-us",
+      "draft": true,
+      "section_id": 50,
+      "updated_at": "2026-09-20T12:00:00Z",
+      "edited_at": null,
+      "body": "<p>Drafts are skipped.</p>"
+    }
+  ],
+  "next_page": null,
+  "count": 4
+}

@@ -109,7 +109,7 @@ def _report(summaries: list[RunSummary], dry_run: bool) -> int:
             if summary.run_id:
                 typer.echo(f"  Details: collector runs show {summary.run_id}")
             blocked = sorted(
-                {r.outcome.value for r in summary.results if OUTCOME_INFO[r.outcome].category is not Category.OK}
+                {r.outcome.value for r in summary.results if r.counted and OUTCOME_INFO[r.outcome].category is not Category.OK}
             )
             for outcome in blocked:
                 info = OUTCOME_INFO[next(r.outcome for r in summary.results if r.outcome.value == outcome)]

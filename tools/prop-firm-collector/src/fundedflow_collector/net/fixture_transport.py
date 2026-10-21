@@ -2,7 +2,7 @@
 
 `DIR/<host>/<path>` holds the files. `/` and paths ending in `/` serve `index.html`; a path without an extension
 also tries `<path>.html` and `<path>/index.html`. A query string maps to `<path>__<query>` with unsafe characters
-replaced by `_`. Every file gets a strong ETag from its content and honours If-None-Match with 304.
+replaced by `_`, falling back to `<path>__default`. Every file gets a strong ETag from its content and honours If-None-Match with 304.
 `DIR/_responses.toml` can override any URL:
 
     [[response]]
@@ -81,6 +81,7 @@ class FixtureSite:
         candidates: list[str] = []
         if parts.query:
             candidates.append(relative + "__" + re.sub(r"[^A-Za-z0-9=&._-]", "_", parts.query))
+            candidates.append(relative + "__default")
         if path.endswith("/"):
             candidates.append(relative + "index.html")
         else:
