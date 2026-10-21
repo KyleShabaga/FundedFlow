@@ -19,7 +19,8 @@ function money(value: string | null, currency: string) {
   return value === null ? <span className="ds-faint">Unknown</span> : formatMoney(value, { currency, dp: 2 });
 }
 
-function RuleResult({ outcome, label, currency }: { outcome: RuleOutcome; label: string; currency: string }) {
+/** One rule's outcome as the engine recorded it (also Today's per-metric explanation, Build 21). */
+export function RuleResult({ outcome, label, currency }: { outcome: RuleOutcome; label: string; currency: string }) {
   const state = OUTCOME[outcome.state];
   const operands = Object.entries(outcome.operands);
   const metrics = Object.entries(outcome.metrics);

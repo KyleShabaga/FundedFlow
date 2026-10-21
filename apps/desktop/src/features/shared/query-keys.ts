@@ -35,6 +35,9 @@ export const featureKeys = {
   snapshotsRoot: (id: string | null) => [...account(id), "snapshots"] as const,
   snapshots: (id: string | null, filters: SnapshotFilters = {}) => [...account(id), "snapshots", { from: filters.from ?? null, to: filters.to ?? null, endOfDayOnly: filters.endOfDayOnly ?? false }] as const,
   latestSnapshot: (id: string | null) => [...account(id), "snapshots", "latest"] as const,
+  /** Build 15.5 evidence: financial observations (checkpoints) and frozen balance comparisons (Build 21 UI). */
+  observations: (id: string | null) => [...account(id), "observations"] as const,
+  reconciliations: (id: string | null) => [...account(id), "reconciliations"] as const,
   ledger: (id: string | null) => [...account(id), "ledger"] as const,
   ledgerBalance: (id: string | null) => [...account(id), "ledger-balance"] as const,
   settings: [...root, "settings"] as const,
