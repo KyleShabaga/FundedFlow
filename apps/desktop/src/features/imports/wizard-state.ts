@@ -71,7 +71,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
     case "clear-file":
       return { ...state, file: null, fileProblem: null, columns: null, confirmedTargetFor: null, step: 0 };
     case "timezone":
-      return { ...state, timezone: action.timezone, confirmedTargetFor: null };
+      return action.timezone === state.timezone ? state : { ...state, timezone: action.timezone, confirmedTargetFor: null };
     case "format":
       return { ...state, format: action.format, columns: action.format === "performance" ? null : state.columns, confirmedTargetFor: null };
     case "date-format":

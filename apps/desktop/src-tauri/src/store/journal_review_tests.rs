@@ -210,8 +210,9 @@ fn import(conn: &mut Connection, account_id: &str) -> csv_import::ImportBatch {
         format: FormatChoice::Auto,
         date_format: DateFormatChoice::Auto,
         columns: None,
+        target_acknowledgement: None,
     };
-    csv_import::commit(conn, &req).unwrap()
+    csv_import::commit_reviewed(conn, &req).unwrap()
 }
 
 #[test]

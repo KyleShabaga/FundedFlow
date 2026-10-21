@@ -4,6 +4,9 @@
 use rusqlite::Connection;
 
 use super::*;
+// Existing pipeline regressions exercise reviewed imports. Guard regressions call
+// super::commit directly so missing/stale acknowledgements are never hidden.
+use super::commit_reviewed as commit;
 use crate::store::tests::{account_input, db};
 use crate::store::{accounts, trades as trade_store};
 
@@ -21,6 +24,7 @@ fn request(account_id: &str, content: &str) -> CsvImportRequest {
         format: FormatChoice::Auto,
         date_format: DateFormatChoice::Auto,
         columns: None,
+        target_acknowledgement: None,
     }
 }
 
@@ -401,3 +405,6 @@ fn a_restored_trade_is_restored_once_per_file() {
 
 #[path = "regression_tests.rs"]
 mod regressions;
+
+#[path = "target_tests.rs"]
+mod target_acceptance;

@@ -1,8 +1,8 @@
 // The destination account attempt: chosen by local id, explained by name, firm,
 // status, broker number and reset lineage. Archived attempts are refused; finished
 // attempts and trades outside an attempt's reset window need explicit confirmation
-// (assessImportTarget from the domain). Nothing is reassigned or split automatically.
-import { assessImportTarget, statusLabels, type AttemptSummary } from "@fundedflow/domain";
+// (from the native preview). Nothing is reassigned or split automatically.
+import { statusLabels, type AttemptSummary, type CsvPreview } from "@fundedflow/domain";
 
 import { Checkbox, formatInstant, InlineNotice, Select, StatList } from "../../../design-system";
 import { ACCOUNT_TYPE_LABELS } from "../../accounts/components/presentation";
@@ -13,9 +13,10 @@ export interface TargetAssessment {
   confirmations: string[];
 }
 
-export function assessTarget(account: AccountViewModel | undefined, lineage: readonly AttemptSummary[] | undefined, tradingDays: readonly string[]): TargetAssessment {
+export function assessTarget(account: AccountViewModel | undefined, native?: CsvPreview["targetAssessment"]): TargetAssessment {
   if (!account) return { blocked: "Choose the account these trades belong to.", confirmations: [] };
-  return assessImportTarget(account, lineage ?? [], tradingDays);
+  if (account.archivedAt) return { blocked: `"${account.name}" is archived. Restore it first before importing.`, confirmations: [] };
+  return native ?? { blocked: null, confirmations: [] };
 }
 
 /** Other unarchived accounts using the same broker account number: easy to confuse with this attempt. */
@@ -45,7 +46,7 @@ export function ImportTargetPicker({
   assessment: TargetAssessment;
   confirmed: boolean;
   onConfirmedChange: (confirmed: boolean) => void;
-  /** Confirmations apply once the file's trading days are known (after preview). */
+  /** Confirmations come from the native assessment of the complete preview. */
   showConfirm: boolean;
   disabled?: boolean;
 }) {
