@@ -1,0 +1,371 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-21T19:05:00Z"
+ },
+ "title": "FundedFlow P0 Screens",
+ "launch": {
+  "view": "canvas",
+  "page": "start"
+ },
+ "pages": [
+  {
+   "id": "start",
+   "name": "Start here"
+  },
+  {
+   "id": "rulebook",
+   "name": "1 · Rulebook"
+  },
+  {
+   "id": "daily",
+   "name": "2 · Daily review"
+  },
+  {
+   "id": "settings",
+   "name": "3 · Settings and data"
+  },
+  {
+   "id": "account",
+   "name": "4 · Account detail"
+  },
+  {
+   "id": "import",
+   "name": "5 · Quick import and history"
+  },
+  {
+   "id": "shared",
+   "name": "Shared shell and patterns"
+  }
+ ],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 2200,
+   "title": "P0 screen map, routes and reconciliation",
+   "page": "start",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "RulebookOverview.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 1740,
+   "title": "1A · Rulebook overview",
+   "page": "rulebook",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "RulebookEditor.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 2290,
+   "title": "1B · Rulebook editor (draft)",
+   "page": "rulebook",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "RulebookCompare.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 1570,
+   "title": "1C · Version comparison",
+   "page": "rulebook",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "RulebookExplain.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1440,
+   "h": 1750,
+   "title": "1D · Calculation explanation and simulation",
+   "page": "rulebook",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "RulebookDialogs.dc.html": {
+   "x": 6080,
+   "y": 0,
+   "w": 1600,
+   "h": 1780,
+   "title": "1E · Assign, publish, verify, leave, conflict",
+   "page": "rulebook"
+  },
+  "NarrowRulebook.dc.html": {
+   "x": 7760,
+   "y": 0,
+   "w": 720,
+   "h": 1500,
+   "title": "1F · Rulebook at 720 px",
+   "page": "rulebook"
+  },
+  "DailyReview.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 2530,
+   "title": "2A–C · Daily review: plan, checklist, reflection",
+   "page": "daily",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "DailyReviewStates.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1600,
+   "h": 1700,
+   "title": "2D · Review states",
+   "page": "daily"
+  },
+  "NarrowDailyReview.dc.html": {
+   "x": 3200,
+   "y": 0,
+   "w": 720,
+   "h": 1700,
+   "title": "2E · Daily review at 720 px",
+   "page": "daily"
+  },
+  "Settings.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 1500,
+   "title": "3A–B · Settings overview and export",
+   "page": "settings",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SettingsRestore.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1600,
+   "h": 1500,
+   "title": "3C · Restore from a full backup",
+   "page": "settings",
+   "is_interactive": true
+  },
+  "SettingsDelete.dc.html": {
+   "x": 3200,
+   "y": 0,
+   "w": 1600,
+   "h": 1600,
+   "title": "3D · Archive, delete an account, erase the journal",
+   "page": "settings",
+   "is_interactive": true
+  },
+  "NarrowSettings.dc.html": {
+   "x": 4880,
+   "y": 0,
+   "w": 720,
+   "h": 1400,
+   "title": "3E · Settings at 720 px",
+   "page": "settings"
+  },
+  "AccountDetail.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 1620,
+   "title": "4A · Account detail",
+   "page": "account",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AccountDialogs.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1600,
+   "h": 1870,
+   "title": "4B · Edit, status, archive, new attempt",
+   "page": "account"
+  },
+  "NarrowAccount.dc.html": {
+   "x": 3200,
+   "y": 0,
+   "w": 720,
+   "h": 1600,
+   "title": "4C · Account detail at 720 px",
+   "page": "account"
+  },
+  "QuickImport.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 1300,
+   "title": "5A · Quick import",
+   "page": "import",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ImportHistory.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 1000,
+   "title": "5B · Import history",
+   "page": "import",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ImportDetail.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 1530,
+   "title": "5C · Import details",
+   "page": "import",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ImportFailures.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1600,
+   "h": 1500,
+   "title": "5D · Failure and recovery",
+   "page": "import"
+  },
+  "NarrowImport.dc.html": {
+   "x": 6240,
+   "y": 0,
+   "w": 720,
+   "h": 1400,
+   "title": "5E · Import at 720 px",
+   "page": "import"
+  },
+  "P0Sidebar.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 248,
+   "h": 900,
+   "title": "Shell · Sidebar as built",
+   "page": "shared",
+   "is_interactive": true
+  },
+  "P0Header.dc.html": {
+   "x": 328,
+   "y": 0,
+   "w": 1192,
+   "h": 140,
+   "title": "Shell · Header with breadcrumb",
+   "page": "shared"
+  },
+  "Patterns.dc.html": {
+   "x": 1600,
+   "y": 0,
+   "w": 1440,
+   "h": 1840,
+   "title": "Shared patterns across the five families",
+   "page": "shared"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "RulebookOverview.dc.html",
+  "RulebookEditor.dc.html",
+  "RulebookCompare.dc.html",
+  "RulebookExplain.dc.html",
+  "RulebookDialogs.dc.html",
+  "NarrowRulebook.dc.html",
+  "DailyReview.dc.html",
+  "DailyReviewStates.dc.html",
+  "NarrowDailyReview.dc.html",
+  "Settings.dc.html",
+  "SettingsRestore.dc.html",
+  "SettingsDelete.dc.html",
+  "NarrowSettings.dc.html",
+  "AccountDetail.dc.html",
+  "AccountDialogs.dc.html",
+  "NarrowAccount.dc.html",
+  "QuickImport.dc.html",
+  "ImportHistory.dc.html",
+  "ImportDetail.dc.html",
+  "ImportFailures.dc.html",
+  "NarrowImport.dc.html",
+  "P0Sidebar.dc.html",
+  "P0Header.dc.html",
+  "Patterns.dc.html"
+ ],
+ "notes": {
+  "tStart": {
+   "x": 0,
+   "y": -300,
+   "text": "FundedFlow V1 · five P0 screen families",
+   "kind": "title1",
+   "maxW": 1440,
+   "page": "start"
+  },
+  "sStart": {
+   "x": 1520,
+   "y": 0,
+   "text": "Every amount, count and name on these boards is an illustrative example, not account data. Unknown values are drawn as — or Unknown, never $0.00 or Safe. Grey dashed bars above a mockup are state switchers for review; they are not product UI.",
+   "w": 360,
+   "fill": "blue",
+   "page": "start"
+  },
+  "tRule": {
+   "x": 0,
+   "y": -300,
+   "text": "1 · Rulebook editor and account rules (Build 19)",
+   "kind": "title1",
+   "maxW": 8480,
+   "page": "rulebook"
+  },
+  "tDaily": {
+   "x": 0,
+   "y": -300,
+   "text": "2 · Daily review and plan adherence (Build 22)",
+   "kind": "title1",
+   "maxW": 3920,
+   "page": "daily"
+  },
+  "tSet": {
+   "x": 0,
+   "y": -300,
+   "text": "3 · Settings and local data controls (Build 25)",
+   "kind": "title1",
+   "maxW": 5600,
+   "page": "settings"
+  },
+  "tAcct": {
+   "x": 0,
+   "y": -300,
+   "text": "4 · Account detail (Builds 15, 15.5, 18.5)",
+   "kind": "title1",
+   "maxW": 3920,
+   "page": "account"
+  },
+  "tImp": {
+   "x": 0,
+   "y": -300,
+   "text": "5 · Quick import and import history (Builds 18, 18.5)",
+   "kind": "title1",
+   "maxW": 6960,
+   "page": "import"
+  },
+  "tShared": {
+   "x": 0,
+   "y": -300,
+   "text": "Shared shell and patterns",
+   "kind": "title1",
+   "maxW": 3040,
+   "page": "shared"
+  }
+ },
+ "designSystems": [
+  {
+   "title": "FundedFlow",
+   "namespace": "fundedflow",
+   "artifact": "https://claude.ai/code/artifact/25635e61-918b-4802-b565-97a08b7f1b49",
+   "version": "1792518127-a511",
+   "copiedAt": "2026-10-21T19:05:00Z"
+  }
+ ]
+}
