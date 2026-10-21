@@ -141,7 +141,7 @@ describe("daily review", () => {
     await screen.findByRole("form", { name: "Daily review" });
     await user.click(within(form()).getByRole("combobox", { name: /Daily checklist/ }));
     await user.click(await screen.findByRole("option", { name: "Session rules" }));
-    const answer = async (item: string, result: string) => user.click(within(screen.getByRole("group", { name: new RegExp(item) })).getByRole("radio", { name: result }));
+    const answer = async (item: string, result: string) => user.click(within(screen.getByRole("radiogroup", { name: new RegExp(item) })).getByRole("radio", { name: result }));
     await answer("Wrote a plan", "Followed");
     await answer("Max two trades", "Missed");
     await answer("No news trades", "Not applicable");

@@ -318,6 +318,8 @@ export function RadioGroup<V extends string>({ label, name, options, value, defa
   const groupName = name ?? ids.control;
   return (
     <fieldset
+      // radiogroup, not the fieldset's implicit group role: only radiogroup supports aria-required (axe aria-allowed-attr).
+      role="radiogroup"
       className={cx("ds-fieldset", "ds-radio-group", inline && "is-inline", error && "is-invalid", className)}
       aria-describedby={describedBy(ids, description, error)}
       aria-invalid={error ? true : undefined}

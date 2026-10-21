@@ -1,0 +1,70 @@
+// TEST ONLY. The three seams the Build 26 cross-feature tests replace: the Tauri `invoke` bridge (runtime
+// commands), the journal repository and the native file dialog. Everything above them (routes, providers,
+// hooks, view models, components) is the real app. Test files wire these with vi.mock factories that import
+// this module, so it must not import application code (types only).
+import type { JournalRepository } from "@fundedflow/domain";
+import type { RuntimeStatus } from "../lib/data/runtime";
+
+export const SCHEMA = 18;
+export const readyStatus: RuntimeStatus = { state: "ready", stage: "ready", schemaVersion: SCHEMA, supportedSchemaVersion: SCHEMA, created: false, failure: null };
+export const initializingStatus: RuntimeStatus = { ...readyStatus, state: "initializing", stage: "migrate" };
+
+type Answer = RuntimeStatus | Error | Promise<RuntimeStatus>;
+
+/** Mutable boundary state, reset by `resetBoundaries()` before every test. */
+export const boundary = {
+  repository: null as unknown as JournalRepository,
+  /** Every `runtime_status` answer; `retry_runtime` answers from `retryAnswers` first. Last answer repeats. */
+  statusAnswers: [readyStatus] as Answer[],
+  retryAnswers: [] as Answer[],
+  invocations: [] as string[],
+  /** Native save/open dialog answers: a path, null for Cancel, or an Error when the chooser can't open. */
+  dialog: {
+    save: [] as (string | null | Error)[],
+    open: [] as (string | null | Error)[],
+    calls: [] as { kind: "save" | "open"; options: unknown }[],
+  },
+};
+
+export function resetBoundaries() {
+  boundary.statusAnswers = [readyStatus];
+  boundary.retryAnswers = [];
+  boundary.invocations = [];
+  boundary.dialog = { save: [], open: [], calls: [] };
+}
+
+const take = <T,>(queue: T[]): T | undefined => (queue.length > 1 ? queue.shift() : queue[0]);
+async function answer(value: Answer | undefined): Promise<RuntimeStatus> {
+  if (value === undefined) throw new Error("No runtime answer configured");
+  if (value instanceof Error) throw value;
+  return structuredClone(await value);
+}
+
+/** `@tauri-apps/api/core`: only the runtime commands go through invoke in these tests. */
+export const tauriCoreMock = {
+  invoke: async (command: string) => {
+    boundary.invocations.push(command);
+    if (command === "runtime_status") return answer(take(boundary.statusAnswers));
+    if (command === "retry_runtime") return answer(boundary.retryAnswers.length ? boundary.retryAnswers.shift() : take(boundary.statusAnswers));
+    throw new Error(`Unexpected native command in a frontend test: ${command}`);
+  },
+};
+
+/** `lib/data/api`: the repository port, backed by the test's in-memory store. */
+export const apiMock = {
+  get repository() { return boundary.repository; },
+};
+
+async function dialogAnswer(kind: "save" | "open", options: unknown) {
+  boundary.dialog.calls.push({ kind, options: structuredClone(options) });
+  const queue = boundary.dialog[kind];
+  const next = queue.length ? queue.shift() : null;
+  if (next instanceof Error) throw next;
+  return next ?? null;
+}
+
+/** `@tauri-apps/plugin-dialog`: Cancel (null) unless the test queued a path. */
+export const dialogPluginMock = {
+  save: (options: unknown) => dialogAnswer("save", options),
+  open: (options: unknown) => dialogAnswer("open", options),
+};

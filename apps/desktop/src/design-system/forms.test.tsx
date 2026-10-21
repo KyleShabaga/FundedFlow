@@ -179,7 +179,7 @@ describe("Checkbox, Switch and RadioGroup", () => {
       );
     }
     render(<Pick />);
-    const group = screen.getByRole("group", { name: /Side/ });
+    const group = screen.getByRole("radiogroup", { name: /Side/ });
     expect(group.getAttribute("aria-invalid")).toBe("true");
     screen.getByRole("radio", { name: "Long" }).focus();
     await userEvent.keyboard("{ArrowDown}");
