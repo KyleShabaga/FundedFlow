@@ -45,3 +45,33 @@ Skipped rows (duplicates, errors) are dimmed.
 ## States
 - File over 10 MB or 50,000 rows: error before preview.
 - Every row invalid: no import button; show the first errors and "Fix the file and choose it again".
+
+## Build 18 implementation
+Code: `apps/desktop/src/features/imports/` (`components/ImportWizardPage.tsx`, `ImportHistoryPage.tsx`,
+`ImportTarget.tsx`, `wizard-state.ts`). Routes `/import` and `/import/history`; the header Import CSV button
+opens the wizard, and Accounts and account detail link to it with that account preselected. All reads and
+writes go through the Build 14 hooks; every count, status, reason and P&L value shown comes from Rust.
+
+Where this differs from the layout above (the card wins):
+- **No "net P&L of new trades" tile.** The card forbids client-side financial calculations and no command
+  returns that total, so the summary has five counts instead: will import (with restores), duplicates, errors,
+  warnings, rows in file (with blank rows). Per-row file and net P&L stay in the table. Add a total to the
+  preview command before showing one.
+- **Extra columns and filter.** The table adds Fees and a Restores filter; invalid rows show their source cells.
+- **Separate confirm step.** Step 4 restates every count and the destination attempt before the import button.
+  Finished attempts and trades outside the attempt's window (`assessImportTarget`) need a confirmation tick; the
+  account is reloaded and re-checked just before the import is sent.
+- **Row limit.** The 10 MiB limit is checked on the file's bytes before it is read. The 50,000-row limit needs
+  a parse, so it comes back from Rust as a blocking file issue; the wizard has no CSV parser of its own.
+- **Large files.** When the preview leaves rows out (`rowsOmitted`), the counts still cover the whole file and a
+  notice says how many plain new rows aren't listed.
+- **Commit outcomes.** One request per click (the button is locked while it runs; no automatic retry). A lost
+  answer shows "Couldn't confirm the import finished" with a link to Import history, and the wizard stays locked
+  until the user says they have checked it. The completion screen shows the returned batch, not the preview.
+- **Leaving mid-wizard.** The app uses a hash router without a navigation blocker, so only Cancel asks before
+  discarding; nothing is saved before the import either way.
+- **No Undo.** There is still no command to undo a whole batch.
+
+Open dependencies: Build 17's fill-pair ID delimiter collision (two different pairs can share a duplicate key)
+and the request schema counting the 10 MiB limit in UTF-16 units rather than UTF-8 bytes are tracked as Triage
+cards; the UI checks bytes itself and shows whatever Rust decides.
