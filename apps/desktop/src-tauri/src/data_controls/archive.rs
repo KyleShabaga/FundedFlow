@@ -305,12 +305,14 @@ pub fn export(
     Ok(result)
 }
 pub struct Inspected {
+    pub source_hash: String,
     pub manifest: ArchiveManifest,
     pub directory: tempfile::TempDir,
 }
 pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
     regular(source)?;
     no_symlink_components(source)?;
+    let source_hash = hash_file(source)?;
     let input = File::open(source)?;
     if input.metadata()?.len() > MAX_TOTAL + 2 * 1024 * 1024 {
         return Err(fail(Code::LimitExceeded));
@@ -414,7 +416,11 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
     if expected_payload != manifest.entries.iter().map(|e| e.path.clone()).collect() {
         return Err(fail(Code::Integrity));
     }
+    if hash_file(source)? != source_hash {
+        return Err(fail(Code::StalePreview));
+    }
     Ok(Inspected {
+        source_hash,
         manifest,
         directory: dir,
     })

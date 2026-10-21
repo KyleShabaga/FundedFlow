@@ -1,3 +1,11 @@
+import {
+  archiveInspectRequestSchema,
+  archiveRestorePreviewSchema,
+  archiveRestoreRequestSchema,
+  archiveRestoreResultSchema,
+  type ArchiveInspectRequest,
+  type ArchiveRestoreRequest,
+} from "@fundedflow/domain";
 /** Non-visual native data-control adapter. Build 25 owns user interaction. */
 import { z } from "zod";
 import {
@@ -39,6 +47,18 @@ export function createDataControls(invoke: Invoke) {
     return output.parse(raw);
   }
   return {
+    inspectArchive: (request: ArchiveInspectRequest) =>
+      call(
+        "inspect_journal_archive",
+        archiveInspectRequestSchema.parse(request),
+        archiveRestorePreviewSchema,
+      ),
+    restoreArchive: (request: ArchiveRestoreRequest) =>
+      call(
+        "restore_journal_archive",
+        archiveRestoreRequestSchema.parse(request),
+        archiveRestoreResultSchema,
+      ),
     exportArchive: (request: ArchiveExportRequest) =>
       call(
         "export_journal_archive",

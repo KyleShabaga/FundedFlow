@@ -1,10 +1,13 @@
 //! Offline data controls. No content or caller-selected paths are logged.
 mod archive;
 mod filesystem;
+mod restore;
+pub use restore::{InspectRequest, RestorePreview, RestoreRequest, RestoreResult};
+pub use restore::{inspect as inspect_restore, prepare as prepare_restore, recover};
 #[cfg(test)]
 mod tests;
 
-pub use archive::{ArchiveManifest, ExportResult};
+pub use archive::ExportResult;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -141,4 +144,19 @@ pub fn export_trades(c: &rusqlite::Connection, request: CsvExportRequest) -> Res
         request.account_id.as_deref(),
         request.acknowledge_plaintext,
     )
+}
+
+/// Cross-process ownership is held by Runtime for its lifetime, including recovery.
+pub fn filesystem_ownership(root: &std::path::Path) -> Result<std::fs::File> {
+    filesystem::no_symlink_components(root)?;
+    let path = root.join("fundedflow.lock");
+    filesystem::no_symlink_components(&path)?;
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(path)?;
+    fs2::FileExt::try_lock_exclusive(&file).map_err(|_| fail(Code::Busy))?;
+    Ok(file)
 }

@@ -182,6 +182,7 @@ pub struct Runtime {
     status: Mutex<RuntimeStatus>,
     /// An initialization is running or has been handed to a thread.
     running: AtomicBool,
+    ownership: Mutex<Option<std::fs::File>>,
 }
 
 /// A panic while a lock was held poisons it. Every write runs in a
@@ -208,6 +209,7 @@ impl Runtime {
                 failure: None,
             }),
             running: AtomicBool::new(true),
+            ownership: Mutex::new(None),
         }
     }
 
@@ -217,6 +219,20 @@ impl Runtime {
         let rt = Runtime::new(path);
         rt.initialize();
         rt
+    }
+
+    /// Stage an approved restore and immediately stop all database access until restart/retry.
+    pub fn prepare_restore(&self, request: crate::data_controls::RestoreRequest) -> crate::data_controls::Result<crate::data_controls::RestoreResult> {
+        let path=self.path.as_ref().map_err(|_| crate::data_controls::fail(crate::data_controls::Code::Io))?;
+        let root=path.parent().ok_or_else(|| crate::data_controls::fail(crate::data_controls::Code::UnsafePath))?;
+        let mut conn=lock(&self.conn);
+        let c=conn.as_mut().ok_or_else(|| crate::data_controls::fail(crate::data_controls::Code::Busy))?;
+        let result=crate::data_controls::prepare_restore(c,root,request)?;
+        // The safety image already contains the committed WAL. Closing prevents stale writes after confirmation.
+        *conn=None;
+        let mut status=lock(&self.status); status.state=RuntimeState::Failed; status.stage=RuntimeStage::Open;
+        status.failure=Some(failure(FailureCategory::OpenFailed, "Confirmed restore staged. Restart FundedFlow or retry runtime initialization to install it; data commands are paused.".into()));
+        Ok(result)
     }
 
     /// The same connection lock and native boundary as ordinary journal commands.
@@ -306,6 +322,15 @@ impl Runtime {
 
     fn open(&self, path: &Path) -> Result<(Connection, u32), (RuntimeFailure, Option<u32>)> {
         self.set_stage(RuntimeStage::Open);
+        let root = path.parent().ok_or_else(|| (failure(FailureCategory::DataDirectory, "No data directory".into()), None))?;
+        std::fs::create_dir_all(root).map_err(|_| (failure(FailureCategory::DataDirectory, "Could not create data directory".into()), None))?;
+        let mut ownership = lock(&self.ownership);
+        if ownership.is_none() {
+            crate::data_controls::filesystem_ownership(root).map(|file| *ownership = Some(file))
+                .map_err(|_| (failure(FailureCategory::OpenFailed, "Journal is already owned or its directory is unsafe".into()), None))?;
+        }
+        drop(ownership);
+        crate::data_controls::recover(root, path).map_err(|e| (failure(FailureCategory::OpenFailed, e.message), None))?;
         // Read the version first, without writing, so a failed attempt still
         // reports it and the stage shows whether an upgrade is about to run.
         if path.exists()

@@ -50,6 +50,8 @@ pub fn run() {
             commands::list_financial_reconciliations,
             commands::resolve_financial_reconciliation,
             commands::list_reconciliation_resolutions,
+            commands::inspect_journal_archive,
+            commands::restore_journal_archive,
             commands::export_journal_archive,
             commands::export_trade_csv,
             commands::runtime_status,

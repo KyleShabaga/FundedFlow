@@ -75,3 +75,30 @@ export const dataExportResultSchema = z.object({
 export type ArchiveExportRequest = z.infer<typeof archiveExportRequestSchema>;
 export type CsvExportRequest = z.infer<typeof csvExportRequestSchema>;
 export type DataExportResult = z.infer<typeof dataExportResultSchema>;
+export const archiveInspectRequestSchema = z.strictObject({
+  source: localPath,
+});
+export const archiveRestorePreviewSchema = z.object({
+  state: z.literal("validated"),
+  manifest: archiveManifestSchema,
+  archiveSha256: z.string().regex(/^[a-f0-9]{64}$/),
+  previewToken: z.string(),
+  replacedEntities: dataControlCountsSchema,
+  requiredConfirmation: z.literal("REPLACE ENTIRE JOURNAL"),
+  requiredFreeBytes: z.number().int().positive(),
+  warnings: z.array(z.string()),
+});
+export const archiveRestoreRequestSchema = z.strictObject({
+  source: localPath,
+  previewToken: z.string().min(1),
+  confirmation: z.literal("REPLACE ENTIRE JOURNAL"),
+});
+export const archiveRestoreResultSchema = z.object({
+  operationId: z.string(),
+  state: z.literal("restart_required"),
+  safetyBackupId: z.string(),
+});
+export type ArchiveInspectRequest = z.infer<typeof archiveInspectRequestSchema>;
+export type ArchiveRestorePreview = z.infer<typeof archiveRestorePreviewSchema>;
+export type ArchiveRestoreRequest = z.infer<typeof archiveRestoreRequestSchema>;
+export type ArchiveRestoreResult = z.infer<typeof archiveRestoreResultSchema>;

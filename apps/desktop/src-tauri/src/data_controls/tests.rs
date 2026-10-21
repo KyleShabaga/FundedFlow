@@ -136,3 +136,175 @@ fn csv_is_separate_exact_scoped_and_spreadsheet_safe() {
     assert_eq!(&rows[0][11], "208.38");
     assert!(rows[0][16].starts_with("'=HYPERLINK"));
 }
+fn backup_with_account(dir: &Path, name: &str) -> std::path::PathBuf {
+    let mut c = journal(&dir.join("source.db"));
+    account(&mut c, name);
+    let path = dir.join("backup.zip");
+    archive::export(&c, &dir.join("attachments"), &path, true).unwrap();
+    path
+}
+#[test]
+fn restore_inspection_is_readonly_stale_and_wrong_confirmations_fail_before_install() {
+    let source = tempfile::tempdir().unwrap();
+    let archive = backup_with_account(source.path(), "incoming");
+    let target = tempfile::tempdir().unwrap();
+    let path = target.path().join(db::DB_FILE_NAME);
+    let mut c = journal(&path);
+    account(&mut c, "original");
+    let before = archive::dump(&c).unwrap();
+    let preview = restore::inspect(
+        &c,
+        target.path(),
+        restore::InspectRequest {
+            source: archive.to_string_lossy().into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(archive::dump(&c).unwrap(), before);
+    assert_eq!(
+        restore::prepare(
+            &c,
+            target.path(),
+            restore::RestoreRequest {
+                source: archive.to_string_lossy().into(),
+                preview_token: preview.preview_token.clone(),
+                confirmation: "yes".into()
+            }
+        )
+        .unwrap_err()
+        .code,
+        Code::ConfirmationRequired
+    );
+    account(&mut c, "changed");
+    let after = archive::dump(&c).unwrap();
+    assert_eq!(
+        restore::prepare(
+            &c,
+            target.path(),
+            restore::RestoreRequest {
+                source: archive.to_string_lossy().into(),
+                preview_token: preview.preview_token,
+                confirmation: "REPLACE ENTIRE JOURNAL".into()
+            }
+        )
+        .unwrap_err()
+        .code,
+        Code::StalePreview
+    );
+    assert_eq!(archive::dump(&c).unwrap(), after);
+    assert!(!target.path().join("data-controls-pending.json").exists());
+}
+#[test]
+fn restore_waits_for_exclusive_restart_then_preserves_ids_and_safety_copy() {
+    let source = tempfile::tempdir().unwrap();
+    let archive = backup_with_account(source.path(), "incoming");
+    let inspected = archive::inspect_to(&archive, source.path()).unwrap();
+    let incoming = archive::dump(
+        &archive::readonly(&inspected.directory.path().join("journal.sqlite")).unwrap(),
+    )
+    .unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let path = target.path().join(db::DB_FILE_NAME);
+    let rt = crate::runtime::Runtime::start(Ok(path.clone()));
+    rt.with(|c| {
+        account(c, "old");
+        Ok(())
+    })
+    .unwrap();
+    let preview = rt
+        .with_controls(|c, root| {
+            restore::inspect(
+                c,
+                root,
+                restore::InspectRequest {
+                    source: archive.to_string_lossy().into(),
+                },
+            )
+        })
+        .unwrap();
+    let result = rt
+        .prepare_restore(restore::RestoreRequest {
+            source: archive.to_string_lossy().into(),
+            preview_token: preview.preview_token,
+            confirmation: "REPLACE ENTIRE JOURNAL".into(),
+        })
+        .unwrap();
+    assert_eq!(result.state, "restart_required");
+    assert!(rt.with(|_| Ok(())).is_err());
+    assert!(rt.begin_initialize());
+    assert_eq!(rt.initialize().state, crate::runtime::RuntimeState::Ready);
+    rt.with_controls(|c, _| {
+        assert_eq!(archive::dump(c).unwrap(), incoming);
+        Ok(())
+    })
+    .unwrap();
+    assert!(
+        target
+            .path()
+            .join("data-controls")
+            .join(result.safety_backup_id)
+            .join("safety.db")
+            .exists()
+    );
+    assert!(!target.path().join("data-controls-pending.json").exists());
+}
+#[test]
+fn failed_swap_and_interrupted_install_restore_the_original_journal() {
+    let source = tempfile::tempdir().unwrap();
+    let archive = backup_with_account(source.path(), "incoming");
+    for crash in [false, true] {
+        let target = tempfile::tempdir().unwrap();
+        let path = target.path().join(db::DB_FILE_NAME);
+        let mut c = journal(&path);
+        account(&mut c, "original");
+        let before = archive::dump(&c).unwrap();
+        let p = restore::inspect(
+            &c,
+            target.path(),
+            restore::InspectRequest {
+                source: archive.to_string_lossy().into(),
+            },
+        )
+        .unwrap();
+        restore::prepare(
+            &c,
+            target.path(),
+            restore::RestoreRequest {
+                source: archive.to_string_lossy().into(),
+                preview_token: p.preview_token,
+                confirmation: "REPLACE ENTIRE JOURNAL".into(),
+            },
+        )
+        .unwrap();
+        drop(c);
+        if crash {
+            let marker = target.path().join("data-controls-pending.json");
+            let text = fs::read_to_string(&marker)
+                .unwrap()
+                .replace("prepared", "installing");
+            fs::write(&marker, text).unwrap();
+            fs::write(&path, b"interrupted overwrite").unwrap();
+            restore::recover(target.path(), &path).unwrap();
+        } else {
+            assert!(restore::recover_failing(target.path(), &path).is_err());
+        }
+        let restored = journal(&path);
+        assert_eq!(archive::dump(&restored).unwrap(), before);
+        assert!(!target.path().join("data-controls-pending.json").exists());
+    }
+}
+#[test]
+fn second_runtime_cannot_access_a_journal_owned_by_another_process_handle() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join(db::DB_FILE_NAME);
+    let first = crate::runtime::Runtime::start(Ok(path.clone()));
+    assert_eq!(first.status().state, crate::runtime::RuntimeState::Ready);
+    let second = crate::runtime::Runtime::start(Ok(path));
+    assert_eq!(second.status().state, crate::runtime::RuntimeState::Failed);
+    drop(first);
+    assert!(second.begin_initialize());
+    assert_eq!(
+        second.initialize().state,
+        crate::runtime::RuntimeState::Ready
+    );
+}
