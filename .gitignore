@@ -33,3 +33,11 @@ dist-ssr
 
 # Synthetic sample journals used by the migration upgrade tests
 !apps/desktop/src-tauri/src/db/fixtures/*.db
+
+# Python (tools/prop-firm-collector)
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
