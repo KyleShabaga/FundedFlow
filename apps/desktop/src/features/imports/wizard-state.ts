@@ -3,7 +3,7 @@
 // it was made from; changing the account, file, time zone, format, date order or
 // mapping makes it stale. Nothing here parses CSV, detects duplicates or does
 // arithmetic: the Rust preview is the only authority.
-import { MAX_CSV_BYTES, type ColumnMapping, type CsvImportRequest, type csvFormats, type dateFormats } from "@fundedflow/domain";
+import { MAX_CSV_BYTES, utf8ByteLength, type ColumnMapping, type CsvImportRequest, type csvFormats, type dateFormats } from "@fundedflow/domain";
 
 export type CsvFormatChoice = (typeof csvFormats)[number];
 export type DateFormatChoice = (typeof dateFormats)[number];
@@ -109,18 +109,26 @@ export function requestKey(state: WizardState): string | null {
 
 const CSV_TYPES = new Set(["text/csv", "application/csv", "application/vnd.ms-excel", "text/plain", ""]);
 
+/** A UTF-8 byte order mark: the decoder removes it, so it is not part of the submitted text (P0-04). */
+const UTF8_BOM_BYTES = 3;
+
 /**
- * Reads a chosen file as strict UTF-8. Size is checked on bytes before reading, so a 10 MiB file of multi-byte
- * characters is not mistaken for a smaller one (the domain schema counts UTF-16 units; see Build 17 triage).
+ * Reads a chosen file as strict UTF-8; anything else (UTF-16, legacy code pages, invalid bytes) is refused as
+ * unreadable rather than guessed. The cap applies to the text that is submitted, measured in UTF-8 bytes as native
+ * code measures it: the decoder drops a leading BOM, so a file may be up to 3 bytes larger than the cap if it has one.
  */
 export async function readCsvFile(file: File, version: number): Promise<LoadedFile | FileProblem> {
   const isCsvName = /\.csv$/i.test(file.name);
   if (!isCsvName || !CSV_TYPES.has(file.type)) return { kind: "not-csv", name: file.name };
-  if (file.size > MAX_CSV_BYTES) return { kind: "too-large", name: file.name, size: file.size };
+  // Too large even without a BOM: refuse before reading it into memory.
+  if (file.size > MAX_CSV_BYTES + UTF8_BOM_BYTES) return { kind: "too-large", name: file.name, size: file.size };
   if (file.size === 0) return { kind: "empty", name: file.name };
   try {
     const bytes = await file.arrayBuffer();
     const content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    // Strict decoding is lossless, so this is the file's size less any BOM.
+    const submitted = utf8ByteLength(content) ?? Infinity;
+    if (submitted > MAX_CSV_BYTES) return { kind: "too-large", name: file.name, size: submitted };
     if (content.trim() === "") return { kind: "empty", name: file.name };
     return { name: file.name, size: file.size, content, version };
   } catch {

@@ -90,6 +90,7 @@ pub struct RoundTripSource {
     pub bought_at_source: String,
     pub sold_at_source: String,
     pub duration_source: Option<String>,
+    #[serde(with = "crate::domain::duration_wire")]
     pub duration_seconds: Option<i64>,
     pub price_format: Option<String>,
     pub price_format_type: Option<String>,
