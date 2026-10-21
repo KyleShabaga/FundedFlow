@@ -39,6 +39,7 @@ import {
   Pnl,
   Popover,
   RadioGroup,
+  ChipGroup,
   RuleMeter,
   RulebookLine,
   RuleStateBadge,
@@ -112,6 +113,8 @@ function ValidationDemo() {
 export function FormsSection() {
   const [q, setQ] = useState("");
   const [side, setSide] = useState<"long" | "short">("long");
+  const [setups, setSetups] = useState<string[]>(["orb"]);
+  const [mistakes, setMistakes] = useState<string[]>([]);
   const [file, setFile] = useState<{ name: string; size: number } | null>(null);
   return (
     <Section title="Form controls" note="Native inputs and Radix Select with labels, descriptions, errors and required/optional markers wired to aria-describedby.">
@@ -133,6 +136,8 @@ export function FormsSection() {
           </FieldGroup>
           <Switch label="Follow the OS theme" description="Applies at once." defaultChecked />
           <RadioGroup label="Side" inline value={side} onValueChange={setSide} options={[{ value: "long", label: "Long" }, { value: "short", label: "Short" }]} />
+          <ChipGroup label="Setup" value={setups} onValueChange={setSetups} options={[{ value: "orb", label: "Opening range" }, { value: "vwap", label: "VWAP pullback" }, { value: "old", label: "Retired setup", note: "Archived: kept on past reviews", disabled: true }]} />
+          <ChipGroup label="Mistakes" tone="warn" value={mistakes} onValueChange={setMistakes} options={[{ value: "chased", label: "Chased entry" }, { value: "stop", label: "Moved stop" }]} empty="No mistake tags yet." />
           <Select label="Import into" placeholder="Choose an account" options={[{ value: "a", label: "Apex $100K · Example" }, { value: "b", label: "Topstep $50K · Example (archived)", disabled: true }, { value: "c", label: "A very long account name that has to truncate inside the trigger without pushing anything" }]} />
           <FileDropzone
             label="Choose a CSV file"
