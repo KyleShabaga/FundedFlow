@@ -1,3 +1,5 @@
+import { instant } from "../contracts/fields.js";
+import { tradingDay } from "../rulebook/versions.js";
 import { accountInputSchema } from "../contracts/accounts.js";
 import {
   accountRiskInputsSchema,
@@ -30,6 +32,21 @@ const unique = (v: string[]) => [...new Set(v)].sort();
 const time = (v: string) => Date.parse(v);
 const maximum = (values: bigint[]) => values.reduce((a, b) => (a > b ? a : b));
 const sum = (values: bigint[]) => values.reduce((a, b) => a + b, 0n);
+
+function lastAt<T>(
+  records: readonly T[],
+  at: number,
+  timestamp: (record: T) => number,
+): T | undefined {
+  let left = 0,
+    right = records.length;
+  while (left < right) {
+    const middle = Math.floor((left + right) / 2);
+    if (timestamp(records[middle]!) <= at) left = middle + 1;
+    else right = middle;
+  }
+  return records[left - 1];
+}
 
 function financialContext(input: AccountRiskInputs) {
   const replaced = new Set(input.observations.map((o) => o.supersedesId));
@@ -66,7 +83,25 @@ function financialContext(input: AccountRiskInputs) {
       time(e.effectiveAt) <= time(input.asOf) &&
       (start === null || time(e.effectiveAt) > start),
   );
+  ledger.sort(
+    (a, b) =>
+      time(a.effectiveAt) - time(b.effectiveAt) || compareText(a.id, b.id),
+  );
   const missing: string[] = [];
+  if (
+    input.trades.some(
+      (t) =>
+        !instant.safeParse(t.entryAt).success ||
+        (t.exitAt !== null && !instant.safeParse(t.exitAt).success) ||
+        !tradingDay.safeParse(t.tradingDay).success,
+    ) ||
+    input.ledger.some(
+      (e) =>
+        !instant.safeParse(e.effectiveAt).success ||
+        !tradingDay.safeParse(e.tradingDay).success,
+    )
+  )
+    missing.push("invalid_stored_time_or_trading_day");
   try {
     if (money(input.account.startingBalance) < 0n)
       missing.push("invalid_starting_balance_configuration");
@@ -125,6 +160,7 @@ function financialContext(input: AccountRiskInputs) {
       sum(ledger.filter((e) => e.affectsBalance).map((e) => money(e.amount)))
     : null;
   const dayPnl =
+    missing.length === 0 &&
     input.coverage.closedTrades === "available" &&
     input.coverage.fees === "available" &&
     !trades.some((t) => t.realizedPnl === null)
@@ -141,9 +177,12 @@ function financialContext(input: AccountRiskInputs) {
   const groups = new Map<number, typeof trades>();
   for (const t of trades) {
     const key = time(t.exitAt!);
-    groups.set(key, [...(groups.get(key) ?? []), t]);
+    const group = groups.get(key);
+    if (group) group.push(t);
+    else groups.set(key, [t]);
   }
-  const points = [...groups.values()].map((group) => {
+  let balancePeak = running;
+  const points = [...groups.entries()].map(([atMillis, group]) => {
     const values = group.map((t) =>
       t.realizedPnl === null ? 0n : money(t.realizedPnl),
     );
@@ -151,7 +190,11 @@ function financialContext(input: AccountRiskInputs) {
       negative = sum(values.filter((v) => v < 0n)),
       previous = running;
     running += net;
+    balancePeak = balancePeak > running ? balancePeak : running;
     return {
+      atMillis,
+      balancePeak,
+      maximumPossible: previous + sum(values.filter((v) => v > 0n)),
       id: group
         .map((t) => t.id)
         .sort()
@@ -165,18 +208,25 @@ function financialContext(input: AccountRiskInputs) {
       mixed: values.some((v) => v < 0n) && values.some((v) => v > 0n),
     };
   });
-  const conflicts = observations.filter((o, i) =>
-    observations
-      .slice(0, i)
-      .some(
-        (p) =>
-          p.kind === o.kind &&
-          p.basis === o.basis &&
-          p.currency === o.currency &&
-          time(p.observedAt) === time(o.observedAt) &&
-          p.value !== o.value,
-      ),
-  );
+  const conflicts: typeof observations = [];
+  const seenObservations = new Map<string, string>();
+  for (const o of observations)
+    if (o.value !== null) {
+      const key = JSON.stringify([
+        o.kind,
+        o.basis,
+        o.currency,
+        time(o.observedAt),
+      ]);
+      if (seenObservations.has(key) && seenObservations.get(key) !== o.value)
+        conflicts.push(o);
+      else seenObservations.set(key, o.value);
+    }
+  let ledgerAdjustment = 0n;
+  const ledgerLevels = ledger.map((e) => ({
+    atMillis: time(e.effectiveAt),
+    adjustment: (ledgerAdjustment += e.affectsBalance ? money(e.amount) : 0n),
+  }));
   if (baseline && complete)
     for (const observed of observations.filter(
       (o) =>
@@ -187,17 +237,11 @@ function financialContext(input: AccountRiskInputs) {
         time(o.observedAt) >= time(baseline.observedAt),
     )) {
       const prefix =
-        points.filter((p) => time(p.at) <= time(observed.observedAt)).at(-1)
-          ?.value ?? money(baseline.value!);
-      const movements = sum(
-        ledger
-          .filter(
-            (e) =>
-              e.affectsBalance &&
-              time(e.effectiveAt) <= time(observed.observedAt),
-          )
-          .map((e) => money(e.amount)),
-      );
+        lastAt(points, time(observed.observedAt), (p) => p.atMillis)?.value ??
+        money(baseline.value!);
+      const movements =
+        lastAt(ledgerLevels, time(observed.observedAt), (e) => e.atMillis)
+          ?.adjustment ?? 0n;
       if (prefix + movements !== money(observed.value!))
         missing.push("historical_checkpoint_conflict");
     }
@@ -398,15 +442,18 @@ function calculate(
         return set("conflicting", "conflicting_trailing_reference_sources");
       if (kind !== null && !history.length)
         return set("unknown", "missing_peak_or_settlement_history");
+      let runningHigh = opening;
+      const historicalLevels = history.map((o) => {
+        const value = money(o.value!);
+        runningHigh = runningHigh > value ? runningHigh : value;
+        return { atMillis: time(o.observedAt), high: runningHigh };
+      });
       const referenceAt = (at: number) =>
-        maximum([
-          opening,
-          ...(p.method === "static" && p.lock.state === "value"
-            ? c.points.filter((p) => time(p.at) <= at).map((p) => p.value)
-            : history
-                .filter((o) => time(o.observedAt) <= at)
-                .map((o) => money(o.value!))),
-        ]);
+        p.method === "static"
+          ? p.lock.state === "value"
+            ? (lastAt(c.points, at, (p) => p.atMillis)?.balancePeak ?? opening)
+            : opening
+          : (lastAt(historicalLevels, at, (p) => p.atMillis)?.high ?? opening);
       const high = referenceAt(time(input.asOf));
       let locked = false;
       const floorAt = (peak: bigint) => {
@@ -481,6 +528,24 @@ function calculate(
         else if (point.mixed && crossed(point.minimumPossible, floorAt(ref)))
           ambiguous = true;
       }
+      if (
+        !historical &&
+        p.method === "static" &&
+        p.lock.state === "value" &&
+        c.points.some(
+          (point) =>
+            point.mixed &&
+            point.maximumPossible >=
+              money(
+                p.lock.state === "value" ? p.lock.value.triggerBalance : "0",
+              ) &&
+            point.balancePeak <
+              money(
+                p.lock.state === "value" ? p.lock.value.triggerBalance : "0",
+              ),
+        )
+      )
+        return set("unknown", "simultaneous_lock_trigger_order_unavailable");
       if (ambiguous && !historical && !crossed(balance, floor))
         return set("unknown", "simultaneous_close_order_unavailable");
       return threshold(balance - floor, historical || crossed(balance, floor));
@@ -512,22 +577,22 @@ function calculate(
       let running = 0n,
         breached = false;
       let ambiguous = false;
-      for (const [day] of c.days) {
-        running = 0n;
-        for (const point of c.points.filter((t) => t.day === day)) {
-          const minimumPossible = running + point.negative;
-          running += point.net;
-          if (p.breach === "hard" || day === input.effectiveTradingDay) {
-            if (crossed(running, -limit)) breached = true;
-            else if (point.mixed && crossed(minimumPossible, -limit))
-              ambiguous = true;
-          }
+      const runningByDay = new Map<string, bigint>();
+      for (const point of c.points) {
+        running = runningByDay.get(point.day) ?? 0n;
+        const minimumPossible = running + point.negative;
+        running += point.net;
+        runningByDay.set(point.day, running);
+        if (p.breach === "hard" || point.day === input.effectiveTradingDay) {
+          if (crossed(running, -limit)) breached = true;
+          else if (point.mixed && crossed(minimumPossible, -limit))
+            ambiguous = true;
         }
       }
       if (ambiguous && !breached)
         return set("unknown", "simultaneous_close_order_unavailable");
       if (p.breach === "soft" && breached)
-        return set("caution", "sourced_soft_daily_limit_reached");
+        return set("breached", "sourced_soft_daily_limit_reached");
       return threshold(remaining, breached || crossed(c.dayPnl, -limit));
     }
     case "profit_target": {
@@ -568,6 +633,8 @@ function calculate(
       if (blocked) return blocked;
       const thresholdValue =
         p.minDayProfit.state === "value" ? money(p.minDayProfit.value) : null;
+      if (thresholdValue !== null && thresholdValue < 0n)
+        return set("unsupported", "negative_qualifying_day_threshold");
       const completed = [...c.days.values()].filter(
         (v) => thresholdValue === null || v >= thresholdValue,
       ).length;
@@ -629,6 +696,8 @@ function calculate(
       const [whole, fraction = ""] = p.maxBestDayShare.value.split(".");
       const scale = 10n ** BigInt(fraction.length),
         share = BigInt(whole! + fraction);
+      if (share <= 0n || share > scale)
+        return set("unsupported", "consistency_share_out_of_range");
       out.metrics = {
         bestDayProfit: wire(best),
         denominator: wire(denominator),

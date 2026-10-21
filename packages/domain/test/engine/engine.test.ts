@@ -581,3 +581,70 @@ it("conditional DLL None does not become unconditional no-limit compliance", () 
   expect(r.status).toBe("Unknown");
   expect(r.rules[1]!.reasonCode).toBe("conditional_daily_absence_unresolved");
 });
+
+it("unknown ordering cannot hide a possible static lock trigger", () => {
+  const d = drawdown();
+  if (d.ruleType !== "max_drawdown") throw Error();
+  d.parameters.amount = { state: "value", value: "5000" };
+  d.parameters.lock = {
+    state: "value",
+    value: { triggerBalance: "53000", lockedFloor: "51000" },
+  };
+  const i = inputs([d]);
+  i.trades = [
+    trade("4000", 1),
+    { ...trade("-1500", 2), exitAt: trade("4000", 1).exitAt },
+    trade("-2000", 3),
+  ];
+  expect(evaluateAccountRisk(i, policy(i)).status).toBe("Unknown");
+});
+it("malformed stored times cannot be dropped and replaced by a zero daily P&L", () => {
+  const i = inputs();
+  i.trades = [{ ...trade("-3000"), exitAt: "invalid" }];
+  const r = evaluateAccountRisk(i, policy(i));
+  expect(r.status).toBe("Unknown");
+  expect(r.realizedDayPnl).toBeNull();
+});
+
+it("exact share bounds cannot round an invalid ratio down to one", () => {
+  const i = inputs([
+    rule("consistency", {
+      maxBestDayShare: {
+        state: "value",
+        value: "1.0000000000000000000000000001",
+      },
+      denominator: "total_profit",
+      appliesTo: "evaluation",
+    }),
+  ]);
+  i.trades = [trade("150")];
+  const r = evaluateAccountRisk(i, policy(i));
+  expect(r.status).toBe("Unknown");
+  expect(r.rules[0]!.reasonCode).toBe("consistency_share_out_of_range");
+});
+it("a sourced soft daily threshold still stops current-day trading without failing the account", () => {
+  const i = inputs([
+    rule("daily_loss_limit", {
+      limit: { state: "value", value: "100" },
+      basis: "realized",
+      resetBasis: "account_trading_day",
+      breach: "soft",
+      condition: "always",
+    }),
+  ]);
+  i.trades = [trade("-101")];
+  expect(evaluateAccountRisk(i, policy(i)).status).toBe("Stop");
+  expect(i.account.status).toBe("active");
+});
+it("coalesces a large same-instant import deterministically without inventing fill order", () => {
+  const i = inputs();
+  i.trades = Array.from({ length: 1000 }, (_, n) => ({
+    ...trade("1"),
+    id: id(1000 + n),
+  }));
+  const r = evaluateAccountRisk(i, policy(i));
+  expect(r.balance).toBe("51000");
+  expect(r.status).toBe("Safe");
+  i.trades.reverse();
+  expect(evaluateAccountRisk(i, policy(i))).toEqual(r);
+});
