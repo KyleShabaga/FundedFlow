@@ -176,6 +176,7 @@
 .ds-pnl-unknown { color: var(--ink-faint); }
 .ds-tab-panel { padding-top: var(--space-4); }
 .ds-tab-panel:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.ds-tab-panel-kept[data-state="inactive"] { display: none; }
 .ds-cal-day { color: var(--ink); text-align: left; font: inherit; }
 .ds-cal-day.is-clickable { cursor: pointer; }
 .ds-cal-day.is-clickable:hover { border-color: var(--line-200); }
