@@ -801,3 +801,76 @@ fn csv_native_request_requires_explicit_all_or_account_scope() {
     );
     assert!(serde_json::from_value::<CsvExportRequest>(serde_json::json!({"destination":"chosen.csv","accountId":null,"acknowledgePlaintext":true})).is_ok());
 }
+#[test]
+fn archived_failed_passed_attempts_reset_lineage_and_reused_numbers_survive_restore() {
+    use crate::store::attempts::{self, ResetInput, RulebookDecision};
+    let reset = |c: &mut Connection, from: &str, outcome: &str, name: &str| {
+        attempts::reset(
+            c,
+            ResetInput {
+                predecessor_account_id: from.into(),
+                prior_outcome: outcome.into(),
+                effective_at: "2026-10-20T15:00:00-04:00".into(),
+                reason: None,
+                source: "provider_email".into(),
+                name: name.into(),
+                external_ref: Some("ABC-123".into()),
+                starting_balance: "50000".into(),
+                catalogue: None,
+                rulebook: RulebookDecision::DecideLater,
+                notes: None,
+            },
+        )
+        .unwrap()
+        .successor
+        .id
+    };
+    let source = tempfile::tempdir().unwrap();
+    let mut c = journal(&source.path().join("source.db"));
+    let first = account(&mut c, "Attempt 1");
+    let second = reset(&mut c, &first, "failed", "Attempt 2");
+    let third = reset(&mut c, &second, "passed", "Attempt 3");
+    accounts::archive(&mut c, &first).unwrap();
+    c.execute("INSERT INTO account_phase_events(id,account_id,to_phase,recorded_at,source,actor) VALUES('phase',?1,'unknown','2026-10-21T14:00:00.000Z','user_entered','user')",[&third]).unwrap();
+    let expected = archive::dump(&c).unwrap();
+    let lineage = attempts::lineage(&c, &third).unwrap();
+    let path = source.path().join("backup.zip");
+    archive::export(&c, &source.path().join("attachments"), &path, true).unwrap();
+    drop(c);
+
+    let target = tempfile::tempdir().unwrap();
+    let rt = crate::runtime::Runtime::start(Ok(target.path().join(db::DB_FILE_NAME)));
+    let preview = rt
+        .with_controls(|c, root| restore::inspect(c, root, restore::InspectRequest { source: path.to_string_lossy().into() }))
+        .unwrap();
+    assert_eq!(preview.manifest.entities["account_attempt_links"], 2);
+    assert_eq!(preview.manifest.entities["account_archive_events"], 1);
+    assert_eq!(preview.manifest.entities["account_phase_events"], 1);
+    rt.prepare_restore(restore::RestoreRequest {
+        source: path.to_string_lossy().into(),
+        preview_token: preview.preview_token,
+        confirmation: "REPLACE ENTIRE JOURNAL".into(),
+    })
+    .unwrap();
+    assert!(rt.begin_initialize());
+    assert_eq!(rt.initialize().state, crate::runtime::RuntimeState::Ready);
+    rt.with_controls(|c, _| {
+        assert_eq!(archive::dump(c).unwrap(), expected);
+        let restored = attempts::lineage(c, &third).unwrap();
+        assert_eq!(restored, lineage);
+        let states: Vec<_> = restored
+            .iter()
+            .map(|a| (a.account_id.as_str(), a.status.as_str(), a.archived_at.is_some(), a.external_ref.as_deref()))
+            .collect();
+        assert_eq!(
+            states,
+            [
+                (first.as_str(), "failed", true, None),
+                (second.as_str(), "passed", false, Some("ABC-123")),
+                (third.as_str(), "active", false, Some("ABC-123")),
+            ]
+        );
+        Ok(())
+    })
+    .unwrap();
+}

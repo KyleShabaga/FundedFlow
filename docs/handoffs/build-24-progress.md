@@ -1,5 +1,19 @@
 # Build 24 backend progress / session recovery
 
+## Verification checkpoint (Windows desktop, 2026-10-21)
+
+Head `9bc37be` (schema 18), verified from a Windows worktree `.claude/worktrees/build-24` on the owner's PC (the `/workspace` paths below were the previous Linux session's).
+
+- `npm test` with no concurrent native work: **459 domain + 523 desktop passed**. The DropdownMenu/dialog focus timeout from the earlier concurrent run did not recur.
+- `npm run check`: boundaries and dist (253 exports) pass.
+- Windows CI run 39553010881 on merge commit `7ce8ec5` failed only the two wire-fixture tests (`data_controls::wire_tests::native_data_control_outputs_match_portable_wire_fixture`, `wire_contract::command_wire_fixture_matches_rust`): the committed fixtures lacked schema 18 tables (`daily_review_*`, `rulebook_events`). `9bc37be` regenerates both fixtures.
+- Windows CI run [39554244084](https://github.com/KyleShabaga/FundedFlow/actions/runs/39554244084) on head `9bc37be`: **success**. `cargo test` 277 passed / 0 failed / 2 ignored; Clippy, typecheck, domain tests, build and dist checks pass.
+- Card audit added `archived_failed_passed_attempts_reset_lineage_and_reused_numbers_survive_restore` (failed + passed + active attempts, one archived, two reset links, a reused provider number and a phase event survive inspect → restart restore with identical tables and lineage). It passes locally on Windows; Clippy with warnings denied passes.
+- Baseline review: the four legacy-rulebook SQLite IO 1802 failures are Linux-environment only. On Windows CI every other native test passed (259 of 261 on `7ce8ec5`, the two failures being the fixtures above), including all four legacy-rulebook tests. They remain tracked at https://app.notion.com/p/3ff1bd4b6bde819499abc89a9f2f9795 for the Linux runner.
+- [build-24-data-controls.md](build-24-data-controls.md) is refreshed to schema 18: Build 20's shared attachment root and `account_id` ownership, schema 17/18 cross-account integrity checks, the new `immutable_shared_rulebook_history` and `attachment_owner_conflict` blockers, and the migration 15–18 policy note.
+
+Still not done: review of archive limits/plaintext choice, restart recovery and the phase/lineage deletion policy; Build 25 UI; packaged Windows cross-profile, power-loss and installer acceptance (Builds 26.75/27). No merge, no Done.
+
 ## Claude Code takeover checkpoint
 
 Accepted main `e5e9f05` (Builds 16/19/20/21/22/29) is integrated by merge commit `7ce8ec5`; journal schema is 18. The accompanying backend checkpoint adds seven regression tests covering current-schema archive/restore, trade corrections, daily reviews, screenshot ownership, account deletion rollback and shared audit retention. It includes owned screenshots whose review links have disappeared, protects foreign-owned attachments, blocks ambiguous attachment/shared-rulebook audit deletion, and validates new cross-account relationships. No UI or migration is authored. Build 29's independent collector database remains outside journal backup/deletion.
