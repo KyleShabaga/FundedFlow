@@ -1,0 +1,102 @@
+name: Release installer
+
+# Build 26.75 / NA-2: builds the unsigned NSIS installer and uploads it with its SHA-256 as a workflow artifact.
+# Nothing is published: no GitHub release, no secrets, no signing, no updater (owner decision 2026-10-21).
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - 'apps/desktop/src-tauri/tauri.conf.json'
+      - '.github/workflows/release-installer.yml'
+
+concurrency:
+  group: release-installer-${{ github.ref }}
+  cancel-in-progress: true
+
+# Read-only token: the job only checks out, builds and uploads a workflow artifact.
+permissions:
+  contents: read
+
+jobs:
+  nsis-installer:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      # A pull request builds its head commit, not GitHub's temporary merge commit, so the hash maps to a real SHA.
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: npm
+
+      # Clean install from the single root lockfile (no node_modules or dist cached).
+      - name: Install dependencies
+        run: npm ci
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Read app version
+        id: meta
+        run: |
+          $version = (Get-Content apps/desktop/src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          if (-not $version) { throw "No version in tauri.conf.json" }
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Tag $env:GITHUB_REF_NAME does not match app version $version"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "short_sha=$($env:SOURCE_SHA.Substring(0, 7))" >> $env:GITHUB_OUTPUT
+
+      # beforeBuildCommand runs `npm run build`, whose build:app ends with scripts/check-no-dev-tools.mjs; a leak
+      # fails it and therefore this step. The Rust dev commands are compiled only under debug_assertions.
+      - name: Build NSIS installer (release)
+        run: npm run tauri -- build
+
+      # Belt and braces: re-run the dev-tools check on the exact frontend that was bundled.
+      - name: No developer tools in the bundled frontend
+        run: node apps/desktop/scripts/check-no-dev-tools.mjs
+
+      - name: Locate installer and write SHA256SUMS.txt
+        id: installer
+        run: |
+          $dir = 'apps/desktop/src-tauri/target/release/bundle/nsis'
+          $exes = @(Get-ChildItem -Path $dir -Filter '*.exe' -File)
+          if ($exes.Count -ne 1) { throw "Expected exactly one installer in $dir, found $($exes.Count)" }
+          $exe = $exes[0]
+          $hash = (Get-FileHash -Algorithm SHA256 -Path $exe.FullName).Hash.ToLowerInvariant()
+          $sums = Join-Path $dir 'SHA256SUMS.txt'
+          @(
+            "# FundedFlow $env:VERSION unsigned NSIS installer"
+            "# source_sha: $env:SOURCE_SHA"
+            "# version: $env:VERSION"
+            "$hash  $($exe.Name)"
+          ) | Set-Content -Path $sums -Encoding utf8NoBOM
+          Get-Content $sums
+          "path=$($exe.FullName)" >> $env:GITHUB_OUTPUT
+          "sums=$sums" >> $env:GITHUB_OUTPUT
+          "## Installer`n`n| | |`n|---|---|`n| File | ``$($exe.Name)`` |`n| SHA-256 | ``$hash`` |`n| Source SHA | ``$env:SOURCE_SHA`` |`n| Version | $env:VERSION |" >> $env:GITHUB_STEP_SUMMARY
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: fundedflow-${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.short_sha }}-windows-nsis
+          path: |
+            ${{ steps.installer.outputs.path }}
+            ${{ steps.installer.outputs.sums }}
+          if-no-files-found: error
+          retention-days: 30
