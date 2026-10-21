@@ -31,11 +31,12 @@ describe("first run to a configured account", () => {
 
     await user.click((await screen.findAllByRole("button", { name: "Add account" }))[0]);
     const dialog = await screen.findByRole("dialog", { name: "Add account" });
-    await user.type(within(dialog).getByRole("textbox", { name: /Account name/ }), "Eval 50K");
-    await user.type(within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
-    const zone = within(dialog).getByRole("combobox", { name: /Time zone/ });
-    await user.clear(zone);
-    await user.type(zone, "America/New_York");
+    // Pasted, not typed key by key: per-keystroke field behaviour is the Accounts feature tests' job, and each
+    // keystroke into the zone combobox re-filters the zone list (slow in jsdom on a busy runner).
+    const fill = async (field: HTMLElement, text: string) => { await user.clear(field); await user.click(field); await user.paste(text); };
+    await fill(within(dialog).getByRole("textbox", { name: /Account name/ }), "Eval 50K");
+    await fill(within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
+    await fill(within(dialog).getByRole("combobox", { name: /Time zone/ }), "America/New_York");
     await user.click(within(dialog).getByRole("button", { name: "Add account" }));
     await waitFor(() => expect(currentPath()).toBe("/accounts/acct-1"));
     await waitFor(() => expect(store.settings.get(ACTIVE_ACCOUNT_SETTING)).toBe("acct-1"));
@@ -58,7 +59,8 @@ describe("first run to a configured account", () => {
     const day = within(assign).getByLabelText(/First trading day/);
     await user.clear(day);
     await user.type(day, "2026-10-19");
-    await user.click(within(assign).getByRole("button", { name: /Assign from 2026-10-19/ }));
+    // The button names the typed day once React has rendered the input; wait for it rather than assume it.
+    await user.click(await within(assign).findByRole("button", { name: /Assign from 2026-10-19/ }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(store.today.assignments).toHaveLength(1);
     expect(await screen.findByRole("region", { name: "In force today" })).toBeTruthy();

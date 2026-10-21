@@ -172,7 +172,7 @@ describe("restore", () => {
     const done = await screen.findByRole("dialog", { name: "Journal restored" });
     expect(store.dataControlCalls.filter(c => c.method === "restoreArchive")).toHaveLength(1);
     expect(boundary.invocations.filter(c => c === "retry_runtime")).toHaveLength(1);
-    await user.click(within(done).getAllByRole("button", { name: "Close" }).at(-1)!);
+    await user.click(within(done).getAllByRole("button", { name: "Close" }).slice(-1)[0]!);
 
     // Every warmed view now reads the restored journal; nothing comes back from the cache.
     await user.click(within(nav()).getByRole("link", { name: "Accounts" }));

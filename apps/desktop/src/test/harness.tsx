@@ -40,8 +40,10 @@ export function resetHarness() {
   vi.useRealTimers();
 }
 
-/** Seeds the store and renders the whole app at `path` (a hash route such as "/journal"). */
-/** `strict` adds the StrictMode wrapper main.tsx uses (doubled effects make call counts noisier). */
+/**
+ * Seeds the store and renders the whole app at `path` (a hash route such as "/journal"). `strict` adds the
+ * StrictMode wrapper main.tsx uses (doubled effects make call counts noisier, so it is off by default).
+ */
 export function renderApp(path = "/", seed: AppStoreSeed | ReturnType<typeof createAppStore> = {}, { strict = false } = {}) {
   const store = "repository" in seed ? seed : createAppStore(seed);
   boundary.repository = store.repository;

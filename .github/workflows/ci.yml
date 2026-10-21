@@ -31,7 +31,9 @@ jobs:
       - name: Typecheck (domain + desktop)
         run: npm run typecheck
 
-      - name: Domain tests (Vitest, incl. Rust golden fixtures)
+      # Domain unit tests (incl. Rust golden fixtures), then desktop component, cross-feature journey and axe
+      # accessibility suites (apps/desktop/src/journeys). All jsdom/Vitest: frontend evidence, not packaged-app runs.
+      - name: Tests (domain + desktop components, journeys and axe accessibility)
         run: npm test
 
       # Must run before cargo: the tauri build script expects apps/desktop/dist to exist.

@@ -11,6 +11,7 @@
     "build:domain": "npm run build --prefix ../../packages/domain",
     "typecheck": "tsc --noEmit",
     "test": "npm run build:domain && vitest run",
+    "test:journeys": "npm run build:domain && vitest run src/journeys",
     "preview": "vite preview",
     "tauri": "tauri"
   },
