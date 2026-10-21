@@ -91,7 +91,7 @@ Code: `apps/desktop/src/features/accounts/` (`components/`, `active-account.ts`,
 ### Differences from the mockup (and why)
 | Mockup | Build 15 | Why |
 |---|---|---|
-| Balance column, "combined balance" KPI | Starting balance column; Current balance KPI shown as unavailable | No current-balance source until Build 15.5 checkpoints; currencies are never added together |
+| Balance column, "combined balance" KPI | Starting balance column; Current balance KPI shown as unavailable | Build 15.5 stores user-reported balance/equity observations and exact reconciliations (`JournalRepository.evidence`), but no hook or screen enters or shows them yet, and a reconciled balance is not a live balance; currencies are never added together |
 | P&L column | Net P&L = Rust's lineage `netPnl` (known closed trades), with "n unknown" | Rust-computed, never a UI sum; unknown stays unknown |
 | Drawdown used / Profit target meters | Not shown; footnote explains | Needs Build 16 rule evaluation; no meters at zero |
 | "Closest to a limit" KPI | "Need setup" count | Same reason; a truthful, supported fact instead |
@@ -110,3 +110,7 @@ Code: `apps/desktop/src/features/accounts/` (`components/`, `active-account.ts`,
 - Restore conflicts carry the conflicting account's name in the Rust message, but Build 14 maps all conflicts to a
   generic message; the UI explains the likely cause instead.
 - Rulebook assignment from the Accounts page waits for the Build 19 editor.
+- Account edits may change currency, time zone or day start after Build 15.5 observations exist. Observations keep the
+  units and session they were recorded with, so later comparisons refuse mismatches instead of converting. The edit
+  warning covers re-derived trades only; warning about recorded checkpoints needs an evidence hook (future Claude
+  card, with the checkpoint-entry UI).
