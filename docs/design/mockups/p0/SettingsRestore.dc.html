@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Restore from a full backup</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.cmp2{width:100%;border-collapse:collapse;font-size:13px}
+.cmp2 th,.cmp2 td{padding:7px 10px;border-bottom:1px solid var(--line-100);text-align:left}
+.cmp2 th{font:600 11px/14px var(--font-sans);letter-spacing:.6px;text-transform:uppercase;color:var(--ink-muted);background:var(--bg-200)}
+.cmp2 td.n{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.spin{width:18px;height:18px;border-radius:50%;border:2px solid var(--line-200);border-top-color:var(--flow);animation:sp 1s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</helmet>
+<div class="shell" style="display: block; width: 1600px; min-height: 1500px; padding: 32px; box-sizing: border-box;">
+  <div class="mock-states" role="group" aria-label="Mockup state (review only)" style="margin-bottom: 16px;">
+    <span>Restore dialog state</span>
+    <sc-for list="{{views}}" as="v" hint-placeholder-count="6"><button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for>
+  </div>
+  <div class="scrim" style="min-height: 1340px; place-items: start center;">
+    <div class="dlg dlg-lg" role="dialog" aria-modal="true" aria-labelledby="rs-t" aria-describedby="rs-d" style="width: 760px;">
+      <div class="dlg-head">
+        <div><h2 id="rs-t" class="dlg-title">{{title}}</h2><p id="rs-d" class="dlg-desc">{{desc}}</p></div>
+        <sc-if value="{{closable}}" hint-placeholder-val="{{ true }}"><button type="button" class="icon-btn" style="border: 0;" aria-label="Close"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></sc-if>
+      </div>
+      <div class="dlg-body">
+        <div class="row small muted" style="gap: 8px;"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5"></path></svg><span class="mono" style="color: var(--ink);">fundedflow-2026-09-30.ffj.zip</span><span>· 41.7 MB</span></div>
+
+        <sc-if value="{{isChecking}}" hint-placeholder-val="{{ false }}">
+          <div class="row" role="status" style="padding: 24px 0;"><span class="spin" aria-hidden="true"></span><span>Checking the archive's version, checksums and contents… The live journal is not touched.</span></div>
+        </sc-if>
+
+        <sc-if value="{{isRejected}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-err" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg><div><b>This archive can't be restored</b><p>{{rejectReason}}</p><div class="notice-actions"><button type="button" class="btn btn-sm">Check again</button><button type="button" class="btn btn-sm btn-ghost">Choose another file…</button></div></div></div>
+          <div class="seg" role="group" aria-label="Rejection reason (mockup)">
+            <sc-for list="{{reasons}}" as="r" hint-placeholder-count="4"><button type="button" class="{{r.cls}}" onClick="{{r.pick}}">{{r.label}}</button></sc-for>
+          </div>
+          <p class="small muted" style="margin: 0;">Nothing was changed. Native error text, paths and rows are never shown.</p>
+        </sc-if>
+
+        <sc-if value="{{isReady}}" hint-placeholder-val="{{ true }}">
+          <div class="stack">
+            <div class="notice n-ok"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"></path></svg><div><b>Checksums, version and contents verified</b></div></div>
+            <dl class="kv">
+              <div><dt>Created</dt><dd>Sep 30, 2026, 6:12 PM</dd></div>
+              <div><dt>Made by</dt><dd>FundedFlow 1.0.3</dd></div>
+              <div><dt>Format · journal version</dt><dd>Backup format 1 · journal 11, upgraded to 12 when installed</dd></div>
+              <div><dt>Protection</dt><dd>Not encrypted</dd></div>
+              <div><dt>Screenshots and files</dt><dd class="num">214 · 38.9 MB</dd></div>
+              <div><dt>Free space needed</dt><dd class="num">96 MB</dd></div>
+              <div><dt>Archive SHA-256</dt><dd class="num" style="font-size: 12px;">a41f 90c2 … 7d3b e015</dd></div>
+            </dl>
+            <table class="cmp2">
+              <caption class="h3" style="text-align: left; padding-bottom: 8px; font-size: 14px;">What changes</caption>
+              <thead><tr><th scope="col">Records</th><th scope="col" style="text-align: right;">In the archive</th><th scope="col" style="text-align: right;">Replaced in this journal</th></tr></thead>
+              <tbody>
+                <tr><th scope="row" style="background: none; text-transform: none; letter-spacing: 0; font: 400 13px/18px var(--font-sans); color: var(--ink);">Accounts (attempts)</th><td class="n">4</td><td class="n">5</td></tr>
+                <tr><th scope="row" style="background: none; text-transform: none; letter-spacing: 0; font: 400 13px/18px var(--font-sans); color: var(--ink);">Trades</th><td class="n">1,182</td><td class="n">1,349</td></tr>
+                <tr><th scope="row" style="background: none; text-transform: none; letter-spacing: 0; font: 400 13px/18px var(--font-sans); color: var(--ink);">Daily reviews</th><td class="n">71</td><td class="n">83</td></tr>
+                <tr><th scope="row" style="background: none; text-transform: none; letter-spacing: 0; font: 400 13px/18px var(--font-sans); color: var(--ink);">Rulebook versions</th><td class="n">9</td><td class="n">11</td></tr>
+                <tr><th scope="row" style="background: none; text-transform: none; letter-spacing: 0; font: 400 13px/18px var(--font-sans); color: var(--ink);">Imports</th><td class="n">26</td><td class="n">31</td></tr>
+              </tbody>
+            </table>
+            <div class="notice n-info"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 16v-4M12 8h.01"></path></svg><div><b>Accounts come back exactly as they were archived</b><p>Status, archive state and provider numbers return as saved, with their reset links. Attempts started after Sep 30 disappear.</p></div></div>
+            <div class="notice n-warn"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></svg><div><b>Before you replace</b><ul class="small" style="margin: 4px 0 0; padding-left: 16px;"><li>Everything recorded since Sep 30 is replaced, not merged.</li><li>Export a full backup of the current journal first if you might need it.</li><li>FundedFlow closes the journal while it installs and keeps a local safety copy.</li></ul></div></div>
+            <label class="fld"><span class="fld-label">Type the confirmation exactly</span><span class="fld-desc">Type <span class="phrase">REPLACE ENTIRE JOURNAL</span> to continue. It is case-sensitive.</span>
+              <input class="{{phraseCls}}" value="{{typed}}" onInput="{{onType}}" autocomplete="off" spellcheck="false" aria-describedby="ph-err">
+              <sc-if value="{{mismatch}}" hint-placeholder-val="{{ false }}"><span id="ph-err" class="fld-err"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 8v4M12 16h.01"></path></svg>This doesn't match yet.</span></sc-if>
+            </label>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{isInstalling}}" hint-placeholder-val="{{ false }}">
+          <div class="stack-s" role="status" style="padding: 16px 0;">
+            <div class="row"><span class="spin" aria-hidden="true"></span><b>Installing the restored journal…</b></div>
+            <p class="small muted" style="margin: 0 0 0 28px;">The journal is closed and a safety copy is kept. This can't be cancelled; don't close FundedFlow. No progress percentage is shown because FundedFlow only learns the end result.</p>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-ok" role="status"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"></path></svg><div><b>Journal restored</b><p>The journal now matches fundedflow-2026-09-30.ffj.zip. Every page reloads its data. The previous journal is kept as a local safety copy.</p></div></div>
+        </sc-if>
+
+        <sc-if value="{{isFailed}}" hint-placeholder-val="{{ false }}">
+          <div class="notice n-err" role="alert"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM15 9l-6 6M9 9l6 6"></path></svg><div><b>The restore didn't finish installing</b><p>The journal isn't open. Your original journal and the safety copy are both kept. The recovery banner at the top of the app takes over from here.</p></div></div>
+          <div class="notice n-neutral" style="border-style: dashed;"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"></path></svg><div><b>Shell recovery banner (existing)</b><p>"Local data isn't open" · Retry opening the journal. Settings stays reachable; data actions stay disabled.</p></div></div>
+        </sc-if>
+      </div>
+      <div class="dlg-foot">
+        <sc-if value="{{showCancel}}" hint-placeholder-val="{{ true }}"><button type="button" class="btn" style="{{cancelFocus}}">Cancel</button></sc-if>
+        <sc-if value="{{isReady}}" hint-placeholder-val="{{ true }}"><button type="button" class="btn btn-danger" aria-disabled="{{notMatched}}" title="{{replaceTitle}}">Replace entire journal</button></sc-if>
+        <sc-if value="{{isInstalling}}" hint-placeholder-val="{{ false }}"><button type="button" class="btn btn-danger" aria-disabled="true">Installing…</button></sc-if>
+        <sc-if value="{{isEnd}}" hint-placeholder-val="{{ false }}"><button type="button" class="btn btn-primary">Close</button></sc-if>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startState":{"editor":"enum","options":["checking","rejected","ready","installing","restored","failed"],"default":"ready"},"$preview":{"width":1600,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: props.startState || 'ready', typed: 'REPLACE ENTIRE', reason: 'newer' }; }
+  renderVals() {
+    var self = this, v = this.state.view, typed = this.state.typed, phrase = 'REPLACE ENTIRE JOURNAL';
+    var reasons = { newer: 'It was made by a newer FundedFlow (journal version 14). Update FundedFlow, then try again.', checksum: 'Some files in it don’t match their checksums, so it may be damaged or incomplete. Use another copy.', notff: 'It isn’t a FundedFlow full backup. Trade CSV files and other zips can’t be restored.', space: 'There isn’t enough free space to install it (needs 96 MB). Free some space and check again.' };
+    var labels = { newer: 'Newer version', checksum: 'Damaged', notff: 'Not a backup', space: 'No space' };
+    var views = [['checking', 'Checking'], ['rejected', 'Rejected'], ['ready', 'Validated'], ['installing', 'Installing'], ['restored', 'Restored'], ['failed', 'Didn’t finish']].map(function (x) {
+      return { label: x[1], on: v === x[0], cls: v === x[0] ? 'is-on' : '', pick: function () { self.setState({ view: x[0] }); } };
+    });
+    var matched = typed === phrase;
+    return {
+      views: views,
+      reasons: Object.keys(reasons).map(function (k) { return { label: labels[k], cls: self.state.reason === k ? 'is-on' : '', pick: function () { self.setState({ reason: k }); } }; }),
+      rejectReason: reasons[this.state.reason],
+      title: v === 'restored' ? 'Journal restored' : v === 'failed' ? 'The restore didn’t finish' : 'Replace the journal with this archive?',
+      desc: v === 'restored' || v === 'failed' ? '' : 'Restoring replaces everything in this journal with the archive. Nothing is merged. The current journal is kept as a local safety copy first.',
+      isChecking: v === 'checking', isRejected: v === 'rejected', isReady: v === 'ready', isInstalling: v === 'installing', isDone: v === 'restored', isFailed: v === 'failed',
+      isEnd: v === 'restored' || v === 'failed' || v === 'rejected', closable: v !== 'installing',
+      showCancel: v === 'checking' || v === 'ready', cancelFocus: v === 'ready' ? 'outline: 2px solid var(--flow); outline-offset: 2px;' : '',
+      typed: typed, onType: function (e) { self.setState({ typed: e.target.value }); },
+      mismatch: typed.length > 0 && !matched, notMatched: !matched, phraseCls: 'input num' + (typed.length > 0 && !matched ? ' is-invalid' : ''),
+      replaceTitle: matched ? '' : 'Type REPLACE ENTIRE JOURNAL to continue'
+    };
+  }
+}
+</script>
+</body>
+</html>
