@@ -213,5 +213,11 @@ try {
     browser.unref();
   }
 } finally {
-  rmSync(dir, { recursive: true, force: true });
+  // On Windows the killed browser can hold its profile files for a moment: retry, then leave the
+  // temporary directory rather than fail a check that already passed.
+  try {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });
+  } catch (error) {
+    console.warn(`Could not remove temporary browser profile ${dir}: ${error.code ?? error}`);
+  }
 }
