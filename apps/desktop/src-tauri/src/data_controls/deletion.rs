@@ -118,6 +118,14 @@ fn recovery_copies(root: &Path) -> Result<Vec<String>> {
             paths.push(name);
         }
     }
+    let work = root.join("data-controls-work");
+    no_symlink_components(&work)?;
+    if work.exists() {
+        if !work.is_dir() {
+            return Err(fail(Code::UnsupportedOwnership));
+        }
+        paths.push("data-controls-work".into());
+    }
     paths.sort();
     Ok(paths)
 }
@@ -196,12 +204,7 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
         Scope::Journal => {
             attachments = archive::inventory(c, &root.join("attachments"))?;
             // Reject stray bytes before promising a complete whole-journal erase.
-            let temp = tempfile::tempdir_in(root)?;
-            super::restore::copy_managed(
-                &root.join("attachments"),
-                &temp.path().join("inventory"),
-                &attachments,
-            )?;
+            super::restore::validate_managed(&root.join("attachments"), &attachments)?;
             affected = before
                 .iter()
                 .map(|(k, t)| (k.clone(), t.rows.len() as u64))
@@ -349,7 +352,8 @@ pub fn recover_cleanup(c: &Connection, root: &Path) -> Result<()> {
         if cleanup.whole_journal && marker.as_deref() == Some(&cleanup.operation_id) {
             for key in &cleanup.recovery_copies {
                 relative(key)?;
-                if !(key.starts_with("data-controls/")
+                if !(key == "data-controls-work"
+                    || key.starts_with("data-controls/")
                     || (key.starts_with("fundedflow.db.before-v") && key.ends_with(".bak")))
                 {
                     return Err(fail(Code::UnsafePath));

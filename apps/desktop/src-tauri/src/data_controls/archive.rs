@@ -188,7 +188,11 @@ pub fn snapshot(conn: &Connection, destination: &Path) -> Result<()> {
         use std::os::unix::fs::PermissionsExt;
         fs::set_permissions(destination, fs::Permissions::from_mode(0o600))?;
     }
-    File::open(destination)?.sync_all()?;
+    fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(destination)?
+        .sync_all()?;
     if fs::metadata(destination)?.len() > MAX_ENTRY {
         return Err(fail(Code::LimitExceeded));
     }

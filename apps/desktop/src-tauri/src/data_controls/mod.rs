@@ -118,6 +118,7 @@ pub struct ExportRequest {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CsvExportRequest {
     pub destination: String,
+    #[serde(deserialize_with = "explicit_nullable")]
     pub account_id: Option<String>,
     pub acknowledge_plaintext: bool,
 }
@@ -167,3 +168,9 @@ pub fn filesystem_ownership(root: &std::path::Path) -> Result<std::fs::File> {
 }
 #[cfg(test)]
 mod wire_tests;
+
+fn explicit_nullable<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> std::result::Result<Option<String>, D::Error> {
+    Option::<String>::deserialize(deserializer)
+}

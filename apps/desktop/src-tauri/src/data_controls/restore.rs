@@ -68,7 +68,7 @@ fn counts(c: &Connection) -> Result<super::Counts> {
 pub fn inspect(c: &Connection, root: &Path, request: InspectRequest) -> Result<RestorePreview> {
     no_symlink_components(root)?;
     space(root, MAX_TOTAL * 4)?;
-    let stage = archive::inspect_to(Path::new(&request.source), root)?;
+    let stage = archive::inspect_to(Path::new(&request.source), &workspace(root)?)?;
     // Also prove that all required upgrades can run without touching active data.
     let mut candidate = db::open_file(&stage.directory.path().join("journal.sqlite"))
         .map_err(|_| fail(Code::Integrity))?;
@@ -101,7 +101,7 @@ pub fn prepare(c: &Connection, root: &Path, request: RestoreRequest) -> Result<R
         return Err(fail(Code::StalePreview));
     }
     // Reopen the input only into controlled staging, then verify the exact inspected file identity.
-    let staged = archive::inspect_to(Path::new(&request.source), root)?;
+    let staged = archive::inspect_to(Path::new(&request.source), &workspace(root)?)?;
     if staged.source_hash != preview.archive_sha256 {
         return Err(fail(Code::StalePreview));
     }
@@ -157,7 +157,11 @@ pub fn prepare(c: &Connection, root: &Path, request: RestoreRequest) -> Result<R
 struct FileSync;
 impl FileSync {
     fn sync(p: &Path) -> Result<()> {
-        std::fs::File::open(p)?.sync_all()?;
+        std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(p)?
+            .sync_all()?;
         Ok(())
     }
 }
@@ -236,6 +240,10 @@ fn managed_files(root: &Path, prefix: &str, names: &mut Vec<String>) -> Result<(
     Ok(())
 }
 pub(crate) fn copy_managed(source: &Path, target: &Path, list: &[super::Attachment]) -> Result<()> {
+    validate_managed(source, list)?;
+    copy_inventory(source, target, list)
+}
+pub(crate) fn validate_managed(source: &Path, list: &[super::Attachment]) -> Result<()> {
     let mut files = Vec::new();
     managed_files(source, "", &mut files)?;
     let expected: std::collections::BTreeSet<_> =
@@ -243,7 +251,7 @@ pub(crate) fn copy_managed(source: &Path, target: &Path, list: &[super::Attachme
     if files.into_iter().collect::<std::collections::BTreeSet<_>>() != expected {
         return Err(fail(Code::UnsupportedOwnership));
     }
-    copy_inventory(source, target, list)
+    Ok(())
 }
 fn replace_database(source: &Path, live: &Path) -> Result<()> {
     // No SQLite connection may exist here. Pending intent makes interrupted multi-file swaps recoverable.
@@ -333,4 +341,11 @@ fn rollback(root: &Path, live: &Path, op: &Path, safety: &[super::Attachment]) -
 #[cfg(test)]
 pub(super) fn recover_failing(root: &Path, live: &Path) -> Result<()> {
     recover_with(root, live, || Err(fail(Code::Io)))
+}
+
+fn workspace(root: &Path) -> Result<PathBuf> {
+    let path = root.join("data-controls-work");
+    private_dir(&path)?;
+    sync_dir(root)?;
+    Ok(path)
 }

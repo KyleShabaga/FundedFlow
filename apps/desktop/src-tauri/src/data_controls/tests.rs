@@ -744,3 +744,60 @@ fn financial_evidence_corrections_reconciliation_and_ledger_provenance_roundtrip
         Code::Integrity
     );
 }
+#[test]
+fn interrupted_inspection_workspace_is_private_managed_and_included_in_whole_erasure() {
+    let source = tempfile::tempdir().unwrap();
+    let archive = backup_with_account(source.path(), "incoming");
+    let target = tempfile::tempdir().unwrap();
+    let mut c = journal(&target.path().join("live.db"));
+    restore::inspect(
+        &c,
+        target.path(),
+        restore::InspectRequest {
+            source: archive.to_string_lossy().into(),
+        },
+    )
+    .unwrap();
+    let work = target.path().join("data-controls-work");
+    assert!(work.is_dir());
+    fs::write(
+        work.join("interrupted-inspection"),
+        b"private old checkpoint",
+    )
+    .unwrap();
+    let p = deletion::preview(
+        &c,
+        target.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Journal,
+        },
+    )
+    .unwrap();
+    assert_eq!(p.local_recovery_copies, 1);
+    assert_eq!(
+        deletion::execute(&mut c, target.path(), approved(&p))
+            .unwrap()
+            .state,
+        "completed"
+    );
+    assert!(!work.exists());
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let safety = target.path().join("data-controls-cleanup");
+        assert_eq!(
+            fs::metadata(safety).unwrap().permissions().mode() & 0o777,
+            0o700
+        );
+    }
+}
+#[test]
+fn csv_native_request_requires_explicit_all_or_account_scope() {
+    assert!(
+        serde_json::from_value::<CsvExportRequest>(
+            serde_json::json!({"destination":"chosen.csv","acknowledgePlaintext":true})
+        )
+        .is_err()
+    );
+    assert!(serde_json::from_value::<CsvExportRequest>(serde_json::json!({"destination":"chosen.csv","accountId":null,"acknowledgePlaintext":true})).is_ok());
+}
