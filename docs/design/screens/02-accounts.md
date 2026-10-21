@@ -140,3 +140,45 @@ canonical inputs as of now, checkpoints), so a card never shows another attempt'
 No figure is computed in the UI: every amount is passed through from the engine result, a checkpoint or the
 rulebook. Each card reads the canonical inputs for its attempt (one `get_account_risk_inputs` per card), which is
 fine for tens of accounts; a summary command would scale better (backend follow-up).
+
+## P0 design: account detail (Build 25.1)
+
+Boards in [`mockups/p0/`](../mockups/p0/): 4A `AccountDetail` (states: calculated, not current, needs setup, failed
+attempt, archived, loading; tabs Overview, History, Attempts), 4B `AccountDialogs` (edit with re-derive warning,
+change status, archive and restore, new attempt step 3, ⋯ menu, discard changes, toast), 4C `NarrowAccount`.
+This redesigns `/accounts/:accountId` from Builds 15, 15.5 and 18.5. Every figure comes from a source the Accounts
+cards already read (engine result, checkpoint, lineage, rulebook, imports); nothing new is calculated.
+
+### Layout (Overview tab)
+1. **Identity**: initial mark, eyebrow "firm · platform", name with masked number, then badges (type, status,
+   Archived, Needs setup) and the "Active account" pill, then "phase · attempt n of m · last traded {time, zone}".
+   Actions: Import trades (menu: Quick import / Full wizard), ghost Import history, primary Edit, ⋯ menu. Archived:
+   Restore from archive replaces them.
+2. **Notices**: archived (read-only), finished attempt (history only, Start new attempt…), needs setup (Set up the
+   rulebook).
+3. **Four figures** (the `OverviewCard` fields, as `MetricCard`s): Balance with its provenance badge ("From your
+   records", "Confirmed by you", "Not current"), Net P&L (known closed trades; unknown count named), Drawdown headroom
+   with floor and a `ProgressMeter`, Profit target progress with "to go". Meters only from a current result; not
+   current figures are muted with a badge; missing ones are "—" with the reason; finished attempts say "History only".
+4. **Rules and risk** card: `StatusIndicator` + "why it isn't Safe", How this was calculated / Calculate now…, the
+   `RulebookLine` with Review or change, five key rules from the assigned version, and the estimate disclaimer.
+5. **Recent trades** (5, links to Journal) and **Recent imports** (3, links to Import history).
+6. Right rail: **Setup** checklist (firm, rulebook in force today, optional balance checkpoint; "a complete setup isn't
+   a Safe account"), **Activity** (the built StatList), collapsed **Account settings**.
+
+History tab: lifecycle timeline (status events with cause "as you recorded it", reset link to the previous attempt)
+and rulebook assignments. Attempts tab: the built attempts table.
+
+### Actions
+⋯ menu on a live attempt: Use as active account, **Rulebook and assignment**, **Quick import into this attempt**, Change
+status…, Mark failed…, Start new attempt…, Archive…, Delete permanently… (loss). The two bold items are new on this page
+(they exist on cards and the Setup panel). Archived: Restore from archive, Delete permanently…. Delete opens the Build
+25 deletion dialog ([15](15-settings-data-controls.md)).
+
+### Keyboard and narrow windows
+Tabs, menu and dialogs are the design-system components. Below 1100 px the figures are 2×2 and the rail moves under
+the main column; at 720 px "Import history" moves into the ⋯ menu and tables scroll inside their cards.
+
+### Changes proposed for the built screen (UI only)
+Header breadcrumb; figures row and Rules and risk card (reusing the overview-card view model); recent trades and
+imports lists; the two new menu items; Import trades as a menu (today it goes straight to the wizard).

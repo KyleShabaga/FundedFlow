@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Account detail at 720 px</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ff-app.css">
+<link rel="stylesheet" href="ff-p0.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#070b14}
+.k2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.k2 .card{padding:12px;display:grid;gap:4px}
+</style>
+</helmet>
+<div class="shell is-narrow" style="width: 720px; min-height: 1600px;">
+  <dc-import name="P0Sidebar" active="accounts" collapsed="{{yes}}" hint-size="72px,100%"></dc-import>
+  <div class="shell-main">
+    <dc-import name="P0Header" title="Account" here="Apex 100K · PA-48213" crumbs="{{crumbs}}" account="Apex 100K · PA-48213" hint-size="100%,150px"></dc-import>
+    <main class="shell-content">
+      <div class="wrap">
+        <div class="stack-s">
+          <span class="overline">Apex Trader Funding · Tradovate</span>
+          <h2 style="margin: 0; font: 600 20px/26px var(--font-display);">Apex 100K · PA-48213</h2>
+          <div class="row" style="gap: 6px;"><span class="badge b-neutral">Evaluation</span><span class="badge b-flow">Active</span><span class="small muted">Attempt 2 of 2</span></div>
+          <div class="row"><button type="button" class="btn btn-sm">Import trades</button><button type="button" class="btn btn-sm btn-primary">Edit</button><button type="button" class="icon-btn" aria-label="More account actions"><svg class="icon icon-s" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.6;"><path d="M5 12h.01M12 12h.01M19 12h.01"></path></svg></button></div>
+          <p class="faint" style="margin: 0;">"Import history" moves into the ⋯ menu below 900 px.</p>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Account"><button type="button" role="tab" class="tab is-on" aria-selected="true">Overview</button><button type="button" role="tab" class="tab" aria-selected="false">History</button><button type="button" role="tab" class="tab" aria-selected="false">Attempts</button></div>
+        <div class="k2">
+          <section class="card"><span class="label">Balance</span><span class="tile-v" style="font-size: 18px;">$100,640.00</span><span class="faint">From your records · 2:14 PM</span></section>
+          <section class="card"><span class="label">Net P&amp;L</span><span class="tile-v pos" style="font-size: 18px;">+$640.00</span><span class="faint">32 known trades · 1 without P&amp;L</span></section>
+          <section class="card"><span class="label">Drawdown headroom</span><span class="tile-v" style="font-size: 18px;">$1,790.00</span><div class="meter-track"><div class="meter-fill" style="width: 59.7%;"></div></div></section>
+          <section class="card"><span class="label">Profit target</span><span class="tile-v" style="font-size: 18px;">+$640.00</span><div class="meter-track"><div class="meter-fill pos" style="width: 10.7%;"></div></div></section>
+        </div>
+        <section class="card pad-s stack-s"><h3 class="h3">Rules and risk</h3><span class="status s-unknown" style="align-self: start;">Unknown</span><span class="small muted">Scaling plan needs setup and Consistency is Unknown.</span><div class="row"><button type="button" class="btn btn-sm">How this was calculated</button></div></section>
+        <section class="card pad-s stack-s"><div class="row-between"><h3 class="h3">Setup</h3><span class="badge b-profit">Complete</span></div><span class="small muted">Firm and rulebook are set.</span></section>
+        <section class="dt-card"><div class="dt-toolbar"><h3 class="h3">Recent trades</h3></div><div class="dt-scroll"><table class="dt" style="min-width: 520px;"><thead><tr><th scope="col"><span>Day</span></th><th scope="col"><span>Symbol</span></th><th scope="col"><span>Side</span></th><th scope="col" class="num"><span>Net P&amp;L</span></th></tr></thead><tbody><tr><td>Wed, Oct 21</td><td class="sym">MNQZ6</td><td><span class="badge b-out-profit">Long</span></td><td class="num neg">−$30.80</td></tr><tr><td>Wed, Oct 21</td><td class="sym">MESZ6</td><td><span class="badge b-out-loss">Short</span></td><td class="num faint">—</td></tr></tbody></table></div></section>
+        <p class="faint" style="margin: 0;">Order when stacked: identity → tabs → 2×2 figures → rules and risk → setup → activity → recent trades → recent imports → settings.</p>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":720,"height":1600}}'>
+class Component extends DCLogic {
+  renderVals() { return { yes: true, crumbs: [{ label: 'Accounts', href: 'Main.dc.html' }] }; }
+}
+</script>
+</body>
+</html>
