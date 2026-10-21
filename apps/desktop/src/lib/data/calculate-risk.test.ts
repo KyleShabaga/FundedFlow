@@ -106,3 +106,35 @@ it("unresolved reconciliation gaps force Unknown and do not mutate the fetched i
   expect(saved?.inputsHash).not.toBe(f.result.inputsHash);
   expect(f.input).toEqual(baseline);
 });
+it("a stored result is current against freshly loaded sources with its frozen policy, and not after a new review", async () => {
+  const { isEngineResultCurrent } = await import("@fundedflow/domain");
+  const { evaluateRisk, loadRiskCalculation } = await import("./calculate-risk");
+  const input = accountRiskInputsSchema.parse(
+    wire.find((f) => f.command === "get_account_risk_inputs")!.output,
+  );
+  const review = {
+    id: "review-1",
+    accountId: input.account.id,
+    observation: { id: "not-current" },
+    request: { asOf: input.asOf },
+    result: { reconciliationStatus: "matched" },
+  } as Reconciliation;
+  const repo = createTauriRepository(async () => {
+    throw Error("unused");
+  });
+  const reviews: Reconciliation[] = [review];
+  vi.spyOn(repo.evidence, "inputs").mockImplementation(async () => structuredClone(input) as never);
+  vi.spyOn(repo.evidence, "reconciliations").mockImplementation(async () => reviews);
+  vi.spyOn(repo.evidence, "resolutions").mockResolvedValue([]);
+  const save = vi.spyOn(repo.snapshots, "save");
+  const query = { accountId: input.account.id, asOf: input.asOf, coverage: input.coverage as never };
+  const first = await evaluateRisk(repo, query, defaultEnginePolicy);
+  expect(save).not.toHaveBeenCalled();
+  // The frozen policy already carries the review id; reloading must not duplicate it.
+  const again = await loadRiskCalculation(repo, query, first.policy);
+  expect(again.policy.reconciliationRevisionIds).toEqual(["review-1"]);
+  expect(isEngineResultCurrent(first.result, again.inputs, again.policy)).toBe(true);
+  reviews.push({ ...review, id: "review-2" });
+  const later = await loadRiskCalculation(repo, query, first.policy);
+  expect(isEngineResultCurrent(first.result, later.inputs, later.policy)).toBe(false);
+});
