@@ -13,6 +13,9 @@ on:
       - 'scripts/dev-*.mjs'
       - '.github/workflows/dev-tools.yml'
 
+permissions:
+  contents: read
+
 jobs:
   reset-tests:
     strategy:

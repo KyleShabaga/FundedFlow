@@ -352,7 +352,7 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
     let mut total = 0u64;
     for i in 0..zip.len() {
         let mut entry = zip.by_index(i)?;
-        let name = entry.name().to_string();
+        let name = entry.name()?.to_string();
         relative(&name)?;
         if !names.insert(name.to_lowercase())
             || entry.is_dir()

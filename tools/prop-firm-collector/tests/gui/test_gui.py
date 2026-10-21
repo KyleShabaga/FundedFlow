@@ -323,7 +323,11 @@ def test_publisher_practice_fetch_counts_evidence_and_review(ui: tuple[Collector
     app.select_publishers_for_fetch(["onlypropfirms"])
     recorder.answer = False
     app.start_fetch()
-    assert recorder.messages[-1][0] == "ask" and "onlypropfirms.com" in recorder.messages[-1][2]
+    kind, _title, message = recorder.messages[-1]
+    assert kind == "ask"
+    # Compare the named hosts exactly: a substring check would also pass for "onlypropfirms.com.example".
+    named = message.split("requests to: ", 1)[1].split(". It respects", 1)[0].split(", ")
+    assert named == ["onlypropfirms.com"]
 
 
 def test_publisher_manual_capture_and_directory_export(ui: tuple[CollectorApp, Recorder], tmp_path: Path) -> None:

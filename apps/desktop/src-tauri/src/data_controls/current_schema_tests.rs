@@ -29,11 +29,11 @@ fn trade_input(id: &str) -> trades::TradeInput {
         notes: Some("original".into()),
     }
 }
-fn screenshot(c: &mut Connection, root: &Path, a: &str, t: &str, salt: u8) -> String {
+fn screenshot(c: &mut Connection, root: &Path, a: &str, t: &str, marker: u8) -> String {
     let mut bytes = b"\x89PNG\r\n\x1a\n\0\0\0\x0dIHDR".to_vec();
     bytes.extend(2u32.to_be_bytes());
     bytes.extend(2u32.to_be_bytes());
-    bytes.extend([8, 6, 0, 0, 0, 0, 0, 0, 0, salt]);
+    bytes.extend([8, 6, 0, 0, 0, 0, 0, 0, 0, marker]);
     attachments::add(
         c,
         root,

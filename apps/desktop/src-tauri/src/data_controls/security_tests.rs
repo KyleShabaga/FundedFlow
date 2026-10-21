@@ -19,7 +19,7 @@ fn unpack(path: &Path) -> Vec<(String, Vec<u8>)> {
         let mut e = z.by_index(i).unwrap();
         let mut bytes = Vec::new();
         e.read_to_end(&mut bytes).unwrap();
-        result.push((e.name().into(), bytes));
+        result.push((e.name().unwrap().into(), bytes));
     }
     result
 }

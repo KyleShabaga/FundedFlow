@@ -33,7 +33,7 @@ rust_decimal = "1.36"
 sha2 = "0.10"
 base64 = "0.22"
 uuid = { version = "1", features = ["v7"] }
-zip = { version = "2.4", default-features = false }
+zip = { version = "9", default-features = false }
 tempfile = "3"
 fs2 = "0.4"
 tauri-plugin-dialog = "2"
