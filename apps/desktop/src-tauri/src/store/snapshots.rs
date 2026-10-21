@@ -244,6 +244,19 @@ pub fn save(conn: &mut Connection, input: SnapshotInput) -> AppResult<Snapshot> 
 
     let tx = conn.transaction()?;
     account_ctx(&tx, &input.account_id)?;
+    if let Some(version) = &input.rulebook_version_id {
+        let owner: Option<Option<String>> = tx.query_row(
+            "SELECT b.owner_account_id FROM rulebook_versions v JOIN rulebooks b ON b.id = v.rulebook_id WHERE v.id = ?1",
+            [version], |r| r.get(0),
+        ).optional()?;
+        match owner {
+            None => return Err(AppError::invalid("rulebookVersionId", "Unknown rulebook version")),
+            Some(Some(owner)) if owner != input.account_id => {
+                return Err(AppError::invalid("rulebookVersionId", "This rulebook belongs to another account"));
+            }
+            _ => {}
+        }
+    }
     if input.is_end_of_day {
         let existing: Option<String> = tx
             .query_row(

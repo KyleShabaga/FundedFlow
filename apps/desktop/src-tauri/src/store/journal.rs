@@ -201,6 +201,8 @@ pub fn update(conn: &mut Connection, id: &str, input: JournalEntryInput) -> AppR
 }
 
 pub fn delete(conn: &Connection, id: &str) -> AppResult<()> {
+    let entry = get(conn, id)?;
+    account_ctx(conn, &entry.account_id)?;
     match conn.execute("DELETE FROM journal_entries WHERE id = ?1", [id])? {
         0 => Err(AppError::not_found("journal entry", id)),
         _ => Ok(()),

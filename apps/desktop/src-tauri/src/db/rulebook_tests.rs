@@ -166,6 +166,79 @@ fn applicable_rulebooks_resolve_by_binding_then_applicability_and_never_guess() 
 }
 
 #[test]
+fn an_archived_bound_version_is_not_resolved_as_applicable() {
+    let mut conn = seeded();
+    let v = verified_100k(&mut conn);
+    conn.execute("UPDATE programme_phases SET default_rulebook_version_id = ?1 WHERE id = ?2", [&v, &id(0x43)]).unwrap();
+    conn.execute("UPDATE rulebook_versions SET record_status = 'archived' WHERE id = ?1", [&v]).unwrap();
+    let result = store::applicable(&conn, &ApplicableRulebookQuery { programme_phase_id: id(0x43), phase_path_id: None }).unwrap();
+    assert_eq!(result.status, "unverified");
+    assert_eq!(result.rulebook_version_ids, [v]);
+}
+
+fn foreign_version(conn: &Connection) {
+    conn.execute_batch("INSERT INTO rulebooks (id, provider_id, slug, display_name, record_status, created_at, updated_at)
+        VALUES ('foreign-book', '01900000-0000-7000-8000-000000000002', 'foreign', 'Other provider', 'active',
+                '2026-10-20T00:00:00.000Z', '2026-10-20T00:00:00.000Z');
+        INSERT INTO rulebook_versions (id, rulebook_id, version_number, schema_version, verification_status, origin,
+                captured_at, record_status, created_at, updated_at, verified_by, verified_at)
+        VALUES ('foreign-version', 'foreign-book', 1, 1, 'verified', 'catalogue', '2026-10-20T00:00:00.000Z', 'active',
+                '2026-10-20T00:00:00.000Z', '2026-10-20T00:00:00.000Z', 'synthetic-reviewer', '2026-10-20T00:00:00.000Z');").unwrap();
+}
+
+#[test]
+fn phase_and_path_bindings_refuse_another_providers_rulebook() {
+    let conn = seeded();
+    foreign_version(&conn);
+    assert!(conn.execute("UPDATE programme_phases SET default_rulebook_version_id = 'foreign-version' WHERE id = ?1", [id(0x43)]).is_err());
+    assert!(conn.execute("UPDATE phase_paths SET rulebook_version_id = 'foreign-version' WHERE id = ?1", [id(0x52)]).is_err());
+    assert!(conn.execute("INSERT INTO programme_phases (id, catalogue_version_id, phase_key, provider_label, display_order, default_rulebook_version_id)
+        VALUES ('foreign-phase', ?1, 'evaluation', 'Foreign phase', 10, 'foreign-version')", [id(0x32)]).is_err());
+    assert!(conn.execute("INSERT INTO phase_paths (id, programme_phase_id, path_key, provider_label, is_default, display_order, record_status, rulebook_version_id)
+        VALUES ('foreign-path', ?1, 'foreign-path', 'Foreign path', 0, 10, 'active', 'foreign-version')", [id(0x43)]).is_err());
+}
+
+#[test]
+fn migration_19_retains_old_bindings_but_never_resolves_a_foreign_provider() {
+    let db = super::upgrade_tests::Journal::copy_of(include_bytes!("fixtures/fundedflow-v4.db"));
+    let before;
+    {
+        let mut conn = Connection::open(&db.0).unwrap();
+        super::migrate_with(&mut conn, &super::MIGRATIONS[..18]).unwrap();
+        let (_, fixture) = crate::parity::catalogue_fixture();
+        super::catalogue_tests_save(&conn, &fixture);
+        foreign_version(&conn);
+        conn.execute("UPDATE programme_phases SET default_rulebook_version_id = 'foreign-version' WHERE id = ?1", [id(0x43)]).unwrap();
+        before = super::upgrade_tests::dump(&conn, &[]);
+    }
+    let mut conn = super::open_file(&db.0).unwrap();
+    assert_eq!(super::upgrade_tests::version(&conn), super::latest_version());
+    assert_eq!(super::upgrade_tests::version(&super::upgrade_tests::read_only(&db.backup())), 18);
+    assert_eq!(super::upgrade_tests::dump(&conn, &[]), before, "no historical binding is rewritten");
+    let q = ApplicableRulebookQuery { programme_phase_id: id(0x43), phase_path_id: None };
+    assert_eq!(store::applicable(&conn, &q).unwrap().status, "unverified");
+    let acc = account(&mut conn, "No foreign rules");
+    assert!(store::assign(&mut conn, AssignmentInput {
+        programme_phase_id: Some(id(0x43)), ..assign(&acc, "foreign-version", "2026-10-20")
+    }).is_err());
+    assert!(store::list_assignments(&conn, &acc).unwrap().is_empty());
+    drop(conn);
+    let conn = super::open_file(&db.0).unwrap();
+    assert_eq!(store::applicable(&conn, &q).unwrap().status, "unverified");
+}
+
+#[test]
+fn failed_migration_19_rolls_back_its_triggers_and_version() {
+    let mut conn = Connection::open_in_memory().unwrap();
+    super::migrate_with(&mut conn, &super::MIGRATIONS[..18]).unwrap();
+    conn.execute_batch("CREATE TRIGGER trg_phase_paths_rulebook_provider_insert BEFORE INSERT ON phase_paths BEGIN SELECT 1; END;").unwrap();
+    assert!(matches!(super::migrate(&mut conn), Err(super::MigrateError::Migration { version: 19, reached: 18, .. })));
+    assert_eq!(super::upgrade_tests::version(&conn), 18);
+    let exists: bool = conn.query_row("SELECT EXISTS (SELECT 1 FROM sqlite_schema WHERE name = 'trg_programme_phases_rulebook_provider_insert')", [], |r| r.get(0)).unwrap();
+    assert!(!exists, "the first trigger created in the failed step is rolled back");
+}
+
+#[test]
 fn assignments_are_explicit_dated_history() {
     let mut conn = seeded();
     let acc = account(&mut conn, "Eval");

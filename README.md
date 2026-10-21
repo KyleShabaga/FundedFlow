@@ -91,6 +91,11 @@ Full rules, field mappings and known limitations: [`docs/data-model.md#csv-impor
 
 ## Tests
 
+Build 10.5 audit baseline, fixes, verification results and retained acceptance gates:
+[`docs/build-10-5-closeout.md`](docs/build-10-5-closeout.md) and the
+[`acceptance matrix`](docs/build-10-5-acceptance-matrix.md). Automated evidence does not replace packaged
+Windows workflow verification or an explicitly approved real-journal-copy upgrade.
+
 CI (Windows) runs the same steps:
 
 ```powershell

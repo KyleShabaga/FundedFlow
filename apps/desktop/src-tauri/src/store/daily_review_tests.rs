@@ -577,7 +577,7 @@ fn migration_18_upgrades_a_populated_v17_journal() {
         title: "Day note".into(), body: "text".into(), tags: vec!["focus".into()],
     }).unwrap();
 
-    assert_eq!(crate::db::migrate(&mut conn).unwrap(), 18);
+    assert_eq!(crate::db::migrate(&mut conn).unwrap(), crate::db::latest_version());
     let (checklist, _) = daily_checklist(&mut conn, &["Rule"]);
     assert_eq!(count(&conn, "SELECT count(*) FROM daily_reviews"), 0, "no note becomes a review");
     assert_eq!(count(&conn, "SELECT count(*) FROM journal_entries"), 1);

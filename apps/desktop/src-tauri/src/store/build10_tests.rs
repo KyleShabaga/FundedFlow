@@ -166,6 +166,31 @@ fn snapshots_can_reference_a_reusable_rulebook_version_after_migration_12() {
 }
 
 #[test]
+fn snapshots_cannot_use_another_accounts_private_rulebook() {
+    let mut conn = crate::db::catalogue_tests_seeded();
+    let owner = accounts::create(&mut conn, account_input("Owner")).unwrap();
+    let other = accounts::create(&mut conn, account_input("Other")).unwrap();
+    let version = crate::store::rulebooks::create_draft(&mut conn, crate::rulebook::RulebookDraftInput {
+        rulebook_id: None,
+        new_rulebook: Some(crate::rulebook::NewRulebook {
+            provider_id: None, owner_account_id: Some(owner.id.clone()), slug: "private-snapshot".into(),
+            display_name: "Private".into(), description: None,
+        }),
+        supersedes_version_id: None, change_reason: None, captured_at: "2026-10-20T00:00:00Z".into(),
+        effective_from: None, effective_to: None, rules: vec![], applicability: vec![],
+    }).unwrap().version.id;
+    assert!(snapshots::save(&mut conn, SnapshotInput {
+        rulebook_version_id: Some(version.clone()), ..snapshot(&other.id)
+    }).is_err());
+    assert!(snapshots::list(&conn, &other.id, None, None, false).unwrap().is_empty());
+    let saved = snapshots::save(&mut conn, SnapshotInput {
+        rulebook_version_id: Some(version), ..snapshot(&owner.id)
+    }).unwrap();
+    assert_eq!(saved.account_id, owner.id);
+    assert!(snapshots::latest(&conn, &other.id).unwrap().is_none());
+}
+
+#[test]
 fn migration_12_keeps_existing_snapshots_and_nulls_a_dangling_rulebook_reference() {
     let mut conn = Connection::open_in_memory().unwrap();
     migrate_with(&mut conn, &MIGRATIONS[..11]).unwrap();

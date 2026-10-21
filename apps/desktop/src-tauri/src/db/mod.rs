@@ -126,6 +126,16 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "daily_reviews",
         step: Step::Sql(include_str!("../../migrations/0018_daily_reviews.sql")),
     },
+    Migration {
+        version: 19,
+        name: "rulebook_binding_provider",
+        step: Step::Sql(include_str!("../../migrations/0019_rulebook_binding_provider.sql")),
+    },
+    Migration {
+        version: 20,
+        name: "source_fact_immutability",
+        step: Step::Sql(include_str!("../../migrations/0020_source_fact_immutability.sql")),
+    },
 ];
 
 /// Latest schema version this build understands.
@@ -250,10 +260,19 @@ pub fn open_file(path: &Path) -> Result<Connection, MigrateError> {
 
     if current > 0 && current < latest_version() {
         // A consistent copy (includes WAL content) the user can restore if an
-        // upgrade goes wrong. Overwrites the backup of the previous upgrade.
+        // upgrade goes wrong. Retain earlier recovery points before replacing
+        // the stable path: a retry may start after only some migrations committed.
         let backup_error = |e: &dyn std::fmt::Display| MigrateError::Backup { current, message: e.to_string() };
         let backup = backup_path(path);
         if backup.exists() {
+            let retained = backup.with_extension(format!("previous-{}.bak", uuid::Uuid::now_v7()));
+            let retain = || -> std::io::Result<()> {
+                let mut source = std::fs::File::open(&backup)?;
+                let mut destination = std::fs::File::create_new(&retained)?;
+                std::io::copy(&mut source, &mut destination)?;
+                destination.sync_all()
+            };
+            retain().map_err(|e| backup_error(&e))?;
             std::fs::remove_file(&backup).map_err(|e| backup_error(&e))?;
         }
         conn.execute("VACUUM INTO ?1", [backup.to_string_lossy()]).map_err(|e| backup_error(&e))?;

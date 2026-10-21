@@ -3,6 +3,11 @@
 Specification: https://app.notion.com/p/3ff1bd4b6bde81b2aafcfa581430daf8
 Base: main cf018ef; schema inspected at v13. No open PRs at audit time.
 
+Build 10.5 reconciliation (October 21, 2026): the delivery-time status and pending Build 16 references below
+are historical. PRs #39 (financial evidence), #42 (engine) and #44 (editor integration) are merged on the
+audit baseline `4a462d0` (schema 18). Current consumption is `calculateAndSaveRisk` and the Build 19/21
+features; see [Build 16 handoff](build-16.md). This does not establish packaged Windows or human acceptance.
+
 ## Source audit
 
 | Source | Provenance, coverage and corrections | Risk meaning |
