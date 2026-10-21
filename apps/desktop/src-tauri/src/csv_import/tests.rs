@@ -398,3 +398,6 @@ fn a_restored_trade_is_restored_once_per_file() {
     assert_eq!(dup_of.as_deref(), Some(t.id.as_str()));
     assert_eq!(trade_store::list(&conn, &account).unwrap().len(), 1);
 }
+
+#[path = "regression_tests.rs"]
+mod regressions;

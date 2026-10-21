@@ -155,8 +155,9 @@ fn check_id(row: &mut Row, field: &str, s: &str) -> Option<String> {
 }
 
 fn money_text(micros: i64) -> String {
-    let s = micros_to_string(micros.abs());
-    if micros < 0 { format!("-${s}") } else { format!("${s}") }
+    // i64::MIN has no positive i64 counterpart. Format before moving the sign.
+    let s = micros_to_string(micros);
+    if micros < 0 { format!("-${}", s.trim_start_matches('-')) } else { format!("${s}") }
 }
 
 /// Compare the exported P&L with the calculated one, when both exist.
@@ -251,7 +252,12 @@ fn performance(row: &mut Row) -> Option<NormalizedTrade> {
         }
     };
     let duration_source = row.text("duration").map(str::to_string);
-    let duration_seconds = duration_source.as_deref().and_then(|s| row.with("duration", parse_duration(s)));
+    let duration_seconds = duration_source.as_deref().and_then(|s| {
+        row.with("duration", parse_duration(s).and_then(|seconds| {
+            // SQLite's duration_seconds is a signed INTEGER. Never wrap on persistence.
+            i64::try_from(seconds).map(|_| seconds).map_err(|_| "is too large to store".into())
+        }))
+    });
 
     let buy_fill_id = row.text("buyFillId").and_then(|s| check_id(row, "buyFillId", s));
     let sell_fill_id = row.text("sellFillId").and_then(|s| check_id(row, "sellFillId", s));
@@ -269,6 +275,11 @@ fn performance(row: &mut Row) -> Option<NormalizedTrade> {
     };
     let (bought_src, sold_src) = (bought_src.unwrap_or_default(), sold_src.unwrap_or_default());
 
+    if bought_at != sold_at && format_instant(bought_at) == format_instant(sold_at) {
+        // The persisted millisecond timestamps cannot represent this ordering.
+        // Reject the row rather than changing its side/P&L or failing the whole batch at SQLite's CHECK.
+        row.error("soldTimestamp", "fill order differs only below stored millisecond precision; export supported timestamps");
+    }
     let entry_basis = match bought_at.cmp(&sold_at) {
         std::cmp::Ordering::Less => EntryBasis::BuyFirst,
         std::cmp::Ordering::Equal => EntryBasis::SameTime,

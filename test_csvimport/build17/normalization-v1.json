@@ -1,0 +1,2906 @@
+{
+  "behaviorBaseline": "rust-csv-v1",
+  "cases": [
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 1,
+          "errorSummary": null,
+          "failedCount": 0,
+          "fileName": "synthetic-generic-fees-and-duplicate.csv",
+          "fileSha256": "a83436d00671ac0c9fe03999e1019e3affeb5c86ab683b2155f4dc02310e35d5",
+          "fileSize": 307,
+          "id": "<batch-id>",
+          "importedCount": 1,
+          "rowCount": 2,
+          "skippedCount": 1,
+          "sourceFormat": "generic",
+          "status": "committed",
+          "warningCount": 0
+        },
+        "commitError": null,
+        "dedupKeys": [
+          "rt:0d7a6fb7decc4abff877c4fb108eff892013c35b7a07a7ab17619be2299426b3",
+          "rt:0d7a6fb7decc4abff877c4fb108eff892013c35b7a07a7ab17619be2299426b3"
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "ymd",
+          "dateFormatReason": "every timestamp fits YYYY-MM-DD HH:MM:SS",
+          "duplicateCount": 1,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "generic",
+          "formatReason": "Generic trade CSV, columns matched by name",
+          "headers": [
+            "Symbol",
+            "Side",
+            "Qty",
+            "Entry Time",
+            "Entry Price",
+            "Exit Time",
+            "Exit Price",
+            "Fees",
+            "P&L",
+            "Notes"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 0,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "Symbol",
+              "required": true
+            },
+            {
+              "field": "side",
+              "header": "Side",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "Qty",
+              "required": true
+            },
+            {
+              "field": "entryTime",
+              "header": "Entry Time",
+              "required": true
+            },
+            {
+              "field": "entryPrice",
+              "header": "Entry Price",
+              "required": true
+            },
+            {
+              "field": "exitTime",
+              "header": "Exit Time",
+              "required": false
+            },
+            {
+              "field": "exitPrice",
+              "header": "Exit Price",
+              "required": false
+            },
+            {
+              "field": "fees",
+              "header": "Fees",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": "P&L",
+              "required": false
+            },
+            {
+              "field": "brokerTradeId",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "notes",
+              "header": "Notes",
+              "required": false
+            }
+          ],
+          "newCount": 1,
+          "restoreCount": 0,
+          "rowCount": 2,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [],
+              "lineNumber": 2,
+              "raw": [
+                "MNQZ6",
+                "Buy",
+                "1",
+                "2026-10-19T09:30:00-04:00",
+                "21000.2500",
+                "2026-10-19T09:31:00-04:00",
+                "21001.25",
+                "$0.0000005",
+                "2",
+                "note, with \"quote\"\nsecond line"
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "new",
+              "trade": {
+                "boughtAtSource": null,
+                "brokerTradeId": null,
+                "buyFillId": null,
+                "duration": null,
+                "durationSeconds": null,
+                "entryAt": "2026-10-19T13:30:00.000Z",
+                "entryBasis": null,
+                "entryPrice": "21000.25",
+                "exitAt": "2026-10-19T13:31:00.000Z",
+                "exitPrice": "21001.25",
+                "fees": "0.000001",
+                "pnlStatus": "calculated",
+                "quantity": "1",
+                "realizedPnl": "1.999999",
+                "reportedPnl": "2",
+                "sellFillId": null,
+                "side": "long",
+                "soldAtSource": null,
+                "symbol": "MNQZ6",
+                "tradingDay": "2026-10-19"
+              },
+              "warnings": []
+            },
+            {
+              "duplicate": {
+                "key": "rt:0d7a6fb7decc4abff877c4fb108eff892013c35b7a07a7ab17619be2299426b3",
+                "lineNumber": 2,
+                "of": "file",
+                "reason": "Same symbol, side, quantity, prices, timestamps and P&L (no IDs to tell them apart) as line 2 of this file.",
+                "tradeId": null
+              },
+              "errors": [],
+              "lineNumber": 4,
+              "raw": [
+                "MNQZ6",
+                "Buy",
+                "1",
+                "2026-10-19T13:30:00Z",
+                "21000.25",
+                "2026-10-19T13:31:00Z",
+                "21001.25",
+                "1",
+                "2",
+                "changed fee and note"
+              ],
+              "restores": null,
+              "rowNumber": 2,
+              "status": "duplicate",
+              "trade": {
+                "boughtAtSource": null,
+                "brokerTradeId": null,
+                "buyFillId": null,
+                "duration": null,
+                "durationSeconds": null,
+                "entryAt": "2026-10-19T13:30:00.000Z",
+                "entryBasis": null,
+                "entryPrice": "21000.25",
+                "exitAt": "2026-10-19T13:31:00.000Z",
+                "exitPrice": "21001.25",
+                "fees": "1",
+                "pnlStatus": "calculated",
+                "quantity": "1",
+                "realizedPnl": "1",
+                "reportedPnl": "2",
+                "sellFillId": null,
+                "side": "long",
+                "soldAtSource": null,
+                "symbol": "MNQZ6",
+                "tradingDay": "2026-10-19"
+              },
+              "warnings": []
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 0
+        }
+      },
+      "name": "generic-fees-and-duplicate",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Fees,P&L,Notes\r\nMNQZ6,Buy,1,2026-10-19T09:30:00-04:00,21000.2500,2026-10-19T09:31:00-04:00,21001.25,$0.0000005,2,\"note, with \"\"quote\"\"\nsecond line\"\r\nMNQZ6,Buy,1,2026-10-19T13:30:00Z,21000.25,2026-10-19T13:31:00Z,21001.25,1,2,changed fee and note\r\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-generic-fees-and-duplicate.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    },
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 0,
+          "errorSummary": null,
+          "failedCount": 0,
+          "fileName": "synthetic-paired-short-warning.csv",
+          "fileSha256": "bb7ef6491d7f5fc54ebb61429fc081e6f8c6221e017a1474927085d04030b007",
+          "fileSize": 225,
+          "id": "<batch-id>",
+          "importedCount": 1,
+          "rowCount": 1,
+          "skippedCount": 0,
+          "sourceFormat": "performance",
+          "status": "committed",
+          "warningCount": 1
+        },
+        "commitError": null,
+        "dedupKeys": [
+          "fills:buy17:sell17"
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "mdy",
+          "dateFormatReason": "every timestamp fits M/D/YYYY HH:MM:SS",
+          "duplicateCount": 0,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "performance",
+          "formatReason": "Round-trip performance export: each row pairs a buy fill with a sell fill (found buyPrice, sellPrice, boughtTimestamp and soldTimestamp)",
+          "headers": [
+            "symbol",
+            "_priceFormat",
+            "_priceFormatType",
+            "_tickSize",
+            "buyFillId",
+            "sellFillId",
+            "qty",
+            "buyPrice",
+            "sellPrice",
+            "pnl",
+            "boughtTimestamp",
+            "soldTimestamp",
+            "duration"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 0,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "symbol",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "qty",
+              "required": true
+            },
+            {
+              "field": "buyPrice",
+              "header": "buyPrice",
+              "required": true
+            },
+            {
+              "field": "sellPrice",
+              "header": "sellPrice",
+              "required": true
+            },
+            {
+              "field": "boughtTimestamp",
+              "header": "boughtTimestamp",
+              "required": true
+            },
+            {
+              "field": "soldTimestamp",
+              "header": "soldTimestamp",
+              "required": true
+            },
+            {
+              "field": "buyFillId",
+              "header": "buyFillId",
+              "required": false
+            },
+            {
+              "field": "sellFillId",
+              "header": "sellFillId",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": "pnl",
+              "required": false
+            },
+            {
+              "field": "duration",
+              "header": "duration",
+              "required": false
+            },
+            {
+              "field": "priceFormat",
+              "header": "_priceFormat",
+              "required": false
+            },
+            {
+              "field": "priceFormatType",
+              "header": "_priceFormatType",
+              "required": false
+            },
+            {
+              "field": "tickSize",
+              "header": "_tickSize",
+              "required": false
+            }
+          ],
+          "newCount": 1,
+          "restoreCount": 0,
+          "rowCount": 1,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [],
+              "lineNumber": 2,
+              "raw": [
+                "MNQZ6",
+                "-2",
+                "0",
+                "0.25",
+                "buy17",
+                "sell17",
+                "1",
+                "21000",
+                "21001",
+                "2",
+                "10/19/2026 09:31:00",
+                "10/19/2026 09:30:00",
+                "60sec"
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "new",
+              "trade": {
+                "boughtAtSource": "10/19/2026 09:31:00",
+                "brokerTradeId": null,
+                "buyFillId": "buy17",
+                "duration": "60sec",
+                "durationSeconds": 60,
+                "entryAt": "2026-10-19T13:30:00.000Z",
+                "entryBasis": "sell_first",
+                "entryPrice": "21001",
+                "exitAt": "2026-10-19T13:31:00.000Z",
+                "exitPrice": "21000",
+                "fees": "0",
+                "pnlStatus": "calculated",
+                "quantity": "1",
+                "realizedPnl": "2",
+                "reportedPnl": "2",
+                "sellFillId": "sell17",
+                "side": "short",
+                "soldAtSource": "10/19/2026 09:30:00",
+                "symbol": "MNQZ6",
+                "tradingDay": "2026-10-19"
+              },
+              "warnings": [
+                {
+                  "field": "soldTimestamp",
+                  "message": "Sell fill (10/19/2026 09:30:00) is earlier than buy fill (10/19/2026 09:31:00). Recorded as a short (entry = sell, exit = buy); both timestamps are stored exactly as supplied. Review if this was not a short (column 'soldTimestamp')"
+                }
+              ]
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 1
+        }
+      },
+      "name": "paired-short-warning",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "symbol,_priceFormat,_priceFormatType,_tickSize,buyFillId,sellFillId,qty,buyPrice,sellPrice,pnl,boughtTimestamp,soldTimestamp,duration\nMNQZ6,-2,0,0.25,buy17,sell17,1,21000,21001,2,10/19/2026 09:31:00,10/19/2026 09:30:00,60sec\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-paired-short-warning.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    },
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 0,
+          "errorSummary": null,
+          "failedCount": 0,
+          "fileName": "synthetic-paired-missing-fill-and-tick-warning.csv",
+          "fileSha256": "0c93419ed01d2c7b09f4ec35378620f8adba8505effce505ccd6dae0d0ac8252",
+          "fileSize": 221,
+          "id": "<batch-id>",
+          "importedCount": 1,
+          "rowCount": 1,
+          "skippedCount": 0,
+          "sourceFormat": "performance",
+          "status": "committed",
+          "warningCount": 1
+        },
+        "commitError": null,
+        "dedupKeys": [
+          "rt:0efe8e45cddc44a4e37d9078f9f2d830ea0c70b5a3a132ff27a00ee363f74249"
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "mdy",
+          "dateFormatReason": "every timestamp fits M/D/YYYY HH:MM:SS",
+          "duplicateCount": 0,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "performance",
+          "formatReason": "Round-trip performance export: each row pairs a buy fill with a sell fill (found buyPrice, sellPrice, boughtTimestamp and soldTimestamp)",
+          "headers": [
+            "symbol",
+            "_priceFormat",
+            "_priceFormatType",
+            "_tickSize",
+            "buyFillId",
+            "sellFillId",
+            "qty",
+            "buyPrice",
+            "sellPrice",
+            "pnl",
+            "boughtTimestamp",
+            "soldTimestamp",
+            "duration"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 0,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "symbol",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "qty",
+              "required": true
+            },
+            {
+              "field": "buyPrice",
+              "header": "buyPrice",
+              "required": true
+            },
+            {
+              "field": "sellPrice",
+              "header": "sellPrice",
+              "required": true
+            },
+            {
+              "field": "boughtTimestamp",
+              "header": "boughtTimestamp",
+              "required": true
+            },
+            {
+              "field": "soldTimestamp",
+              "header": "soldTimestamp",
+              "required": true
+            },
+            {
+              "field": "buyFillId",
+              "header": "buyFillId",
+              "required": false
+            },
+            {
+              "field": "sellFillId",
+              "header": "sellFillId",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": "pnl",
+              "required": false
+            },
+            {
+              "field": "duration",
+              "header": "duration",
+              "required": false
+            },
+            {
+              "field": "priceFormat",
+              "header": "_priceFormat",
+              "required": false
+            },
+            {
+              "field": "priceFormatType",
+              "header": "_priceFormatType",
+              "required": false
+            },
+            {
+              "field": "tickSize",
+              "header": "_tickSize",
+              "required": false
+            }
+          ],
+          "newCount": 1,
+          "restoreCount": 0,
+          "rowCount": 1,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [],
+              "lineNumber": 2,
+              "raw": [
+                "MNQZ6",
+                "-2",
+                "0",
+                "unknown",
+                "",
+                "sell17",
+                "1",
+                "21000",
+                "21001",
+                "",
+                "10/19/2026 09:30:00",
+                "10/19/2026 09:31:00",
+                "1min"
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "new",
+              "trade": {
+                "boughtAtSource": "10/19/2026 09:30:00",
+                "brokerTradeId": null,
+                "buyFillId": null,
+                "duration": "1min",
+                "durationSeconds": 60,
+                "entryAt": "2026-10-19T13:30:00.000Z",
+                "entryBasis": "buy_first",
+                "entryPrice": "21000",
+                "exitAt": "2026-10-19T13:31:00.000Z",
+                "exitPrice": "21001",
+                "fees": "0",
+                "pnlStatus": "calculated",
+                "quantity": "1",
+                "realizedPnl": "2",
+                "reportedPnl": null,
+                "sellFillId": "sell17",
+                "side": "long",
+                "soldAtSource": "10/19/2026 09:31:00",
+                "symbol": "MNQZ6",
+                "tradingDay": "2026-10-19"
+              },
+              "warnings": [
+                {
+                  "field": "realizedPnl",
+                  "message": "is empty; P&L will be calculated from prices (column 'pnl')"
+                },
+                {
+                  "field": "tickSize",
+                  "message": "'unknown' is not a positive tick size; kept as text (column '_tickSize')"
+                },
+                {
+                  "field": "buyFillId",
+                  "message": "is missing, so duplicates are detected by the trade's values instead of the fill pair (column 'buyFillId')"
+                }
+              ]
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 1
+        }
+      },
+      "name": "paired-missing-fill-and-tick-warning",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "symbol,_priceFormat,_priceFormatType,_tickSize,buyFillId,sellFillId,qty,buyPrice,sellPrice,pnl,boughtTimestamp,soldTimestamp,duration\nMNQZ6,-2,0,unknown,,sell17,1,21000,21001,,10/19/2026 09:30:00,10/19/2026 09:31:00,1min\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-paired-missing-fill-and-tick-warning.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    },
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 0,
+          "errorSummary": null,
+          "failedCount": 2,
+          "fileName": "synthetic-dst-gap-and-overlap.csv",
+          "fileSha256": "b4acfedf3986a5ad44c436d6b4eae5970b67d53090f5675385deda828dab0ab6",
+          "fileSize": 157,
+          "id": "<batch-id>",
+          "importedCount": 0,
+          "rowCount": 2,
+          "skippedCount": 0,
+          "sourceFormat": "generic",
+          "status": "committed",
+          "warningCount": 0
+        },
+        "commitError": null,
+        "dedupKeys": [
+          null,
+          null
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "ymd",
+          "dateFormatReason": "every timestamp fits YYYY-MM-DD HH:MM:SS",
+          "duplicateCount": 0,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "generic",
+          "formatReason": "Generic trade CSV, columns matched by name",
+          "headers": [
+            "Symbol",
+            "Side",
+            "Qty",
+            "Entry Time",
+            "Entry Price",
+            "Exit Time",
+            "Exit Price",
+            "Fees",
+            "P&L",
+            "Notes"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 2,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "Symbol",
+              "required": true
+            },
+            {
+              "field": "side",
+              "header": "Side",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "Qty",
+              "required": true
+            },
+            {
+              "field": "entryTime",
+              "header": "Entry Time",
+              "required": true
+            },
+            {
+              "field": "entryPrice",
+              "header": "Entry Price",
+              "required": true
+            },
+            {
+              "field": "exitTime",
+              "header": "Exit Time",
+              "required": false
+            },
+            {
+              "field": "exitPrice",
+              "header": "Exit Price",
+              "required": false
+            },
+            {
+              "field": "fees",
+              "header": "Fees",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": "P&L",
+              "required": false
+            },
+            {
+              "field": "brokerTradeId",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "notes",
+              "header": "Notes",
+              "required": false
+            }
+          ],
+          "newCount": 0,
+          "restoreCount": 0,
+          "rowCount": 2,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [
+                {
+                  "field": "entryTime",
+                  "message": "'2026-03-08 02:30:00' does not exist in America/New_York (daylight-saving gap) (column 'Entry Time')"
+                },
+                {
+                  "field": "entryAt",
+                  "message": "must be an ISO 8601 date-time with offset, e.g. 2026-10-19T14:30:00Z"
+                }
+              ],
+              "lineNumber": 2,
+              "raw": [
+                "MNQ",
+                "Buy",
+                "1",
+                "2026-03-08 02:30:00",
+                "21000",
+                "",
+                "",
+                "",
+                "",
+                ""
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "invalid",
+              "trade": null,
+              "warnings": []
+            },
+            {
+              "duplicate": null,
+              "errors": [
+                {
+                  "field": "entryTime",
+                  "message": "'2026-11-01 01:30:00' occurs twice in America/New_York (daylight-saving change); export with a UTC offset (column 'Entry Time')"
+                },
+                {
+                  "field": "entryAt",
+                  "message": "must be an ISO 8601 date-time with offset, e.g. 2026-10-19T14:30:00Z"
+                }
+              ],
+              "lineNumber": 3,
+              "raw": [
+                "MNQ",
+                "Buy",
+                "1",
+                "2026-11-01 01:30:00",
+                "21000",
+                "",
+                "",
+                "",
+                "",
+                ""
+              ],
+              "restores": null,
+              "rowNumber": 2,
+              "status": "invalid",
+              "trade": null,
+              "warnings": []
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 0
+        }
+      },
+      "name": "dst-gap-and-overlap",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Fees,P&L,Notes\nMNQ,Buy,1,2026-03-08 02:30:00,21000,,,,,\nMNQ,Buy,1,2026-11-01 01:30:00,21000,,,,,\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-dst-gap-and-overlap.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    },
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 0,
+          "errorSummary": null,
+          "failedCount": 0,
+          "fileName": "synthetic-explicit-dst-offsets.csv",
+          "fileSha256": "ee912f8d8c7ca95c3e8366e1341fa1cb604e65ed90c603ece948a5d0f580b93d",
+          "fileSize": 154,
+          "id": "<batch-id>",
+          "importedCount": 1,
+          "rowCount": 1,
+          "skippedCount": 0,
+          "sourceFormat": "generic",
+          "status": "committed",
+          "warningCount": 0
+        },
+        "commitError": null,
+        "dedupKeys": [
+          "rt:7da0b46e3c14954850578593bdb0c38ba84ec6f26dbcac8a7054b7bacfcc6656"
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "ymd",
+          "dateFormatReason": "every timestamp fits YYYY-MM-DD HH:MM:SS",
+          "duplicateCount": 0,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "generic",
+          "formatReason": "Generic trade CSV, columns matched by name",
+          "headers": [
+            "Symbol",
+            "Side",
+            "Qty",
+            "Entry Time",
+            "Entry Price",
+            "Exit Time",
+            "Exit Price",
+            "Fees",
+            "P&L",
+            "Notes"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 0,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "Symbol",
+              "required": true
+            },
+            {
+              "field": "side",
+              "header": "Side",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "Qty",
+              "required": true
+            },
+            {
+              "field": "entryTime",
+              "header": "Entry Time",
+              "required": true
+            },
+            {
+              "field": "entryPrice",
+              "header": "Entry Price",
+              "required": true
+            },
+            {
+              "field": "exitTime",
+              "header": "Exit Time",
+              "required": false
+            },
+            {
+              "field": "exitPrice",
+              "header": "Exit Price",
+              "required": false
+            },
+            {
+              "field": "fees",
+              "header": "Fees",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": "P&L",
+              "required": false
+            },
+            {
+              "field": "brokerTradeId",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "notes",
+              "header": "Notes",
+              "required": false
+            }
+          ],
+          "newCount": 1,
+          "restoreCount": 0,
+          "rowCount": 1,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [],
+              "lineNumber": 2,
+              "raw": [
+                "MNQ",
+                "Buy",
+                "1",
+                "2026-11-01T01:30:00-04:00",
+                "21000",
+                "2026-11-01T01:30:00-05:00",
+                "21001",
+                "0",
+                "2",
+                ""
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "new",
+              "trade": {
+                "boughtAtSource": null,
+                "brokerTradeId": null,
+                "buyFillId": null,
+                "duration": null,
+                "durationSeconds": null,
+                "entryAt": "2026-11-01T05:30:00.000Z",
+                "entryBasis": null,
+                "entryPrice": "21000",
+                "exitAt": "2026-11-01T06:30:00.000Z",
+                "exitPrice": "21001",
+                "fees": "0",
+                "pnlStatus": "calculated",
+                "quantity": "1",
+                "realizedPnl": "2",
+                "reportedPnl": "2",
+                "sellFillId": null,
+                "side": "long",
+                "soldAtSource": null,
+                "symbol": "MNQ",
+                "tradingDay": "2026-11-02"
+              },
+              "warnings": []
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 0
+        }
+      },
+      "name": "explicit-dst-offsets",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Fees,P&L,Notes\nMNQ,Buy,1,2026-11-01T01:30:00-04:00,21000,2026-11-01T01:30:00-05:00,21001,0,2,\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-explicit-dst-offsets.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    },
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 0,
+          "errorSummary": null,
+          "failedCount": 0,
+          "fileName": "synthetic-reported-fallback-and-null.csv",
+          "fileSha256": "d42bb5cc34c6bdf7c3fca6ddea20005aa721fa95ad938ff8de83259f01eea089",
+          "fileSize": 205,
+          "id": "<batch-id>",
+          "importedCount": 2,
+          "rowCount": 2,
+          "skippedCount": 0,
+          "sourceFormat": "generic",
+          "status": "committed",
+          "warningCount": 0
+        },
+        "commitError": null,
+        "dedupKeys": [
+          "rt:3669df506c56cb4df55857d921407e0e51db0eb2d1398930335d7745652bdc60",
+          "rt:0e3a69f37981a7198223ff0961747298cc23d0673dd0c706bcb0d934d20fa630"
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "ymd",
+          "dateFormatReason": "every timestamp fits YYYY-MM-DD HH:MM:SS",
+          "duplicateCount": 0,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "generic",
+          "formatReason": "Generic trade CSV, columns matched by name",
+          "headers": [
+            "Symbol",
+            "Side",
+            "Qty",
+            "Entry Time",
+            "Entry Price",
+            "Exit Time",
+            "Exit Price",
+            "Fees",
+            "P&L",
+            "Notes"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 0,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "Symbol",
+              "required": true
+            },
+            {
+              "field": "side",
+              "header": "Side",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "Qty",
+              "required": true
+            },
+            {
+              "field": "entryTime",
+              "header": "Entry Time",
+              "required": true
+            },
+            {
+              "field": "entryPrice",
+              "header": "Entry Price",
+              "required": true
+            },
+            {
+              "field": "exitTime",
+              "header": "Exit Time",
+              "required": false
+            },
+            {
+              "field": "exitPrice",
+              "header": "Exit Price",
+              "required": false
+            },
+            {
+              "field": "fees",
+              "header": "Fees",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": "P&L",
+              "required": false
+            },
+            {
+              "field": "brokerTradeId",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "notes",
+              "header": "Notes",
+              "required": false
+            }
+          ],
+          "newCount": 2,
+          "restoreCount": 0,
+          "rowCount": 2,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [],
+              "lineNumber": 2,
+              "raw": [
+                "UNKNOWN",
+                "Buy",
+                "1",
+                "2026-10-19 09:30:00",
+                "1",
+                "2026-10-19 09:31:00",
+                "2",
+                "0.25",
+                "3.5",
+                ""
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "new",
+              "trade": {
+                "boughtAtSource": null,
+                "brokerTradeId": null,
+                "buyFillId": null,
+                "duration": null,
+                "durationSeconds": null,
+                "entryAt": "2026-10-19T13:30:00.000Z",
+                "entryBasis": null,
+                "entryPrice": "1",
+                "exitAt": "2026-10-19T13:31:00.000Z",
+                "exitPrice": "2",
+                "fees": "0.25",
+                "pnlStatus": "reported",
+                "quantity": "1",
+                "realizedPnl": "3.25",
+                "reportedPnl": "3.5",
+                "sellFillId": null,
+                "side": "long",
+                "soldAtSource": null,
+                "symbol": "UNKNOWN",
+                "tradingDay": "2026-10-19"
+              },
+              "warnings": []
+            },
+            {
+              "duplicate": null,
+              "errors": [],
+              "lineNumber": 3,
+              "raw": [
+                "UNKNOWN",
+                "Buy",
+                "1",
+                "2026-10-19 10:30:00",
+                "1",
+                "2026-10-19 10:31:00",
+                "2",
+                "0",
+                "",
+                ""
+              ],
+              "restores": null,
+              "rowNumber": 2,
+              "status": "new",
+              "trade": {
+                "boughtAtSource": null,
+                "brokerTradeId": null,
+                "buyFillId": null,
+                "duration": null,
+                "durationSeconds": null,
+                "entryAt": "2026-10-19T14:30:00.000Z",
+                "entryBasis": null,
+                "entryPrice": "1",
+                "exitAt": "2026-10-19T14:31:00.000Z",
+                "exitPrice": "2",
+                "fees": "0",
+                "pnlStatus": "missing_instrument",
+                "quantity": "1",
+                "realizedPnl": null,
+                "reportedPnl": null,
+                "sellFillId": null,
+                "side": "long",
+                "soldAtSource": null,
+                "symbol": "UNKNOWN",
+                "tradingDay": "2026-10-19"
+              },
+              "warnings": []
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 0
+        }
+      },
+      "name": "reported-fallback-and-null",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Fees,P&L,Notes\nUNKNOWN,Buy,1,2026-10-19 09:30:00,1,2026-10-19 09:31:00,2,0.25,3.5,\nUNKNOWN,Buy,1,2026-10-19 10:30:00,1,2026-10-19 10:31:00,2,0,,\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-reported-fallback-and-null.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    },
+    {
+      "account": {
+        "currency": "EUR",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 0,
+          "errorSummary": null,
+          "failedCount": 0,
+          "fileName": "synthetic-currency-mismatch.csv",
+          "fileSha256": "92c4bcaf3c76482a5779511b16f4267f3dced5f59ea162513bbc2a414504130b",
+          "fileSize": 141,
+          "id": "<batch-id>",
+          "importedCount": 1,
+          "rowCount": 1,
+          "skippedCount": 0,
+          "sourceFormat": "generic",
+          "status": "committed",
+          "warningCount": 0
+        },
+        "commitError": null,
+        "dedupKeys": [
+          "rt:aac97ddbbf5f64752082a6652adf1966145b4d844a80a83c39d5c5c83628af73"
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "ymd",
+          "dateFormatReason": "every timestamp fits YYYY-MM-DD HH:MM:SS",
+          "duplicateCount": 0,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "generic",
+          "formatReason": "Generic trade CSV, columns matched by name",
+          "headers": [
+            "Symbol",
+            "Side",
+            "Qty",
+            "Entry Time",
+            "Entry Price",
+            "Exit Time",
+            "Exit Price",
+            "Fees",
+            "P&L",
+            "Notes"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 0,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "Symbol",
+              "required": true
+            },
+            {
+              "field": "side",
+              "header": "Side",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "Qty",
+              "required": true
+            },
+            {
+              "field": "entryTime",
+              "header": "Entry Time",
+              "required": true
+            },
+            {
+              "field": "entryPrice",
+              "header": "Entry Price",
+              "required": true
+            },
+            {
+              "field": "exitTime",
+              "header": "Exit Time",
+              "required": false
+            },
+            {
+              "field": "exitPrice",
+              "header": "Exit Price",
+              "required": false
+            },
+            {
+              "field": "fees",
+              "header": "Fees",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": "P&L",
+              "required": false
+            },
+            {
+              "field": "brokerTradeId",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "notes",
+              "header": "Notes",
+              "required": false
+            }
+          ],
+          "newCount": 1,
+          "restoreCount": 0,
+          "rowCount": 1,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [],
+              "lineNumber": 2,
+              "raw": [
+                "MNQ",
+                "Buy",
+                "1",
+                "2026-10-19 09:30:00",
+                "21000",
+                "2026-10-19 09:31:00",
+                "21001",
+                "0",
+                "",
+                ""
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "new",
+              "trade": {
+                "boughtAtSource": null,
+                "brokerTradeId": null,
+                "buyFillId": null,
+                "duration": null,
+                "durationSeconds": null,
+                "entryAt": "2026-10-19T13:30:00.000Z",
+                "entryBasis": null,
+                "entryPrice": "21000",
+                "exitAt": "2026-10-19T13:31:00.000Z",
+                "exitPrice": "21001",
+                "fees": "0",
+                "pnlStatus": "currency_mismatch",
+                "quantity": "1",
+                "realizedPnl": null,
+                "reportedPnl": null,
+                "sellFillId": null,
+                "side": "long",
+                "soldAtSource": null,
+                "symbol": "MNQ",
+                "tradingDay": "2026-10-19"
+              },
+              "warnings": []
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 0
+        }
+      },
+      "name": "currency-mismatch",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Fees,P&L,Notes\nMNQ,Buy,1,2026-10-19 09:30:00,21000,2026-10-19 09:31:00,21001,0,,\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-currency-mismatch.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    },
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 0,
+          "errorSummary": null,
+          "failedCount": 1,
+          "fileName": "synthetic-mixed-date-lines.csv",
+          "fileSha256": "80f74a9853985afc65e52493e9380fd68544e44bd82ce24943e005f31cedf909",
+          "fileSize": 198,
+          "id": "<batch-id>",
+          "importedCount": 2,
+          "rowCount": 3,
+          "skippedCount": 0,
+          "sourceFormat": "generic",
+          "status": "committed",
+          "warningCount": 0
+        },
+        "commitError": null,
+        "dedupKeys": [
+          "rt:a10939eb2aa49dc3e63712d25925e8c7047a4582f0ab621c710ae60d96ec780f",
+          "rt:5f55aeed91104b5aef75a8f42ada773c6ce5d868faf0e4979e83fbfe102c54bf",
+          null
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "mdy",
+          "dateFormatReason": "2 of 3 timestamps fit M/D/YYYY HH:MM:SS; the rest are reported per row",
+          "duplicateCount": 0,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "generic",
+          "formatReason": "Generic trade CSV, columns matched by name",
+          "headers": [
+            "Symbol",
+            "Side",
+            "Qty",
+            "Entry Time",
+            "Entry Price",
+            "Exit Time",
+            "Exit Price",
+            "Fees",
+            "P&L",
+            "Notes"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 1,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "Symbol",
+              "required": true
+            },
+            {
+              "field": "side",
+              "header": "Side",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "Qty",
+              "required": true
+            },
+            {
+              "field": "entryTime",
+              "header": "Entry Time",
+              "required": true
+            },
+            {
+              "field": "entryPrice",
+              "header": "Entry Price",
+              "required": true
+            },
+            {
+              "field": "exitTime",
+              "header": "Exit Time",
+              "required": false
+            },
+            {
+              "field": "exitPrice",
+              "header": "Exit Price",
+              "required": false
+            },
+            {
+              "field": "fees",
+              "header": "Fees",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": "P&L",
+              "required": false
+            },
+            {
+              "field": "brokerTradeId",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "notes",
+              "header": "Notes",
+              "required": false
+            }
+          ],
+          "newCount": 2,
+          "restoreCount": 0,
+          "rowCount": 3,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [],
+              "lineNumber": 2,
+              "raw": [
+                "MNQ",
+                "Buy",
+                "1",
+                "10/19/2026 09:30:00",
+                "21000",
+                "",
+                "",
+                "",
+                "",
+                ""
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "new",
+              "trade": {
+                "boughtAtSource": null,
+                "brokerTradeId": null,
+                "buyFillId": null,
+                "duration": null,
+                "durationSeconds": null,
+                "entryAt": "2026-10-19T13:30:00.000Z",
+                "entryBasis": null,
+                "entryPrice": "21000",
+                "exitAt": null,
+                "exitPrice": null,
+                "fees": "0",
+                "pnlStatus": "open",
+                "quantity": "1",
+                "realizedPnl": null,
+                "reportedPnl": null,
+                "sellFillId": null,
+                "side": "long",
+                "soldAtSource": null,
+                "symbol": "MNQ",
+                "tradingDay": "2026-10-19"
+              },
+              "warnings": []
+            },
+            {
+              "duplicate": null,
+              "errors": [],
+              "lineNumber": 3,
+              "raw": [
+                "MNQ",
+                "Buy",
+                "1",
+                "10/20/2026 09:30:00",
+                "21000",
+                "",
+                "",
+                "",
+                "",
+                ""
+              ],
+              "restores": null,
+              "rowNumber": 2,
+              "status": "new",
+              "trade": {
+                "boughtAtSource": null,
+                "brokerTradeId": null,
+                "buyFillId": null,
+                "duration": null,
+                "durationSeconds": null,
+                "entryAt": "2026-10-20T13:30:00.000Z",
+                "entryBasis": null,
+                "entryPrice": "21000",
+                "exitAt": null,
+                "exitPrice": null,
+                "fees": "0",
+                "pnlStatus": "open",
+                "quantity": "1",
+                "realizedPnl": null,
+                "reportedPnl": null,
+                "sellFillId": null,
+                "side": "long",
+                "soldAtSource": null,
+                "symbol": "MNQ",
+                "tradingDay": "2026-10-20"
+              },
+              "warnings": []
+            },
+            {
+              "duplicate": null,
+              "errors": [
+                {
+                  "field": "entryTime",
+                  "message": "'19/10/2026 09:30:00' is not a valid M/D/YYYY HH:MM:SS date-time (column 'Entry Time')"
+                },
+                {
+                  "field": "entryAt",
+                  "message": "must be an ISO 8601 date-time with offset, e.g. 2026-10-19T14:30:00Z"
+                }
+              ],
+              "lineNumber": 4,
+              "raw": [
+                "MNQ",
+                "Buy",
+                "1",
+                "19/10/2026 09:30:00",
+                "21000",
+                "",
+                "",
+                "",
+                "",
+                ""
+              ],
+              "restores": null,
+              "rowNumber": 3,
+              "status": "invalid",
+              "trade": null,
+              "warnings": []
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 0
+        }
+      },
+      "name": "mixed-date-lines",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Fees,P&L,Notes\nMNQ,Buy,1,10/19/2026 09:30:00,21000,,,,,\nMNQ,Buy,1,10/20/2026 09:30:00,21000,,,,,\nMNQ,Buy,1,19/10/2026 09:30:00,21000,,,,,\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-mixed-date-lines.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    },
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 0,
+          "errorSummary": null,
+          "failedCount": 0,
+          "fileName": "synthetic-local-zone-new-york.csv",
+          "fileSha256": "06ca94c00c99fa2b64cac02e2f10c3a676dc25d7b5185e9a023d2a810930f756",
+          "fileSize": 116,
+          "id": "<batch-id>",
+          "importedCount": 1,
+          "rowCount": 1,
+          "skippedCount": 0,
+          "sourceFormat": "generic",
+          "status": "committed",
+          "warningCount": 0
+        },
+        "commitError": null,
+        "dedupKeys": [
+          "rt:293d0af70291490bcc0db82a0a3931cd7c190fdf3ce50220f81effccdcf429d9"
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "ymd",
+          "dateFormatReason": "every timestamp fits YYYY-MM-DD HH:MM:SS",
+          "duplicateCount": 0,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "generic",
+          "formatReason": "Generic trade CSV, columns matched by name",
+          "headers": [
+            "Symbol",
+            "Side",
+            "Qty",
+            "Entry Time",
+            "Entry Price",
+            "Exit Time",
+            "Exit Price",
+            "Fees",
+            "P&L",
+            "Notes"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 0,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "Symbol",
+              "required": true
+            },
+            {
+              "field": "side",
+              "header": "Side",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "Qty",
+              "required": true
+            },
+            {
+              "field": "entryTime",
+              "header": "Entry Time",
+              "required": true
+            },
+            {
+              "field": "entryPrice",
+              "header": "Entry Price",
+              "required": true
+            },
+            {
+              "field": "exitTime",
+              "header": "Exit Time",
+              "required": false
+            },
+            {
+              "field": "exitPrice",
+              "header": "Exit Price",
+              "required": false
+            },
+            {
+              "field": "fees",
+              "header": "Fees",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": "P&L",
+              "required": false
+            },
+            {
+              "field": "brokerTradeId",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "notes",
+              "header": "Notes",
+              "required": false
+            }
+          ],
+          "newCount": 1,
+          "restoreCount": 0,
+          "rowCount": 1,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [],
+              "lineNumber": 2,
+              "raw": [
+                "MNQ",
+                "Buy",
+                "1",
+                "2026-10-19 17:30:00",
+                "21000",
+                "",
+                "",
+                "",
+                "",
+                ""
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "new",
+              "trade": {
+                "boughtAtSource": null,
+                "brokerTradeId": null,
+                "buyFillId": null,
+                "duration": null,
+                "durationSeconds": null,
+                "entryAt": "2026-10-19T21:30:00.000Z",
+                "entryBasis": null,
+                "entryPrice": "21000",
+                "exitAt": null,
+                "exitPrice": null,
+                "fees": "0",
+                "pnlStatus": "open",
+                "quantity": "1",
+                "realizedPnl": null,
+                "reportedPnl": null,
+                "sellFillId": null,
+                "side": "long",
+                "soldAtSource": null,
+                "symbol": "MNQ",
+                "tradingDay": "2026-10-20"
+              },
+              "warnings": []
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 0
+        }
+      },
+      "name": "local-zone-new-york",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Fees,P&L,Notes\nMNQ,Buy,1,2026-10-19 17:30:00,21000,,,,,\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-local-zone-new-york.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    },
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 0,
+          "errorSummary": null,
+          "failedCount": 0,
+          "fileName": "synthetic-local-zone-tokyo.csv",
+          "fileSha256": "06ca94c00c99fa2b64cac02e2f10c3a676dc25d7b5185e9a023d2a810930f756",
+          "fileSize": 116,
+          "id": "<batch-id>",
+          "importedCount": 1,
+          "rowCount": 1,
+          "skippedCount": 0,
+          "sourceFormat": "generic",
+          "status": "committed",
+          "warningCount": 0
+        },
+        "commitError": null,
+        "dedupKeys": [
+          "rt:9acd3929db57b311b04770772607fe3f3a218acd6fce3bb31c666b9fbcf8ef2d"
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "ymd",
+          "dateFormatReason": "every timestamp fits YYYY-MM-DD HH:MM:SS",
+          "duplicateCount": 0,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "generic",
+          "formatReason": "Generic trade CSV, columns matched by name",
+          "headers": [
+            "Symbol",
+            "Side",
+            "Qty",
+            "Entry Time",
+            "Entry Price",
+            "Exit Time",
+            "Exit Price",
+            "Fees",
+            "P&L",
+            "Notes"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 0,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "Symbol",
+              "required": true
+            },
+            {
+              "field": "side",
+              "header": "Side",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "Qty",
+              "required": true
+            },
+            {
+              "field": "entryTime",
+              "header": "Entry Time",
+              "required": true
+            },
+            {
+              "field": "entryPrice",
+              "header": "Entry Price",
+              "required": true
+            },
+            {
+              "field": "exitTime",
+              "header": "Exit Time",
+              "required": false
+            },
+            {
+              "field": "exitPrice",
+              "header": "Exit Price",
+              "required": false
+            },
+            {
+              "field": "fees",
+              "header": "Fees",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": "P&L",
+              "required": false
+            },
+            {
+              "field": "brokerTradeId",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "notes",
+              "header": "Notes",
+              "required": false
+            }
+          ],
+          "newCount": 1,
+          "restoreCount": 0,
+          "rowCount": 1,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [],
+              "lineNumber": 2,
+              "raw": [
+                "MNQ",
+                "Buy",
+                "1",
+                "2026-10-19 17:30:00",
+                "21000",
+                "",
+                "",
+                "",
+                "",
+                ""
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "new",
+              "trade": {
+                "boughtAtSource": null,
+                "brokerTradeId": null,
+                "buyFillId": null,
+                "duration": null,
+                "durationSeconds": null,
+                "entryAt": "2026-10-19T08:30:00.000Z",
+                "entryBasis": null,
+                "entryPrice": "21000",
+                "exitAt": null,
+                "exitPrice": null,
+                "fees": "0",
+                "pnlStatus": "open",
+                "quantity": "1",
+                "realizedPnl": null,
+                "reportedPnl": null,
+                "sellFillId": null,
+                "side": "long",
+                "soldAtSource": null,
+                "symbol": "MNQ",
+                "tradingDay": "2026-10-19"
+              },
+              "warnings": []
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 0
+        }
+      },
+      "name": "local-zone-tokyo",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Fees,P&L,Notes\nMNQ,Buy,1,2026-10-19 17:30:00,21000,,,,,\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-local-zone-tokyo.csv",
+        "format": "auto",
+        "timezone": "Asia/Tokyo"
+      }
+    },
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 0,
+          "errorSummary": null,
+          "failedCount": 0,
+          "fileName": "synthetic-signed-money-minimum.csv",
+          "fileSha256": "6571d261cb60bc9fd00b13525bee9dcdb6cd0bb11453519ea230ed8d5110fb0d",
+          "fileSize": 242,
+          "id": "<batch-id>",
+          "importedCount": 1,
+          "rowCount": 1,
+          "skippedCount": 0,
+          "sourceFormat": "performance",
+          "status": "committed",
+          "warningCount": 1
+        },
+        "commitError": null,
+        "dedupKeys": [
+          "fills:buy17:sell17"
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "mdy",
+          "dateFormatReason": "every timestamp fits M/D/YYYY HH:MM:SS",
+          "duplicateCount": 0,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "performance",
+          "formatReason": "Round-trip performance export: each row pairs a buy fill with a sell fill (found buyPrice, sellPrice, boughtTimestamp and soldTimestamp)",
+          "headers": [
+            "symbol",
+            "_priceFormat",
+            "_priceFormatType",
+            "_tickSize",
+            "buyFillId",
+            "sellFillId",
+            "qty",
+            "buyPrice",
+            "sellPrice",
+            "pnl",
+            "boughtTimestamp",
+            "soldTimestamp",
+            "duration"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 0,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "symbol",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "qty",
+              "required": true
+            },
+            {
+              "field": "buyPrice",
+              "header": "buyPrice",
+              "required": true
+            },
+            {
+              "field": "sellPrice",
+              "header": "sellPrice",
+              "required": true
+            },
+            {
+              "field": "boughtTimestamp",
+              "header": "boughtTimestamp",
+              "required": true
+            },
+            {
+              "field": "soldTimestamp",
+              "header": "soldTimestamp",
+              "required": true
+            },
+            {
+              "field": "buyFillId",
+              "header": "buyFillId",
+              "required": false
+            },
+            {
+              "field": "sellFillId",
+              "header": "sellFillId",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": "pnl",
+              "required": false
+            },
+            {
+              "field": "duration",
+              "header": "duration",
+              "required": false
+            },
+            {
+              "field": "priceFormat",
+              "header": "_priceFormat",
+              "required": false
+            },
+            {
+              "field": "priceFormatType",
+              "header": "_priceFormatType",
+              "required": false
+            },
+            {
+              "field": "tickSize",
+              "header": "_tickSize",
+              "required": false
+            }
+          ],
+          "newCount": 1,
+          "restoreCount": 0,
+          "rowCount": 1,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [],
+              "lineNumber": 2,
+              "raw": [
+                "MNQ",
+                "-2",
+                "0",
+                "0.25",
+                "buy17",
+                "sell17",
+                "1",
+                "21000",
+                "21001",
+                "-9223372036854.775808",
+                "10/19/2026 09:30:00",
+                "10/19/2026 09:31:00",
+                "1min"
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "new",
+              "trade": {
+                "boughtAtSource": "10/19/2026 09:30:00",
+                "brokerTradeId": null,
+                "buyFillId": "buy17",
+                "duration": "1min",
+                "durationSeconds": 60,
+                "entryAt": "2026-10-19T13:30:00.000Z",
+                "entryBasis": "buy_first",
+                "entryPrice": "21000",
+                "exitAt": "2026-10-19T13:31:00.000Z",
+                "exitPrice": "21001",
+                "fees": "0",
+                "pnlStatus": "calculated",
+                "quantity": "1",
+                "realizedPnl": "2",
+                "reportedPnl": "-9223372036854.775808",
+                "sellFillId": "sell17",
+                "side": "long",
+                "soldAtSource": "10/19/2026 09:31:00",
+                "symbol": "MNQ",
+                "tradingDay": "2026-10-19"
+              },
+              "warnings": [
+                {
+                  "field": "realizedPnl",
+                  "message": "Exported P&L -$9223372036854.775808 differs from the calculated $2 (price move × quantity × point value); the calculated value is used (column 'pnl')"
+                }
+              ]
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 1
+        }
+      },
+      "name": "signed-money-minimum",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "symbol,_priceFormat,_priceFormatType,_tickSize,buyFillId,sellFillId,qty,buyPrice,sellPrice,pnl,boughtTimestamp,soldTimestamp,duration\nMNQ,-2,0,0.25,buy17,sell17,1,21000,21001,-9223372036854.775808,10/19/2026 09:30:00,10/19/2026 09:31:00,1min\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-signed-money-minimum.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    },
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": null,
+        "commitError": "validation",
+        "dedupKeys": [],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": null,
+          "dateFormatReason": "",
+          "duplicateCount": 0,
+          "fileIssues": [
+            {
+              "field": "dateFormat",
+              "message": "Timestamps such as '03/04/2026 09:30:00' fit both M/D/YYYY and D/M/YYYY. Choose the date format."
+            }
+          ],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "generic",
+          "formatReason": "Generic trade CSV, columns matched by name",
+          "headers": [
+            "Symbol",
+            "Side",
+            "Qty",
+            "Entry Time",
+            "Entry Price",
+            "Exit Time",
+            "Exit Price",
+            "Fees",
+            "P&L",
+            "Notes"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 0,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "Symbol",
+              "required": true
+            },
+            {
+              "field": "side",
+              "header": "Side",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "Qty",
+              "required": true
+            },
+            {
+              "field": "entryTime",
+              "header": "Entry Time",
+              "required": true
+            },
+            {
+              "field": "entryPrice",
+              "header": "Entry Price",
+              "required": true
+            },
+            {
+              "field": "exitTime",
+              "header": "Exit Time",
+              "required": false
+            },
+            {
+              "field": "exitPrice",
+              "header": "Exit Price",
+              "required": false
+            },
+            {
+              "field": "fees",
+              "header": "Fees",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": "P&L",
+              "required": false
+            },
+            {
+              "field": "brokerTradeId",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "notes",
+              "header": "Notes",
+              "required": false
+            }
+          ],
+          "newCount": 0,
+          "restoreCount": 0,
+          "rowCount": 1,
+          "rows": [],
+          "rowsOmitted": 0,
+          "warningCount": 0
+        }
+      },
+      "name": "ambiguous-dates",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Fees,P&L,Notes\nMNQ,Buy,1,03/04/2026 09:30:00,21000,,,,,\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-ambiguous-dates.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    },
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 0,
+          "errorSummary": null,
+          "failedCount": 1,
+          "fileName": "synthetic-invalid-duration.csv",
+          "fileSha256": "bda34156e33caadebaf36075b30025eba9f8fa6a8743910fa5783d2d37d08d90",
+          "fileSize": 244,
+          "id": "<batch-id>",
+          "importedCount": 0,
+          "rowCount": 1,
+          "skippedCount": 0,
+          "sourceFormat": "performance",
+          "status": "committed",
+          "warningCount": 0
+        },
+        "commitError": null,
+        "dedupKeys": [
+          null
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "mdy",
+          "dateFormatReason": "every timestamp fits M/D/YYYY HH:MM:SS",
+          "duplicateCount": 0,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "performance",
+          "formatReason": "Round-trip performance export: each row pairs a buy fill with a sell fill (found buyPrice, sellPrice, boughtTimestamp and soldTimestamp)",
+          "headers": [
+            "symbol",
+            "_priceFormat",
+            "_priceFormatType",
+            "_tickSize",
+            "buyFillId",
+            "sellFillId",
+            "qty",
+            "buyPrice",
+            "sellPrice",
+            "pnl",
+            "boughtTimestamp",
+            "soldTimestamp",
+            "duration"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 1,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "symbol",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "qty",
+              "required": true
+            },
+            {
+              "field": "buyPrice",
+              "header": "buyPrice",
+              "required": true
+            },
+            {
+              "field": "sellPrice",
+              "header": "sellPrice",
+              "required": true
+            },
+            {
+              "field": "boughtTimestamp",
+              "header": "boughtTimestamp",
+              "required": true
+            },
+            {
+              "field": "soldTimestamp",
+              "header": "soldTimestamp",
+              "required": true
+            },
+            {
+              "field": "buyFillId",
+              "header": "buyFillId",
+              "required": false
+            },
+            {
+              "field": "sellFillId",
+              "header": "sellFillId",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": "pnl",
+              "required": false
+            },
+            {
+              "field": "duration",
+              "header": "duration",
+              "required": false
+            },
+            {
+              "field": "priceFormat",
+              "header": "_priceFormat",
+              "required": false
+            },
+            {
+              "field": "priceFormatType",
+              "header": "_priceFormatType",
+              "required": false
+            },
+            {
+              "field": "tickSize",
+              "header": "_tickSize",
+              "required": false
+            }
+          ],
+          "newCount": 0,
+          "restoreCount": 0,
+          "rowCount": 1,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [
+                {
+                  "field": "duration",
+                  "message": "'18446744073709551615:00:00' is not a supported duration (examples: 32sec, 1min 17sec, 1hr 2min, 1:02:03) (column 'duration')"
+                }
+              ],
+              "lineNumber": 2,
+              "raw": [
+                "MNQ",
+                "-2",
+                "0",
+                "0.25",
+                "buy17",
+                "sell17",
+                "1",
+                "21000",
+                "21001",
+                "2",
+                "10/19/2026 09:30:00",
+                "10/19/2026 09:31:00",
+                "18446744073709551615:00:00"
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "invalid",
+              "trade": null,
+              "warnings": []
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 0
+        }
+      },
+      "name": "invalid-duration",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "symbol,_priceFormat,_priceFormatType,_tickSize,buyFillId,sellFillId,qty,buyPrice,sellPrice,pnl,boughtTimestamp,soldTimestamp,duration\nMNQ,-2,0,0.25,buy17,sell17,1,21000,21001,2,10/19/2026 09:30:00,10/19/2026 09:31:00,18446744073709551615:00:00\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-invalid-duration.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    },
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 0,
+          "errorSummary": null,
+          "failedCount": 1,
+          "fileName": "synthetic-submillisecond-fill-order.csv",
+          "fileSha256": "d56743f421ae3c14ec2c8a2811ed810a4e1f8bf8c8036d9ecc4282467d8f7923",
+          "fileSize": 130,
+          "id": "<batch-id>",
+          "importedCount": 0,
+          "rowCount": 1,
+          "skippedCount": 0,
+          "sourceFormat": "performance",
+          "status": "committed",
+          "warningCount": 0
+        },
+        "commitError": null,
+        "dedupKeys": [
+          null
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "ymd",
+          "dateFormatReason": "every timestamp fits YYYY-MM-DD HH:MM:SS",
+          "duplicateCount": 0,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "performance",
+          "formatReason": "Round-trip performance export: each row pairs a buy fill with a sell fill (found buyPrice, sellPrice, boughtTimestamp and soldTimestamp)",
+          "headers": [
+            "symbol",
+            "qty",
+            "buyPrice",
+            "sellPrice",
+            "boughtTimestamp",
+            "soldTimestamp"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 1,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "symbol",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "qty",
+              "required": true
+            },
+            {
+              "field": "buyPrice",
+              "header": "buyPrice",
+              "required": true
+            },
+            {
+              "field": "sellPrice",
+              "header": "sellPrice",
+              "required": true
+            },
+            {
+              "field": "boughtTimestamp",
+              "header": "boughtTimestamp",
+              "required": true
+            },
+            {
+              "field": "soldTimestamp",
+              "header": "soldTimestamp",
+              "required": true
+            },
+            {
+              "field": "buyFillId",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "sellFillId",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "duration",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "priceFormat",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "priceFormatType",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "tickSize",
+              "header": null,
+              "required": false
+            }
+          ],
+          "newCount": 0,
+          "restoreCount": 0,
+          "rowCount": 1,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [
+                {
+                  "field": "soldTimestamp",
+                  "message": "fill order differs only below stored millisecond precision; export supported timestamps (column 'soldTimestamp')"
+                }
+              ],
+              "lineNumber": 2,
+              "raw": [
+                "MNQ",
+                "1",
+                "21000",
+                "21001",
+                "2026-10-19T13:30:00.0001Z",
+                "2026-10-19T13:30:00.0002Z"
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "invalid",
+              "trade": null,
+              "warnings": []
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 0
+        }
+      },
+      "name": "submillisecond-fill-order",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "symbol,qty,buyPrice,sellPrice,boughtTimestamp,soldTimestamp\nMNQ,1,21000,21001,2026-10-19T13:30:00.0001Z,2026-10-19T13:30:00.0002Z\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-submillisecond-fill-order.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    },
+    {
+      "account": {
+        "currency": "USD",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00"
+      },
+      "expected": {
+        "batch": {
+          "accountId": "<account-id>",
+          "completedAt": "2026-01-01T00:00:00.000Z",
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "duplicateCount": 1,
+          "errorSummary": null,
+          "failedCount": 0,
+          "fileName": "synthetic-known-fill-id-delimiter-collision.csv",
+          "fileSha256": "ebed58ccc31f1b21910c57512ca088a016aa7ddd7a70fc85002f070d1728fba4",
+          "fileSize": 209,
+          "id": "<batch-id>",
+          "importedCount": 1,
+          "rowCount": 2,
+          "skippedCount": 1,
+          "sourceFormat": "performance",
+          "status": "committed",
+          "warningCount": 0
+        },
+        "commitError": null,
+        "dedupKeys": [
+          "fills:a:b:c",
+          "fills:a:b:c"
+        ],
+        "preview": {
+          "blankCount": 0,
+          "dateFormat": "mdy",
+          "dateFormatReason": "every timestamp fits M/D/YYYY HH:MM:SS",
+          "duplicateCount": 1,
+          "fileIssues": [],
+          "filePreviouslyImported": false,
+          "fileWarnings": [],
+          "format": "performance",
+          "formatReason": "Round-trip performance export: each row pairs a buy fill with a sell fill (found buyPrice, sellPrice, boughtTimestamp and soldTimestamp)",
+          "headers": [
+            "symbol",
+            "qty",
+            "buyPrice",
+            "sellPrice",
+            "buyFillId",
+            "sellFillId",
+            "boughtTimestamp",
+            "soldTimestamp"
+          ],
+          "ignoredHeaders": [],
+          "invalidCount": 0,
+          "limits": {
+            "maxBytes": 10485760,
+            "maxRows": 50000
+          },
+          "mapping": [
+            {
+              "field": "symbol",
+              "header": "symbol",
+              "required": true
+            },
+            {
+              "field": "quantity",
+              "header": "qty",
+              "required": true
+            },
+            {
+              "field": "buyPrice",
+              "header": "buyPrice",
+              "required": true
+            },
+            {
+              "field": "sellPrice",
+              "header": "sellPrice",
+              "required": true
+            },
+            {
+              "field": "boughtTimestamp",
+              "header": "boughtTimestamp",
+              "required": true
+            },
+            {
+              "field": "soldTimestamp",
+              "header": "soldTimestamp",
+              "required": true
+            },
+            {
+              "field": "buyFillId",
+              "header": "buyFillId",
+              "required": false
+            },
+            {
+              "field": "sellFillId",
+              "header": "sellFillId",
+              "required": false
+            },
+            {
+              "field": "realizedPnl",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "duration",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "priceFormat",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "priceFormatType",
+              "header": null,
+              "required": false
+            },
+            {
+              "field": "tickSize",
+              "header": null,
+              "required": false
+            }
+          ],
+          "newCount": 1,
+          "restoreCount": 0,
+          "rowCount": 2,
+          "rows": [
+            {
+              "duplicate": null,
+              "errors": [],
+              "lineNumber": 2,
+              "raw": [
+                "MNQ",
+                "1",
+                "21000",
+                "21001",
+                "a:b",
+                "c",
+                "10/19/2026 09:30:00",
+                "10/19/2026 09:31:00"
+              ],
+              "restores": null,
+              "rowNumber": 1,
+              "status": "new",
+              "trade": {
+                "boughtAtSource": "10/19/2026 09:30:00",
+                "brokerTradeId": null,
+                "buyFillId": "a:b",
+                "duration": null,
+                "durationSeconds": null,
+                "entryAt": "2026-10-19T13:30:00.000Z",
+                "entryBasis": "buy_first",
+                "entryPrice": "21000",
+                "exitAt": "2026-10-19T13:31:00.000Z",
+                "exitPrice": "21001",
+                "fees": "0",
+                "pnlStatus": "calculated",
+                "quantity": "1",
+                "realizedPnl": "2",
+                "reportedPnl": null,
+                "sellFillId": "c",
+                "side": "long",
+                "soldAtSource": "10/19/2026 09:31:00",
+                "symbol": "MNQ",
+                "tradingDay": "2026-10-19"
+              },
+              "warnings": []
+            },
+            {
+              "duplicate": {
+                "key": "fills:a:b:c",
+                "lineNumber": 2,
+                "of": "file",
+                "reason": "Same buy/sell fill IDs (a / b:c) as line 2 of this file.",
+                "tradeId": null
+              },
+              "errors": [],
+              "lineNumber": 3,
+              "raw": [
+                "MNQ",
+                "1",
+                "21000",
+                "21001",
+                "a",
+                "b:c",
+                "10/19/2026 09:30:00",
+                "10/19/2026 09:31:00"
+              ],
+              "restores": null,
+              "rowNumber": 2,
+              "status": "duplicate",
+              "trade": {
+                "boughtAtSource": "10/19/2026 09:30:00",
+                "brokerTradeId": null,
+                "buyFillId": "a",
+                "duration": null,
+                "durationSeconds": null,
+                "entryAt": "2026-10-19T13:30:00.000Z",
+                "entryBasis": "buy_first",
+                "entryPrice": "21000",
+                "exitAt": "2026-10-19T13:31:00.000Z",
+                "exitPrice": "21001",
+                "fees": "0",
+                "pnlStatus": "calculated",
+                "quantity": "1",
+                "realizedPnl": "2",
+                "reportedPnl": null,
+                "sellFillId": "b:c",
+                "side": "long",
+                "soldAtSource": "10/19/2026 09:31:00",
+                "symbol": "MNQ",
+                "tradingDay": "2026-10-19"
+              },
+              "warnings": []
+            }
+          ],
+          "rowsOmitted": 0,
+          "warningCount": 0
+        }
+      },
+      "knownLimitation": "Existing fills:<buy>:<sell> encoding collides for (a:b,c) and (a,b:c). This is a recorded defect, not accepted behavior; changing persisted keys needs a coordinated version/migration decision.",
+      "name": "known-fill-id-delimiter-collision",
+      "request": {
+        "accountId": "<account-id>",
+        "columns": null,
+        "content": "symbol,qty,buyPrice,sellPrice,buyFillId,sellFillId,boughtTimestamp,soldTimestamp\nMNQ,1,21000,21001,a:b,c,10/19/2026 09:30:00,10/19/2026 09:31:00\nMNQ,1,21000,21001,a,b:c,10/19/2026 09:30:00,10/19/2026 09:31:00\n",
+        "dateFormat": "auto",
+        "fileName": "synthetic-known-fill-id-delimiter-collision.csv",
+        "format": "auto",
+        "timezone": "America/New_York"
+      }
+    }
+  ],
+  "fixtureVersion": 1,
+  "purpose": "Rust-generated baseline and TypeScript DTO compatibility; not TypeScript algorithm parity or a new production wire contract."
+}
