@@ -250,7 +250,7 @@ describe("permanent deletion", () => {
     await waitFor(() => expect(screen.queryByText("MNQZ6")).toBeNull());
   });
 
-  it("never deletes from a stale preview, and Check again shows the current counts first", async () => {
+  it("never deletes from a stale preview and keeps the dialog open with a plain reason", async () => {
     const store = store2();
     const { user } = renderApp("/accounts/acct-b", store);
     const dialog = await openFromAccounts(user, /Permanently delete Eval B\?/);

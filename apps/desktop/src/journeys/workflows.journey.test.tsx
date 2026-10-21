@@ -152,6 +152,37 @@ describe("Today's risk across features", () => {
   });
 });
 
+describe("Today's statuses are words with an icon", () => {
+  it.each([
+    ["Caution", "Caution (estimate)"],
+    ["Stop", "Stop"],
+  ] as const)("renders a saved %s estimate as its label and icon, never as Safe", async (status, label) => {
+    vi.useFakeTimers({ now: new Date(NOW), shouldAdvanceTime: true, toFake: ["Date"] });
+    const store = createAppStore({
+      accounts: [makeAccount({ id: "acct-a", name: "Eval A", propFirm: "Example" })],
+      trades: [makeTrade({ id: "t1", accountId: "acct-a", tradingDay: "2026-10-20", entryAt: "2026-10-20T14:00:00.000Z", exitAt: "2026-10-20T14:30:00.000Z" })],
+    });
+    await assignCatalogue(store, "acct-a");
+    await store.today.saveEstimate("acct-a", CUTOFF, r => ({ ...r, status, reasons: ["loss_threshold_breached"], balance: "50100",
+      rules: [drawdownOutcome({ headroom: status === "Stop" ? "0" : "150", state: status === "Stop" ? "breached" : "caution", reasonCode: status === "Stop" ? "loss_threshold_breached" : "near_limit" })] }));
+    renderApp("/", store);
+    await waitFor(async () => expect(await headline()).toContain(label));
+    const badge = within(risk()).getByText(label).closest(".ds-status") as HTMLElement;
+    expect(badge.querySelector("svg")).toBeTruthy();
+    expect(within(risk()).queryByText(/^Safe/)).toBeNull();
+  });
+
+  it("with a rulebook but no trades and nothing calculated, is Unknown and shows no $0.00", async () => {
+    vi.useFakeTimers({ now: new Date(NOW), shouldAdvanceTime: true, toFake: ["Date"] });
+    const store = createAppStore({ accounts: [makeAccount({ id: "acct-a", name: "Eval A", propFirm: "Example" })] });
+    await assignCatalogue(store, "acct-a");
+    renderApp("/", store);
+    await waitFor(async () => expect(await headline()).toContain("Unknown"));
+    expect(within(risk()).queryByText("$0.00")).toBeNull();
+    expect(within(risk()).queryByText(/Safe/)).toBeNull();
+  });
+});
+
 describe("attempt lineage", () => {
   it("fails an attempt, starts a linked one with the same number, and the new attempt shows no carried-over risk or trades", async () => {
     vi.useFakeTimers({ now: new Date(NOW), shouldAdvanceTime: true, toFake: ["Date"] });
@@ -198,7 +229,7 @@ describe("attempt lineage", () => {
 });
 
 describe("attempt history", () => {
-  it("archives a failed attempt out of the live list and restores it from the archive, keeping its id, link and trades", async () => {
+  it("archives a failed attempt read-only and restores it from the archive, keeping its id, link and trades", async () => {
     const store = createAppStore({
       accounts: [
         makeAccount({ id: "acct-a", name: "PA-1", externalRef: "48213", status: "failed", successorAccountId: "acct-b" }),
