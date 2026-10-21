@@ -8,6 +8,9 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 // The shell is tested on its own: the Accounts page and header account selector make their own
 // data reads and are covered by features/accounts/accounts.test.tsx.
 vi.mock("../features/accounts/components/AccountsPage", () => ({ AccountsPage: () => <h2>Accounts is not built yet</h2> }));
+vi.mock("../features/journal/components/JournalPage", () => ({ JournalPage: () => <h2>Journal is not built yet</h2> }));
+vi.mock("../features/daily-reviews/components/DailyReviewPage", () => ({ DailyReviewPage: () => <h2>Daily review stub</h2> }));
+vi.mock("../features/today/components/TodayPage", () => ({ TodayPage: () => <h2>Today is not built yet</h2> }));
 vi.mock("../features/accounts/components/AccountSwitcher", () => ({ AccountSwitcher: () => null }));
 import App from "../App";
 import { AppFrame } from "../design-system";
@@ -82,6 +85,14 @@ it.each(["/journal/", "/JOURNAL"])("keeps the title and active item aligned for 
   render(<App />);
   await screen.findByRole("heading", { name: "Journal is not built yet" });
   expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Journal");
+  expect(current()[0].getAttribute("aria-label")).toBe("Journal");
+});
+
+it("titles a day's review and keeps Journal active", async () => {
+  window.location.hash = "/journal/days/2026-10-19?account=a1";
+  render(<App />);
+  await screen.findByRole("heading", { name: "Daily review stub" });
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Daily review");
   expect(current()[0].getAttribute("aria-label")).toBe("Journal");
 });
 

@@ -1,0 +1,4 @@
+Sample Funding Co - FAQ (synthetic)
+
+Q: Can I hold trades over the weekend?
+A: Not in this fictitious example. All positions close before the Friday session ends.

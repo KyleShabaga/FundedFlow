@@ -5,14 +5,16 @@
 //! fills a missing figure with zero.
 //!
 //! End-of-day rows are idempotent: saving the same (account, day, engine
-//! version, inputs hash) again returns the stored row. They form the
-//! high-water-mark history that eod_trailing drawdown needs.
+//! version, inputs hash) again returns the stored row. These are calculated outputs; raw EOD evidence comes from financial_observations.
 
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use super::{account_ctx, require_account};
-use crate::domain::{format_instant, micros_to_string, new_id, now, parse_decimal, parse_payload_time, to_micros};
+use crate::domain::{
+    format_instant, micros_to_string, new_id, now, parse_decimal, parse_payload_time, to_micros,
+};
 use crate::error::{AppError, AppResult, Issues};
 
 pub const DATA_SOURCES: &[&str] = &["csv_import", "manual", "mixed", "none"];
@@ -35,8 +37,8 @@ pub struct SnapshotInput {
     pub inputs_hash: String,
     pub fees_included: bool,
     pub unrealized_included: bool,
-    pub balance: String,
-    pub realized_day_pnl: String,
+    pub balance: Option<String>,
+    pub realized_day_pnl: Option<String>,
     pub unrealized_pnl: Option<String>,
     pub daily_loss_limit: Option<String>,
     pub daily_loss_remaining: Option<String>,
@@ -44,9 +46,9 @@ pub struct SnapshotInput {
     pub high_water_mark: Option<String>,
     pub drawdown_floor: Option<String>,
     pub drawdown_headroom: Option<String>,
-    pub drawdown_locked: bool,
+    pub drawdown_locked: Option<bool>,
     pub profit_target: Option<String>,
-    pub trading_days_completed: u32,
+    pub trading_days_completed: Option<u32>,
     pub trading_days_required: Option<u32>,
     pub status: String,
     pub status_reasons: Vec<String>,
@@ -69,8 +71,8 @@ pub struct Snapshot {
     pub inputs_hash: String,
     pub fees_included: bool,
     pub unrealized_included: bool,
-    pub balance: String,
-    pub realized_day_pnl: String,
+    pub balance: Option<String>,
+    pub realized_day_pnl: Option<String>,
     pub unrealized_pnl: Option<String>,
     pub daily_loss_limit: Option<String>,
     pub daily_loss_remaining: Option<String>,
@@ -78,9 +80,9 @@ pub struct Snapshot {
     pub high_water_mark: Option<String>,
     pub drawdown_floor: Option<String>,
     pub drawdown_headroom: Option<String>,
-    pub drawdown_locked: bool,
+    pub drawdown_locked: Option<bool>,
     pub profit_target: Option<String>,
-    pub trading_days_completed: u32,
+    pub trading_days_completed: Option<u32>,
     pub trading_days_required: Option<u32>,
     pub status: String,
     pub status_reasons: Vec<String>,
@@ -88,7 +90,8 @@ pub struct Snapshot {
 }
 
 fn is_day(s: &str) -> bool {
-    chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").is_ok_and(|d| d.format("%Y-%m-%d").to_string() == s)
+    chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
+        .is_ok_and(|d| d.format("%Y-%m-%d").to_string() == s)
 }
 
 fn money(issues: &mut Issues, field: &str, value: &str) -> i64 {
@@ -113,9 +116,13 @@ const COLUMNS: &str = "id, account_id, rulebook_version_id, trading_day, is_end_
     explanation_json";
 
 fn from_row(r: &rusqlite::Row) -> rusqlite::Result<Snapshot> {
-    let m = |i: usize| -> rusqlite::Result<Option<String>> { Ok(r.get::<_, Option<i64>>(i)?.map(micros_to_string)) };
+    let m = |i: usize| -> rusqlite::Result<Option<String>> {
+        Ok(r.get::<_, Option<i64>>(i)?.map(micros_to_string))
+    };
     let json = |i: usize| -> rusqlite::Result<String> { r.get(i) };
-    let bad = |e: serde_json::Error| rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e));
+    let bad = |e: serde_json::Error| {
+        rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
+    };
     Ok(Snapshot {
         id: r.get(0)?,
         account_id: r.get(1)?,
@@ -129,8 +136,8 @@ fn from_row(r: &rusqlite::Row) -> rusqlite::Result<Snapshot> {
         inputs_hash: r.get(9)?,
         fees_included: r.get(10)?,
         unrealized_included: r.get(11)?,
-        balance: micros_to_string(r.get(12)?),
-        realized_day_pnl: micros_to_string(r.get(13)?),
+        balance: m(12)?,
+        realized_day_pnl: m(13)?,
         unrealized_pnl: m(14)?,
         daily_loss_limit: m(15)?,
         daily_loss_remaining: m(16)?,
@@ -149,9 +156,13 @@ fn from_row(r: &rusqlite::Row) -> rusqlite::Result<Snapshot> {
 }
 
 pub fn get(conn: &Connection, id: &str) -> AppResult<Snapshot> {
-    conn.query_row(&format!("SELECT {COLUMNS} FROM account_snapshots WHERE id = ?1"), [id], from_row)
-        .optional()?
-        .ok_or_else(|| AppError::not_found("snapshot", id))
+    conn.query_row(
+        &format!("SELECT {COLUMNS} FROM account_snapshots WHERE id = ?1"),
+        [id],
+        from_row,
+    )
+    .optional()?
+    .ok_or_else(|| AppError::not_found("snapshot", id))
 }
 
 /// Store a snapshot, or return the existing end-of-day row for the same inputs.
@@ -162,13 +173,23 @@ pub fn save(conn: &mut Connection, input: SnapshotInput) -> AppResult<Snapshot> 
         issues.add("tradingDay", "use a trading day as YYYY-MM-DD");
     }
     if !DATA_SOURCES.contains(&input.data_source.as_str()) {
-        issues.add("dataSource", format!("must be one of {}", DATA_SOURCES.join(", ")));
+        issues.add(
+            "dataSource",
+            format!("must be one of {}", DATA_SOURCES.join(", ")),
+        );
     }
     if !STATUSES.contains(&input.status.as_str()) {
         issues.add("status", format!("must be one of {}", STATUSES.join(", ")));
     }
-    if input.drawdown_mode.as_deref().is_some_and(|m| !DRAWDOWN_MODES.contains(&m)) {
-        issues.add("drawdownMode", format!("must be one of {}", DRAWDOWN_MODES.join(", ")));
+    if input
+        .drawdown_mode
+        .as_deref()
+        .is_some_and(|m| !DRAWDOWN_MODES.contains(&m))
+    {
+        issues.add(
+            "drawdownMode",
+            format!("must be one of {}", DRAWDOWN_MODES.join(", ")),
+        );
     }
     if input.engine_version.trim().is_empty() {
         issues.add("engineVersion", "required");
@@ -177,27 +198,48 @@ pub fn save(conn: &mut Connection, input: SnapshotInput) -> AppResult<Snapshot> 
         issues.add("inputsHash", "required");
     }
     if !input.explanation.as_object().is_some_and(|o| !o.is_empty()) {
-        issues.add("explanation", "must be a non-empty object that explains the figures");
+        issues.add(
+            "explanation",
+            "must be a non-empty object that explains the figures",
+        );
     }
     if input.status == "unknown" && input.status_reasons.is_empty() {
         issues.add("statusReasons", "an unknown status must say why");
     }
-    let data_as_of = match input.data_as_of.as_deref().map(parse_payload_time).transpose() {
+    let data_as_of = match input
+        .data_as_of
+        .as_deref()
+        .map(parse_payload_time)
+        .transpose()
+    {
         Ok(t) => t.map(format_instant),
         Err(m) => {
             issues.add("dataAsOf", m);
             None
         }
     };
-    let balance = money(&mut issues, "balance", &input.balance);
-    let realized = money(&mut issues, "realizedDayPnl", &input.realized_day_pnl);
+    let balance = opt_money(&mut issues, "balance", &input.balance);
+    let realized = opt_money(&mut issues, "realizedDayPnl", &input.realized_day_pnl);
     let unrealized = opt_money(&mut issues, "unrealizedPnl", &input.unrealized_pnl);
     let limit = opt_money(&mut issues, "dailyLossLimit", &input.daily_loss_limit);
-    let remaining = opt_money(&mut issues, "dailyLossRemaining", &input.daily_loss_remaining);
+    let remaining = opt_money(
+        &mut issues,
+        "dailyLossRemaining",
+        &input.daily_loss_remaining,
+    );
     let hwm = opt_money(&mut issues, "highWaterMark", &input.high_water_mark);
     let floor = opt_money(&mut issues, "drawdownFloor", &input.drawdown_floor);
     let headroom = opt_money(&mut issues, "drawdownHeadroom", &input.drawdown_headroom);
     let target = opt_money(&mut issues, "profitTarget", &input.profit_target);
+    if matches!(input.status.as_str(), "safe" | "caution")
+        && (balance.is_none() || realized.is_none())
+    {
+        issues.add(
+            "status",
+            "safe/caution requires known balance and daily P&L",
+        );
+    }
+    validate_engine_payload(&input, &mut issues);
     issues.into_result()?;
 
     let tx = conn.transaction()?;
@@ -293,4 +335,78 @@ pub fn latest(conn: &Connection, account_id: &str) -> AppResult<Option<Snapshot>
             from_row,
         )
         .optional()?)
+}
+
+/// Canonical JSON shared with the portable engine (UTF-16 ordering, including collections).
+pub(crate) fn canonical_engine_json(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::Array(a) => {
+            let mut items: Vec<_> = a.iter().map(canonical_engine_json).collect();
+            items.sort_by(|a, b| a.encode_utf16().cmp(b.encode_utf16()));
+            format!("[{}]", items.join(","))
+        }
+        serde_json::Value::Object(o) => {
+            let mut items: Vec<_> = o.iter().collect();
+            items.sort_by(|a, b| a.0.encode_utf16().cmp(b.0.encode_utf16()));
+            format!(
+                "{{{}}}",
+                items
+                    .into_iter()
+                    .map(|(k, v)| format!(
+                        "{}:{}",
+                        serde_json::to_string(k).expect("string serializes"),
+                        canonical_engine_json(v)
+                    ))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            )
+        }
+        _ => value.to_string(),
+    }
+}
+fn validate_engine_payload(input: &SnapshotInput, issues: &mut Issues) {
+    if !input.engine_version.starts_with("fundedflow-risk/") {
+        return;
+    } // Existing caller-supplied snapshots remain compatible.
+    let e = &input.explanation["engine"];
+    let frozen = &input.explanation["inputs"];
+    let policy = &input.explanation["policy"];
+    let expected =
+        serde_json::json!({"engineVersion":input.engine_version,"input":frozen,"policy":policy});
+    let hash = format!(
+        "{:x}",
+        Sha256::digest(canonical_engine_json(&expected).as_bytes())
+    );
+    let checks = [
+        e["accountId"] == input.account_id,
+        e["engineVersion"] == input.engine_version,
+        e["inputsHash"] == input.inputs_hash,
+        e["tradingDay"] == input.trading_day,
+        e["rulebookVersionId"] == serde_json::json!(input.rulebook_version_id),
+        e["balance"] == serde_json::json!(input.balance),
+        e["realizedDayPnl"] == serde_json::json!(input.realized_day_pnl),
+        frozen["account"]["id"] == input.account_id,
+        frozen["asOf"] == e["asOf"],
+        e["dataAsOf"] == serde_json::json!(input.data_as_of),
+        e["status"]
+            .as_str()
+            .is_some_and(|s| s.to_ascii_lowercase() == input.status),
+        hash == input.inputs_hash,
+        policy.is_object(),
+        frozen.is_object(),
+    ];
+    let projected = |field: &str| {
+        let values: Vec<_> = e["rules"].as_array().into_iter().flatten()
+            .filter(|r| matches!(r["state"].as_str(),Some("satisfied"|"breached"|"caution")))
+            .filter_map(|r| r["metrics"].get(field)).filter(|v| !v.is_null()).cloned().collect();
+        if values.len()==1 { values[0].clone() } else { serde_json::Value::Null }
+    };
+    let metric_checks=[("dailyLossLimit",serde_json::json!(input.daily_loss_limit)),("dailyLossRemaining",serde_json::json!(input.daily_loss_remaining)),("highWaterMark",serde_json::json!(input.high_water_mark)),("drawdownFloor",serde_json::json!(input.drawdown_floor)),("drawdownHeadroom",serde_json::json!(input.drawdown_headroom)),("drawdownLocked",serde_json::json!(input.drawdown_locked)),("profitTarget",serde_json::json!(input.profit_target)),("tradingDaysRequired",serde_json::json!(input.trading_days_required))];
+    if e["tradingDaysCompleted"]!=serde_json::json!(input.trading_days_completed)||metric_checks.into_iter().any(|(field,value)| projected(field)!=value) { issues.add("explanation","stored metric projection must match engine output"); }
+    if checks.iter().any(|ok| !ok) {
+        issues.add(
+            "explanation",
+            "engine snapshot identity, frozen inputs, hash and figures must agree",
+        );
+    }
 }

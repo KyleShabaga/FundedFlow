@@ -369,6 +369,82 @@ export function RadioGroup<V extends string>({ label, name, options, value, defa
   );
 }
 
+/* ---------- ChipGroup ---------- */
+
+export interface ChipOption<V extends string = string> {
+  value: V;
+  label: string;
+  /** Shown as the chip's tooltip and to screen readers ("Archived: kept on past reviews"). */
+  note?: string;
+  disabled?: boolean;
+}
+
+export interface ChipGroupProps<V extends string = string> {
+  /** Legend of the group ("Mistakes"). */
+  label: string;
+  options: readonly ChipOption<V>[];
+  /** The chosen values (several may be chosen). */
+  value: readonly V[];
+  onValueChange: (value: V[]) => void;
+  /** warn: chips that flag a problem (mistakes) turn amber when chosen. */
+  tone?: "flow" | "warn";
+  description?: ReactNode;
+  error?: string | null;
+  /** Shown in place of the chips when there are no options. */
+  empty?: ReactNode;
+  disabled?: boolean;
+  className?: string;
+}
+
+/**
+ * Several-of-many choice as toggle chips (setup, mistake and mindset tags). Each chip is a button with
+ * aria-pressed in a labelled fieldset, so Tab moves between chips and Space or Enter toggles one.
+ */
+export function ChipGroup<V extends string>({ label, options, value, onValueChange, tone = "flow", description, error, empty, disabled, className }: ChipGroupProps<V>) {
+  const ids = useFieldIds(undefined);
+  const toggle = (v: V) => onValueChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+  return (
+    <fieldset
+      className={cx("ds-fieldset", "ds-chips", tone === "warn" && "is-warn", error && "is-invalid", className)}
+      aria-describedby={describedBy(ids, description, error)}
+      aria-invalid={error ? true : undefined}
+      disabled={disabled}
+    >
+      <legend className="ds-field-label">{label}</legend>
+      {description != null && (
+        <p id={ids.description} className="ds-field-desc">
+          {description}
+        </p>
+      )}
+      {options.length === 0 && empty != null ? (
+        <div className="ds-faint ds-chips-empty">{empty}</div>
+      ) : (
+        <div className="ds-chips-list">
+          {options.map((o) => {
+            const on = value.includes(o.value);
+            return (
+              <button
+                key={o.value}
+                type="button"
+                className={cx("ds-chip", on && "is-on")}
+                aria-pressed={on}
+                disabled={o.disabled}
+                title={o.note}
+                onClick={() => toggle(o.value)}
+              >
+                {on && <Check size={12} aria-hidden="true" />}
+                {o.label}
+                {o.note && <span className="ds-sr-only">, {o.note}</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <FieldError id={ids.error}>{error}</FieldError>
+    </fieldset>
+  );
+}
+
 /* ---------- Select (Radix) ---------- */
 
 export interface SelectOption<V extends string = string> {

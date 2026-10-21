@@ -360,6 +360,11 @@ impl Runtime {
         Ok((conn, version))
     }
 
+    /// The per-user data folder that holds the journal (and its `attachments/` folder), when known.
+    pub fn data_dir(&self) -> Option<PathBuf> {
+        self.path.as_ref().ok().and_then(|p| p.parent()).map(Path::to_path_buf)
+    }
+
     /// Run `f` on the journal, or report it unavailable at once while the
     /// runtime is initializing or failed. Never waits for initialization.
     pub fn with<T>(&self, f: impl FnOnce(&mut Connection) -> AppResult<T>) -> AppResult<T> {

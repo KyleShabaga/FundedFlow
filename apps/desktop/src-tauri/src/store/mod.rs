@@ -3,12 +3,16 @@
 //! transaction.
 
 pub mod accounts;
+pub mod attachments;
 pub mod attempts;
 pub mod authoring;
 pub mod catalogue;
+pub mod daily_reviews;
 pub mod journal;
 pub mod ledger;
+pub mod library;
 pub mod offers;
+pub mod reviews;
 pub mod rulebooks;
 pub mod settings;
 pub mod snapshots;
@@ -94,3 +98,12 @@ pub mod reconciliation;
 
 #[cfg(test)]
 mod evidence_tests;
+
+#[cfg(test)]
+mod engine_snapshot_tests;
+
+#[cfg(test)]
+mod journal_review_tests;
+
+#[cfg(test)]
+mod daily_review_tests;

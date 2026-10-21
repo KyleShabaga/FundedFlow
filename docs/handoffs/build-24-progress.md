@@ -1,5 +1,10 @@
 # Build 24 backend progress / session recovery
 
+## New-merge integration in progress
+
+Accepted main advanced to `e5e9f05`: Builds 16/19/20/21/22/29 are merged; journal schema is 18. The pre-integration Build 24 head `739678f` passed Windows CI run 39533908558. Merge reconciliation preserves both native command sets and domain exports; fixtures are being regenerated against accepted contracts. Build 20 screenshot storage follows the existing archive root convention. Required follow-up: owned/unlinked screenshot cleanup, shared rulebook-event retention blockers, trade-correction/review and all four daily-review tables in round-trip/deletion/integrity tests. Build 29 is an independent collector DB, outside journal backup/deletion. Full merged checks are pending; historical evidence below applies to schema 14 until updated. No UI changes are authored.
+
+
 Spec: https://app.notion.com/p/3fe1bd4b6bde81aaa955ded001bcf18d
 Draft PR: https://github.com/KyleShabaga/FundedFlow/pull/43
 Branch: `feat/build-24-data-controls-backend`

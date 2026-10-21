@@ -28,7 +28,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `tokens.css` | Colour tokens per theme (with the role of each), spacing, radii, font stacks |
 | `tokens.test.ts` | Fails if any text/background pair drops below 4.5:1, or control borders below 3:1, in either theme |
 | `format.ts` | Money, compact money, percentage, trading-day and instant (`formatInstant`) formatting; exact money sums |
-| `components/primitives.tsx` | `Button`, `Badge`, `Pnl`, `StatTile`, `Tabs` + `TabPanel` (Radix Tabs) |
+| `components/primitives.tsx` | `Button`, `Badge`, `Pnl`, `StatTile`, `Tabs` + `TabPanel` (Radix Tabs; `keepMounted` keeps a panel's form state while another tab shows, Build 19) |
 | `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots; Build 12 supplies navigation and routing |
 | `components/rules.tsx` | `RuleMeter`, `ruleState`, `AccountCard` |
 | `components/charts.tsx` | `WinGauge`, `Sparkline`, `EquityCurve` |
@@ -105,6 +105,9 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
   button focusable and reads the reason.
 - `FileDropzone` only hands `File` objects (or an `onBrowse` request for a native dialog) to the caller. Reading,
   size limits, parsing and staging belong to the CSV import and attachment cards.
+- `ChipGroup` (Build 20) is a several-of-many choice as toggle chips (setup, mistake and mindset tags): a labelled
+  `fieldset` of buttons with `aria-pressed`. `tone="warn"` turns chosen chips amber (mistakes). A chip can carry a
+  `note` (tooltip and screen-reader text, e.g. "Archived") and be `disabled`; `empty` replaces an empty list.
 
 ### Overlays
 - `Dialog` and `Drawer` are modal: focus moves in and is trapped, Escape and the overlay close them, and focus

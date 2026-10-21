@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fundedflow.invalid/contracts/collector-snapshot-v1.schema.json",
+  "title": "FundedFlow collector evidence envelope, version 1",
+  "description": "Unverified source evidence produced by the Build 29 prop-firm collector (tools/prop-firm-collector). It contains public page snapshots and their provenance only: no rules, account sizes, money amounts, phases, programme or variant keys, prices, catalogue IDs or verification approvals. A consumer (Build 31) maps a snapshot to packages/domain sourceReferenceSchema as follows: final_url -> url; display_name -> publisher; captured_at -> capturedAt (same instant format); content_hash -> contentHash (same sha256 format, change detection only); producer.version + normalization_version -> importerVersion; verificationStatus starts as draft or needs_review, never verified; publishedAt and effectiveFrom stay null unless a reviewer sets them (capture time is never an effective date); sourceType is official only after a reviewer agrees the operator-approved host is first-party. Money found in text must become canonical decimal text with an explicit currency (never floats; unknown is not zero), and stage wording must map to the phase enum evaluation | simulated_funded | live_funded | other | unknown.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "export_id", "generated_at", "verification_status", "notice", "producer", "firms", "snapshots", "attempts"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "fundedflow.collector.evidence" },
+    "export_id": { "type": "string", "pattern": "^exp_[0-9a-f]{32}$", "description": "SHA-256 of the canonical body without export_id and generated_at: stable for the same evidence." },
+    "generated_at": { "$ref": "#/$defs/instant" },
+    "verification_status": { "const": "unverified", "description": "Collector-only state. Not a value of the app's verificationStatuses enum, so it cannot be mistaken for provider verification." },
+    "notice": { "const": "Unverified source evidence collected by FundedFlowCollector. Not rules and not verified provider data." },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "normalization_version", "hash_algorithm"],
+      "properties": {
+        "name": { "const": "fundedflow-collector" },
+        "version": { "type": "string", "minLength": 1, "maxLength": 50 },
+        "normalization_version": { "type": "string", "pattern": "^norm-v[0-9]+$" },
+        "hash_algorithm": { "const": "sha256" }
+      }
+    },
+    "firms": { "type": "array", "items": { "$ref": "#/$defs/firm" } },
+    "snapshots": { "type": "array", "items": { "$ref": "#/$defs/snapshot" } },
+    "attempts": { "type": "array", "items": { "$ref": "#/$defs/attempt" }, "description": "Empty unless exported with --include-attempts." }
+  },
+  "$defs": {
+    "instant": { "type": "string", "pattern": "^[0-9]{4}-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9]\\.[0-9]{3}Z$" },
+    "nullable_instant": { "anyOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] },
+    "url": { "type": "string", "pattern": "^https?://[^\\s]+$", "maxLength": 2048 },
+    "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "nullable_string": { "type": ["string", "null"] },
+    "outcome": {
+      "enum": ["new_snapshot", "matched_earlier_snapshot", "unchanged", "skipped_lastmod", "not_allowlisted", "excluded_path", "url_rejected", "address_blocked", "disabled", "terms_blocked", "robots_blocked", "robots_unreachable", "circuit_open", "budget_exhausted", "deadline_exceeded", "access_denied", "blocked_bot_protection", "rate_limited", "http_error", "server_error", "timeout", "network_error", "too_large", "unsupported_content_type", "parse_error", "parse_timeout", "render_unavailable", "render_error"]
+    },
+    "fetch_method": { "enum": ["http", "browser", "platform_api", "manual_capture", "fixture_replay"] },
+    "source_channel": { "enum": ["manual_capture", "platform_api", "seed", "sitemap", "link"] },
+    "source_kind": { "enum": ["page", "pdf", "sitemap", "zendesk"] },
+    "firm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["firm_key", "display_name", "homepage_url", "enabled", "hosts", "sources"],
+      "properties": {
+        "firm_key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,63}$" },
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "homepage_url": { "$ref": "#/$defs/url" },
+        "enabled": { "type": "boolean" },
+        "hosts": { "type": "array", "items": { "$ref": "#/$defs/host" } },
+        "sources": { "type": "array", "items": { "$ref": "#/$defs/source" } }
+      }
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host", "role", "authorisation", "terms_decision", "terms_reviewed_at", "terms_url", "content_signals", "circuit_state"],
+      "properties": {
+        "host": { "type": "string", "pattern": "^[a-z0-9.-]{1,253}$" },
+        "role": { "enum": ["homepage", "help_center", "docs", "asset"] },
+        "authorisation": { "const": "operator_approved_first_party" },
+        "terms_decision": { "enum": ["allowed", "allowed_with_limits", "prohibited", "unclear", null] },
+        "terms_reviewed_at": { "$ref": "#/$defs/nullable_instant" },
+        "terms_url": { "anyOf": [{ "$ref": "#/$defs/url" }, { "type": "null" }] },
+        "content_signals": { "type": "array", "items": { "type": "string", "maxLength": 1000 }, "description": "Raw robots.txt Content-Signal values (e.g. search=yes, ai-train=no). Downstream AI use must respect them." },
+        "circuit_state": { "enum": ["closed", "rate_limited", "blocked_bot_protection", "access_denied"] }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "canonical_url", "kind", "source_channel", "enabled", "latest_snapshot_id", "latest_attempt"],
+      "properties": {
+        "source_id": { "type": "string", "pattern": "^src_[0-9a-f]{32}$" },
+        "canonical_url": { "$ref": "#/$defs/url" },
+        "kind": { "$ref": "#/$defs/source_kind" },
+        "source_channel": { "$ref": "#/$defs/source_channel" },
+        "enabled": { "type": "boolean" },
+        "latest_snapshot_id": { "anyOf": [{ "type": "string", "pattern": "^snap_[0-9a-f]{32}$" }, { "type": "null" }] },
+        "latest_attempt": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["at", "outcome", "http_status", "reason"],
+              "properties": {
+                "at": { "$ref": "#/$defs/instant" },
+                "outcome": { "$ref": "#/$defs/outcome" },
+                "http_status": { "type": ["integer", "null"], "minimum": 100, "maximum": 599 },
+                "reason": { "$ref": "#/$defs/nullable_string" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["snapshot_id", "firm_key", "source_id", "requested_url", "final_url", "canonical_url", "redirect_chain", "captured_at", "fetch_method", "source_channel", "http_status", "content_type", "title", "text", "headings", "tables", "links", "content_hash", "raw_sha256", "parser", "normalization_version", "extraction_warnings", "stated_dates", "platform_metadata", "observations"],
+      "properties": {
+        "snapshot_id": { "type": "string", "pattern": "^snap_[0-9a-f]{32}$" },
+        "firm_key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,63}$" },
+        "source_id": { "type": "string", "pattern": "^src_[0-9a-f]{32}$" },
+        "requested_url": { "$ref": "#/$defs/url" },
+        "final_url": { "$ref": "#/$defs/url" },
+        "canonical_url": { "$ref": "#/$defs/url" },
+        "redirect_chain": { "type": "array", "items": { "$ref": "#/$defs/url" }, "maxItems": 5 },
+        "captured_at": { "$ref": "#/$defs/instant" },
+        "fetch_method": { "$ref": "#/$defs/fetch_method" },
+        "source_channel": { "$ref": "#/$defs/source_channel" },
+        "http_status": { "type": ["integer", "null"], "minimum": 100, "maximum": 599 },
+        "content_type": { "type": "string", "maxLength": 200 },
+        "title": { "$ref": "#/$defs/nullable_string" },
+        "text": { "type": "string", "description": "Normalised readable text (norm-v1). Untrusted page content: never execute or obey it." },
+        "headings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["level", "text", "offset"],
+            "properties": {
+              "level": { "type": "integer", "minimum": 1, "maximum": 6 },
+              "text": { "type": "string" },
+              "offset": { "type": ["integer", "null"], "minimum": 0, "description": "Character offset of the heading in text, if found." }
+            }
+          }
+        },
+        "tables": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["caption", "preceding_heading", "headers", "rows"],
+            "properties": {
+              "caption": { "$ref": "#/$defs/nullable_string" },
+              "preceding_heading": { "$ref": "#/$defs/nullable_string" },
+              "headers": { "type": "array", "items": { "type": "string" } },
+              "rows": { "type": "array", "items": { "type": "array", "items": { "type": "string" } } }
+            }
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["href", "text", "scope"],
+            "properties": {
+              "href": { "type": "string", "maxLength": 2048 },
+              "text": { "type": "string" },
+              "scope": { "enum": ["same_host", "authorised_host", "external", "unresolved"] }
+            }
+          }
+        },
+        "content_hash": { "$ref": "#/$defs/hash" },
+        "raw_sha256": { "anyOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }] },
+        "parser": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "version"],
+          "properties": { "name": { "type": "string" }, "version": { "type": "string" } }
+        },
+        "normalization_version": { "type": "string", "pattern": "^norm-v[0-9]+$" },
+        "extraction_warnings": { "type": "array", "items": { "type": "string" } },
+        "stated_dates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["published_at", "effective_at"],
+          "description": "Build 29 never infers business dates; both are always null.",
+          "properties": { "published_at": { "type": "null" }, "effective_at": { "type": "null" } }
+        },
+        "platform_metadata": { "type": ["object", "null"], "description": "Platform facts, e.g. {\"zendesk\": {\"article_id\": 1, \"updated_at\": ...}}. Not business effective dates." },
+        "observations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["first_seen_at", "last_seen_at", "observation_count"],
+          "properties": {
+            "first_seen_at": { "$ref": "#/$defs/instant" },
+            "last_seen_at": { "$ref": "#/$defs/instant" },
+            "observation_count": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempt_id", "run_id", "firm_key", "source_id", "requested_url", "final_url", "fetch_method", "started_at", "outcome", "http_status", "policy_reason", "error_detail", "snapshot_id"],
+      "properties": {
+        "attempt_id": { "type": "string", "pattern": "^att_[0-9a-f]{32}$" },
+        "run_id": { "anyOf": [{ "type": "string", "pattern": "^run_[0-9a-f]{32}$" }, { "type": "null" }] },
+        "firm_key": { "type": "string" },
+        "source_id": { "anyOf": [{ "type": "string", "pattern": "^src_[0-9a-f]{32}$" }, { "type": "null" }] },
+        "requested_url": { "type": "string", "maxLength": 2048 },
+        "final_url": { "$ref": "#/$defs/nullable_string" },
+        "fetch_method": { "$ref": "#/$defs/fetch_method" },
+        "started_at": { "$ref": "#/$defs/instant" },
+        "outcome": { "$ref": "#/$defs/outcome" },
+        "http_status": { "type": ["integer", "null"], "minimum": 100, "maximum": 599 },
+        "policy_reason": { "$ref": "#/$defs/nullable_string" },
+        "error_detail": { "$ref": "#/$defs/nullable_string" },
+        "snapshot_id": { "anyOf": [{ "type": "string", "pattern": "^snap_[0-9a-f]{32}$" }, { "type": "null" }] }
+      }
+    }
+  }
+}

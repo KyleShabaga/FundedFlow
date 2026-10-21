@@ -259,8 +259,8 @@ pub fn reset(conn: &mut Connection, input: ResetInput) -> AppResult<ResetResult>
     accounts::record_status_event(&tx, &successor_id, "active", &v.effective_at, v.reason.as_deref(), None)?;
 
     let (assignment, decision) = match &input.rulebook {
-        RulebookDecision::Assign { rulebook_version_id, effective_from, programme_phase_id, phase_path_id } => (
-            Some(rulebooks::assign_in(
+        RulebookDecision::Assign { rulebook_version_id, effective_from, programme_phase_id, phase_path_id } => {
+            let assignment = rulebooks::assign_in(
                 &tx,
                 AssignmentInput {
                     account_id: successor_id.clone(),
@@ -270,9 +270,11 @@ pub fn reset(conn: &mut Connection, input: ResetInput) -> AppResult<ResetResult>
                     phase_path_id: phase_path_id.clone(),
                     account_phase_event_id: None,
                 },
-            )?),
-            "assigned",
-        ),
+            )?;
+            let context = crate::rulebook::ChangeContext { actor: "local_user".into(), reason: Some("New attempt".into()) };
+            rulebooks::record_event(&tx, &assignment.rulebook_version_id, "assigned", &context, Some((&successor_id, Some(&assignment.id))))?;
+            (Some(assignment), "assigned")
+        }
         RulebookDecision::DecideLater => (None, "deferred"),
     };
 

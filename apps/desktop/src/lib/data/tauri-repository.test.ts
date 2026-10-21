@@ -53,6 +53,41 @@ describe("Tauri JournalRepository adapter", () => {
     ]);
   });
 
+  it("sends Build 20 trade, review, screenshot and library calls with their argument keys", async () => {
+    const { repo, calls } = fake((command) => {
+      if (command.startsWith("list_")) return [];
+      if (command === "get_trade_review") return null;
+      if (command === "get_review_library") return { strategies: [], tags: [], checklists: [] };
+      return null;
+    });
+    await repo.trades.remove("t1", "duplicate");
+    await repo.trades.listDeleted("a1");
+    await repo.reviews.get("a1", "t1");
+    await repo.reviews.summaries("a1");
+    await repo.reviews.removeScreenshot("a1", "s1");
+    await repo.library.load();
+    await repo.library.setArchived({ entity: "tag", id: "g1", archived: true });
+    expect(calls).toEqual([
+      ["delete_trade", { id: "t1", reason: "duplicate" }],
+      ["list_deleted_trades", { accountId: "a1" }],
+      ["get_trade_review", { accountId: "a1", tradeId: "t1" }],
+      ["list_trade_review_summaries", { accountId: "a1" }],
+      ["remove_trade_screenshot", { accountId: "a1", id: "s1" }],
+      ["get_review_library", {}],
+      ["set_library_archived", { input: { entity: "tag", id: "g1", archived: true } }],
+    ]);
+  });
+
+  it("validates Build 20 inputs before invoking", () => {
+    const { repo, calls } = fake(() => null);
+    const review = { accountId: "a1", tradeId: "t1", expectedRevision: null, reviewed: false, tagIds: [], checklistResults: [], executionRating: 7 };
+    // Validation fails before any invoke (synchronously, like every adapter input check).
+    expect(() => repo.reviews.save(review)).toThrow(RepositoryError);
+    expect(() => repo.reviews.addScreenshot({ accountId: "a1", tradeId: "t1", dataBase64: "" })).toThrow(RepositoryError);
+    expect(() => repo.library.saveChecklist(null, { name: "x", scope: "daily", strategyId: "s1", items: [] })).toThrow(RepositoryError);
+    expect(calls).toEqual([]);
+  });
+
   it("sends account lifecycle calls to the commands in commands.rs", async () => {
     const { repo, calls } = fake((command) => {
       switch (command) {

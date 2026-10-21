@@ -13,6 +13,8 @@ export * from "./contracts/accounts.js";
 export * from "./contracts/account-lifecycle.js";
 export * from "./contracts/trades.js";
 export * from "./contracts/journal.js";
+export * from "./contracts/reviews.js";
+export * from "./contracts/daily-reviews.js";
 export * from "./contracts/csv-import.js";
 export * from "./contracts/settings.js";
 export * from "./contracts/ledger.js";
@@ -27,3 +29,9 @@ export * from "./risk/contracts.js";
 export * from "./risk/reconciliation.js";
 export * from "./risk/sufficiency.js";
 export * from "./contracts/data-controls.js";
+
+export * from "./engine/contracts.js";
+export * from "./engine/canonical.js";
+export * from "./engine/applicability.js";
+export * from "./engine/evaluate.js";
+export * from "./engine/snapshot.js";

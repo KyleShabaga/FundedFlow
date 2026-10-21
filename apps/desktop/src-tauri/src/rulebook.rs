@@ -351,7 +351,7 @@ pub struct RulebookVersionDetail {
     pub claims: Vec<RuleClaim>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct NewRulebook {
     pub provider_id: Option<String>,
@@ -361,7 +361,7 @@ pub struct NewRulebook {
     pub description: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ApplicabilityInput {
     pub catalogue_version_id: String,
@@ -369,7 +369,7 @@ pub struct ApplicabilityInput {
     pub phase_path_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RulebookDraftInput {
     pub rulebook_id: Option<String>,
@@ -383,7 +383,7 @@ pub struct RulebookDraftInput {
     pub applicability: Vec<ApplicabilityInput>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AssignmentInput {
     pub account_id: String,
@@ -394,7 +394,7 @@ pub struct AssignmentInput {
     pub account_phase_event_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SourceConflictInput {
     pub rule_definition_id: String,
@@ -404,7 +404,7 @@ pub struct SourceConflictInput {
     pub note: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ApplicableRulebookQuery {
     pub programme_phase_id: String,
@@ -417,6 +417,69 @@ pub struct ApplicableRulebook {
     /// "resolved" | "unverified" | "ambiguous" | "none"
     pub status: &'static str,
     pub rulebook_version_ids: Vec<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Build 19: draft editing, guarded writes and the audit log
+// ---------------------------------------------------------------------------
+
+/// A draft's new content. Its rulebook, number and the version it supersedes stay.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RulebookDraftUpdate {
+    pub change_reason: Option<String>,
+    pub captured_at: String,
+    pub effective_from: Option<String>,
+    pub effective_to: Option<String>,
+    pub rules: Vec<RuleDefinitionInput>,
+    pub applicability: Vec<ApplicabilityInput>,
+}
+
+/// Who acts and why, for the audit log. A local label, not an authenticated identity.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ChangeContext {
+    pub actor: String,
+    pub reason: Option<String>,
+}
+
+impl ChangeContext {
+    /// The label used by callers that predate the audit log.
+    pub fn local() -> Self {
+        Self { actor: "local_user".into(), reason: None }
+    }
+}
+
+/// What the caller saw when it decided to assign: the account's open
+/// assignment (None: there was none). A different open assignment is a conflict.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AssignmentGuard {
+    pub expected_open_assignment_id: Option<String>,
+    pub actor: String,
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RulebookEvent {
+    pub id: String,
+    pub rulebook_id: String,
+    pub rulebook_version_id: String,
+    pub account_id: Option<String>,
+    pub assignment_id: Option<String>,
+    pub action: String,
+    pub actor: String,
+    pub reason: Option<String>,
+    pub occurred_at: String,
+}
+
+/// Events of one rulebook, or about one account (its assignments and its private rulebooks).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RulebookEventQuery {
+    pub rulebook_id: Option<String>,
+    pub account_id: Option<String>,
 }
 
 // ---------------------------------------------------------------------------

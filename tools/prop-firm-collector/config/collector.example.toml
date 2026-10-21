@@ -1,0 +1,40 @@
+# FundedFlow collector settings. Every value has a safe default, so this file can stay almost empty.
+# `collector init-db` writes a copy to %LOCALAPPDATA%\FundedFlow\Collector\collector.toml.
+# Values outside the allowed range are an error (they are never silently clamped), and unknown keys are rejected:
+# there is no setting for proxies, a different User-Agent, cookies, other ports or ignoring robots.txt/terms.
+
+[user_agent]
+# Required before live fetching: a page that explains this collector (your repository or a page you control).
+info_url = "https://github.com/KyleShabaga/FundedFlow"
+# Optional contact shown in the User-Agent, e.g. an email address.
+# contact = "you@example.com"
+
+[pacing]
+# min_delay_seconds = 2.0            # between requests to one host; floor 1.0
+# unclear_terms_delay_seconds = 5.0  # hosts with acknowledged "unclear" terms; floor 5.0
+# jitter_ms = 250                    # 0-500; avoids lockstep timing only
+# slow_response_seconds = 3.0        # a slower response doubles the delay for that host...
+# max_adaptive_delay_seconds = 60.0  # ...up to this
+
+[budget]
+# fetches_per_firm_run = 75          # ceiling 300; robots.txt requests do not count
+# run_deadline_minutes = 20          # ceiling 120
+
+[limits]
+# max_depth = 2                      # relevant-link following depth; ceiling 5
+# max_html_bytes = 5242880           # 5 MiB; ceiling 10 MiB
+# max_pdf_bytes = 20971520           # 20 MiB; ceiling 50 MiB
+# max_sitemap_urls = 50000
+
+[pdf]
+# timeout_seconds = 30
+# max_pages = 50
+# max_memory_mib = 512
+
+[browser]
+# enabled = "auto"                   # "auto": use the optional [browser] extra when installed; "off": never
+# min_text_chars = 300               # below this much readable text, try the browser
+
+[raw]
+# retain = false                     # keep raw response bytes (off by default)
+# retention_days = 90

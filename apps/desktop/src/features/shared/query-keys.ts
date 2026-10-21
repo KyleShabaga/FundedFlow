@@ -15,6 +15,24 @@ export const featureKeys = {
   deletion: (id: string | null) => [...account(id), "deletion-preview"] as const,
   tradeDetail: (id: string | null, tradeId: string | null) => [...account(id), "trades", "detail", tradeId] as const,
   tradesRoot: (id: string | null) => [...account(id), "trades"] as const,
+  /** Build 20: one trade with provenance and corrections; soft-deleted trades. Under tradesRoot. */
+  tradeRecord: (id: string | null, tradeId: string | null) => [...account(id), "trades", "record", tradeId] as const,
+  deletedTrades: (id: string | null) => [...account(id), "trades", "deleted"] as const,
+  /** Build 20 reviews of an account's trades. Library edits invalidate every account's reviews (labels). */
+  reviewsAll: [...root, "reviews"] as const,
+  reviewsRoot: (id: string | null) => [...root, "reviews", id] as const,
+  tradeReview: (id: string | null, tradeId: string | null) => [...root, "reviews", id, "trade", tradeId] as const,
+  reviewSummaries: (id: string | null) => [...root, "reviews", id, "summaries"] as const,
+  screenshot: (id: string | null, attachmentId: string | null) => [...root, "reviews", id, "screenshot", attachmentId] as const,
+  /**
+   * Build 22 daily reviews of an account: the index and one key per trading day. Trade, import and account writes
+   * invalidate the account's; library edits invalidate every account's (checklist labels).
+   */
+  dailyReviewsAll: [...root, "daily-reviews"] as const,
+  dailyReviewsRoot: (id: string | null) => [...root, "daily-reviews", id] as const,
+  dailyReviewIndex: (id: string | null) => [...root, "daily-reviews", id, "index"] as const,
+  dailyReviewDay: (id: string | null, day: string | null) => [...root, "daily-reviews", id, "day", day] as const,
+  library: [...root, "library"] as const,
   trades: (id: string | null, filters: TradeFilters = {}) => [...account(id), "trades", { from: filters.from ?? null, to: filters.to ?? null, symbol: filters.symbol ?? null, side: filters.side ?? null }] as const,
   journalDetail: (id: string | null, entryId: string | null) => [...account(id), "journal", "detail", entryId] as const,
   journalRoot: (id: string | null) => [...account(id), "journal"] as const,
@@ -25,6 +43,9 @@ export const featureKeys = {
   snapshotsRoot: (id: string | null) => [...account(id), "snapshots"] as const,
   snapshots: (id: string | null, filters: SnapshotFilters = {}) => [...account(id), "snapshots", { from: filters.from ?? null, to: filters.to ?? null, endOfDayOnly: filters.endOfDayOnly ?? false }] as const,
   latestSnapshot: (id: string | null) => [...account(id), "snapshots", "latest"] as const,
+  /** Build 15.5 evidence: financial observations (checkpoints) and frozen balance comparisons (Build 21 UI). */
+  observations: (id: string | null) => [...account(id), "observations"] as const,
+  reconciliations: (id: string | null) => [...account(id), "reconciliations"] as const,
   ledger: (id: string | null) => [...account(id), "ledger"] as const,
   ledgerBalance: (id: string | null) => [...account(id), "ledger-balance"] as const,
   settings: [...root, "settings"] as const,
@@ -37,5 +58,7 @@ export const featureKeys = {
   rulebookVersions: (id: string | null) => [...root, "rulebook-versions", id] as const,
   rulebookVersion: (id: string | null) => [...root, "rulebook-version", id] as const,
   assignments: (id: string | null) => [...account(id), "rulebook-assignments"] as const,
+  rulebookEvents: (id: string | null) => [...account(id), "rulebook-events"] as const,
+  rulebookRoots: [[...root, "rulebooks"], [...root, "rulebook-versions"], [...root, "rulebook-version"], [...root, "applicable-rulebook"]] as const,
   capability: (name: string) => [...root, "capability", name] as const,
 };

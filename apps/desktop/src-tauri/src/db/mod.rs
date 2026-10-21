@@ -11,7 +11,7 @@ use std::path::Path;
 
 use rusqlite::{Connection, Transaction};
 
-pub(crate) use steps::{convert_legacy_rulebooks, map_legacy_catalogue, provider_for_firm, rederive_trading_days};
+pub(crate) use steps::{convert_legacy_rulebooks, map_legacy_catalogue, provider_for_firm, rederive_trading_days, rulebook_events};
 
 /// File name of the journal database inside the app data directory
 /// (`%APPDATA%\com.fundedflow.desktop\` on Windows).
@@ -105,6 +105,26 @@ pub const MIGRATIONS: &[Migration] = &[
         version: 14,
         name: "financial_evidence",
         step: Step::Sql(include_str!("../../migrations/0014_financial_evidence.sql")),
+    },
+    Migration {
+        version: 15,
+        name: "nullable_engine_snapshots",
+        step: Step::Sql(include_str!("../../migrations/0015_nullable_engine_snapshots.sql")),
+    },
+    Migration {
+        version: 16,
+        name: "rulebook_events",
+        step: Step::Rust(|tx| rulebook_events(tx)),
+    },
+    Migration {
+        version: 17,
+        name: "trade_reviews",
+        step: Step::Sql(include_str!("../../migrations/0017_trade_reviews.sql")),
+    },
+    Migration {
+        version: 18,
+        name: "daily_reviews",
+        step: Step::Sql(include_str!("../../migrations/0018_daily_reviews.sql")),
     },
 ];
 
@@ -262,3 +282,5 @@ pub(crate) fn catalogue_tests_seeded() -> Connection {
 mod legacy_rulebook_tests;
 #[cfg(test)]
 mod rulebook_tests;
+#[cfg(test)]
+mod rulebook_editor_tests;

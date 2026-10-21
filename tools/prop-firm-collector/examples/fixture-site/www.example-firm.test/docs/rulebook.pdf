@@ -1,0 +1,65 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 7 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 278 >>
+stream
+BT
+/F1 12 Tf
+72 720 Td
+14 TL
+(Example Prop Firm - Synthetic Rulebook) Tj T*
+() Tj T*
+(This PDF is a synthetic fixture for the FundedFlow collector.) Tj T*
+(Section 1. Evaluation phase) Tj T*
+(Traders must reach the profit target without breaching the daily loss limit.) Tj T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 6 0 R /Resources << /Font << /F1 7 0 R >> >> >>
+endobj
+6 0 obj
+<< /Length 234 >>
+stream
+BT
+/F1 12 Tf
+72 720 Td
+14 TL
+(Section 2. Simulated funded phase) Tj T*
+(Payouts are reviewed after eight trading days.) Tj T*
+(Section 3. Prohibited practices) Tj T*
+(Copy trading between unrelated accounts is not permitted.) Tj T*
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+8 0 obj
+<< /Title (Example Prop Firm Rulebook \(synthetic\)) /Producer (FundedFlow test factory) >>
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000127 00000 n 
+0000000253 00000 n 
+0000000582 00000 n 
+0000000708 00000 n 
+0000000993 00000 n 
+0000001063 00000 n 
+trailer
+<< /Size 9 /Root 1 0 R /Info 8 0 R >>
+startxref
+1170
+%%EOF

@@ -65,12 +65,288 @@
         {
           "accountId": "id-3",
           "balanceAdjustment": "-1500.5",
+          "dailyReviewDays": [
+            {
+              "accountId": "id-3",
+              "archived": false,
+              "currentTradingDay": "2026-10-20",
+              "dayState": "no_trade_day",
+              "isFuture": false,
+              "missingTrades": [],
+              "outcome": {
+                "closedWithKnownPnl": 0,
+                "net": null,
+                "open": 0,
+                "trades": 0,
+                "unknownPnl": 0
+              },
+              "review": {
+                "accountId": "id-3",
+                "adherence": {
+                  "answered": 0,
+                  "followed": 0,
+                  "missed": 0,
+                  "notApplicable": 0,
+                  "percent": null,
+                  "unanswered": 0
+                },
+                "answers": [],
+                "checklist": null,
+                "completedAt": null,
+                "createdAt": "2026-10-20T15:00:00.000Z",
+                "editedAfterCompletionAt": null,
+                "events": [
+                  {
+                    "at": "2026-10-20T15:00:00.000Z",
+                    "kind": "created",
+                    "revision": 1
+                  }
+                ],
+                "firstCompletedAt": null,
+                "id": "id-4",
+                "noTradeDay": true,
+                "plan": {
+                  "authoredAt": null,
+                  "commitments": null,
+                  "focus": null,
+                  "maxRisk": null,
+                  "noTradeConditions": null,
+                  "notes": null,
+                  "setups": null,
+                  "timing": null
+                },
+                "reflection": {
+                  "emotions": null,
+                  "keyLesson": null,
+                  "marketContext": null,
+                  "mistakes": null,
+                  "nextAction": null,
+                  "notes": null,
+                  "wentWell": null
+                },
+                "reopenedAt": null,
+                "revision": 1,
+                "savedWith": {
+                  "resetTime": "17:00",
+                  "timezone": "America/New_York"
+                },
+                "status": "draft",
+                "tradingDay": "2026-10-16",
+                "updatedAt": "2026-10-20T15:00:00.000Z"
+              },
+              "session": {
+                "resetTime": "17:00",
+                "timezone": "America/New_York"
+              },
+              "sessionEnd": "2026-10-16T21:00:00.000Z",
+              "sessionSettingsChanged": false,
+              "sessionStart": "2026-10-15T21:00:00.000Z",
+              "trades": [],
+              "tradesChanged": false,
+              "tradingDay": "2026-10-16"
+            },
+            {
+              "accountId": "id-3",
+              "archived": false,
+              "currentTradingDay": "2026-10-20",
+              "dayState": "traded",
+              "isFuture": false,
+              "missingTrades": [],
+              "outcome": {
+                "closedWithKnownPnl": 3,
+                "net": "196.38",
+                "open": 1,
+                "trades": 4,
+                "unknownPnl": 0
+              },
+              "review": {
+                "accountId": "id-3",
+                "adherence": {
+                  "answered": 0,
+                  "followed": 0,
+                  "missed": 0,
+                  "notApplicable": 0,
+                  "percent": null,
+                  "unanswered": 0
+                },
+                "answers": [],
+                "checklist": null,
+                "completedAt": "2026-10-20T15:00:00.000Z",
+                "createdAt": "2026-10-20T15:00:00.000Z",
+                "editedAfterCompletionAt": null,
+                "events": [
+                  {
+                    "at": "2026-10-20T15:00:00.000Z",
+                    "kind": "completed",
+                    "revision": 1
+                  },
+                  {
+                    "at": "2026-10-20T15:00:00.000Z",
+                    "kind": "created",
+                    "revision": 1
+                  }
+                ],
+                "firstCompletedAt": "2026-10-20T15:00:00.000Z",
+                "id": "id-5",
+                "noTradeDay": false,
+                "plan": {
+                  "authoredAt": "2026-10-20T15:00:00.000Z",
+                  "commitments": null,
+                  "focus": "A+ only",
+                  "maxRisk": "250",
+                  "noTradeConditions": null,
+                  "notes": null,
+                  "setups": null,
+                  "timing": "retrospective"
+                },
+                "reflection": {
+                  "emotions": null,
+                  "keyLesson": "Wait for the retest",
+                  "marketContext": null,
+                  "mistakes": null,
+                  "nextAction": null,
+                  "notes": null,
+                  "wentWell": null
+                },
+                "reopenedAt": null,
+                "revision": 1,
+                "savedWith": {
+                  "resetTime": "17:00",
+                  "timezone": "America/New_York"
+                },
+                "status": "completed",
+                "tradingDay": "2026-10-19",
+                "updatedAt": "2026-10-20T15:00:00.000Z"
+              },
+              "session": {
+                "resetTime": "17:00",
+                "timezone": "America/New_York"
+              },
+              "sessionEnd": "2026-10-19T21:00:00.000Z",
+              "sessionSettingsChanged": false,
+              "sessionStart": "2026-10-16T21:00:00.000Z",
+              "trades": [
+                {
+                  "entryAt": "2026-10-16T21:10:00.000Z",
+                  "exitAt": "2026-10-16T21:20:00.000Z",
+                  "link": "added",
+                  "netPnl": "-38",
+                  "pnlStatus": "calculated",
+                  "side": "long",
+                  "symbol": "MNQZ6",
+                  "tradeId": "id-6"
+                },
+                {
+                  "entryAt": "2026-10-19T11:47:48.000Z",
+                  "exitAt": "2026-10-19T11:48:21.000Z",
+                  "link": "added",
+                  "netPnl": "26",
+                  "pnlStatus": "calculated",
+                  "side": "long",
+                  "symbol": "MNQZ6",
+                  "tradeId": "id-7"
+                },
+                {
+                  "entryAt": "2026-10-19T13:30:00.000Z",
+                  "exitAt": "2026-10-19T18:00:00.000Z",
+                  "link": "linked",
+                  "netPnl": "208.38",
+                  "pnlStatus": "calculated",
+                  "side": "long",
+                  "symbol": "ESZ6",
+                  "tradeId": "id-8"
+                },
+                {
+                  "entryAt": "2026-10-19T13:30:00.000Z",
+                  "exitAt": null,
+                  "link": "linked",
+                  "netPnl": null,
+                  "pnlStatus": "open",
+                  "side": "long",
+                  "symbol": "ESZ6",
+                  "tradeId": "id-9"
+                }
+              ],
+              "tradesChanged": true,
+              "tradingDay": "2026-10-19"
+            }
+          ],
+          "dailyReviews": {
+            "accountId": "id-3",
+            "archived": false,
+            "currentTradingDay": "2026-10-20",
+            "legacyNotes": [],
+            "reviews": [
+              {
+                "adherence": {
+                  "answered": 0,
+                  "followed": 0,
+                  "missed": 0,
+                  "notApplicable": 0,
+                  "percent": null,
+                  "unanswered": 0
+                },
+                "completedAt": "2026-10-20T15:00:00.000Z",
+                "hasPlan": true,
+                "hasReflection": true,
+                "id": "id-5",
+                "keyLesson": "Wait for the retest",
+                "noTradeDay": false,
+                "outcome": {
+                  "closedWithKnownPnl": 3,
+                  "net": "196.38",
+                  "open": 1,
+                  "trades": 4,
+                  "unknownPnl": 0
+                },
+                "planTiming": "retrospective",
+                "revision": 1,
+                "status": "completed",
+                "tradesChanged": true,
+                "tradingDay": "2026-10-19",
+                "updatedAt": "2026-10-20T15:00:00.000Z"
+              },
+              {
+                "adherence": {
+                  "answered": 0,
+                  "followed": 0,
+                  "missed": 0,
+                  "notApplicable": 0,
+                  "percent": null,
+                  "unanswered": 0
+                },
+                "completedAt": null,
+                "hasPlan": false,
+                "hasReflection": false,
+                "id": "id-4",
+                "keyLesson": null,
+                "noTradeDay": true,
+                "outcome": {
+                  "closedWithKnownPnl": 0,
+                  "net": null,
+                  "open": 0,
+                  "trades": 0,
+                  "unknownPnl": 0
+                },
+                "planTiming": null,
+                "revision": 1,
+                "status": "draft",
+                "tradesChanged": false,
+                "tradingDay": "2026-10-16",
+                "updatedAt": "2026-10-20T15:00:00.000Z"
+              }
+            ],
+            "session": {
+              "resetTime": "17:00",
+              "timezone": "America/New_York"
+            }
+          },
           "deletionPreview": {
             "accountId": "id-3",
             "accountName": "Eval 50K",
             "blockers": [
-              "This account is part of an evaluation-reset chain; its links are append-only and deleting one attempt would orphan its neighbours.",
-              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
+              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24).",
+              "This account is part of an evaluation-reset chain; its links are append-only and deleting one attempt would orphan its neighbours."
             ],
             "deletedTrades": 0,
             "importBatches": 2,
@@ -116,7 +392,7 @@
               "fileName": "Performance.csv",
               "fileSha256": "e455224dd244cc827e2a81232d9c4fb6551a325c2ff1f10ea22a799bfc3c8913",
               "fileSize": 27,
-              "id": "id-4",
+              "id": "id-10",
               "importedCount": 0,
               "rowCount": 1,
               "skippedCount": 0,
@@ -134,7 +410,7 @@
               "fileName": "Performance.csv",
               "fileSha256": "c4d0eea472e276225c5acdbb685688ddaa1f04f45e35d80badd034d3ae0b81f9",
               "fileSize": 591,
-              "id": "id-5",
+              "id": "id-11",
               "importedCount": 2,
               "rowCount": 4,
               "skippedCount": 1,
@@ -149,12 +425,12 @@
               "body": "Waited for the retest.",
               "createdAt": "2026-01-01T00:00:00.000Z",
               "entryAt": "2026-10-19T21:00:00.000Z",
-              "id": "id-6",
+              "id": "id-12",
               "tags": [
                 "patience"
               ],
               "title": "Review",
-              "tradeId": "id-7",
+              "tradeId": "id-8",
               "updatedAt": "2026-01-01T00:00:00.000Z"
             }
           ],
@@ -174,13 +450,13 @@
             "explanation": {
               "inputs": {
                 "trades": [
-                  "id-7"
+                  "id-8"
                 ]
               }
             },
             "feesIncluded": true,
             "highWaterMark": null,
-            "id": "id-8",
+            "id": "id-13",
             "inputsHash": "abc123",
             "isEndOfDay": true,
             "profitTarget": null,
@@ -201,7 +477,7 @@
               "amount": "-165",
               "createdAt": "2026-01-01T00:00:00.000Z",
               "effectiveAt": "2026-10-19T21:30:00.000Z",
-              "id": "id-9",
+              "id": "id-14",
               "kind": "evaluation_fee",
               "note": null,
               "tradingDay": "2026-10-20",
@@ -213,7 +489,7 @@
               "amount": "-1500.5",
               "createdAt": "2026-01-01T00:00:00.000Z",
               "effectiveAt": "2026-10-19T21:30:00.000Z",
-              "id": "id-10",
+              "id": "id-15",
               "kind": "payout",
               "note": null,
               "tradingDay": "2026-10-20",
@@ -267,14 +543,14 @@
           ],
           "problemRows": [
             {
-              "batchId": "id-4",
+              "batchId": "id-10",
               "rows": []
             },
             {
-              "batchId": "id-5",
+              "batchId": "id-11",
               "rows": [
                 {
-                  "duplicateOfTradeId": "id-11",
+                  "duplicateOfTradeId": "id-7",
                   "errors": [
                     {
                       "field": "row",
@@ -349,13 +625,13 @@
               "explanation": {
                 "inputs": {
                   "trades": [
-                    "id-7"
+                    "id-8"
                   ]
                 }
               },
               "feesIncluded": true,
               "highWaterMark": null,
-              "id": "id-8",
+              "id": "id-13",
               "inputsHash": "abc123",
               "isEndOfDay": true,
               "profitTarget": null,
@@ -385,13 +661,13 @@
               "explanation": {
                 "inputs": {
                   "trades": [
-                    "id-7"
+                    "id-8"
                   ]
                 }
               },
               "feesIncluded": true,
               "highWaterMark": null,
-              "id": "id-12",
+              "id": "id-16",
               "inputsHash": "abc123",
               "isEndOfDay": false,
               "profitTarget": null,
@@ -419,8 +695,8 @@
               "exitPrice": "29790.5",
               "fees": "0",
               "grossPnl": "-38",
-              "id": "id-13",
-              "importBatchId": "id-5",
+              "id": "id-6",
+              "importBatchId": "id-11",
               "notes": null,
               "pnlStatus": "calculated",
               "quantity": "2",
@@ -458,8 +734,8 @@
               "exitPrice": "29787.25",
               "fees": "0",
               "grossPnl": "26",
-              "id": "id-11",
-              "importBatchId": "id-5",
+              "id": "id-7",
+              "importBatchId": "id-11",
               "notes": null,
               "pnlStatus": "calculated",
               "quantity": "1",
@@ -497,7 +773,7 @@
               "exitPrice": "5004.5",
               "fees": "4.12",
               "grossPnl": "212.5",
-              "id": "id-7",
+              "id": "id-8",
               "importBatchId": null,
               "notes": null,
               "pnlStatus": "calculated",
@@ -521,7 +797,7 @@
               "exitPrice": null,
               "fees": "4.12",
               "grossPnl": null,
-              "id": "id-14",
+              "id": "id-9",
               "importBatchId": null,
               "notes": null,
               "pnlStatus": "open",
@@ -538,104 +814,26 @@
           ]
         },
         {
-          "accountId": "id-1",
-          "balanceAdjustment": "0",
-          "deletionPreview": {
-            "accountId": "id-1",
-            "accountName": "Euro account",
-            "blockers": [
-              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
-            ],
-            "deletedTrades": 0,
-            "importBatches": 0,
-            "journalEntries": 0,
-            "ledgerEntries": 0,
-            "linkedAttempts": [],
-            "phaseEvents": 0,
-            "privateRulebooks": 0,
-            "rulebookAssignments": 0,
-            "snapshots": 0,
-            "statusEvents": 1,
-            "trades": 1
-          },
-          "history": {
-            "archiveEvents": [
-              {
-                "action": "archived",
-                "occurredAt": "2026-01-01T00:00:00.000Z"
-              }
-            ],
-            "statusEvents": [
-              {
-                "cause": null,
-                "effectiveAt": "2026-01-01T00:00:00.000Z",
-                "note": null,
-                "recordedAt": "2026-01-01T00:00:00.000Z",
-                "status": "active"
-              }
-            ]
-          },
-          "imports": [],
-          "journal": [],
-          "latestSnapshot": null,
-          "ledger": [],
-          "lineage": [
-            {
-              "accountId": "id-1",
-              "archivedAt": "2026-01-01T00:00:00.000Z",
-              "attemptNumber": 1,
-              "createdAt": "2026-01-01T00:00:00.000Z",
-              "externalRef": null,
-              "firstTradingDay": "2026-10-19",
-              "importCount": 0,
-              "lastTradingDay": "2026-10-19",
-              "name": "Euro account",
-              "netPnl": null,
-              "resetToNext": null,
-              "startingBalance": "50000",
-              "status": "active",
-              "tradeCount": 1,
-              "tradesWithUnknownPnl": 1
-            }
-          ],
-          "problemRows": [],
-          "snapshots": [],
-          "trades": [
-            {
-              "accountId": "id-1",
-              "brokerTradeId": null,
-              "createdAt": "2026-01-01T00:00:00.000Z",
-              "entryAt": "2026-10-19T13:30:00.000Z",
-              "entryPrice": "5000.25",
-              "exitAt": "2026-10-19T18:00:00.000Z",
-              "exitPrice": "5004.5",
-              "fees": "4.12",
-              "grossPnl": null,
-              "id": "id-15",
-              "importBatchId": null,
-              "notes": null,
-              "pnlStatus": "currency_mismatch",
-              "quantity": "1",
-              "realizedPnl": null,
-              "reportedPnl": null,
-              "roundTrip": null,
-              "side": "long",
-              "source": "manual",
-              "symbol": "ESZ6",
-              "tradingDay": "2026-10-19",
-              "updatedAt": "2026-01-01T00:00:00.000Z"
-            }
-          ]
-        },
-        {
           "accountId": "id-2",
           "balanceAdjustment": "0",
+          "dailyReviewDays": [],
+          "dailyReviews": {
+            "accountId": "id-2",
+            "archived": false,
+            "currentTradingDay": "2026-10-20",
+            "legacyNotes": [],
+            "reviews": [],
+            "session": {
+              "resetTime": "17:00",
+              "timezone": "America/New_York"
+            }
+          },
           "deletionPreview": {
             "accountId": "id-2",
             "accountName": "Eval 50K attempt 2",
             "blockers": [
-              "This account is part of an evaluation-reset chain; its links are append-only and deleting one attempt would orphan its neighbours.",
-              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
+              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24).",
+              "This account is part of an evaluation-reset chain; its links are append-only and deleting one attempt would orphan its neighbours."
             ],
             "deletedTrades": 0,
             "importBatches": 0,
@@ -715,6 +913,108 @@
           "problemRows": [],
           "snapshots": [],
           "trades": []
+        },
+        {
+          "accountId": "id-1",
+          "balanceAdjustment": "0",
+          "dailyReviewDays": [],
+          "dailyReviews": {
+            "accountId": "id-1",
+            "archived": true,
+            "currentTradingDay": "2026-10-20",
+            "legacyNotes": [],
+            "reviews": [],
+            "session": {
+              "resetTime": "17:00",
+              "timezone": "America/New_York"
+            }
+          },
+          "deletionPreview": {
+            "accountId": "id-1",
+            "accountName": "Euro account",
+            "blockers": [
+              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
+            ],
+            "deletedTrades": 0,
+            "importBatches": 0,
+            "journalEntries": 0,
+            "ledgerEntries": 0,
+            "linkedAttempts": [],
+            "phaseEvents": 0,
+            "privateRulebooks": 0,
+            "rulebookAssignments": 0,
+            "snapshots": 0,
+            "statusEvents": 1,
+            "trades": 1
+          },
+          "history": {
+            "archiveEvents": [
+              {
+                "action": "archived",
+                "occurredAt": "2026-01-01T00:00:00.000Z"
+              }
+            ],
+            "statusEvents": [
+              {
+                "cause": null,
+                "effectiveAt": "2026-01-01T00:00:00.000Z",
+                "note": null,
+                "recordedAt": "2026-01-01T00:00:00.000Z",
+                "status": "active"
+              }
+            ]
+          },
+          "imports": [],
+          "journal": [],
+          "latestSnapshot": null,
+          "ledger": [],
+          "lineage": [
+            {
+              "accountId": "id-1",
+              "archivedAt": "2026-01-01T00:00:00.000Z",
+              "attemptNumber": 1,
+              "createdAt": "2026-01-01T00:00:00.000Z",
+              "externalRef": null,
+              "firstTradingDay": "2026-10-19",
+              "importCount": 0,
+              "lastTradingDay": "2026-10-19",
+              "name": "Euro account",
+              "netPnl": null,
+              "resetToNext": null,
+              "startingBalance": "50000",
+              "status": "active",
+              "tradeCount": 1,
+              "tradesWithUnknownPnl": 1
+            }
+          ],
+          "problemRows": [],
+          "snapshots": [],
+          "trades": [
+            {
+              "accountId": "id-1",
+              "brokerTradeId": null,
+              "createdAt": "2026-01-01T00:00:00.000Z",
+              "entryAt": "2026-10-19T13:30:00.000Z",
+              "entryPrice": "5000.25",
+              "exitAt": "2026-10-19T18:00:00.000Z",
+              "exitPrice": "5004.5",
+              "fees": "4.12",
+              "grossPnl": null,
+              "id": "id-17",
+              "importBatchId": null,
+              "notes": null,
+              "pnlStatus": "currency_mismatch",
+              "quantity": "1",
+              "realizedPnl": null,
+              "reportedPnl": null,
+              "roundTrip": null,
+              "side": "long",
+              "source": "manual",
+              "symbol": "ESZ6",
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-01-01T00:00:00.000Z"
+            }
+          ]
         }
       ],
       "settings": [
@@ -734,7 +1034,7 @@
           "createdAt": "2026-10-20T04:16:25.348Z",
           "currency": "USD",
           "externalRef": "APEX-1",
-          "id": "id-16",
+          "id": "id-18",
           "name": "NY 17:00 eval",
           "notes": null,
           "predecessorAccountId": null,
@@ -753,7 +1053,7 @@
           "createdAt": "2026-10-20T04:16:25.348Z",
           "currency": "USD",
           "externalRef": "APEX-2",
-          "id": "id-17",
+          "id": "id-19",
           "name": "UTC calendar",
           "notes": null,
           "predecessorAccountId": null,
@@ -772,7 +1072,7 @@
           "createdAt": "2026-10-20T04:16:25.351Z",
           "currency": "USD",
           "externalRef": "APEX-3",
-          "id": "id-18",
+          "id": "id-20",
           "name": "Legacy 06:00",
           "notes": null,
           "predecessorAccountId": null,
@@ -787,13 +1087,25 @@
       ],
       "perAccount": [
         {
-          "accountId": "id-18",
+          "accountId": "id-19",
           "balanceAdjustment": "0",
+          "dailyReviewDays": [],
+          "dailyReviews": {
+            "accountId": "id-19",
+            "archived": false,
+            "currentTradingDay": "2026-10-20",
+            "legacyNotes": [],
+            "reviews": [],
+            "session": {
+              "resetTime": "00:00",
+              "timezone": "Etc/UTC"
+            }
+          },
           "deletionPreview": {
-            "accountId": "id-18",
-            "accountName": "Legacy 06:00",
+            "accountId": "id-19",
+            "accountName": "UTC calendar",
             "blockers": [
-              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
+              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
             ],
             "deletedTrades": 0,
             "importBatches": 0,
@@ -812,9 +1124,9 @@
             "statusEvents": [
               {
                 "cause": null,
-                "effectiveAt": "2026-10-20T04:16:25.351Z",
+                "effectiveAt": "2026-10-20T04:16:25.348Z",
                 "note": null,
-                "recordedAt": "2026-10-20T04:16:25.351Z",
+                "recordedAt": "2026-10-20T04:16:25.348Z",
                 "status": "active"
               }
             ]
@@ -825,16 +1137,16 @@
           "ledger": [],
           "lineage": [
             {
-              "accountId": "id-18",
+              "accountId": "id-19",
               "archivedAt": null,
               "attemptNumber": 1,
-              "createdAt": "2026-10-20T04:16:25.351Z",
-              "externalRef": "APEX-3",
-              "firstTradingDay": "2026-10-19",
+              "createdAt": "2026-10-20T04:16:25.348Z",
+              "externalRef": "APEX-2",
+              "firstTradingDay": "2026-10-15",
               "importCount": 0,
               "lastTradingDay": "2026-10-19",
-              "name": "Legacy 06:00",
-              "netPnl": "40.02",
+              "name": "UTC calendar",
+              "netPnl": "31.27",
               "resetToNext": null,
               "startingBalance": "50000",
               "status": "active",
@@ -846,42 +1158,42 @@
           "snapshots": [],
           "trades": [
             {
-              "accountId": "id-18",
+              "accountId": "id-19",
               "brokerTradeId": null,
-              "createdAt": "2026-10-20T04:16:25.351Z",
-              "entryAt": "2026-10-16T11:00:00.000Z",
+              "createdAt": "2026-10-20T04:16:25.350Z",
+              "entryAt": "2026-10-17T09:00:00.000Z",
               "entryPrice": "6000.25",
-              "exitAt": "2026-10-16T11:05:00.000Z",
+              "exitAt": "2026-10-17T10:00:00.000Z",
               "exitPrice": "6004.5",
               "fees": "1.24",
-              "grossPnl": "21.25",
-              "id": "id-19",
+              "grossPnl": "12.5",
+              "id": "id-21",
               "importBatchId": null,
-              "notes": "legacy fri",
-              "pnlStatus": "calculated",
+              "notes": "unknown sat",
+              "pnlStatus": "reported",
               "quantity": "1",
-              "realizedPnl": "20.01",
-              "reportedPnl": null,
+              "realizedPnl": "11.26",
+              "reportedPnl": "12.5",
               "roundTrip": null,
               "side": "long",
               "source": "manual",
-              "symbol": "MESZ6",
+              "symbol": "XYZ",
               "tradingDay": "2026-10-19",
-              "updatedAt": "2026-10-20T04:16:25.351Z"
+              "updatedAt": "2026-10-20T04:16:25.350Z"
             },
             {
-              "accountId": "id-18",
+              "accountId": "id-19",
               "brokerTradeId": null,
               "createdAt": "2026-10-20T04:16:25.351Z",
-              "entryAt": "2026-10-19T09:00:00.000Z",
+              "entryAt": "2026-10-15T09:00:00.000Z",
               "entryPrice": "6000.25",
-              "exitAt": "2026-10-19T09:05:00.000Z",
+              "exitAt": "2026-10-15T10:00:00.000Z",
               "exitPrice": "6004.5",
               "fees": "1.24",
               "grossPnl": "21.25",
-              "id": "id-20",
+              "id": "id-22",
               "importBatchId": null,
-              "notes": "legacy mon",
+              "notes": "thu",
               "pnlStatus": "calculated",
               "quantity": "1",
               "realizedPnl": "20.01",
@@ -890,19 +1202,31 @@
               "side": "long",
               "source": "manual",
               "symbol": "MESZ6",
-              "tradingDay": "2026-10-19",
+              "tradingDay": "2026-10-15",
               "updatedAt": "2026-10-20T04:16:25.351Z"
             }
           ]
         },
         {
-          "accountId": "id-16",
+          "accountId": "id-18",
           "balanceAdjustment": "0",
+          "dailyReviewDays": [],
+          "dailyReviews": {
+            "accountId": "id-18",
+            "archived": false,
+            "currentTradingDay": "2026-10-20",
+            "legacyNotes": [],
+            "reviews": [],
+            "session": {
+              "resetTime": "17:00",
+              "timezone": "America/New_York"
+            }
+          },
           "deletionPreview": {
-            "accountId": "id-16",
+            "accountId": "id-18",
             "accountName": "NY 17:00 eval",
             "blockers": [
-              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
+              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
             ],
             "deletedTrades": 1,
             "importBatches": 1,
@@ -930,7 +1254,7 @@
           },
           "imports": [
             {
-              "accountId": "id-16",
+              "accountId": "id-18",
               "completedAt": "2026-10-20T04:16:25.353Z",
               "createdAt": "2026-10-20T04:16:25.352Z",
               "duplicateCount": 1,
@@ -939,7 +1263,7 @@
               "fileName": "Performance.csv",
               "fileSha256": "e18b895bbb98d9f421cfb2a86db272a739cdc1c09751c6956ff15e9433889f7a",
               "fileSize": 705,
-              "id": "id-21",
+              "id": "id-23",
               "importedCount": 3,
               "rowCount": 5,
               "skippedCount": 1,
@@ -950,17 +1274,17 @@
           ],
           "journal": [
             {
-              "accountId": "id-16",
+              "accountId": "id-18",
               "body": "Waited for the open.",
               "createdAt": "2026-10-20T04:16:25.353Z",
               "entryAt": "2026-10-19T15:00:00.000Z",
-              "id": "id-22",
+              "id": "id-24",
               "tags": [
                 "es",
                 "patience"
               ],
               "title": "Monday review",
-              "tradeId": "id-23",
+              "tradeId": "id-25",
               "updatedAt": "2026-10-20T04:16:25.353Z"
             }
           ],
@@ -968,7 +1292,7 @@
           "ledger": [],
           "lineage": [
             {
-              "accountId": "id-16",
+              "accountId": "id-18",
               "archivedAt": null,
               "attemptNumber": 1,
               "createdAt": "2026-10-20T04:16:25.348Z",
@@ -987,10 +1311,10 @@
           ],
           "problemRows": [
             {
-              "batchId": "id-21",
+              "batchId": "id-23",
               "rows": [
                 {
-                  "duplicateOfTradeId": "id-24",
+                  "duplicateOfTradeId": "id-26",
                   "errors": [
                     {
                       "field": "row",
@@ -1079,7 +1403,7 @@
           "snapshots": [],
           "trades": [
             {
-              "accountId": "id-16",
+              "accountId": "id-18",
               "brokerTradeId": null,
               "createdAt": "2026-10-20T04:16:25.349Z",
               "entryAt": "2026-10-16T21:00:00.000Z",
@@ -1088,7 +1412,7 @@
               "exitPrice": "6004.5",
               "fees": "1.24",
               "grossPnl": "-21.25",
-              "id": "id-25",
+              "id": "id-27",
               "importBatchId": null,
               "notes": "fri after reset",
               "pnlStatus": "calculated",
@@ -1103,7 +1427,7 @@
               "updatedAt": "2026-10-20T04:16:25.349Z"
             },
             {
-              "accountId": "id-16",
+              "accountId": "id-18",
               "brokerTradeId": null,
               "createdAt": "2026-10-20T04:16:25.349Z",
               "entryAt": "2026-10-18T22:00:00.000Z",
@@ -1112,7 +1436,7 @@
               "exitPrice": "6004.5",
               "fees": "1.24",
               "grossPnl": "212.5",
-              "id": "id-26",
+              "id": "id-28",
               "importBatchId": null,
               "notes": "sun evening",
               "pnlStatus": "calculated",
@@ -1127,7 +1451,7 @@
               "updatedAt": "2026-10-20T04:16:25.349Z"
             },
             {
-              "accountId": "id-16",
+              "accountId": "id-18",
               "brokerTradeId": null,
               "createdAt": "2026-10-20T04:16:25.349Z",
               "entryAt": "2026-10-19T14:00:00.000Z",
@@ -1136,7 +1460,7 @@
               "exitPrice": "6004.5",
               "fees": "1.24",
               "grossPnl": "21.25",
-              "id": "id-23",
+              "id": "id-25",
               "importBatchId": null,
               "notes": "mon",
               "pnlStatus": "calculated",
@@ -1151,7 +1475,7 @@
               "updatedAt": "2026-10-20T04:16:25.349Z"
             },
             {
-              "accountId": "id-16",
+              "accountId": "id-18",
               "brokerTradeId": null,
               "createdAt": "2026-10-20T04:16:25.350Z",
               "entryAt": "2026-10-17T14:00:00.000Z",
@@ -1160,7 +1484,7 @@
               "exitPrice": null,
               "fees": "1.24",
               "grossPnl": null,
-              "id": "id-27",
+              "id": "id-29",
               "importBatchId": null,
               "notes": "open sat",
               "pnlStatus": "open",
@@ -1175,7 +1499,7 @@
               "updatedAt": "2026-10-20T04:16:25.350Z"
             },
             {
-              "accountId": "id-16",
+              "accountId": "id-18",
               "brokerTradeId": null,
               "createdAt": "2026-10-20T04:16:25.352Z",
               "entryAt": "2026-10-16T21:10:00.000Z",
@@ -1184,8 +1508,8 @@
               "exitPrice": "29790.5",
               "fees": "0",
               "grossPnl": "-38",
-              "id": "id-28",
-              "importBatchId": "id-21",
+              "id": "id-30",
+              "importBatchId": "id-23",
               "notes": null,
               "pnlStatus": "calculated",
               "quantity": "2",
@@ -1214,7 +1538,7 @@
               "updatedAt": "2026-10-20T04:16:25.352Z"
             },
             {
-              "accountId": "id-16",
+              "accountId": "id-18",
               "brokerTradeId": null,
               "createdAt": "2026-10-20T04:16:25.352Z",
               "entryAt": "2026-10-18T22:01:00.000Z",
@@ -1223,8 +1547,8 @@
               "exitPrice": "6010.25",
               "fees": "0",
               "grossPnl": "-51.25",
-              "id": "id-29",
-              "importBatchId": "id-21",
+              "id": "id-31",
+              "importBatchId": "id-23",
               "notes": null,
               "pnlStatus": "calculated",
               "quantity": "1",
@@ -1253,7 +1577,7 @@
               "updatedAt": "2026-10-20T04:16:25.352Z"
             },
             {
-              "accountId": "id-16",
+              "accountId": "id-18",
               "brokerTradeId": null,
               "createdAt": "2026-10-20T04:16:25.352Z",
               "entryAt": "2026-10-19T11:47:48.000Z",
@@ -1262,8 +1586,8 @@
               "exitPrice": "29787.25",
               "fees": "0",
               "grossPnl": "26",
-              "id": "id-24",
-              "importBatchId": "id-21",
+              "id": "id-26",
+              "importBatchId": "id-23",
               "notes": null,
               "pnlStatus": "calculated",
               "quantity": "1",
@@ -1294,13 +1618,25 @@
           ]
         },
         {
-          "accountId": "id-17",
+          "accountId": "id-20",
           "balanceAdjustment": "0",
+          "dailyReviewDays": [],
+          "dailyReviews": {
+            "accountId": "id-20",
+            "archived": false,
+            "currentTradingDay": "2026-10-21",
+            "legacyNotes": [],
+            "reviews": [],
+            "session": {
+              "resetTime": "06:00",
+              "timezone": "America/New_York"
+            }
+          },
           "deletionPreview": {
-            "accountId": "id-17",
-            "accountName": "UTC calendar",
+            "accountId": "id-20",
+            "accountName": "Legacy 06:00",
             "blockers": [
-              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
+              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
             ],
             "deletedTrades": 0,
             "importBatches": 0,
@@ -1319,9 +1655,9 @@
             "statusEvents": [
               {
                 "cause": null,
-                "effectiveAt": "2026-10-20T04:16:25.348Z",
+                "effectiveAt": "2026-10-20T04:16:25.351Z",
                 "note": null,
-                "recordedAt": "2026-10-20T04:16:25.348Z",
+                "recordedAt": "2026-10-20T04:16:25.351Z",
                 "status": "active"
               }
             ]
@@ -1332,16 +1668,16 @@
           "ledger": [],
           "lineage": [
             {
-              "accountId": "id-17",
+              "accountId": "id-20",
               "archivedAt": null,
               "attemptNumber": 1,
-              "createdAt": "2026-10-20T04:16:25.348Z",
-              "externalRef": "APEX-2",
-              "firstTradingDay": "2026-10-15",
+              "createdAt": "2026-10-20T04:16:25.351Z",
+              "externalRef": "APEX-3",
+              "firstTradingDay": "2026-10-19",
               "importCount": 0,
               "lastTradingDay": "2026-10-19",
-              "name": "UTC calendar",
-              "netPnl": "31.27",
+              "name": "Legacy 06:00",
+              "netPnl": "40.02",
               "resetToNext": null,
               "startingBalance": "50000",
               "status": "active",
@@ -1353,42 +1689,18 @@
           "snapshots": [],
           "trades": [
             {
-              "accountId": "id-17",
-              "brokerTradeId": null,
-              "createdAt": "2026-10-20T04:16:25.350Z",
-              "entryAt": "2026-10-17T09:00:00.000Z",
-              "entryPrice": "6000.25",
-              "exitAt": "2026-10-17T10:00:00.000Z",
-              "exitPrice": "6004.5",
-              "fees": "1.24",
-              "grossPnl": "12.5",
-              "id": "id-30",
-              "importBatchId": null,
-              "notes": "unknown sat",
-              "pnlStatus": "reported",
-              "quantity": "1",
-              "realizedPnl": "11.26",
-              "reportedPnl": "12.5",
-              "roundTrip": null,
-              "side": "long",
-              "source": "manual",
-              "symbol": "XYZ",
-              "tradingDay": "2026-10-19",
-              "updatedAt": "2026-10-20T04:16:25.350Z"
-            },
-            {
-              "accountId": "id-17",
+              "accountId": "id-20",
               "brokerTradeId": null,
               "createdAt": "2026-10-20T04:16:25.351Z",
-              "entryAt": "2026-10-15T09:00:00.000Z",
+              "entryAt": "2026-10-16T11:00:00.000Z",
               "entryPrice": "6000.25",
-              "exitAt": "2026-10-15T10:00:00.000Z",
+              "exitAt": "2026-10-16T11:05:00.000Z",
               "exitPrice": "6004.5",
               "fees": "1.24",
               "grossPnl": "21.25",
-              "id": "id-31",
+              "id": "id-32",
               "importBatchId": null,
-              "notes": "thu",
+              "notes": "legacy fri",
               "pnlStatus": "calculated",
               "quantity": "1",
               "realizedPnl": "20.01",
@@ -1397,7 +1709,31 @@
               "side": "long",
               "source": "manual",
               "symbol": "MESZ6",
-              "tradingDay": "2026-10-15",
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-20T04:16:25.351Z"
+            },
+            {
+              "accountId": "id-20",
+              "brokerTradeId": null,
+              "createdAt": "2026-10-20T04:16:25.351Z",
+              "entryAt": "2026-10-19T09:00:00.000Z",
+              "entryPrice": "6000.25",
+              "exitAt": "2026-10-19T09:05:00.000Z",
+              "exitPrice": "6004.5",
+              "fees": "1.24",
+              "grossPnl": "21.25",
+              "id": "id-33",
+              "importBatchId": null,
+              "notes": "legacy mon",
+              "pnlStatus": "calculated",
+              "quantity": "1",
+              "realizedPnl": "20.01",
+              "reportedPnl": null,
+              "roundTrip": null,
+              "side": "long",
+              "source": "manual",
+              "symbol": "MESZ6",
+              "tradingDay": "2026-10-19",
               "updatedAt": "2026-10-20T04:16:25.351Z"
             }
           ]
@@ -1414,7 +1750,7 @@
           "createdAt": "2026-10-20T04:16:15.003Z",
           "currency": "USD",
           "externalRef": "APEX-3",
-          "id": "id-32",
+          "id": "id-34",
           "name": "Archived",
           "notes": null,
           "predecessorAccountId": null,
@@ -1433,7 +1769,7 @@
           "createdAt": "2026-10-20T04:16:14.998Z",
           "currency": "USD",
           "externalRef": "APEX-1",
-          "id": "id-33",
+          "id": "id-35",
           "name": "NY 17:00 eval",
           "notes": null,
           "predecessorAccountId": null,
@@ -1452,7 +1788,7 @@
           "createdAt": "2026-10-20T04:16:14.998Z",
           "currency": "USD",
           "externalRef": "APEX-2",
-          "id": "id-34",
+          "id": "id-36",
           "name": "UTC calendar",
           "notes": null,
           "predecessorAccountId": null,
@@ -1467,13 +1803,556 @@
       ],
       "perAccount": [
         {
-          "accountId": "id-32",
+          "accountId": "id-36",
           "balanceAdjustment": "0",
+          "dailyReviewDays": [],
+          "dailyReviews": {
+            "accountId": "id-36",
+            "archived": false,
+            "currentTradingDay": "2026-10-20",
+            "legacyNotes": [],
+            "reviews": [],
+            "session": {
+              "resetTime": "00:00",
+              "timezone": "Etc/UTC"
+            }
+          },
           "deletionPreview": {
-            "accountId": "id-32",
+            "accountId": "id-36",
+            "accountName": "UTC calendar",
+            "blockers": [
+              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
+            ],
+            "deletedTrades": 0,
+            "importBatches": 0,
+            "journalEntries": 0,
+            "ledgerEntries": 0,
+            "linkedAttempts": [],
+            "phaseEvents": 0,
+            "privateRulebooks": 0,
+            "rulebookAssignments": 0,
+            "snapshots": 0,
+            "statusEvents": 1,
+            "trades": 2
+          },
+          "history": {
+            "archiveEvents": [],
+            "statusEvents": [
+              {
+                "cause": null,
+                "effectiveAt": "2026-10-20T04:16:14.998Z",
+                "note": null,
+                "recordedAt": "2026-10-20T04:16:14.998Z",
+                "status": "active"
+              }
+            ]
+          },
+          "imports": [],
+          "journal": [],
+          "latestSnapshot": null,
+          "ledger": [],
+          "lineage": [
+            {
+              "accountId": "id-36",
+              "archivedAt": null,
+              "attemptNumber": 1,
+              "createdAt": "2026-10-20T04:16:14.998Z",
+              "externalRef": "APEX-2",
+              "firstTradingDay": "2026-10-15",
+              "importCount": 0,
+              "lastTradingDay": "2026-10-19",
+              "name": "UTC calendar",
+              "netPnl": "31.27",
+              "resetToNext": null,
+              "startingBalance": "50000",
+              "status": "active",
+              "tradeCount": 2,
+              "tradesWithUnknownPnl": 0
+            }
+          ],
+          "problemRows": [],
+          "snapshots": [],
+          "trades": [
+            {
+              "accountId": "id-36",
+              "brokerTradeId": null,
+              "createdAt": "2026-10-20T04:16:15.000Z",
+              "entryAt": "2026-10-15T09:00:00.000Z",
+              "entryPrice": "6000.25",
+              "exitAt": "2026-10-15T10:00:00.000Z",
+              "exitPrice": "6004.5",
+              "fees": "1.24",
+              "grossPnl": "21.25",
+              "id": "id-37",
+              "importBatchId": null,
+              "notes": "thu",
+              "pnlStatus": "calculated",
+              "quantity": "1",
+              "realizedPnl": "20.01",
+              "reportedPnl": null,
+              "roundTrip": null,
+              "side": "long",
+              "source": "manual",
+              "symbol": "MESZ6",
+              "tradingDay": "2026-10-15",
+              "updatedAt": "2026-10-20T04:16:15.000Z"
+            },
+            {
+              "accountId": "id-36",
+              "brokerTradeId": null,
+              "createdAt": "2026-10-20T04:16:15.000Z",
+              "entryAt": "2026-10-17T09:00:00.000Z",
+              "entryPrice": "6000.25",
+              "exitAt": "2026-10-17T10:00:00.000Z",
+              "exitPrice": "6004.5",
+              "fees": "1.24",
+              "grossPnl": "12.5",
+              "id": "id-38",
+              "importBatchId": null,
+              "notes": "unknown sat",
+              "pnlStatus": "reported",
+              "quantity": "1",
+              "realizedPnl": "11.26",
+              "reportedPnl": "12.5",
+              "roundTrip": null,
+              "side": "long",
+              "source": "manual",
+              "symbol": "XYZ",
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-20T04:16:15.000Z"
+            }
+          ]
+        },
+        {
+          "accountId": "id-35",
+          "balanceAdjustment": "0",
+          "dailyReviewDays": [],
+          "dailyReviews": {
+            "accountId": "id-35",
+            "archived": false,
+            "currentTradingDay": "2026-10-20",
+            "legacyNotes": [],
+            "reviews": [],
+            "session": {
+              "resetTime": "17:00",
+              "timezone": "America/New_York"
+            }
+          },
+          "deletionPreview": {
+            "accountId": "id-35",
+            "accountName": "NY 17:00 eval",
+            "blockers": [
+              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
+            ],
+            "deletedTrades": 1,
+            "importBatches": 1,
+            "journalEntries": 1,
+            "ledgerEntries": 0,
+            "linkedAttempts": [],
+            "phaseEvents": 0,
+            "privateRulebooks": 0,
+            "rulebookAssignments": 0,
+            "snapshots": 0,
+            "statusEvents": 1,
+            "trades": 7
+          },
+          "history": {
+            "archiveEvents": [],
+            "statusEvents": [
+              {
+                "cause": null,
+                "effectiveAt": "2026-10-20T04:16:14.998Z",
+                "note": null,
+                "recordedAt": "2026-10-20T04:16:14.998Z",
+                "status": "active"
+              }
+            ]
+          },
+          "imports": [
+            {
+              "accountId": "id-35",
+              "completedAt": "2026-10-20T04:16:15.002Z",
+              "createdAt": "2026-10-20T04:16:15.001Z",
+              "duplicateCount": 1,
+              "errorSummary": null,
+              "failedCount": 1,
+              "fileName": "Performance.csv",
+              "fileSha256": "e18b895bbb98d9f421cfb2a86db272a739cdc1c09751c6956ff15e9433889f7a",
+              "fileSize": 705,
+              "id": "id-39",
+              "importedCount": 3,
+              "rowCount": 5,
+              "skippedCount": 1,
+              "sourceFormat": "performance",
+              "status": "committed",
+              "warningCount": 1
+            }
+          ],
+          "journal": [
+            {
+              "accountId": "id-35",
+              "body": "Waited for the open.",
+              "createdAt": "2026-10-20T04:16:15.002Z",
+              "entryAt": "2026-10-19T15:00:00.000Z",
+              "id": "id-40",
+              "tags": [
+                "es",
+                "patience"
+              ],
+              "title": "Monday review",
+              "tradeId": "id-41",
+              "updatedAt": "2026-10-20T04:16:15.002Z"
+            }
+          ],
+          "latestSnapshot": null,
+          "ledger": [],
+          "lineage": [
+            {
+              "accountId": "id-35",
+              "archivedAt": null,
+              "attemptNumber": 1,
+              "createdAt": "2026-10-20T04:16:14.998Z",
+              "externalRef": "APEX-1",
+              "firstTradingDay": "2026-10-19",
+              "importCount": 1,
+              "lastTradingDay": "2026-10-19",
+              "name": "NY 17:00 eval",
+              "netPnl": "145.53",
+              "resetToNext": null,
+              "startingBalance": "50000",
+              "status": "active",
+              "tradeCount": 7,
+              "tradesWithUnknownPnl": 1
+            }
+          ],
+          "problemRows": [
+            {
+              "batchId": "id-39",
+              "rows": [
+                {
+                  "duplicateOfTradeId": "id-42",
+                  "errors": [
+                    {
+                      "field": "row",
+                      "message": "Same buy/sell fill IDs (900000000001 / 900000000002) as line 2 of this file."
+                    }
+                  ],
+                  "lineNumber": 5,
+                  "raw": [
+                    "$26.00",
+                    "-2",
+                    "0",
+                    "0.25",
+                    "1",
+                    "10/19/2026 07:47:48",
+                    "10/19/2026 07:48:21",
+                    "29774.25",
+                    "29787.25",
+                    "33sec",
+                    "900000000001",
+                    "900000000002",
+                    "MNQZ6"
+                  ],
+                  "rowNumber": 4,
+                  "status": "duplicate",
+                  "warnings": []
+                },
+                {
+                  "duplicateOfTradeId": null,
+                  "errors": [],
+                  "lineNumber": 4,
+                  "raw": [
+                    "$(51.25)",
+                    "-2",
+                    "0",
+                    "0.25",
+                    "1",
+                    "10/18/2026 18:01:00",
+                    "10/18/2026 18:05:00",
+                    "4min",
+                    "6000.00",
+                    "6010.25",
+                    "900000000005",
+                    "900000000006",
+                    "MESZ6"
+                  ],
+                  "rowNumber": 3,
+                  "status": "imported",
+                  "warnings": [
+                    {
+                      "field": "soldTimestamp",
+                      "message": "Sell fill (10/18/2026 18:01:00) is earlier than buy fill (10/18/2026 18:05:00). Recorded as a short (entry = sell, exit = buy); both timestamps are stored exactly as supplied. Review if this was not a short (column 'soldTimestamp')"
+                    }
+                  ]
+                },
+                {
+                  "duplicateOfTradeId": null,
+                  "errors": [
+                    {
+                      "field": "buyPrice",
+                      "message": "'abc' is not a number (column 'buyPrice')"
+                    }
+                  ],
+                  "lineNumber": 6,
+                  "raw": [
+                    "$26.00",
+                    "-2",
+                    "0",
+                    "0.25",
+                    "1",
+                    "10/19/2026 07:47:48",
+                    "10/19/2026 07:48:21",
+                    "29787.25",
+                    "33sec",
+                    "900000000007",
+                    "900000000008",
+                    "MNQZ6",
+                    "abc"
+                  ],
+                  "rowNumber": 5,
+                  "status": "invalid",
+                  "warnings": []
+                }
+              ]
+            }
+          ],
+          "snapshots": [],
+          "trades": [
+            {
+              "accountId": "id-35",
+              "brokerTradeId": null,
+              "createdAt": "2026-10-20T04:16:14.999Z",
+              "entryAt": "2026-10-16T21:00:00.000Z",
+              "entryPrice": "6000.25",
+              "exitAt": "2026-10-16T21:30:00.000Z",
+              "exitPrice": "6004.5",
+              "fees": "1.24",
+              "grossPnl": "-21.25",
+              "id": "id-43",
+              "importBatchId": null,
+              "notes": "fri after reset",
+              "pnlStatus": "calculated",
+              "quantity": "1",
+              "realizedPnl": "-22.49",
+              "reportedPnl": null,
+              "roundTrip": null,
+              "side": "short",
+              "source": "manual",
+              "symbol": "MESZ6",
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-20T04:16:14.999Z"
+            },
+            {
+              "accountId": "id-35",
+              "brokerTradeId": null,
+              "createdAt": "2026-10-20T04:16:14.999Z",
+              "entryAt": "2026-10-17T14:00:00.000Z",
+              "entryPrice": "6000.25",
+              "exitAt": null,
+              "exitPrice": null,
+              "fees": "1.24",
+              "grossPnl": null,
+              "id": "id-44",
+              "importBatchId": null,
+              "notes": "open sat",
+              "pnlStatus": "open",
+              "quantity": "1",
+              "realizedPnl": null,
+              "reportedPnl": null,
+              "roundTrip": null,
+              "side": "long",
+              "source": "manual",
+              "symbol": "MNQZ6",
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-20T04:16:14.999Z"
+            },
+            {
+              "accountId": "id-35",
+              "brokerTradeId": null,
+              "createdAt": "2026-10-20T04:16:14.999Z",
+              "entryAt": "2026-10-18T22:00:00.000Z",
+              "entryPrice": "6000.25",
+              "exitAt": "2026-10-18T22:10:00.000Z",
+              "exitPrice": "6004.5",
+              "fees": "1.24",
+              "grossPnl": "212.5",
+              "id": "id-45",
+              "importBatchId": null,
+              "notes": "sun evening",
+              "pnlStatus": "calculated",
+              "quantity": "1",
+              "realizedPnl": "211.26",
+              "reportedPnl": null,
+              "roundTrip": null,
+              "side": "long",
+              "source": "manual",
+              "symbol": "ESZ6",
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-20T04:16:14.999Z"
+            },
+            {
+              "accountId": "id-35",
+              "brokerTradeId": null,
+              "createdAt": "2026-10-20T04:16:14.999Z",
+              "entryAt": "2026-10-19T14:00:00.000Z",
+              "entryPrice": "6000.25",
+              "exitAt": "2026-10-19T14:30:00.000Z",
+              "exitPrice": "6004.5",
+              "fees": "1.24",
+              "grossPnl": "21.25",
+              "id": "id-41",
+              "importBatchId": null,
+              "notes": "mon",
+              "pnlStatus": "calculated",
+              "quantity": "1",
+              "realizedPnl": "20.01",
+              "reportedPnl": null,
+              "roundTrip": null,
+              "side": "long",
+              "source": "manual",
+              "symbol": "MESZ6",
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-20T04:16:14.999Z"
+            },
+            {
+              "accountId": "id-35",
+              "brokerTradeId": null,
+              "createdAt": "2026-10-20T04:16:15.001Z",
+              "entryAt": "2026-10-16T21:10:00.000Z",
+              "entryPrice": "29800",
+              "exitAt": "2026-10-16T21:20:00.000Z",
+              "exitPrice": "29790.5",
+              "fees": "0",
+              "grossPnl": "-38",
+              "id": "id-46",
+              "importBatchId": "id-39",
+              "notes": null,
+              "pnlStatus": "calculated",
+              "quantity": "2",
+              "realizedPnl": "-38",
+              "reportedPnl": "-38",
+              "roundTrip": {
+                "boughtAt": "2026-10-16T21:10:00.000Z",
+                "boughtAtSource": "10/16/2026 17:10:00",
+                "buyFillId": "900000000003",
+                "buyPrice": "29800",
+                "durationSeconds": 600,
+                "durationSource": "10min",
+                "entryBasis": "buy_first",
+                "priceFormat": "-2",
+                "priceFormatType": "0",
+                "sellFillId": "900000000004",
+                "sellPrice": "29790.5",
+                "soldAt": "2026-10-16T21:20:00.000Z",
+                "soldAtSource": "10/16/2026 17:20:00",
+                "tickSize": "0.25"
+              },
+              "side": "long",
+              "source": "csv_import",
+              "symbol": "MNQZ6",
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-20T04:16:15.001Z"
+            },
+            {
+              "accountId": "id-35",
+              "brokerTradeId": null,
+              "createdAt": "2026-10-20T04:16:15.001Z",
+              "entryAt": "2026-10-18T22:01:00.000Z",
+              "entryPrice": "6000",
+              "exitAt": "2026-10-18T22:05:00.000Z",
+              "exitPrice": "6010.25",
+              "fees": "0",
+              "grossPnl": "-51.25",
+              "id": "id-47",
+              "importBatchId": "id-39",
+              "notes": null,
+              "pnlStatus": "calculated",
+              "quantity": "1",
+              "realizedPnl": "-51.25",
+              "reportedPnl": "-51.25",
+              "roundTrip": {
+                "boughtAt": "2026-10-18T22:05:00.000Z",
+                "boughtAtSource": "10/18/2026 18:05:00",
+                "buyFillId": "900000000005",
+                "buyPrice": "6010.25",
+                "durationSeconds": 240,
+                "durationSource": "4min",
+                "entryBasis": "sell_first",
+                "priceFormat": "-2",
+                "priceFormatType": "0",
+                "sellFillId": "900000000006",
+                "sellPrice": "6000",
+                "soldAt": "2026-10-18T22:01:00.000Z",
+                "soldAtSource": "10/18/2026 18:01:00",
+                "tickSize": "0.25"
+              },
+              "side": "short",
+              "source": "csv_import",
+              "symbol": "MESZ6",
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-20T04:16:15.001Z"
+            },
+            {
+              "accountId": "id-35",
+              "brokerTradeId": null,
+              "createdAt": "2026-10-20T04:16:15.001Z",
+              "entryAt": "2026-10-19T11:47:48.000Z",
+              "entryPrice": "29774.25",
+              "exitAt": "2026-10-19T11:48:21.000Z",
+              "exitPrice": "29787.25",
+              "fees": "0",
+              "grossPnl": "26",
+              "id": "id-42",
+              "importBatchId": "id-39",
+              "notes": null,
+              "pnlStatus": "calculated",
+              "quantity": "1",
+              "realizedPnl": "26",
+              "reportedPnl": "26",
+              "roundTrip": {
+                "boughtAt": "2026-10-19T11:47:48.000Z",
+                "boughtAtSource": "10/19/2026 07:47:48",
+                "buyFillId": "900000000001",
+                "buyPrice": "29774.25",
+                "durationSeconds": 33,
+                "durationSource": "33sec",
+                "entryBasis": "buy_first",
+                "priceFormat": "-2",
+                "priceFormatType": "0",
+                "sellFillId": "900000000002",
+                "sellPrice": "29787.25",
+                "soldAt": "2026-10-19T11:48:21.000Z",
+                "soldAtSource": "10/19/2026 07:48:21",
+                "tickSize": "0.25"
+              },
+              "side": "long",
+              "source": "csv_import",
+              "symbol": "MNQZ6",
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-20T04:16:15.001Z"
+            }
+          ]
+        },
+        {
+          "accountId": "id-34",
+          "balanceAdjustment": "0",
+          "dailyReviewDays": [],
+          "dailyReviews": {
+            "accountId": "id-34",
+            "archived": true,
+            "currentTradingDay": "2026-10-20",
+            "legacyNotes": [],
+            "reviews": [],
+            "session": {
+              "resetTime": "17:00",
+              "timezone": "America/New_York"
+            }
+          },
+          "deletionPreview": {
+            "accountId": "id-34",
             "accountName": "Archived",
             "blockers": [
-              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
+              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
             ],
             "deletedTrades": 0,
             "importBatches": 0,
@@ -1510,7 +2389,7 @@
           "ledger": [],
           "lineage": [
             {
-              "accountId": "id-32",
+              "accountId": "id-34",
               "archivedAt": "2026-10-20T04:16:15.003Z",
               "attemptNumber": 1,
               "createdAt": "2026-10-20T04:16:15.003Z",
@@ -1531,7 +2410,7 @@
           "snapshots": [],
           "trades": [
             {
-              "accountId": "id-32",
+              "accountId": "id-34",
               "brokerTradeId": null,
               "createdAt": "2026-10-20T04:16:15.003Z",
               "entryAt": "2026-10-16T21:00:00.000Z",
@@ -1540,7 +2419,7 @@
               "exitPrice": "6004.5",
               "fees": "1.24",
               "grossPnl": "21.25",
-              "id": "id-35",
+              "id": "id-48",
               "importBatchId": null,
               "notes": "archived fri",
               "pnlStatus": "calculated",
@@ -1553,513 +2432,6 @@
               "symbol": "MESZ6",
               "tradingDay": "2026-10-19",
               "updatedAt": "2026-10-20T04:16:15.003Z"
-            }
-          ]
-        },
-        {
-          "accountId": "id-33",
-          "balanceAdjustment": "0",
-          "deletionPreview": {
-            "accountId": "id-33",
-            "accountName": "NY 17:00 eval",
-            "blockers": [
-              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
-            ],
-            "deletedTrades": 1,
-            "importBatches": 1,
-            "journalEntries": 1,
-            "ledgerEntries": 0,
-            "linkedAttempts": [],
-            "phaseEvents": 0,
-            "privateRulebooks": 0,
-            "rulebookAssignments": 0,
-            "snapshots": 0,
-            "statusEvents": 1,
-            "trades": 7
-          },
-          "history": {
-            "archiveEvents": [],
-            "statusEvents": [
-              {
-                "cause": null,
-                "effectiveAt": "2026-10-20T04:16:14.998Z",
-                "note": null,
-                "recordedAt": "2026-10-20T04:16:14.998Z",
-                "status": "active"
-              }
-            ]
-          },
-          "imports": [
-            {
-              "accountId": "id-33",
-              "completedAt": "2026-10-20T04:16:15.002Z",
-              "createdAt": "2026-10-20T04:16:15.001Z",
-              "duplicateCount": 1,
-              "errorSummary": null,
-              "failedCount": 1,
-              "fileName": "Performance.csv",
-              "fileSha256": "e18b895bbb98d9f421cfb2a86db272a739cdc1c09751c6956ff15e9433889f7a",
-              "fileSize": 705,
-              "id": "id-36",
-              "importedCount": 3,
-              "rowCount": 5,
-              "skippedCount": 1,
-              "sourceFormat": "performance",
-              "status": "committed",
-              "warningCount": 1
-            }
-          ],
-          "journal": [
-            {
-              "accountId": "id-33",
-              "body": "Waited for the open.",
-              "createdAt": "2026-10-20T04:16:15.002Z",
-              "entryAt": "2026-10-19T15:00:00.000Z",
-              "id": "id-37",
-              "tags": [
-                "es",
-                "patience"
-              ],
-              "title": "Monday review",
-              "tradeId": "id-38",
-              "updatedAt": "2026-10-20T04:16:15.002Z"
-            }
-          ],
-          "latestSnapshot": null,
-          "ledger": [],
-          "lineage": [
-            {
-              "accountId": "id-33",
-              "archivedAt": null,
-              "attemptNumber": 1,
-              "createdAt": "2026-10-20T04:16:14.998Z",
-              "externalRef": "APEX-1",
-              "firstTradingDay": "2026-10-19",
-              "importCount": 1,
-              "lastTradingDay": "2026-10-19",
-              "name": "NY 17:00 eval",
-              "netPnl": "145.53",
-              "resetToNext": null,
-              "startingBalance": "50000",
-              "status": "active",
-              "tradeCount": 7,
-              "tradesWithUnknownPnl": 1
-            }
-          ],
-          "problemRows": [
-            {
-              "batchId": "id-36",
-              "rows": [
-                {
-                  "duplicateOfTradeId": "id-39",
-                  "errors": [
-                    {
-                      "field": "row",
-                      "message": "Same buy/sell fill IDs (900000000001 / 900000000002) as line 2 of this file."
-                    }
-                  ],
-                  "lineNumber": 5,
-                  "raw": [
-                    "$26.00",
-                    "-2",
-                    "0",
-                    "0.25",
-                    "1",
-                    "10/19/2026 07:47:48",
-                    "10/19/2026 07:48:21",
-                    "29774.25",
-                    "29787.25",
-                    "33sec",
-                    "900000000001",
-                    "900000000002",
-                    "MNQZ6"
-                  ],
-                  "rowNumber": 4,
-                  "status": "duplicate",
-                  "warnings": []
-                },
-                {
-                  "duplicateOfTradeId": null,
-                  "errors": [],
-                  "lineNumber": 4,
-                  "raw": [
-                    "$(51.25)",
-                    "-2",
-                    "0",
-                    "0.25",
-                    "1",
-                    "10/18/2026 18:01:00",
-                    "10/18/2026 18:05:00",
-                    "4min",
-                    "6000.00",
-                    "6010.25",
-                    "900000000005",
-                    "900000000006",
-                    "MESZ6"
-                  ],
-                  "rowNumber": 3,
-                  "status": "imported",
-                  "warnings": [
-                    {
-                      "field": "soldTimestamp",
-                      "message": "Sell fill (10/18/2026 18:01:00) is earlier than buy fill (10/18/2026 18:05:00). Recorded as a short (entry = sell, exit = buy); both timestamps are stored exactly as supplied. Review if this was not a short (column 'soldTimestamp')"
-                    }
-                  ]
-                },
-                {
-                  "duplicateOfTradeId": null,
-                  "errors": [
-                    {
-                      "field": "buyPrice",
-                      "message": "'abc' is not a number (column 'buyPrice')"
-                    }
-                  ],
-                  "lineNumber": 6,
-                  "raw": [
-                    "$26.00",
-                    "-2",
-                    "0",
-                    "0.25",
-                    "1",
-                    "10/19/2026 07:47:48",
-                    "10/19/2026 07:48:21",
-                    "29787.25",
-                    "33sec",
-                    "900000000007",
-                    "900000000008",
-                    "MNQZ6",
-                    "abc"
-                  ],
-                  "rowNumber": 5,
-                  "status": "invalid",
-                  "warnings": []
-                }
-              ]
-            }
-          ],
-          "snapshots": [],
-          "trades": [
-            {
-              "accountId": "id-33",
-              "brokerTradeId": null,
-              "createdAt": "2026-10-20T04:16:14.999Z",
-              "entryAt": "2026-10-16T21:00:00.000Z",
-              "entryPrice": "6000.25",
-              "exitAt": "2026-10-16T21:30:00.000Z",
-              "exitPrice": "6004.5",
-              "fees": "1.24",
-              "grossPnl": "-21.25",
-              "id": "id-40",
-              "importBatchId": null,
-              "notes": "fri after reset",
-              "pnlStatus": "calculated",
-              "quantity": "1",
-              "realizedPnl": "-22.49",
-              "reportedPnl": null,
-              "roundTrip": null,
-              "side": "short",
-              "source": "manual",
-              "symbol": "MESZ6",
-              "tradingDay": "2026-10-19",
-              "updatedAt": "2026-10-20T04:16:14.999Z"
-            },
-            {
-              "accountId": "id-33",
-              "brokerTradeId": null,
-              "createdAt": "2026-10-20T04:16:14.999Z",
-              "entryAt": "2026-10-17T14:00:00.000Z",
-              "entryPrice": "6000.25",
-              "exitAt": null,
-              "exitPrice": null,
-              "fees": "1.24",
-              "grossPnl": null,
-              "id": "id-41",
-              "importBatchId": null,
-              "notes": "open sat",
-              "pnlStatus": "open",
-              "quantity": "1",
-              "realizedPnl": null,
-              "reportedPnl": null,
-              "roundTrip": null,
-              "side": "long",
-              "source": "manual",
-              "symbol": "MNQZ6",
-              "tradingDay": "2026-10-19",
-              "updatedAt": "2026-10-20T04:16:14.999Z"
-            },
-            {
-              "accountId": "id-33",
-              "brokerTradeId": null,
-              "createdAt": "2026-10-20T04:16:14.999Z",
-              "entryAt": "2026-10-18T22:00:00.000Z",
-              "entryPrice": "6000.25",
-              "exitAt": "2026-10-18T22:10:00.000Z",
-              "exitPrice": "6004.5",
-              "fees": "1.24",
-              "grossPnl": "212.5",
-              "id": "id-42",
-              "importBatchId": null,
-              "notes": "sun evening",
-              "pnlStatus": "calculated",
-              "quantity": "1",
-              "realizedPnl": "211.26",
-              "reportedPnl": null,
-              "roundTrip": null,
-              "side": "long",
-              "source": "manual",
-              "symbol": "ESZ6",
-              "tradingDay": "2026-10-19",
-              "updatedAt": "2026-10-20T04:16:14.999Z"
-            },
-            {
-              "accountId": "id-33",
-              "brokerTradeId": null,
-              "createdAt": "2026-10-20T04:16:14.999Z",
-              "entryAt": "2026-10-19T14:00:00.000Z",
-              "entryPrice": "6000.25",
-              "exitAt": "2026-10-19T14:30:00.000Z",
-              "exitPrice": "6004.5",
-              "fees": "1.24",
-              "grossPnl": "21.25",
-              "id": "id-38",
-              "importBatchId": null,
-              "notes": "mon",
-              "pnlStatus": "calculated",
-              "quantity": "1",
-              "realizedPnl": "20.01",
-              "reportedPnl": null,
-              "roundTrip": null,
-              "side": "long",
-              "source": "manual",
-              "symbol": "MESZ6",
-              "tradingDay": "2026-10-19",
-              "updatedAt": "2026-10-20T04:16:14.999Z"
-            },
-            {
-              "accountId": "id-33",
-              "brokerTradeId": null,
-              "createdAt": "2026-10-20T04:16:15.001Z",
-              "entryAt": "2026-10-16T21:10:00.000Z",
-              "entryPrice": "29800",
-              "exitAt": "2026-10-16T21:20:00.000Z",
-              "exitPrice": "29790.5",
-              "fees": "0",
-              "grossPnl": "-38",
-              "id": "id-43",
-              "importBatchId": "id-36",
-              "notes": null,
-              "pnlStatus": "calculated",
-              "quantity": "2",
-              "realizedPnl": "-38",
-              "reportedPnl": "-38",
-              "roundTrip": {
-                "boughtAt": "2026-10-16T21:10:00.000Z",
-                "boughtAtSource": "10/16/2026 17:10:00",
-                "buyFillId": "900000000003",
-                "buyPrice": "29800",
-                "durationSeconds": 600,
-                "durationSource": "10min",
-                "entryBasis": "buy_first",
-                "priceFormat": "-2",
-                "priceFormatType": "0",
-                "sellFillId": "900000000004",
-                "sellPrice": "29790.5",
-                "soldAt": "2026-10-16T21:20:00.000Z",
-                "soldAtSource": "10/16/2026 17:20:00",
-                "tickSize": "0.25"
-              },
-              "side": "long",
-              "source": "csv_import",
-              "symbol": "MNQZ6",
-              "tradingDay": "2026-10-19",
-              "updatedAt": "2026-10-20T04:16:15.001Z"
-            },
-            {
-              "accountId": "id-33",
-              "brokerTradeId": null,
-              "createdAt": "2026-10-20T04:16:15.001Z",
-              "entryAt": "2026-10-18T22:01:00.000Z",
-              "entryPrice": "6000",
-              "exitAt": "2026-10-18T22:05:00.000Z",
-              "exitPrice": "6010.25",
-              "fees": "0",
-              "grossPnl": "-51.25",
-              "id": "id-44",
-              "importBatchId": "id-36",
-              "notes": null,
-              "pnlStatus": "calculated",
-              "quantity": "1",
-              "realizedPnl": "-51.25",
-              "reportedPnl": "-51.25",
-              "roundTrip": {
-                "boughtAt": "2026-10-18T22:05:00.000Z",
-                "boughtAtSource": "10/18/2026 18:05:00",
-                "buyFillId": "900000000005",
-                "buyPrice": "6010.25",
-                "durationSeconds": 240,
-                "durationSource": "4min",
-                "entryBasis": "sell_first",
-                "priceFormat": "-2",
-                "priceFormatType": "0",
-                "sellFillId": "900000000006",
-                "sellPrice": "6000",
-                "soldAt": "2026-10-18T22:01:00.000Z",
-                "soldAtSource": "10/18/2026 18:01:00",
-                "tickSize": "0.25"
-              },
-              "side": "short",
-              "source": "csv_import",
-              "symbol": "MESZ6",
-              "tradingDay": "2026-10-19",
-              "updatedAt": "2026-10-20T04:16:15.001Z"
-            },
-            {
-              "accountId": "id-33",
-              "brokerTradeId": null,
-              "createdAt": "2026-10-20T04:16:15.001Z",
-              "entryAt": "2026-10-19T11:47:48.000Z",
-              "entryPrice": "29774.25",
-              "exitAt": "2026-10-19T11:48:21.000Z",
-              "exitPrice": "29787.25",
-              "fees": "0",
-              "grossPnl": "26",
-              "id": "id-39",
-              "importBatchId": "id-36",
-              "notes": null,
-              "pnlStatus": "calculated",
-              "quantity": "1",
-              "realizedPnl": "26",
-              "reportedPnl": "26",
-              "roundTrip": {
-                "boughtAt": "2026-10-19T11:47:48.000Z",
-                "boughtAtSource": "10/19/2026 07:47:48",
-                "buyFillId": "900000000001",
-                "buyPrice": "29774.25",
-                "durationSeconds": 33,
-                "durationSource": "33sec",
-                "entryBasis": "buy_first",
-                "priceFormat": "-2",
-                "priceFormatType": "0",
-                "sellFillId": "900000000002",
-                "sellPrice": "29787.25",
-                "soldAt": "2026-10-19T11:48:21.000Z",
-                "soldAtSource": "10/19/2026 07:48:21",
-                "tickSize": "0.25"
-              },
-              "side": "long",
-              "source": "csv_import",
-              "symbol": "MNQZ6",
-              "tradingDay": "2026-10-19",
-              "updatedAt": "2026-10-20T04:16:15.001Z"
-            }
-          ]
-        },
-        {
-          "accountId": "id-34",
-          "balanceAdjustment": "0",
-          "deletionPreview": {
-            "accountId": "id-34",
-            "accountName": "UTC calendar",
-            "blockers": [
-              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
-            ],
-            "deletedTrades": 0,
-            "importBatches": 0,
-            "journalEntries": 0,
-            "ledgerEntries": 0,
-            "linkedAttempts": [],
-            "phaseEvents": 0,
-            "privateRulebooks": 0,
-            "rulebookAssignments": 0,
-            "snapshots": 0,
-            "statusEvents": 1,
-            "trades": 2
-          },
-          "history": {
-            "archiveEvents": [],
-            "statusEvents": [
-              {
-                "cause": null,
-                "effectiveAt": "2026-10-20T04:16:14.998Z",
-                "note": null,
-                "recordedAt": "2026-10-20T04:16:14.998Z",
-                "status": "active"
-              }
-            ]
-          },
-          "imports": [],
-          "journal": [],
-          "latestSnapshot": null,
-          "ledger": [],
-          "lineage": [
-            {
-              "accountId": "id-34",
-              "archivedAt": null,
-              "attemptNumber": 1,
-              "createdAt": "2026-10-20T04:16:14.998Z",
-              "externalRef": "APEX-2",
-              "firstTradingDay": "2026-10-15",
-              "importCount": 0,
-              "lastTradingDay": "2026-10-19",
-              "name": "UTC calendar",
-              "netPnl": "31.27",
-              "resetToNext": null,
-              "startingBalance": "50000",
-              "status": "active",
-              "tradeCount": 2,
-              "tradesWithUnknownPnl": 0
-            }
-          ],
-          "problemRows": [],
-          "snapshots": [],
-          "trades": [
-            {
-              "accountId": "id-34",
-              "brokerTradeId": null,
-              "createdAt": "2026-10-20T04:16:15.000Z",
-              "entryAt": "2026-10-15T09:00:00.000Z",
-              "entryPrice": "6000.25",
-              "exitAt": "2026-10-15T10:00:00.000Z",
-              "exitPrice": "6004.5",
-              "fees": "1.24",
-              "grossPnl": "21.25",
-              "id": "id-45",
-              "importBatchId": null,
-              "notes": "thu",
-              "pnlStatus": "calculated",
-              "quantity": "1",
-              "realizedPnl": "20.01",
-              "reportedPnl": null,
-              "roundTrip": null,
-              "side": "long",
-              "source": "manual",
-              "symbol": "MESZ6",
-              "tradingDay": "2026-10-15",
-              "updatedAt": "2026-10-20T04:16:15.000Z"
-            },
-            {
-              "accountId": "id-34",
-              "brokerTradeId": null,
-              "createdAt": "2026-10-20T04:16:15.000Z",
-              "entryAt": "2026-10-17T09:00:00.000Z",
-              "entryPrice": "6000.25",
-              "exitAt": "2026-10-17T10:00:00.000Z",
-              "exitPrice": "6004.5",
-              "fees": "1.24",
-              "grossPnl": "12.5",
-              "id": "id-46",
-              "importBatchId": null,
-              "notes": "unknown sat",
-              "pnlStatus": "reported",
-              "quantity": "1",
-              "realizedPnl": "11.26",
-              "reportedPnl": "12.5",
-              "roundTrip": null,
-              "side": "long",
-              "source": "manual",
-              "symbol": "XYZ",
-              "tradingDay": "2026-10-19",
-              "updatedAt": "2026-10-20T04:16:15.000Z"
             }
           ]
         }

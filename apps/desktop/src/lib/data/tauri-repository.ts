@@ -38,6 +38,11 @@ import {
   resetResultSchema,
   statusChangeInputSchema,
   accountRulebookAssignmentSchema,
+  assignmentGuardSchema,
+  changeContextSchema,
+  rulebookDraftUpdateSchema,
+  rulebookEventQuerySchema,
+  rulebookEventSchema,
   accountSchema,
   appErrorSchema,
   applicableRulebookQuerySchema,
@@ -57,6 +62,27 @@ import {
   journalEntrySchema,
   tradeInputSchema,
   tradeSchema,
+  archiveInputSchema,
+  attachmentMetaSchema,
+  checklistInputSchema,
+  checklistSchema,
+  deletedTradeSchema,
+  librarySchema,
+  reviewInputSchema,
+  reviewSummarySchema,
+  screenshotDataSchema,
+  screenshotInputSchema,
+  strategyInputSchema,
+  strategySchema,
+  tagInputSchema,
+  tagSchema,
+  tradeChangeOptionsSchema,
+  tradeDetailSchema,
+  tradeReviewSchema,
+  dailyReviewDaySchema,
+  dailyReviewIndexSchema,
+  dailyReviewInputSchema,
+  dailyReviewRefSchema,
 } from "./schemas";
 
 /** The shape of Tauri's `invoke`, injected so the adapter can be tested without a webview. */
@@ -123,8 +149,40 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
     trades: {
       list: (accountId) => call("list_trades", { accountId }, z.array(tradeSchema)),
       create: (input) => call("create_trade", { input: validate(tradeInputSchema, input) }, tradeSchema),
-      update: (id, input) => call("update_trade", { id, input: validate(tradeInputSchema, input) }, tradeSchema),
-      remove: (id) => done("delete_trade", { id }),
+      update: (id, input, options) =>
+        call(
+          "update_trade",
+          { id, input: validate(tradeInputSchema, input), ...(options ? { options: validate(tradeChangeOptionsSchema, options) } : {}) },
+          tradeSchema,
+        ),
+      remove: (id, reason) => done("delete_trade", reason ? { id, reason } : { id }),
+      restore: (accountId, id, reason) => call("restore_trade", { accountId, id, reason: reason ?? null }, tradeSchema),
+      listDeleted: (accountId) => call("list_deleted_trades", { accountId }, z.array(deletedTradeSchema)),
+      detail: (accountId, id) => call("get_trade_detail", { accountId, id }, tradeDetailSchema),
+    },
+    reviews: {
+      get: (accountId, tradeId) => call("get_trade_review", { accountId, tradeId }, tradeReviewSchema.nullable()),
+      save: (input) => call("save_trade_review", { input: validate(reviewInputSchema, input) }, tradeReviewSchema),
+      summaries: (accountId) => call("list_trade_review_summaries", { accountId }, z.array(reviewSummarySchema)),
+      addScreenshot: (input) =>
+        call("add_trade_screenshot", { input: validate(screenshotInputSchema, input) }, attachmentMetaSchema),
+      readScreenshot: (accountId, id) => call("read_trade_screenshot", { accountId, id }, screenshotDataSchema),
+      removeScreenshot: (accountId, id) => done("remove_trade_screenshot", { accountId, id }),
+    },
+    dailyReviews: {
+      getDay: (accountId, tradingDay) => call("get_daily_review", { accountId, tradingDay }, dailyReviewDaySchema),
+      list: (accountId) => call("list_daily_reviews", { accountId }, dailyReviewIndexSchema),
+      save: (input) => call("save_daily_review", { input: validate(dailyReviewInputSchema, input) }, dailyReviewDaySchema),
+      reopen: (ref) => call("reopen_daily_review", { input: validate(dailyReviewRefSchema, ref) }, dailyReviewDaySchema),
+      relinkTrades: (ref) => call("relink_daily_review_trades", { input: validate(dailyReviewRefSchema, ref) }, dailyReviewDaySchema),
+    },
+    library: {
+      load: () => call("get_review_library", {}, librarySchema),
+      saveStrategy: (id, input) => call("save_strategy", { id, input: validate(strategyInputSchema, input) }, strategySchema),
+      saveTag: (id, input) => call("save_tag", { id, input: validate(tagInputSchema, input) }, tagSchema),
+      saveChecklist: (id, input) =>
+        call("save_checklist", { id, input: validate(checklistInputSchema, input) }, checklistSchema),
+      setArchived: (input) => done("set_library_archived", { input: validate(archiveInputSchema, input) }),
     },
     journal: {
       list: (accountId) => call("list_journal_entries", { accountId }, z.array(journalEntrySchema)),
@@ -195,12 +253,37 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
       getVersion: (id) => call("get_rulebook_version", { id }, rulebookVersionDetailSchema),
       getApplicable: (query) =>
         call("get_applicable_rulebook", { query: validate(applicableRulebookQuerySchema, query) }, applicableRulebookSchema),
-      createDraft: (input) =>
-        call("create_rulebook_draft", { input: validate(rulebookDraftInputSchema, input) }, rulebookVersionDetailSchema),
+      createDraft: (input, context) =>
+        call(
+          "create_rulebook_draft",
+          { input: validate(rulebookDraftInputSchema, input), ...(context ? { context: validate(changeContextSchema, context) } : {}) },
+          rulebookVersionDetailSchema,
+        ),
+      updateDraft: (id, expectedUpdatedAt, input, context) =>
+        call(
+          "update_rulebook_draft",
+          { id, expectedUpdatedAt, input: validate(rulebookDraftUpdateSchema, input), context: validate(changeContextSchema, context) },
+          rulebookVersionDetailSchema,
+        ),
+      discardDraft: (id, expectedUpdatedAt, context) =>
+        call("discard_rulebook_draft", { id, expectedUpdatedAt, context: validate(changeContextSchema, context) }, rulebookVersionDetailSchema),
+      listEvents: (query) =>
+        call("list_rulebook_events", { query: validate(rulebookEventQuerySchema, query) }, z.array(rulebookEventSchema)),
       validateDraft: (id) => call("validate_rulebook_draft", { id }, z.array(draftIssueSchema)),
-      publish: (id, reviewer) => call("publish_rulebook_version", { id, reviewer }, rulebookVersionDetailSchema),
-      assign: (input) =>
-        call("assign_rulebook_to_account", { input: validate(assignmentInputSchema, input) }, accountRulebookAssignmentSchema),
+      publish: (id, reviewer, options) =>
+        call(
+          "publish_rulebook_version",
+          options
+            ? { id, reviewer, expectedUpdatedAt: options.expectedUpdatedAt, context: validate(changeContextSchema, options.context) }
+            : { id, reviewer },
+          rulebookVersionDetailSchema,
+        ),
+      assign: (input, guard) =>
+        call(
+          "assign_rulebook_to_account",
+          { input: validate(assignmentInputSchema, input), ...(guard ? { guard: validate(assignmentGuardSchema, guard) } : {}) },
+          accountRulebookAssignmentSchema,
+        ),
       listAssignments: (accountId) =>
         call("list_account_rulebook_assignments", { accountId }, z.array(accountRulebookAssignmentSchema)),
       flagSourceConflict: (input) =>

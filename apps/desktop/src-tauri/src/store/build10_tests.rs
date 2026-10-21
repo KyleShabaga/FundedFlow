@@ -133,8 +133,8 @@ fn snapshot(account_id: &str) -> SnapshotInput {
         inputs_hash: "abc123".into(),
         fees_included: true,
         unrealized_included: false,
-        balance: "50212.5".into(),
-        realized_day_pnl: "212.5".into(),
+        balance: Some("50212.5".into()),
+        realized_day_pnl: Some("212.5".into()),
         unrealized_pnl: None,
         daily_loss_limit: Some("1000".into()),
         daily_loss_remaining: Some("1212.5".into()),
@@ -142,9 +142,9 @@ fn snapshot(account_id: &str) -> SnapshotInput {
         high_water_mark: Some("50212.5".into()),
         drawdown_floor: Some("48212.5".into()),
         drawdown_headroom: Some("2000".into()),
-        drawdown_locked: false,
+        drawdown_locked: Some(false),
         profit_target: Some("3000".into()),
-        trading_days_completed: 1,
+        trading_days_completed: Some(1),
         trading_days_required: Some(5),
         status: "safe".into(),
         status_reasons: vec![],
@@ -206,7 +206,7 @@ fn end_of_day_snapshots_are_idempotent_and_listed_newest_first() {
     let first = snapshots::save(&mut conn, snapshot(&a.id)).unwrap();
     let again = snapshots::save(&mut conn, snapshot(&a.id)).unwrap();
     assert_eq!(first.id, again.id, "same inputs, same end-of-day row");
-    assert_eq!(first.balance, "50212.5");
+    assert_eq!(first.balance.as_deref(), Some("50212.5"));
     assert_eq!(first.explanation["steps"][0], "balance = start + pnl");
     // New inputs make a new row; intraday rows are never merged.
     let changed = snapshots::save(&mut conn, SnapshotInput { inputs_hash: "def".into(), ..snapshot(&a.id) }).unwrap();
@@ -240,7 +240,7 @@ fn snapshots_validate_scope_and_never_invent_figures() {
         engine_version: " ".into(),
         inputs_hash: "".into(),
         explanation: json!({}),
-        balance: "lots".into(),
+        balance: Some("lots".into()),
         data_as_of: Some("noon".into()),
         ..snapshot(&a.id)
     };

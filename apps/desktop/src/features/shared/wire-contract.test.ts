@@ -8,6 +8,7 @@ import { createTauriRepository } from "../../lib/data/tauri-repository";
 import { readAccountHistory, readAccountLineage, readAccounts, readDeletionPreview } from "../accounts/api/accounts";
 import { readImportHistory, readImportProblemRows } from "../imports/api/imports";
 import { readLatestSnapshot, readSnapshots } from "../insights/api/snapshots";
+import { readDailyReviewDay, readDailyReviewIndex } from "../daily-reviews/api/daily-reviews";
 import { readJournal } from "../journal/api/journal";
 import { readLedger, readLedgerBalance } from "../ledger/api/ledger";
 import { readSettings } from "../settings/api/settings";
@@ -18,6 +19,7 @@ type PerAccount = {
   accountId: string; history: unknown; lineage: unknown; deletionPreview: unknown; trades: unknown[]; journal: unknown[];
   imports: { id: string }[]; problemRows: { batchId: string; rows: unknown[] }[]; ledger: unknown[]; balanceAdjustment: string;
   snapshots: unknown[]; latestSnapshot: unknown;
+  dailyReviews: { reviews: { tradingDay: string }[] }; dailyReviewDays: { tradingDay: string }[];
 };
 type Journal = { accounts: { id: string }[]; perAccount: PerAccount[]; settings: unknown[] };
 const fixture = wire as unknown as { journals: Record<string, Journal> };
@@ -52,6 +54,8 @@ function answer(journal: Journal) {
       case "list_account_snapshots": return per(id).snapshots;
       case "get_latest_account_snapshot": return per(id).latestSnapshot;
       case "list_settings": return journal.settings;
+      case "list_daily_reviews": return per(id).dailyReviews;
+      case "get_daily_review": return per(id).dailyReviewDays.find(d => d.tradingDay === args.tradingDay);
       default: throw new Error(`unexpected command ${command}`);
     }
   };
@@ -92,6 +96,9 @@ describe.each(Object.entries(fixture.journals))("Rust payloads from the %s journ
       expect(snapshots).toHaveLength(p.snapshots.length);
       for (const snapshot of snapshots) expect(snapshot.currency).toBeNull();
       await readLatestSnapshot(id);
+      const reviews = (await readDailyReviewIndex(id)).value;
+      expect(reviews.reviews).toHaveLength(p.dailyReviews.reviews.length);
+      for (const r of reviews.reviews) expect((await readDailyReviewDay(id, r.tradingDay)).value.review?.id).toBe(r.id);
     }
   });
 });
@@ -105,4 +112,5 @@ it("covers the records a fresh journal can hold", () => {
   expect(all.some(p => p.snapshots.length > 1)).toBe(true);
   expect(all.some(p => (p.lineage as unknown[]).length > 1)).toBe(true);
   expect(fresh.settings.length).toBeGreaterThan(0);
+  expect(all.some(p => p.dailyReviews.reviews.length > 1)).toBe(true);
 });

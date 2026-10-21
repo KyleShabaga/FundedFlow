@@ -1,0 +1,31 @@
+/*
+ * Daily review (Build 22). Structure follows docs/design/screens/14-daily-review.md; values come from tokens.css and
+ * components from the design system. Shares the Journal's jr-* pieces (crumbs, checklist rows, form actions).
+ */
+.dr-page { display: grid; gap: var(--space-4); max-width: 1200px; min-width: 0; grid-template-columns: minmax(0, 1fr); font-family: var(--font-sans); color: var(--ink); }
+.dr-head { display: grid; gap: var(--space-2); }
+.dr-title { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.dr-title h2 { margin: 0; font: 600 22px/28px var(--font-display); }
+.dr-nav { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.dr-chooser { display: inline-flex; align-items: flex-start; gap: var(--space-2); }
+.dr-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); }
+.dr-fact { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.dr-disclaimer { grid-column: 1 / -1; margin: 0; font-size: 12.5px; }
+.dr-form { display: grid; gap: var(--space-4); min-width: 0; }
+.dr-body { display: grid; gap: var(--space-4); min-width: 0; border: 0; padding: 0; margin: 0; }
+.dr-body > section { padding: var(--space-4); border: 1px solid var(--line-100); border-radius: var(--radius-md); background: var(--bg-100); }
+.dr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-3); align-items: start; }
+.dr-status { margin: 0; color: var(--ink-muted); font-size: 12.5px; }
+.dr-status:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; border-radius: var(--radius-sm); }
+.dr-actions { position: sticky; bottom: 0; padding: var(--space-3) 0; background: var(--bg-000); border-top: 1px solid var(--line-100); z-index: 1; }
+.dr-history summary { cursor: pointer; font-weight: 600; }
+.dr-events { margin: var(--space-2) 0 0; padding-left: var(--space-4); display: grid; gap: 4px; }
+
+/* Journal and Library entry points */
+.dr-day-review { display: inline-flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.dr-day-only { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.dr-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.dr-list-item { display: grid; gap: var(--space-2); }
+.dr-list-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.dr-list-head .dr-spacer { flex: 1; }
+.dr-changes { margin: 0 0 var(--space-2); padding-left: 1.2em; display: grid; gap: 4px; }

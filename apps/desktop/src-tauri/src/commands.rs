@@ -12,8 +12,9 @@ use crate::store::accounts::{self, Account, AccountHistory, AccountInput, Status
 use crate::store::attempts::{self, AttemptSummary, DeletionPreview, ResetInput, ResetResult};
 use crate::error::FieldIssue;
 use crate::rulebook::{
-    AccountRulebookAssignment, ApplicableRulebook, ApplicableRulebookQuery, AssignmentInput, RuleClaim, Rulebook,
-    RulebookDraftInput, RulebookVersionDetail, SourceConflictInput,
+    AccountRulebookAssignment, ApplicableRulebook, ApplicableRulebookQuery, AssignmentGuard, AssignmentInput,
+    ChangeContext, RuleClaim, Rulebook, RulebookDraftInput, RulebookDraftUpdate, RulebookEvent, RulebookEventQuery,
+    RulebookVersionDetail, SourceConflictInput,
 };
 use crate::catalogue::{AccountCatalogueLink, AccountPhaseEvent, CatalogueVersion};
 use crate::store::catalogue::{self as catalogue_store, AccountLinkInput, CatalogueSnapshot, PhaseEventInput};
@@ -25,7 +26,11 @@ use crate::store::settings::{self, Setting};
 use crate::store::snapshots::{self, Snapshot, SnapshotInput};
 use crate::store::journal::{self, JournalEntry, JournalEntryInput};
 use crate::store::rulebooks;
-use crate::store::trades::{self, Trade, TradeInput};
+use crate::store::trades::{self, DeletedTrade, Trade, TradeChangeOptions, TradeDetail, TradeInput};
+use crate::store::attachments::{self, AttachmentMeta, ScreenshotData, ScreenshotInput};
+use crate::store::library::{self, ArchiveInput, Checklist, ChecklistInput, Library, Strategy, StrategyInput, Tag, TagInput};
+use crate::store::reviews::{self, ReviewInput, ReviewSummary, TradeReview};
+use crate::error::AppError;
 use crate::runtime::{Runtime, RuntimeStatus};
 
 #[tauri::command]
@@ -99,14 +104,99 @@ pub async fn create_trade(db: State<'_, Runtime>, input: TradeInput) -> AppResul
     db.with(|c| trades::create(c, input))
 }
 
+/// `options` (Build 20) guards against a stale edit and records a reason; without it the call behaves as before.
+/// Every change is recorded in the trade's correction history.
 #[tauri::command]
-pub async fn update_trade(db: State<'_, Runtime>, id: String, input: TradeInput) -> AppResult<Trade> {
-    db.with(|c| trades::update(c, &id, input))
+pub async fn update_trade(
+    db: State<'_, Runtime>,
+    id: String,
+    input: TradeInput,
+    options: Option<TradeChangeOptions>,
+) -> AppResult<Trade> {
+    db.with(|c| trades::update_with(c, &id, input, options.unwrap_or_default()))
 }
 
 #[tauri::command]
-pub async fn delete_trade(db: State<'_, Runtime>, id: String) -> AppResult<()> {
-    db.with(|c| trades::delete(c, &id))
+pub async fn delete_trade(db: State<'_, Runtime>, id: String, reason: Option<String>) -> AppResult<()> {
+    db.with(|c| trades::delete_with(c, &id, reason))
+}
+
+#[tauri::command]
+pub async fn restore_trade(db: State<'_, Runtime>, account_id: String, id: String, reason: Option<String>) -> AppResult<Trade> {
+    db.with(|c| trades::restore_deleted(c, &account_id, &id, reason))
+}
+
+#[tauri::command]
+pub async fn list_deleted_trades(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<DeletedTrade>> {
+    db.with(|c| trades::list_deleted(c, &account_id))
+}
+
+#[tauri::command]
+pub async fn get_trade_detail(db: State<'_, Runtime>, account_id: String, id: String) -> AppResult<TradeDetail> {
+    db.with(|c| trades::detail(c, &account_id, &id))
+}
+
+#[tauri::command]
+pub async fn get_trade_review(db: State<'_, Runtime>, account_id: String, trade_id: String) -> AppResult<Option<TradeReview>> {
+    let root = db.data_dir();
+    db.with(|c| reviews::get(c, root.as_deref(), &account_id, &trade_id))
+}
+
+#[tauri::command]
+pub async fn save_trade_review(db: State<'_, Runtime>, input: ReviewInput) -> AppResult<TradeReview> {
+    let root = db.data_dir();
+    db.with(|c| reviews::save(c, root.as_deref(), input))
+}
+
+#[tauri::command]
+pub async fn list_trade_review_summaries(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<ReviewSummary>> {
+    db.with(|c| reviews::summaries(c, &account_id))
+}
+
+fn attachment_root(db: &Runtime) -> AppResult<std::path::PathBuf> {
+    db.data_dir().ok_or_else(|| AppError::Unavailable { message: "the data folder is not available".into() })
+}
+
+#[tauri::command]
+pub async fn add_trade_screenshot(db: State<'_, Runtime>, input: ScreenshotInput) -> AppResult<AttachmentMeta> {
+    let root = attachment_root(&db)?;
+    db.with(|c| attachments::add(c, &root, input))
+}
+
+#[tauri::command]
+pub async fn read_trade_screenshot(db: State<'_, Runtime>, account_id: String, id: String) -> AppResult<ScreenshotData> {
+    let root = attachment_root(&db)?;
+    db.with(|c| attachments::read(c, &root, &account_id, &id))
+}
+
+#[tauri::command]
+pub async fn remove_trade_screenshot(db: State<'_, Runtime>, account_id: String, id: String) -> AppResult<()> {
+    db.with(|c| attachments::remove(c, &account_id, &id))
+}
+
+#[tauri::command]
+pub async fn get_review_library(db: State<'_, Runtime>) -> AppResult<Library> {
+    db.with(|c| library::load(c))
+}
+
+#[tauri::command]
+pub async fn save_strategy(db: State<'_, Runtime>, id: Option<String>, input: StrategyInput) -> AppResult<Strategy> {
+    db.with(|c| library::save_strategy(c, id.as_deref(), input))
+}
+
+#[tauri::command]
+pub async fn save_tag(db: State<'_, Runtime>, id: Option<String>, input: TagInput) -> AppResult<Tag> {
+    db.with(|c| library::save_tag(c, id.as_deref(), input))
+}
+
+#[tauri::command]
+pub async fn save_checklist(db: State<'_, Runtime>, id: Option<String>, input: ChecklistInput) -> AppResult<Checklist> {
+    db.with(|c| library::save_checklist(c, id.as_deref(), input))
+}
+
+#[tauri::command]
+pub async fn set_library_archived(db: State<'_, Runtime>, input: ArchiveInput) -> AppResult<()> {
+    db.with(|c| library::set_archived(c, input))
 }
 
 #[tauri::command]
@@ -170,8 +260,40 @@ pub async fn get_applicable_rulebook(db: State<'_, Runtime>, query: ApplicableRu
 }
 
 #[tauri::command]
-pub async fn create_rulebook_draft(db: State<'_, Runtime>, input: RulebookDraftInput) -> AppResult<RulebookVersionDetail> {
-    db.with(|c| rulebooks::create_draft(c, input))
+pub async fn create_rulebook_draft(
+    db: State<'_, Runtime>,
+    input: RulebookDraftInput,
+    context: Option<ChangeContext>,
+) -> AppResult<RulebookVersionDetail> {
+    db.with(|c| rulebooks::create_draft_with(c, input, context.unwrap_or_else(ChangeContext::local)))
+}
+
+/// Build 19: save a draft's content; a stale `expected_updated_at` is a conflict.
+#[tauri::command]
+pub async fn update_rulebook_draft(
+    db: State<'_, Runtime>,
+    id: String,
+    expected_updated_at: String,
+    input: RulebookDraftUpdate,
+    context: ChangeContext,
+) -> AppResult<RulebookVersionDetail> {
+    db.with(|c| rulebooks::update_draft(c, &id, &expected_updated_at, input, context))
+}
+
+/// Build 19: set a draft aside (rejected, kept in history).
+#[tauri::command]
+pub async fn discard_rulebook_draft(
+    db: State<'_, Runtime>,
+    id: String,
+    expected_updated_at: String,
+    context: ChangeContext,
+) -> AppResult<RulebookVersionDetail> {
+    db.with(|c| rulebooks::discard_draft(c, &id, &expected_updated_at, context))
+}
+
+#[tauri::command]
+pub async fn list_rulebook_events(db: State<'_, Runtime>, query: RulebookEventQuery) -> AppResult<Vec<RulebookEvent>> {
+    db.with(|c| rulebooks::list_events(c, &query))
 }
 
 #[tauri::command]
@@ -184,13 +306,21 @@ pub async fn publish_rulebook_version(
     db: State<'_, Runtime>,
     id: String,
     reviewer: Option<String>,
+    expected_updated_at: Option<String>,
+    context: Option<ChangeContext>,
 ) -> AppResult<RulebookVersionDetail> {
-    db.with(|c| rulebooks::publish(c, &id, reviewer))
+    db.with(|c| {
+        rulebooks::publish_with(c, &id, reviewer, expected_updated_at.as_deref(), context.unwrap_or_else(ChangeContext::local))
+    })
 }
 
 #[tauri::command]
-pub async fn assign_rulebook_to_account(db: State<'_, Runtime>, input: AssignmentInput) -> AppResult<AccountRulebookAssignment> {
-    db.with(|c| rulebooks::assign(c, input))
+pub async fn assign_rulebook_to_account(
+    db: State<'_, Runtime>,
+    input: AssignmentInput,
+    guard: Option<AssignmentGuard>,
+) -> AppResult<AccountRulebookAssignment> {
+    db.with(|c| rulebooks::assign_with(c, input, guard))
 }
 
 #[tauri::command]
@@ -486,4 +616,33 @@ pub async fn permanently_delete_data(db: State<'_, Runtime>, request: crate::dat
 #[tauri::command]
 pub async fn retry_data_cleanup(db: State<'_, Runtime>) -> crate::data_controls::Result<()> {
     db.with_controls(|c, root| crate::data_controls::recover_cleanup(c, root))
+}
+
+use crate::store::daily_reviews::{self, DailyReviewDay, DailyReviewIndex, DailyReviewInput, DailyReviewRef};
+
+/// Build 22: one trading day of an account with its daily review (if any), its trades and their link status.
+#[tauri::command]
+pub async fn get_daily_review(db: State<'_, Runtime>, account_id: String, trading_day: String) -> AppResult<DailyReviewDay> {
+    db.with(|c| daily_reviews::get_day(c, &account_id, &trading_day))
+}
+
+/// Build 22: an account's daily reviews, its current trading day and legacy day notes.
+#[tauri::command]
+pub async fn list_daily_reviews(db: State<'_, Runtime>, account_id: String) -> AppResult<DailyReviewIndex> {
+    db.with(|c| daily_reviews::list(c, &account_id))
+}
+
+#[tauri::command]
+pub async fn save_daily_review(db: State<'_, Runtime>, input: DailyReviewInput) -> AppResult<DailyReviewDay> {
+    db.with(|c| daily_reviews::save(c, input))
+}
+
+#[tauri::command]
+pub async fn reopen_daily_review(db: State<'_, Runtime>, input: DailyReviewRef) -> AppResult<DailyReviewDay> {
+    db.with(|c| daily_reviews::reopen(c, input))
+}
+
+#[tauri::command]
+pub async fn relink_daily_review_trades(db: State<'_, Runtime>, input: DailyReviewRef) -> AppResult<DailyReviewDay> {
+    db.with(|c| daily_reviews::relink_trades(c, input))
 }

@@ -87,6 +87,16 @@
 .ds-fieldgroup-body { display: grid; gap: var(--space-3); }
 .ds-fieldgroup-body.is-inline { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: start; }
 
+/* ChipGroup */
+.ds-chips-list { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.ds-chip { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; border: 1px solid var(--line-200); background: transparent; color: var(--ink-muted); border-radius: 999px; padding: 4px 12px; font: 500 12.5px/16px var(--font-sans); cursor: pointer; }
+.ds-chip:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-faint); }
+.ds-chip:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.ds-chip:disabled { opacity: .45; cursor: not-allowed; }
+.ds-chip.is-on { background: var(--flow-soft); border-color: var(--flow); color: var(--flow); }
+.ds-chips.is-warn .ds-chip.is-on { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.ds-chips-empty { font-size: 12.5px; }
+
 /* Select (Radix) */
 .ds-select-trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: var(--space-2); text-align: left; cursor: pointer; }
 .ds-select-trigger[data-placeholder] { color: var(--ink-faint); }

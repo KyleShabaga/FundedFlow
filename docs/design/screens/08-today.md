@@ -35,3 +35,17 @@ discrepancy with the firm dashboard, calculation error, mixed multi-account stat
 - Failed, passed, closed and archived attempts stay out of Today; a reset attempt starts Unknown.
 - No risk formulas in React: values come from Build 16 snapshots via Build 14 hooks.
 - Rule display follows `RuleState` ([components.md](../components.md#rulestate)).
+
+## As built (Build 21)
+Details, traceability and the "current" rules: [build-21-today.md](../../architecture/build-21-today.md).
+- The selected account is the header's active account; the all-accounts cards appear when there are several active
+  attempts (or none is chosen) and switch it only on **Show**. Failed, passed, closed, paused and archived attempts
+  are listed under "Not in today's risk".
+- A saved estimate counts as current only for the Rust trading day now, with unchanged inputs, nothing dated after
+  its cutoff and the same rulebook version; otherwise the headline is Unknown (a recorded Stop stays Stop) and the
+  figures say "Not current".
+- **Verify balance** records a user-reported checkpoint and can run the exact Build 15.5 comparison. **Review
+  session** (Build 22) opens the selected account's daily review for its current trading day as Rust reports it
+  (`list_daily_reviews`); it reads "Continue review" when that day has a draft and "Open review" when it is completed,
+  and is unavailable with its reason while the day can't be read. It never waits for, refreshes or changes the risk
+  estimate. The equity curve with the floor is not drawn (no floor series stored).

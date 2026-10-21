@@ -230,3 +230,72 @@ export type ApplicableRulebook = z.infer<typeof applicableRulebookSchema>;
 
 export const draftIssueSchema = z.strictObject({ field: z.string(), message: z.string() });
 export type DraftIssue = z.infer<typeof draftIssueSchema>;
+
+// ---------------------------------------------------------------------------
+// Build 19: draft editing, guarded writes and the audit log
+// ---------------------------------------------------------------------------
+
+/** A draft's new content. Its rulebook, number and the version it supersedes stay. */
+export const rulebookDraftUpdateSchema = z.strictObject({
+  changeReason: z.string().max(2_000).nullable(),
+  capturedAt: catalogueInstant,
+  effectiveFrom: catalogueInstant.nullable(),
+  effectiveTo: catalogueInstant.nullable(),
+  rules: z.array(ruleDefinitionInputSchema),
+  applicability: z.array(
+    z.strictObject({ catalogueVersionId: catalogueId, programmePhaseId: catalogueId, phasePathId: catalogueId.nullable() }),
+  ),
+});
+export type RulebookDraftUpdate = z.infer<typeof rulebookDraftUpdateSchema>;
+
+/** Who acts and why, for the audit log: a local label, not an authenticated identity. */
+export const changeContextSchema = z.strictObject({
+  actor: z.string().trim().min(1).max(200),
+  reason: z.string().max(2_000).nullable(),
+});
+export type ChangeContext = z.infer<typeof changeContextSchema>;
+
+/**
+ * What the caller saw when deciding to assign: the account's open assignment
+ * (null: none). If another assignment is open now, the write is a conflict.
+ */
+export const assignmentGuardSchema = z.strictObject({
+  expectedOpenAssignmentId: z.string().min(1).nullable(),
+  actor: z.string().trim().min(1).max(200),
+  reason: z.string().max(2_000).nullable(),
+});
+export type AssignmentGuard = z.infer<typeof assignmentGuardSchema>;
+
+export const rulebookEventActions = [
+  "draft_created",
+  "draft_saved",
+  "draft_discarded",
+  "published",
+  "verified",
+  "assigned",
+  "conflict_flagged",
+] as const;
+export type RulebookEventAction = (typeof rulebookEventActions)[number];
+
+/** One append-only audit row (migration 15). */
+export const rulebookEventSchema = z.strictObject({
+  id: z.string().min(1),
+  rulebookId: catalogueId,
+  rulebookVersionId: rulebookRecordId,
+  accountId: z.string().min(1).nullable(),
+  assignmentId: z.string().min(1).nullable(),
+  action: z.enum(rulebookEventActions),
+  actor: z.string().min(1),
+  reason: z.string().nullable(),
+  occurredAt: catalogueInstant,
+});
+export type RulebookEvent = z.infer<typeof rulebookEventSchema>;
+
+/** Events of one rulebook, or about one account (its assignments and private rulebooks). Exactly one is given. */
+export const rulebookEventQuerySchema = z
+  .strictObject({ rulebookId: catalogueId.nullable(), accountId: z.string().min(1).nullable() })
+  .refine((q) => (q.rulebookId === null) !== (q.accountId === null), {
+    path: ["rulebookId"],
+    message: "Give either a rulebook or an account",
+  });
+export type RulebookEventQuery = z.infer<typeof rulebookEventQuerySchema>;

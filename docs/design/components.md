@@ -25,6 +25,7 @@ Build 13 added the patterns below; props and usage are in [`../design-system.md`
 | Component | Used on |
 |---|---|
 | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select`, `FieldGroup`, `FormSection`, `ValidationSummary` | Accounts, rulebook editor, trade editor, Import options, Settings |
+| `ChipGroup` (Build 20) | Trade review setup, mistake and mindset tags |
 | `IconButton`, `SegmentedControl` | Pagers, row menus, Table/Cards and filter switches |
 | `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `DropdownMenu`, `Tooltip` | Editors, destructive confirmations, calculation breakdowns, column chooser, row menus |
 | `InlineNotice`, `ToastProvider`/`useToast`, `StatusIndicator` | Every screen |
@@ -39,8 +40,9 @@ Build 13 added the patterns below; props and usage are in [`../design-system.md`
 ## Build 6 component plan (owned by feature cards)
 
 `AccountContextBar`, `GlobalFreshnessIndicator` (12/21), `AccountHealthCard`, `RiskStatusBadge` (Safe / Caution /
-Stop / Unknown, text + icon + colour), `RiskMetricCard`, `DataFreshnessBadge`, `CalculationBreakdownDrawer` (21),
-`RuleVersionTimeline`, `CalculationPreview` (19), `ColumnMappingTable`, `ValidationIssueList`, `DuplicateReview`,
+Stop / Unknown, text + icon + colour), `RiskMetricCard`, `DataFreshnessBadge`, `CalculationBreakdownDrawer` (21: built
+from `StatusIndicator`, `MetricCard`, `StatList` and `Drawer` in `features/today`, no new primitives),
+`RuleVersionTimeline`, `CalculationPreview` (19: built as the Activity tab, `VersionComparison`, `EvidencePreview` and `CalculationExplanation` in `features/rulebooks`), `ColumnMappingTable`, `ValidationIssueList`, `DuplicateReview`,
 `ImportSummary` (18), `TradeEditor`, `ChecklistReview`, `AttachmentManager`, `SessionReviewForm` (20, 22),
 `FilterBar`, `ChartPanel`, `ContributingTradesDrawer` (23), `BackupRestorePanel`, `DestructiveActionDialog` (25).
 Build 13 also owns the async-state set: `LoadingState`, `EmptyState`, `ErrorState`, `UnavailableState`,

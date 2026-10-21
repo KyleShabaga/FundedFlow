@@ -1,7 +1,7 @@
 # FundedFlow local data model
 
-Status: V1, schema version 14 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql` and `0014_financial_evidence.sql`; see [Migrations](#database-location-and-migrations)).
-Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks),
+Status: V1, schema version 18 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`) `0017_trade_reviews.sql` and `0018_daily_reviews.sql`; see [Migrations](#database-location-and-migrations)).
+Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks, reviews, library, attachments),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
 
@@ -65,7 +65,9 @@ that feeds the same `trades` table.
 |---|---|
 | **Implemented** (commands, store code and tests) | `accounts`, `firms` (find-or-create by name), `account_status_events` (written on create and status change), `instruments` (seeded by 0002, read-only), `trades`, `trade_round_trips`, `import_batches`, `import_rows`, `journal_entries`, `tags`, `journal_entry_tags`, and the [rulebooks](#rulebooks): `rulebooks`, `rulebook_versions`, `rule_definitions`, `rule_claims`, `rule_applicability`, `account_rulebook_assignments` |
 | **Implemented** (Builds 10 and 15.5) | `settings`, `account_ledger_entries`, `account_snapshots`, `financial_observations`, `ledger_revisions`, `financial_reconciliations`, `reconciliation_resolutions`; see [financial evidence](#financial-evidence-and-reconciliation-build-155) |
-| **Reserved** (created and constraint-tested in 0001, no commands) | `app_meta` (journal_id etc. not yet written), `programmes`, `csv_mapping_profiles`, `strategies`, `checklists`, `checklist_items`, `checklist_results`, `trade_reviews`, `trade_review_tags`, `attachments`, `attachment_links`, `audit_events`, `sync_outbox` (inert) |
+| **Implemented** (Build 20; see [Trade journal and reviews](#trade-journal-and-reviews-build-20)) | `trade_corrections` (migration 17), `trade_reviews`, `trade_review_tags`, `checklist_results`, `strategies`, `checklists`, `checklist_items`, `tags` (review kinds and archive), `attachments` and `attachment_links` (trade screenshots) |
+| **Implemented** (Build 22; see [Daily reviews](#daily-reviews-build-22)) | `daily_reviews`, `daily_review_answers`, `daily_review_trades`, `daily_review_events` (migration 18) |
+| **Reserved** (created and constraint-tested in 0001, no commands) | `app_meta` (journal_id etc. not yet written), `programmes`, `csv_mapping_profiles`, `audit_events`, `sync_outbox` (inert); `checklist_results.journal_entry_id` and `attachment_links.journal_entry_id` (still unused: daily reviews keep their answers in `daily_review_answers`, see Build 22) |
 | **Implemented** (Builds 9/10 authoring and read commands; not merely schema) | provider catalogue: `providers`, `programme_families`, `programme_variants`, `catalogue_versions`, `catalogue_version_sources`, `catalogue_field_claims`, `catalogue_sources`, `programme_phases`, `phase_paths`, `commercial_offers`, `commercial_offer_sources`, `promotions`, `promotion_sources`, `promotion_offers`, `account_phase_events`, and the `accounts` link columns; see [Provider catalogue](#provider-catalogue). The account store keeps `providers` in step with `firms` (`provider_for_firm`). |
 | **Legacy, kept unchanged** | `legacy_account_rulebook_versions`, `legacy_account_rules`: the 0001 account-owned rulebook tables, renamed by migration 9 and converted by step 10. No code writes them. |
 | **Not in the schema** (future extensions) | `executions`, `execution_fees`, `trade_executions` (execution-first) |
@@ -293,11 +295,38 @@ until a correction supersedes it.
 - A phase or path given with an assignment must be one the version applies to.
 
 **Publication.** `publish_rulebook_version(id, reviewer)` moves one step at a time:
-- a draft goes to `needs_review`, without a reviewer;
+- a draft goes to `needs_review`, without a reviewer; for an account-private rulebook this also records the user's
+  confirmation in `user_confirmed_at` (Build 19), which the Build 16 engine requires before it evaluates private rules;
 - a catalogue version in review goes to `verified`. That needs a reviewer, at least one applicability row and
   no conflicting claim.
 
 `validate_rulebook_draft` returns what would stop the next step.
+
+### Editing, guarded writes and the audit log (Build 19)
+
+Store: `store/rulebooks.rs`; tests: `db/rulebook_editor_tests.rs`; table: `migrations/0016_rulebook_events.sql` (migration 16).
+
+- **Revision.** A version's `updated_at` is its revision. Every write that changes a version sets it to now, but
+  always at least one millisecond later than before, so two saves in one millisecond still differ.
+- **`update_rulebook_draft(id, expectedUpdatedAt, input, context)`** replaces a never-published draft's rules,
+  applicability, provider-stated dates, captured time and reason in one transaction (its rules' claims go with
+  them). The rulebook, number and superseded version stay. A different `expectedUpdatedAt`, or a version that is
+  no longer a draft, is a **conflict**: nothing is written. Validation is the same as for a new draft.
+- **`discard_rulebook_draft(id, expectedUpdatedAt, context)`** moves a draft to `rejected` with a required
+  reason. It is kept, listed with the versions and can never be published. Nothing is deleted.
+- **`publish_rulebook_version(id, reviewer?, expectedUpdatedAt?, context?)`**: the optional arguments refuse a
+  version changed since it was read. Publishing a draft that supersedes `S` is a **conflict** when another
+  version of the rulebook newer than `S` has been published meanwhile (the draft is stale; start again from the
+  newest version). Old callers without the new arguments behave as before.
+- **`assign_rulebook_to_account(input, guard?)`**: the guard names the open assignment the caller saw
+  (`expectedOpenAssignmentId`, null for none) and the actor and reason. A different open assignment is a
+  **conflict**, so a stale window never ends an assignment it did not show.
+- **Audit log.** `rulebook_events` is append-only (no update; no delete while the rulebook exists): one row per
+  draft created, saved or discarded, version published or verified, assignment (with its id and account), and
+  source conflict, with the actor label and reason. Resets that assign a rulebook log it too. Actor labels are
+  local and unauthenticated (`local_user`). `list_rulebook_events({ rulebookId } | { accountId })` reads them
+  oldest first; the account query also returns the events of the account's private rulebooks. Nothing was
+  backfilled: versions and assignments from before v16 keep only their own timestamps.
 
 ## Conventions
 
@@ -319,7 +348,8 @@ until a correction supersedes it.
 | Mark failed / change status | `change_account_status` records the new status with the user's effective time, optional `cause` (the user's words; none means unknown) and notes in `account_status_events`. It never archives, deletes or resets, and infers no rule breach. An archived account must be restored first. |
 | Evaluation reset | `reset_account_attempt` creates a **new account** (new id) linked to the previous attempt. See [Account lifecycle](#account-lifecycle-attempts-archive-and-history). |
 | Permanent delete | **Not implemented** (Builds 24–25). `preview_account_deletion` is read-only and lists what one account holds and what blocks deleting it. The schema's `ON DELETE CASCADE` remains for that future flow, but attempt links and phase events use `ON DELETE RESTRICT`, so an account in a reset chain cannot be hard-deleted. |
-| Delete trade | Soft delete (`deleted_at`). Hidden from lists; any journal entry linking to it has `trade_id` cleared in the same transaction. The row keeps its `dedup_key`; re-importing its CSV row restores this same trade (see [Duplicate detection](#duplicate-detection)). |
+| Delete trade | Soft delete (`deleted_at`). Hidden from lists; any journal entry linking to it has `trade_id` cleared in the same transaction. The row keeps its `dedup_key`; re-importing its CSV row restores this same trade (see [Duplicate detection](#duplicate-detection)). Its review, checklist answers and screenshots are kept and return with it; `restore_trade` undoes a delete. Both are recorded in `trade_corrections`. |
+| Correct trade | `update_trade` replaces the editable fields and re-derives trading day and P&L. The original CSV row and source fills never change. Each change is a `trade_corrections` row with the old and new stored values (Build 20). |
 | Delete journal entry | Hard delete; tag links cascade. |
 | Journal ↔ trade | A journal entry may link only to a non-deleted trade **of the same account** (validated in Rust, enforced by triggers). |
 | Trade ↔ account | A trade never moves between accounts; account and import provenance are immutable (trigger). |
@@ -468,6 +498,10 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 12 | `snapshot_rulebook_fk` | SQL | Rebuilds `account_snapshots` so `rulebook_version_id` references the reusable `rulebook_versions` (migration 9's rename had left it pointing at `legacy_account_rulebook_versions`, so no snapshot of an account on a reusable rulebook could be stored). Rows are kept; a reference to an id that was never converted becomes null; the key is `RESTRICT` instead of `CASCADE` |
 | 13 | `account_offer_selections` | SQL | Append-only `account_offer_selections`: the offer and promotion an account was bought under, with a frozen JSON copy of the terms and provenance. Offer, promotion and version keys are `RESTRICT`. Changes no other rows |
 | 14 | `financial_evidence` | SQL | Dedicated immutable financial observations, ledger revisions (including migration-time current-state baseline), frozen reconciliations and append-only review resolutions. No inferred financial history or calculated snapshot changes |
+| 15 | `nullable_engine_snapshots` | SQL | Build 16: rebuilds `account_snapshots` keeping every row, id, key and index, so `balance`, `realized_day_pnl`, `trading_days_completed` and `drawdown_locked` can be NULL (unknown); calculated rows become immutable |
+| 16 | `rulebook_events` | Rust | Build 19: the append-only [rulebook audit log](#editing-guarded-writes-and-the-audit-log-build-19) (`0016_rulebook_events.sql`, idempotent). Builds 16 and 19 were built in parallel and both numbered their migration 15; neither shipped. A journal that reached 15 on the Build 19 branch has the audit log but not the nullable snapshots, so this step first applies the migration 15 rebuild when `account_snapshots.balance_micros` is still NOT NULL, then creates the log if missing. Nothing backfilled |
+| 17 | `trade_reviews` | SQL | Build 20: append-only `trade_corrections`; `trade_reviews` gains `account_id` (filled from the trade), `revision` and strategy/checklist label snapshots; `trade_review_tags` gains label and kind snapshots; `tags.archived_at`, `checklists.description_md`; `attachments` gains `account_id`, `width`, `height`. Same-account and append-only triggers. Changes no other rows. See [Trade journal and reviews](#trade-journal-and-reviews-build-20) |
+| 18 | `daily_reviews` | SQL | Build 22: `daily_reviews` (unique per account and trading day, revision, plan with authored time and timing, reflection, no-trade day, daily checklist snapshot, completion fields), `daily_review_answers` (item label and order snapshots), `daily_review_trades` (links by trade id with the values saved), append-only `daily_review_events`. New tables only; no existing row changes and no journal entry becomes a review. See [Daily reviews](#daily-reviews-build-22) |
 
 How an upgrade runs:
 
@@ -521,7 +555,9 @@ or SQLite types, so a Stage 2 adapter can implement the same interface.
 | Member | Methods |
 |---|---|
 | `accounts` | `list({ includeArchived? })`, `get`, `listActive`, `create`, `update`, `archive`, `restore`, `changeStatus`, `history`, `resetAttempt`, `lineage`, `previewDeletion` |
-| `trades` | `list`, `create`, `update`, `remove` |
+| `trades` | `list`, `create`, `update(id, input, options?)`, `remove(id, reason?)`, `restore`, `listDeleted`, `detail` |
+| `reviews` | `get`, `save`, `summaries`, `addScreenshot`, `readScreenshot`, `removeScreenshot` (Build 20) |
+| `library` | `load`, `saveStrategy`, `saveTag`, `saveChecklist`, `setArchived` (Build 20) |
 | `ledger` | `list`, `create`, `update`, `remove`, `balanceAdjustment` (writes now append immutable revisions) |
 | `evidence` | `inputs`, `create`, `get`, `list`, `correct`, `ledgerHistory`, `correctLedger`, `removeLedger`, `reconcile`, `reconciliations`, `resolve`, `resolutions`; [contracts and commands](handoffs/build-15-5.md) |
 | `settings` | `get`, `list`, `set`, `remove` |
@@ -772,10 +808,13 @@ Limitations:
 | Settings | `get_setting(key)`, `list_settings`, `set_setting(key, value)`, `remove_setting(key)` |
 | Snapshots | `save_account_snapshot(input)`, `list_account_snapshots(accountId, from?, to?, endOfDayOnly?)`, `get_latest_account_snapshot(accountId)` |
 | Catalogue | `get_catalogue`, `transition_catalogue_version(id, to, reviewer?)`, `get_account_catalogue_link(accountId)`, `set_account_catalogue_link(input)`, `list_account_phase_events(accountId)`, `record_account_phase_event(input)`, `create_catalogue_source(input)`, `create_catalogue_draft(input)`, `replace_catalogue_draft(id, input)`, `select_account_offer(input)`, `list_account_offer_selections(accountId)` |
-| Trades | `list_trades(accountId)`, `create_trade(input)`, `update_trade(id, input)`, `delete_trade(id)` |
+| Trades | `list_trades(accountId)`, `create_trade(input)`, `update_trade(id, input, options?)`, `delete_trade(id, reason?)`, `restore_trade(accountId, id, reason?)`, `list_deleted_trades(accountId)`, `get_trade_detail(accountId, id)` |
+| Reviews | `get_trade_review(accountId, tradeId)`, `save_trade_review(input)`, `list_trade_review_summaries(accountId)`, `add_trade_screenshot(input)`, `read_trade_screenshot(accountId, id)`, `remove_trade_screenshot(accountId, id)` |
+| Library | `get_review_library()`, `save_strategy(id?, input)`, `save_tag(id?, input)`, `save_checklist(id?, input)`, `set_library_archived(input)` |
+| Daily reviews | `get_daily_review(accountId, tradingDay)`, `list_daily_reviews(accountId)`, `save_daily_review(input)`, `reopen_daily_review(input)`, `relink_daily_review_trades(input)` |
 | Journal | `list_journal_entries(accountId)`, `create_journal_entry(input)`, `update_journal_entry(id, input)`, `delete_journal_entry(id)` |
 | CSV | `preview_csv_import(request)`, `commit_csv_import(request)`, `list_csv_imports(accountId)`, `list_csv_import_problem_rows(batchId)` |
-| Rulebooks | `list_rulebooks(accountId?)`, `list_rulebook_versions(rulebookId)`, `get_rulebook_version(id)`, `get_applicable_rulebook(query)`, `create_rulebook_draft(input)`, `validate_rulebook_draft(id)`, `publish_rulebook_version(id, reviewer?)`, `assign_rulebook_to_account(input)`, `list_account_rulebook_assignments(accountId)`, `flag_rulebook_source_conflict(input)` |
+| Rulebooks | `list_rulebooks(accountId?)`, `list_rulebook_versions(rulebookId)`, `get_rulebook_version(id)`, `get_applicable_rulebook(query)`, `create_rulebook_draft(input, context?)`, `update_rulebook_draft(id, expectedUpdatedAt, input, context)`, `discard_rulebook_draft(id, expectedUpdatedAt, context)`, `validate_rulebook_draft(id)`, `publish_rulebook_version(id, reviewer?, expectedUpdatedAt?, context?)`, `assign_rulebook_to_account(input, guard?)`, `list_account_rulebook_assignments(accountId)`, `flag_rulebook_source_conflict(input)`, `list_rulebook_events(query)` |
 
 Updates replace all editable fields. Inputs are validated in TypeScript (Zod) and again in Rust before any write.
 Errors are `{ kind: "validation" | "notFound" | "conflict" | "database" | "unavailable", message, issues? }`, with `issues` naming
@@ -784,3 +823,140 @@ each invalid field.
 ## Financial evidence and reconciliation (Build 15.5)
 
 Schema 14 adds source observations separately from calculated account snapshots, immutable ledger revisions and frozen exact reconciliation comparisons. New contracts, command payloads, precision/time policy, migration baseline limitations, per-rule evidence requirements and acceptance evidence are documented in the [Build 15.5 backend handoff](handoffs/build-15-5.md). Existing ledger APIs remain callable and record explicit legacy correction metadata. No risk-floor policy, live-equity feed, automatic balancing or compliance verdict is introduced.
+
+## Trade journal and reviews (Build 20)
+
+Store: `store/trades.rs` (corrections, detail, restore), `store/reviews.rs`, `store/library.rs`, `store/attachments.rs`;
+tests: `store/journal_review_tests.rs`; schema: `migrations/0017_trade_reviews.sql` (migration 17); contracts:
+`packages/domain/src/contracts/reviews.ts`. Screens and design notes: [architecture/build-20-trade-journal.md](architecture/build-20-trade-journal.md).
+
+**Still round-trip first.** A trade stays one round trip. Nothing here regroups, splits, merges or rebuilds trades from
+executions, and there is no execution ledger, so a correction edits the journal's values, never a source execution.
+
+**Corrections.**
+- `update_trade(id, input, options?)` validates, re-derives trading day, instrument and P&L in Rust, and writes in one
+  transaction together with a `trade_corrections` row: kind `edit`, time, actor (`local_user`), optional reason, the
+  changed field names and the stored values before and after (Trade DTO names, money as decimal text). An edit that
+  changes nothing writes nothing and keeps `updated_at`.
+- `options.expectedUpdatedAt` is the trade as last read; a later change is a **conflict** and nothing is written. Every
+  write moves `updated_at` at least one millisecond forward, so two saves never share a revision. Callers without
+  `options` behave as before.
+- Delete (`delete_trade(id, reason?)`) and `restore_trade` are recorded too (`delete`, `restore`), and a CSV re-import
+  that restores a deleted trade records `import_restore` (actor `csv_import`). The table is append-only: no update, and
+  no delete while the trade exists (account deletion still cascades through the trade).
+- Imported trades can be corrected. `import_rows.raw_json` and `trade_round_trips` stay as exported (their triggers),
+  and re-importing the file never reverts a correction: the row is a duplicate of the same trade.
+- Stored risk snapshots are never rewritten. Their `inputsHash` no longer matches the changed inputs, so the Build 16
+  freshness check reports them stale; the desktop invalidates `snapshotsRoot` after every trade write.
+
+**Trade detail.** `get_trade_detail(accountId, id)` returns the active trade of that account (another account's trade
+is "not found"), its import batch and original CSV cells with the file's headers, the correction history, and the
+previous and next active trade in entry order (ties broken by id) with its position.
+
+**Reviews** (`trade_reviews`, one active review per trade).
+- Owned by the trade's account (`account_id`, same-account trigger; trade and account immutable). Keyed by trade id, so
+  CSV re-imports (which skip or restore the same trade) never touch a review, and nothing is matched by time or symbol.
+- `save_trade_review(input)` creates or replaces in one transaction. `expectedRevision` is the revision the form started
+  from (`null` when there was none); a different stored revision is a **conflict**. A screenshot added to a trade with
+  no review creates an empty review (revision 1, no content), which a first save may replace.
+- Snapshots: the strategy and checklist names, each tag's label and kind, and each checklist item's label are stored
+  as they read when chosen. Re-saving keeps them; renaming or archiving a template never re-labels a review. Reads
+  return the recorded label, `currentLabel` when the template was renamed since, and `archived`. Archived entries
+  already on a review may stay; they cannot be newly chosen.
+- Checklist answers (`followed`, `missed`, `not_applicable`, optional note) belong to the chosen trade checklist. An
+  answer no longer given is set aside (`deleted_at`), never hard-deleted. Daily checklists are refused here (Build 22).
+- Plan: planned entry, stop and target prices (decimal text) and planned risk (1R, money > 0). Unknown stays null, never
+  zero. When no risk is entered, Rust derives 1R as |entry − stop| × quantity × point value for an instrument quoted in
+  the account currency (`plannedRiskSource = "derived"`). `rMultiple` is net P&L ÷ 1R to 2 dp (half away from zero),
+  only when both are known. Process (checklist adherence counts) and outcome (P&L) are returned separately.
+- `list_trade_review_summaries(accountId)` returns reviewed status, strategy, tags, rating, adherence, screenshot count
+  and note text per active reviewed trade, for the trade log's filters and search.
+- `trade_reviews.mae_micros`, `mfe_micros` and `followed_plan` stay unused: excursions need execution data, and plan
+  adherence for the day is the daily review's ([Build 22](#daily-reviews-build-22)).
+
+**Library**, shared by every account: strategies (playbooks), tags (`setup`, `mistake`, `emotion`, `general`; unique
+name per kind) and checklists (`trade` or `daily` scope, optional strategy for trade checklists) with ordered items.
+`save_checklist` keeps item ids when items are renamed or reordered; items left out are archived. Nothing is deleted:
+`set_library_archived` archives or restores a strategy, tag or checklist. Journal entry tags (Build 10) share `tags`
+as `general` tags.
+
+**Screenshots** (`attachments` of kind `screenshot`, linked to the review by `attachment_links`).
+- The webview reads the picked, dropped or pasted file and sends its bytes (base64); no file path crosses IPC. Rust
+  identifies PNG, JPEG or WebP from the signature (not the name), reads the dimensions from the header and refuses
+  more than 10 MB, more than 16,384 px a side or 120 megapixels, more than 20 screenshots per trade, and the same image
+  twice on one trade (SHA-256).
+- Bytes are written to `<app data>/attachments/screenshots/<uuid>.<ext>` (a temporary name, flushed, then renamed;
+  never overwriting an existing file), then the rows are committed. If the transaction fails the file is removed.
+  `storage_key` is that relative, portable key; the row records `account_id`, size, hash, type and dimensions, and the
+  original file name only as display text. Account and review ownership are checked on every read and write.
+- `read_trade_screenshot` re-checks size, hash and type and returns `missing` or `corrupt` instead of bytes when the
+  file is gone or changed; the review's text never depends on it. Uploads change neither the review's text nor its
+  revision.
+- Removing a screenshot soft-deletes its link and row. The bytes stay, because the Build 24 archive inventory includes
+  soft-deleted rows; permanent removal belongs to Build 24's deletion and cleanup.
+- Build 24 compatibility: the root (`<app data>/attachments/<storage_key>`), the key format and the inventory columns
+  (`id`, `storage_key`, `byte_size`, `sha256`) are the ones the Build 24 archive and restore read, and ownership follows
+  `attachment_links` → `trade_reviews` → `trades.account_id` as its deletion preview expects. Build 24 (PR #43) is not
+  merged; its integration tests must be re-run against migration 17 when it is.
+
+## Daily reviews (Build 22)
+
+Store: `store/daily_reviews.rs`; tests: `store/daily_review_tests.rs`; schema: `migrations/0018_daily_reviews.sql`
+(migration 18); contracts: `packages/domain/src/contracts/daily-reviews.ts`. Screens and design notes:
+[architecture/build-22-daily-review.md](architecture/build-22-daily-review.md).
+
+**Identity.** One review per `(account_id, trading_day)` (unique index). The trading day is Rust's
+(`domain::trading_day`: the account's zone and reset time, weekends rolled to Monday), never a browser date; only
+Monday-to-Friday keys are accepted (a CHECK and the store). An evaluation reset creates a new account, so a reset
+attempt starts with no reviews and never shares one with its predecessor; a daily rollover is not a reset. Account and
+day are immutable (trigger). Duplicate writes cannot fork: a save without `expectedRevision` when a review exists, or
+with a stale one, is a **conflict** and writes nothing.
+
+**Content.**
+- Plan (optional): focus, planned setups, no-trade conditions, process commitments, maximum self-imposed risk (money
+  > 0, account currency; null is not stated, never zero) and notes. Self-reported intentions, not firm rules.
+  `plan_authored_at` is set when the plan first has content (cleared with it) and `plan_timing` is `pre_session` when
+  that moment was before the session ended **and** before the day's first trade opened, otherwise `retrospective`.
+- Reflection: market context, what went well, mistakes, emotions/mindset, key lesson, one next-session action, notes.
+  Blank fields are allowed; each text is at most 20,000 characters.
+- `no_trade_day`: the trader states they did not trade by choice. Refused when trades are recorded for the day.
+- Daily checklist: a library checklist of scope `daily` (a trade checklist is refused), its name snapshotted when
+  chosen. Answers (`followed`, `missed`, `not_applicable`, optional note) live in `daily_review_answers` with the item
+  label and order as answered; an item answered before keeps its label. Unanswered items have no row. Renaming,
+  reordering or archiving the checklist or an item never changes a past answer; an archived checklist already on the
+  review may stay, but cannot be newly chosen. Library usage counts include daily reviews, so a used checklist cannot
+  change scope.
+
+**Adherence** (process only): numerator = answers `followed`; denominator = `followed + missed`. Not-applicable and
+unanswered items never count as failures; `unanswered` is the chosen checklist's active items without an answer. With
+no denominator `percent` is null (Unknown), never 0% or 100%. Whole percent, half away from zero, computed in Rust.
+It says nothing about profit or prop-firm compliance.
+
+**Lifecycle.** `status` is `draft` or `completed`. `save_daily_review(input)` with `action: "save"` keeps the status (a
+completed review stays completed and records `edited_after_completion_at`); `"complete"` completes it and requires some
+content (plan, reflection, checklist or a no-trade day). `reopen_daily_review` moves a completed review back to draft;
+`first_completed_at` and the history stay. Every write bumps `revision` and appends a `daily_review_events` row
+(`created`, `saved`, `completed`, `edited`, `reopened`, `relinked`; append-only). A future day (after the current trading
+day, up to 14 calendar days ahead) takes a plan only. Archived accounts are read-only (writes are conflicts); failed or
+closed attempts stay editable as history. Each save is one transaction; a failed check leaves the previous version.
+
+**Trades and source changes.** On each save (and on `relink_daily_review_trades`) the day's active trades are stored
+in `daily_review_trades` by trade id with their trading day, net P&L, P&L status and `updated_at` at that moment
+(same-account trigger). Reads compare them with the day's trades now:
+- `linked` (unchanged), `added` (imported or entered since), `changed` (corrected since);
+- missing: `deleted` (soft-deleted; restoring brings it back as linked) or `moved` (now on another trading day, for
+  example after a corrected exit time or an account timezone/reset change, which re-derives every trade's day);
+- `sessionSettingsChanged` when the account's zone or reset differs from the review's `timezone_snapshot` /
+  `reset_time_snapshot`.
+The review never moves to another day or account; `relink_daily_review_trades` accepts the current trades without
+touching text or status. CSV re-imports skip or restore the same trade ids, so links survive. The day's **outcome** is
+summed in Rust from current trades with a known net P&L; unknown-P&L and open trades are counted and left out, and a
+day without trades has no P&L (null), never zero. `dayState`: `traded`, `no_trade_day` (declared), or
+`no_trades_recorded` (which cannot tell a missing import from a day off).
+
+**Reads.** `get_daily_review(accountId, tradingDay)` returns the day: session settings now, the session window
+(`[start, end)` instants: a day starts when the previous trading day ends, so Monday includes the weekend; DST is
+resolved in the account's zone), the current trading day, `isFuture`, `archived`, the review or null, the day's trades
+with link status, missing trades, outcome, day state and change flags. `list_daily_reviews(accountId)` returns the
+current trading day, summaries newest first and **legacy day notes**: `journal_entries` without a trade, with the
+trading day derived from their time. They are listed apart, read only, never converted into or counted as reviews.

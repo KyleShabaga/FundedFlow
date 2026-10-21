@@ -177,6 +177,16 @@ const SELECT: &str = "SELECT t.id, t.account_id, t.source, t.import_batch_id, t.
         r.price_format_type, r.tick_size, r.entry_basis
     FROM trades t LEFT JOIN trade_round_trips r ON r.trade_id = t.id";
 
+/// `SELECT` plus the deletion time as column 36.
+const SELECT_DELETED: &str = "SELECT t.id, t.account_id, t.source, t.import_batch_id, t.broker_trade_id, t.symbol, t.side,
+        t.quantity, t.entry_at, t.entry_price, t.exit_at, t.exit_price, t.fees_micros, t.trading_day,
+        t.reported_pnl_micros, t.gross_pnl_micros, t.net_pnl_micros, t.pnl_status, t.notes_md, t.created_at,
+        t.updated_at,
+        r.trade_id, r.buy_fill_id, r.sell_fill_id, r.buy_price, r.sell_price, r.bought_at, r.sold_at,
+        r.bought_at_source, r.sold_at_source, r.duration_source, r.duration_seconds, r.price_format,
+        r.price_format_type, r.tick_size, r.entry_basis, t.deleted_at
+    FROM trades t LEFT JOIN trade_round_trips r ON r.trade_id = t.id";
+
 fn round_trip_from_row(r: &Row) -> rusqlite::Result<Option<RoundTripSource>> {
     if r.get::<_, Option<String>>(21)?.is_none() {
         return Ok(None);
@@ -255,20 +265,122 @@ pub fn create(conn: &mut Connection, input: TradeInput) -> AppResult<Trade> {
     get(conn, &id)
 }
 
+/// Optional guards for `update_with`: the stored revision the edit started from, and why.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TradeChangeOptions {
+    /// The trade's `updatedAt` as last read. A later change is a conflict, never an overwrite.
+    pub expected_updated_at: Option<String>,
+    pub reason: Option<String>,
+}
+
+/// One row of a trade's append-only correction history (Build 20).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TradeCorrection {
+    pub id: String,
+    pub trade_id: String,
+    /// "edit" | "delete" | "restore" | "import_restore"
+    pub kind: String,
+    pub corrected_at: String,
+    pub actor: String,
+    pub reason: Option<String>,
+    pub changed_fields: Vec<String>,
+    pub before: Option<serde_json::Value>,
+    pub after: Option<serde_json::Value>,
+}
+
+/// The stored values a correction records, as the Trade DTO names them.
+fn values(t: &Trade) -> serde_json::Value {
+    serde_json::json!({
+        "symbol": t.symbol, "side": t.side, "quantity": t.quantity, "entryAt": t.entry_at,
+        "entryPrice": t.entry_price, "exitAt": t.exit_at, "exitPrice": t.exit_price, "fees": t.fees,
+        "tradingDay": t.trading_day, "reportedPnl": t.reported_pnl, "grossPnl": t.gross_pnl,
+        "realizedPnl": t.realized_pnl, "pnlStatus": t.pnl_status, "notes": t.notes,
+    })
+}
+
+const ACTOR: &str = "local_user";
+const MAX_REASON_CHARS: usize = 2000;
+
+fn reason(text: Option<String>) -> AppResult<Option<String>> {
+    let text = super::opt_text(text);
+    if text.as_ref().is_some_and(|r| r.chars().count() > MAX_REASON_CHARS) {
+        return Err(AppError::invalid("reason", format!("must be at most {MAX_REASON_CHARS} characters")));
+    }
+    Ok(text)
+}
+
+struct Change<'a> {
+    kind: &'a str,
+    actor: &'a str,
+    reason: Option<&'a str>,
+    changed: &'a [String],
+    before: Option<&'a Trade>,
+    after: Option<&'a Trade>,
+    at: &'a str,
+}
+
+fn record(conn: &Connection, trade_id: &str, account_id: &str, c: Change) -> AppResult<()> {
+    conn.execute(
+        "INSERT INTO trade_corrections (id, trade_id, account_id, kind, corrected_at, actor, reason, changed_fields,
+                                        before_json, after_json)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        params![
+            new_id(),
+            trade_id,
+            account_id,
+            c.kind,
+            c.at,
+            c.actor,
+            c.reason,
+            serde_json::to_string(c.changed).unwrap_or_else(|_| "[]".into()),
+            c.before.map(|t| values(t).to_string()),
+            c.after.map(|t| values(t).to_string()),
+        ],
+    )?;
+    Ok(())
+}
+
+/// A write time strictly after `previous`, so a revision always changes.
+pub(crate) fn later_than(previous: &str) -> String {
+    let current = now();
+    match parse_instant(previous) {
+        Some(p) if current.as_str() <= previous => format_instant(p + chrono::Duration::milliseconds(1)),
+        _ => current,
+    }
+}
+
 /// Replace a trade's editable fields. Imported trades can be corrected too;
-/// their account and import provenance never change.
+/// their account, import provenance, original CSV row and source fills never
+/// change. (Tests and older callers; commands use `update_with`.)
+#[cfg(test)]
 pub fn update(conn: &mut Connection, id: &str, input: TradeInput) -> AppResult<Trade> {
-    let account_id: String = conn
-        .query_row("SELECT account_id FROM trades WHERE id = ?1 AND deleted_at IS NULL", [id], |r| r.get(0))
-        .optional()?
-        .ok_or_else(|| AppError::not_found("trade", id))?;
-    if account_id != input.account_id {
+    update_with(conn, id, input, TradeChangeOptions::default())
+}
+
+/// `update` with an optional revision guard and reason. Every change is
+/// recorded in `trade_corrections` with the old and new stored values, in the
+/// same transaction; an edit that changes nothing writes nothing.
+pub fn update_with(conn: &mut Connection, id: &str, input: TradeInput, options: TradeChangeOptions) -> AppResult<Trade> {
+    let reason = reason(options.reason)?;
+    let tx = conn.transaction()?;
+    let before = get(&tx, id)?;
+    if before.account_id != input.account_id {
         return Err(AppError::invalid("accountId", "a trade cannot be moved to another account"));
     }
+    if let Some(expected) = &options.expected_updated_at
+        && *expected != before.updated_at
+    {
+        return Err(AppError::Conflict {
+            message: "this trade was changed after you opened it; reload it and apply your correction again".into(),
+        });
+    }
     let fields = validate(&input)?;
-    let ctx = account_ctx(conn, &account_id)?;
-    let d = derive(&fields, &ctx, &load_instruments(conn)?)?;
-    conn.execute(
+    let ctx = account_ctx(&tx, &before.account_id)?;
+    let d = derive(&fields, &ctx, &load_instruments(&tx)?)?;
+    let at = later_than(&before.updated_at);
+    tx.execute(
         "UPDATE trades SET symbol = ?2, instrument_id = ?3, side = ?4, quantity = ?5, entry_at = ?6,
                 entry_price = ?7, exit_at = ?8, exit_price = ?9, fees_micros = ?10, trading_day = ?11,
                 reported_pnl_micros = ?12, gross_pnl_micros = ?13, net_pnl_micros = ?14, pnl_status = ?15,
@@ -291,29 +403,52 @@ pub fn update(conn: &mut Connection, id: &str, input: TradeInput) -> AppResult<T
             d.pnl.net_micros,
             d.pnl.status,
             fields.notes,
-            now(),
+            at,
         ],
     )?;
-    get(conn, id)
+    let after = get(&tx, id)?;
+    let (old, new) = (values(&before), values(&after));
+    let changed: Vec<String> = new
+        .as_object()
+        .map(|m| m.keys().filter(|k| old.get(*k) != new.get(*k)).cloned().collect())
+        .unwrap_or_default();
+    if changed.is_empty() {
+        // Nothing changed: the transaction rolls back, keeping the stored revision and writing no history.
+        return Ok(before);
+    }
+    let change = Change {
+        kind: "edit",
+        actor: ACTOR,
+        reason: reason.as_deref(),
+        changed: &changed,
+        before: Some(&before),
+        after: Some(&after),
+        at: &at,
+    };
+    record(&tx, id, &before.account_id, change)?;
+    tx.commit()?;
+    Ok(after)
 }
 
 /// Soft-delete a trade and unlink journal entries that referenced it. An
 /// imported trade keeps its dedup key, so re-importing its CSV row restores it
-/// (`restore`) rather than creating a second trade.
+/// (`restore`) rather than creating a second trade. Its review, checklist
+/// results and screenshots are kept and come back with it.
+#[cfg(test)]
 pub fn delete(conn: &mut Connection, id: &str) -> AppResult<()> {
-    let now = now();
+    delete_with(conn, id, None)
+}
+
+pub fn delete_with(conn: &mut Connection, id: &str, why: Option<String>) -> AppResult<()> {
+    let why = reason(why)?;
     let tx = conn.transaction()?;
-    let n = tx.execute(
-        "UPDATE trades SET deleted_at = ?2, updated_at = ?2 WHERE id = ?1 AND deleted_at IS NULL",
-        params![id, now],
-    )?;
-    if n == 0 {
-        return Err(AppError::not_found("trade", id));
-    }
-    tx.execute(
-        "UPDATE journal_entries SET trade_id = NULL, updated_at = ?2 WHERE trade_id = ?1",
-        params![id, now],
-    )?;
+    let before = get(&tx, id)?;
+    let at = later_than(&before.updated_at);
+    tx.execute("UPDATE trades SET deleted_at = ?2, updated_at = ?2 WHERE id = ?1 AND deleted_at IS NULL", params![id, at])?;
+    tx.execute("UPDATE journal_entries SET trade_id = NULL, updated_at = ?2 WHERE trade_id = ?1", params![id, at])?;
+    let change =
+        Change { kind: "delete", actor: ACTOR, reason: why.as_deref(), changed: &[], before: Some(&before), after: None, at: &at };
+    record(&tx, id, &before.account_id, change)?;
     tx.commit()?;
     Ok(())
 }
@@ -321,17 +456,169 @@ pub fn delete(conn: &mut Connection, id: &str) -> AppResult<()> {
 /// Un-delete a trade as it was saved (a CSV re-import of its row). Journal
 /// links cleared by `delete` are not restored.
 pub(crate) fn restore(conn: &Connection, id: &str) -> AppResult<()> {
-    let n = conn.execute(
-        "UPDATE trades SET deleted_at = NULL, updated_at = ?2 WHERE id = ?1 AND deleted_at IS NOT NULL",
-        params![id, now()],
-    )?;
-    if n == 0 {
-        return Err(AppError::not_found("deleted trade", id));
-    }
-    Ok(())
+    restore_as(conn, id, "import_restore", "csv_import", None).map(|_| ())
 }
 
-/// Recompute trading day, instrument and P&L for every trade of an account
+fn restore_as(conn: &Connection, id: &str, kind: &str, actor: &str, why: Option<&str>) -> AppResult<Trade> {
+    let previous: Option<(String, String)> = conn
+        .query_row("SELECT account_id, updated_at FROM trades WHERE id = ?1 AND deleted_at IS NOT NULL", [id], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .optional()?;
+    let (account_id, updated_at) = previous.ok_or_else(|| AppError::not_found("deleted trade", id))?;
+    let at = later_than(&updated_at);
+    conn.execute("UPDATE trades SET deleted_at = NULL, updated_at = ?2 WHERE id = ?1", params![id, at])?;
+    let after = get(conn, id)?;
+    record(conn, id, &account_id, Change { kind, actor, reason: why, changed: &[], before: None, after: Some(&after), at: &at })?;
+    Ok(after)
+}
+
+/// The trader undoes a delete: the trade comes back exactly as stored, with its
+/// review and screenshots. Archived accounts are read-only.
+pub fn restore_deleted(conn: &mut Connection, account_id: &str, id: &str, why: Option<String>) -> AppResult<Trade> {
+    let why = reason(why)?;
+    let tx = conn.transaction()?;
+    account_ctx(&tx, account_id)?;
+    let owner: Option<String> = tx.query_row("SELECT account_id FROM trades WHERE id = ?1", [id], |r| r.get(0)).optional()?;
+    if owner.as_deref() != Some(account_id) {
+        return Err(AppError::not_found("deleted trade", id));
+    }
+    let trade = restore_as(&tx, id, "restore", ACTOR, why.as_deref())?;
+    tx.commit()?;
+    Ok(trade)
+}
+
+/// A soft-deleted trade and when it was deleted.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeletedTrade {
+    pub trade: Trade,
+    pub deleted_at: String,
+}
+
+/// Soft-deleted trades of an account, most recently deleted first.
+pub fn list_deleted(conn: &Connection, account_id: &str) -> AppResult<Vec<DeletedTrade>> {
+    super::require_account(conn, account_id)?;
+    let mut stmt = conn.prepare(&format!(
+        "{SELECT_DELETED} WHERE t.account_id = ?1 AND t.deleted_at IS NOT NULL ORDER BY t.deleted_at DESC, t.id"
+    ))?;
+    let rows = stmt.query_map([account_id], |r| Ok(DeletedTrade { trade: from_row(r)?, deleted_at: r.get(36)? }))?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+pub fn corrections(conn: &Connection, trade_id: &str) -> AppResult<Vec<TradeCorrection>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, trade_id, kind, corrected_at, actor, reason, changed_fields, before_json, after_json
+         FROM trade_corrections WHERE trade_id = ?1 ORDER BY corrected_at, rowid",
+    )?;
+    let json = |s: Option<String>| s.and_then(|s| serde_json::from_str(&s).ok());
+    let rows = stmt.query_map([trade_id], |r| {
+        Ok(TradeCorrection {
+            id: r.get(0)?,
+            trade_id: r.get(1)?,
+            kind: r.get(2)?,
+            corrected_at: r.get(3)?,
+            actor: r.get(4)?,
+            reason: r.get(5)?,
+            changed_fields: serde_json::from_str(&r.get::<_, String>(6)?).unwrap_or_default(),
+            before: json(r.get(7)?),
+            after: json(r.get(8)?),
+        })
+    })?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// Where an imported trade came from: its batch and its original CSV row, unchanged.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportSource {
+    pub batch_id: String,
+    pub file_name: String,
+    pub file_sha256: String,
+    /// "performance" | "generic"
+    pub source_format: String,
+    pub source_timezone: String,
+    pub imported_at: String,
+    pub row_number: Option<i64>,
+    pub line_number: Option<i64>,
+    /// The file's header row, as recorded with the import.
+    pub headers: Vec<String>,
+    /// The original cells exactly as read from the file, in header order.
+    pub raw_cells: Option<Vec<String>>,
+}
+
+/// A trade with its provenance, correction history and its neighbours in the account.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TradeDetail {
+    pub trade: Trade,
+    pub import_source: Option<ImportSource>,
+    pub corrections: Vec<TradeCorrection>,
+    /// Neighbours among the account's active trades in entry order (oldest first).
+    pub previous_trade_id: Option<String>,
+    pub next_trade_id: Option<String>,
+    /// 1-based place of this trade in that order, and the number of active trades.
+    pub position: i64,
+    pub total: i64,
+}
+
+/// One active trade of `account_id`. A trade of another account is "not found":
+/// nothing about it is returned.
+pub fn detail(conn: &Connection, account_id: &str, id: &str) -> AppResult<TradeDetail> {
+    super::require_account(conn, account_id)?;
+    let trade = get(conn, id)?;
+    if trade.account_id != account_id {
+        return Err(AppError::not_found("trade", id));
+    }
+    let import_source = conn
+        .query_row(
+            "SELECT b.id, b.file_name, b.file_sha256, b.source_format, b.source_timezone, b.created_at,
+                    r.row_number, r.line_number, r.raw_json, json_extract(b.mapping_snapshot_json, '$.headers')
+             FROM trades t JOIN import_batches b ON b.id = t.import_batch_id
+             LEFT JOIN import_rows r ON r.id = t.import_row_id
+             WHERE t.id = ?1",
+            [id],
+            |r| {
+                Ok(ImportSource {
+                    batch_id: r.get(0)?,
+                    file_name: r.get(1)?,
+                    file_sha256: r.get(2)?,
+                    source_format: r.get(3)?,
+                    source_timezone: r.get(4)?,
+                    imported_at: r.get(5)?,
+                    row_number: r.get(6)?,
+                    line_number: r.get(7)?,
+                    raw_cells: r.get::<_, Option<String>>(8)?.and_then(|s| serde_json::from_str(&s).ok()),
+                    headers: r
+                        .get::<_, Option<String>>(9)?
+                        .and_then(|s| serde_json::from_str(&s).ok())
+                        .unwrap_or_default(),
+                })
+            },
+        )
+        .optional()?;
+    let neighbour = |sql: &str| -> AppResult<Option<String>> {
+        Ok(conn.query_row(sql, params![account_id, trade.entry_at, id], |r| r.get(0)).optional()?)
+    };
+    let previous_trade_id = neighbour(
+        "SELECT id FROM trades WHERE account_id = ?1 AND deleted_at IS NULL
+           AND (entry_at < ?2 OR (entry_at = ?2 AND id < ?3)) ORDER BY entry_at DESC, id DESC LIMIT 1",
+    )?;
+    let next_trade_id = neighbour(
+        "SELECT id FROM trades WHERE account_id = ?1 AND deleted_at IS NULL
+           AND (entry_at > ?2 OR (entry_at = ?2 AND id > ?3)) ORDER BY entry_at, id LIMIT 1",
+    )?;
+    let (position, total): (i64, i64) = conn.query_row(
+        "SELECT (SELECT count(*) FROM trades WHERE account_id = ?1 AND deleted_at IS NULL
+                   AND (entry_at < ?2 OR (entry_at = ?2 AND id <= ?3))),
+                (SELECT count(*) FROM trades WHERE account_id = ?1 AND deleted_at IS NULL)",
+        params![account_id, trade.entry_at, id],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
+    Ok(TradeDetail { corrections: corrections(conn, id)?, trade, import_source, previous_trade_id, next_trade_id, position, total })
+}
+
+// Recompute trading day, instrument and P&L for every trade of an account
 /// (after its currency, timezone or reset time changed).
 pub(crate) fn rederive_account(conn: &Connection, account_id: &str) -> AppResult<()> {
     let ctx = account_ctx(conn, account_id)?;

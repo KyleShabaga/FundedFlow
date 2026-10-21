@@ -44,8 +44,13 @@ it("rejects unknown statuses, missing values, invalid times, dates and cross-acc
 it("sanitizes stored import diagnostics and exposes unsupported capabilities without data", () => {
   const failed = toImportViewModel({ ...batch, status: "failed", errorSummary: "SQL /private/path" });
   expect(failed.failureMessage).toContain("not completed"); expect(failed).not.toHaveProperty("errorSummary");
-  for (const feature of ["today-summary", "insights-aggregates", "structured-reviews"] as const) {
-    const capability = getCapability(feature);
-    expect(capability.available).toBe(false); expect(capability).not.toHaveProperty("data");
-  }
+  const capability = getCapability("insights-aggregates");
+  expect(capability.available).toBe(false); expect(capability).not.toHaveProperty("data");
+  // Build 22 implemented daily reviews, so their placeholder capability is gone.
+  expect(() => getCapability("structured-reviews" as never)).toThrow();
+});
+it("keeps a Build 16 engine snapshot's unknown balance, day P&L, day count and lock state as null, never zero or false", () => {
+  const unknown = { ...snapshot, balance: null, realizedDayPnl: null, tradingDaysCompleted: null, drawdownLocked: null };
+  const risk = toSnapshotViewModel(unknown, account);
+  expect([risk.balance, risk.realizedDayPnl, risk.tradingDaysCompleted, risk.drawdownLocked]).toEqual([null, null, null, null]);
 });

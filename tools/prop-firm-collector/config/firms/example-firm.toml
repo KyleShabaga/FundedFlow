@@ -1,0 +1,49 @@
+# Synthetic firm definition for `collector firm import --file`. Fictitious hosts on the reserved .test domain.
+# The terms decisions here are part of the fixture; for a real firm, record them only after reading its terms.
+
+[firm]
+key = "example-firm"
+name = "Example Prop Firm (synthetic)"
+homepage = "https://www.example-firm.test/"
+max_fetches = 40
+max_depth = 2
+excluded_paths = ["/blog/*", "/login*"]
+
+[[hosts]]
+host = "www.example-firm.test"
+role = "homepage"
+[hosts.terms]
+decision = "allowed"
+url = "https://www.example-firm.test/terms"
+notes = "Synthetic terms permit modest automated access to public pages."
+
+[[hosts]]
+host = "help.example-firm.test"
+role = "help_center"
+[hosts.terms]
+decision = "allowed_with_limits"
+url = "https://www.example-firm.test/terms"
+notes = "Synthetic: help center API allowed at a slower rate."
+min_delay = 3
+
+[[sources]]
+url = "https://www.example-firm.test/rules"
+kind = "page"
+label = "Trading rules"
+priority = 20
+
+[[sources]]
+url = "https://www.example-firm.test/docs/rulebook.pdf"
+kind = "pdf"
+label = "Rulebook PDF"
+priority = 10
+
+[[sources]]
+url = "https://www.example-firm.test/funded-dashboard"
+kind = "page"
+label = "Funded account rules (needs JavaScript)"
+
+[[sources]]
+url = "https://help.example-firm.test/hc/en-us"
+kind = "zendesk"
+label = "Help center"

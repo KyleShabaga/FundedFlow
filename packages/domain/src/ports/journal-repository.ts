@@ -29,6 +29,7 @@ import type {
   SourceInput,
 } from "../catalogue/index.js";
 import type { SourceReference } from "../catalogue/index.js";
+import type { DailyReviewDay, DailyReviewIndex, DailyReviewInput, DailyReviewRef } from "../contracts/daily-reviews.js";
 import type { LedgerEntry, LedgerEntryInput } from "../contracts/ledger.js";
 import type { Setting } from "../contracts/settings.js";
 import type { Snapshot, SnapshotInput, SnapshotQuery } from "../contracts/snapshots.js";
@@ -46,14 +47,38 @@ import type { AppError } from "../contracts/errors.js";
 import type { JournalEntry, JournalEntryInput } from "../contracts/journal.js";
 import type { Trade, TradeInput } from "../contracts/trades.js";
 import type {
+  ArchiveInput,
+  AttachmentMeta,
+  Checklist,
+  ChecklistInput,
+  DeletedTrade,
+  Library,
+  ReviewInput,
+  ReviewSummary,
+  ScreenshotData,
+  ScreenshotInput,
+  Strategy,
+  StrategyInput,
+  Tag,
+  TagInput,
+  TradeChangeOptions,
+  TradeDetail,
+  TradeReview,
+} from "../contracts/reviews.js";
+import type {
   AccountRulebookAssignment,
   ApplicableRulebook,
   ApplicableRulebookQuery,
+  AssignmentGuard,
   AssignmentInput,
+  ChangeContext,
   DraftIssue,
   RuleClaim,
   Rulebook,
   RulebookDraftInput,
+  RulebookDraftUpdate,
+  RulebookEvent,
+  RulebookEventQuery,
   RulebookVersionDetail,
   SourceConflictInput,
 } from "../rulebook/versions.js";
@@ -98,9 +123,63 @@ export interface TradeRepository {
   /** Non-deleted trades of an account, newest entry first. */
   list(accountId: string): Promise<Trade[]>;
   create(input: TradeInput): Promise<Trade>;
-  update(id: string, input: TradeInput): Promise<Trade>;
-  /** Soft delete; unlinks journal entries. Re-importing its CSV row restores the same trade. */
-  remove(id: string): Promise<void>;
+  /**
+   * Replaces every editable field and recomputes trading day and P&L. Imported source rows and fills never change.
+   * Every change is recorded in the trade's correction history; `options.expectedUpdatedAt` refuses a stale edit.
+   */
+  update(id: string, input: TradeInput, options?: TradeChangeOptions): Promise<Trade>;
+  /** Soft delete; unlinks journal entries. Re-importing its CSV row restores the same trade. The review is kept. */
+  remove(id: string, reason?: string | null): Promise<void>;
+  /** Undo a delete: the trade returns as stored, with its review and screenshots (Build 20). */
+  restore(accountId: string, id: string, reason?: string | null): Promise<Trade>;
+  /** Soft-deleted trades of the account, most recently deleted first. */
+  listDeleted(accountId: string): Promise<DeletedTrade[]>;
+  /** One active trade of the account with import provenance, correction history and neighbours. */
+  detail(accountId: string, id: string): Promise<TradeDetail>;
+}
+
+/**
+ * Per-trade reviews and screenshots (Build 20). A review belongs to one trade and its account and keeps the
+ * strategy, checklist and tag labels it was made with. Another account's trade is "not found".
+ */
+export interface ReviewRepository {
+  get(accountId: string, tradeId: string): Promise<TradeReview | null>;
+  /** Create or replace; `expectedRevision` is the revision the form started from (null: none existed). */
+  save(input: ReviewInput): Promise<TradeReview>;
+  /** One summary per active reviewed trade of the account, for the trade log. */
+  summaries(accountId: string): Promise<ReviewSummary[]>;
+  /** Stores a PNG, JPEG or WebP (type checked from the bytes). Never touches the review's text. */
+  addScreenshot(input: ScreenshotInput): Promise<AttachmentMeta>;
+  /** Verified bytes, or a missing/corrupt status. */
+  readScreenshot(accountId: string, id: string): Promise<ScreenshotData>;
+  /** Detaches it; the row and bytes stay for backups until permanent deletion (Build 24). */
+  removeScreenshot(accountId: string, id: string): Promise<void>;
+}
+
+/**
+ * Daily reviews (Build 22): one per account attempt and trading day (Rust's trading day). Reads return the day with
+ * its review (or none), its trades with their link status and the closed-trade outcome. Writes name the revision
+ * they started from, so a stale form is a conflict. Archived accounts are read-only.
+ */
+export interface DailyReviewRepository {
+  getDay(accountId: string, tradingDay: string): Promise<DailyReviewDay>;
+  /** The account's reviews (newest first), its current trading day and legacy day notes. */
+  list(accountId: string): Promise<DailyReviewIndex>;
+  save(input: DailyReviewInput): Promise<DailyReviewDay>;
+  /** Back to draft; the first completion and the history are kept. */
+  reopen(ref: DailyReviewRef): Promise<DailyReviewDay>;
+  /** Accept the day's trades as they are now without changing the review's text or status. */
+  relinkTrades(ref: DailyReviewRef): Promise<DailyReviewDay>;
+}
+
+/** Strategies (playbooks), tags and checklists (templates), shared by every account. Archived, never deleted. */
+export interface LibraryRepository {
+  load(): Promise<Library>;
+  saveStrategy(id: string | null, input: StrategyInput): Promise<Strategy>;
+  saveTag(id: string | null, input: TagInput): Promise<Tag>;
+  /** Items keep their ids when renamed; items left out are archived. */
+  saveChecklist(id: string | null, input: ChecklistInput): Promise<Checklist>;
+  setArchived(input: ArchiveInput): Promise<void>;
 }
 
 export interface JournalEntryRepository {
@@ -133,16 +212,32 @@ export interface RulebookRepository {
   /** The verified version governing a phase or path; never guessed. */
   getApplicable(query: ApplicableRulebookQuery): Promise<ApplicableRulebook>;
   /** A new draft version, of an existing rulebook or a new one, with its rules and applicability. */
-  createDraft(input: RulebookDraftInput): Promise<RulebookVersionDetail>;
+  createDraft(input: RulebookDraftInput, context?: ChangeContext): Promise<RulebookVersionDetail>;
+  /**
+   * Replaces a never-published draft's content (Build 19). `expectedUpdatedAt` is the draft as last read;
+   * a later change by anyone is a conflict, never an overwrite.
+   */
+  updateDraft(id: string, expectedUpdatedAt: string, input: RulebookDraftUpdate, context: ChangeContext): Promise<RulebookVersionDetail>;
+  /** Sets a draft aside: it becomes `rejected` and stays in the history with the reason (Build 19). */
+  discardDraft(id: string, expectedUpdatedAt: string, context: ChangeContext): Promise<RulebookVersionDetail>;
+  /** The append-only audit log of a rulebook or of an account (Build 19). */
+  listEvents(query: RulebookEventQuery): Promise<RulebookEvent[]>;
   /** What stops the version from being published now; empty when nothing does. */
   validateDraft(id: string): Promise<DraftIssue[]>;
   /**
    * One publication step: a draft goes to `needs_review` (a private rulebook
    * is then in use); a catalogue version in review is verified by `reviewer`.
    */
-  publish(id: string, reviewer: string | null): Promise<RulebookVersionDetail>;
-  /** From a trading day; the account's open assignment ends that day. */
-  assign(input: AssignmentInput): Promise<AccountRulebookAssignment>;
+  publish(
+    id: string,
+    reviewer: string | null,
+    options?: { expectedUpdatedAt: string; context: ChangeContext },
+  ): Promise<RulebookVersionDetail>;
+  /**
+   * From a trading day; the account's open assignment ends that day. With a guard, a different open
+   * assignment than the caller saw is a conflict, and the actor and reason are logged.
+   */
+  assign(input: AssignmentInput, guard?: AssignmentGuard): Promise<AccountRulebookAssignment>;
   listAssignments(accountId: string): Promise<AccountRulebookAssignment[]>;
   /** Records a contradicting source; a verified version it contradicts becomes stale. */
   flagSourceConflict(input: SourceConflictInput): Promise<RuleClaim>;
@@ -251,6 +346,9 @@ export interface JournalRepository {
   readonly accounts: AccountRepository;
   readonly trades: TradeRepository;
   readonly journal: JournalEntryRepository;
+  readonly reviews: ReviewRepository;
+  readonly dailyReviews: DailyReviewRepository;
+  readonly library: LibraryRepository;
   readonly imports: ImportRepository;
   readonly rulebooks: RulebookRepository;
   readonly ledger: LedgerRepository;
