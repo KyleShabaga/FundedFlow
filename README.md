@@ -21,7 +21,7 @@ The UI design system (tokens, bundled fonts, components, money formatting) is in
 
 The product root supplies Today, Insights and Settings placeholders inside the desktop shell, with Accounts
 (Build 15), the rulebook editor (Build 19), CSV import (Build 18) and the Journal with trade detail, reviews and the
-Library (Build 20; [`docs/architecture/build-20-trade-journal.md`](docs/architecture/build-20-trade-journal.md)). Local runtime failure leaves navigation and recovery available; an already-open data screen retains
+Library (Build 20; [`docs/architecture/build-20-trade-journal.md`](docs/architecture/build-20-trade-journal.md)), and the daily review with plan adherence (Build 22; [`docs/architecture/build-22-daily-review.md`](docs/architecture/build-22-daily-review.md)). Local runtime failure leaves navigation and recovery available; an already-open data screen retains
 its local draft while its controls are disabled. Build 12 evidence, browser smoke instructions and pending
 Windows checks are in [`docs/build-12-verification.md`](docs/build-12-verification.md).
 

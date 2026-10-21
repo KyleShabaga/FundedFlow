@@ -112,7 +112,7 @@ dropzone receive drops).
 - No price chart: there is no market data in V1 (Builds 42–43), and a round trip is not an execution record.
 - Trade correction times are typed to the minute; untouched times keep their seconds.
 - Removed screenshots keep their bytes until Build 24 permanent deletion; there is no "empty attachment trash".
-- Day notes and plan adherence are Build 22; the Library lists existing daily entries read only.
+- Day plans, reflections and plan adherence were added by Build 22 ([build-22-daily-review.md](build-22-daily-review.md)); existing daily entries are listed there as earlier day notes, read only.
 - Strategies, tags and checklists are shared by all accounts (the reserved schema has no account column); reviews and
   screenshots are account-scoped.
 - Not verified here: a packaged Windows run (restart persistence, file drop/paste through WebView2, Build 24 backup

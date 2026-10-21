@@ -24,7 +24,7 @@ specification). When a spec and a card disagree, the card wins; fix the spec in 
 |---|---|---|---|
 | [01 App shell](screens/01-app-shell.md) | 12 App shell and runtime gate; primitives in 13 | P0 | Search, feedback, notifications, theme and session clock are not in Build 12 (see below) |
 | [02 Accounts](screens/02-accounts.md) | 15 Account management UI; 15.5 risk inputs; 19 rulebook editor | P0 | Needs 14 (gateway hooks) |
-| [03 Journal](screens/03-journal.md) | 20 Trade journal, detail and review; 22 daily review | P0 | Needs 14 |
+| [03 Journal](screens/03-journal.md) | 20 Trade journal, detail and review; 22 daily review entry points | P0 | Needs 14 |
 | [04 Calendar](screens/04-calendar.md) | 23 Insights (calendar view) | P0 | Month/year picker is a Build 13 primitive |
 | [05 Day timer](screens/05-day-timer.md) | No card: proposed in Triage | — | Fits the shell's account context bar or Today |
 | [06 Import](screens/06-import.md) | 18 CSV import wizard (backend 17) | P0 | In development |
@@ -35,6 +35,7 @@ specification). When a spec and a card disagree, the card wins; fix the spec in 
 | [11 Library](screens/11-library.md) | 20 (strategy, tag, checklist management) and 22 | P0 | A Journal sub-view, not top-level navigation |
 | [12 Economic calendar](screens/12-economic-calendar.md) | 41 Economic calendar and market sessions | P2 | Not V1 |
 | [13 Account rulebook](screens/13-rulebook.md) | 19 Rulebook version editor and calculation explanation | P0 | Needs 16 for preview/explanation (blocked) |
+| [14 Daily review](screens/14-daily-review.md) | 22 Daily review and plan adherence | P0 | A nested Journal page; opened from Today, By day and Library |
 
 Shared patterns ([components.md](components.md)) belong to **Build 13**; their visual specification to **Build 7**.
 

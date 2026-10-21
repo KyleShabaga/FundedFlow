@@ -6,7 +6,7 @@ ideas that belong on Today ([08](08-today.md)) or elsewhere:
 | Home element | Where it goes |
 |---|---|
 | Greeting and "last session" line | Today header (optional) |
-| "Continue: review Monday" card | Today action "Review session" → Build 22 daily review |
+| "Continue: review Monday" card | Today action "Review session" / "Continue review" → Build 22 daily review (implemented) |
 | Accounts today with closest limit | Today all-accounts cards (Build 21), using engine values only |
 | Recent days (`DayCard`) | Journal (Build 20) or Today |
 | Quick actions | Today actions; Import CSV stays the header's primary action |

@@ -65,7 +65,7 @@ removes).
 | Timestamps | `entryAt`: the moment the note is about (user-chosen). `createdAt`, `updatedAt`: storage |
 | Validation | Input: domain `journalEntryInputSchema`. Form drafts use that input type; persisted entries use this model |
 | Commands | `list_journal_entries { accountId }`; writes `create_journal_entry`, `update_journal_entry`, `delete_journal_entry` |
-| Not modelled | Structured daily reviews and scoring: no backend contract (capability `structured-reviews`) |
+| Daily reviews | Build 22 added a canonical daily-review contract (`features/daily-reviews`, [build-22-daily-review.md](build-22-daily-review.md)); the `structured-reviews` placeholder capability is removed. Generic entries stay as above |
 
 ## CSV import
 
