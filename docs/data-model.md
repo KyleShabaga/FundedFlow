@@ -293,7 +293,8 @@ until a correction supersedes it.
 - A phase or path given with an assignment must be one the version applies to.
 
 **Publication.** `publish_rulebook_version(id, reviewer)` moves one step at a time:
-- a draft goes to `needs_review`, without a reviewer;
+- a draft goes to `needs_review`, without a reviewer; for an account-private rulebook this also records the user's
+  confirmation in `user_confirmed_at` (Build 19), which the Build 16 engine requires before it evaluates private rules;
 - a catalogue version in review goes to `verified`. That needs a reviewer, at least one applicability row and
   no conflicting claim.
 

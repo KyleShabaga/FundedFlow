@@ -1,7 +1,7 @@
 # 13 · Account rulebook, version editor and calculation explanation
 
 **Card:** Build 19 (rulebook version editor and calculation-explanation UI). Needs Builds 9.5 (rulebook contracts),
-14 (hooks), 15 (accounts), 15.5 (evidence) and 16 (rules engine, **not built yet**: see Blockers).
+14 (hooks), 15 (accounts), 15.5 (evidence) and 16 (rules engine, PR #42; this screen is integrated on it).
 No canvas mockup exists (the design task "Design rulebook editor, version comparison and explanation UX" is in
 the backlog), so this screen follows the Accounts screens' layout and the Build 13 components.
 
@@ -45,7 +45,7 @@ Rule states use `RuleStateBadge` (Needs setup, Manual check, Not tracked, None, 
 "Not calculated" badge for manual-only, unsupported and needs-setup rules.
 
 ## Version page and editor (blocks B, C, D, E)
-Tabs: **Edit rules** (draft) / **Rules** (published), **Compare**, **Inputs check**, **Review and publish** /
+Tabs: **Edit rules** (draft) / **Rules** (published), **Compare**, **Preview**, **Review and publish** /
 **Status**, **Details**.
 - **Start a draft** copies a version into a new draft: into the account's own rules (created on first use,
   never verified), or as a correction to the catalogue rulebook (needs a named reviewer). A superseding draft needs
@@ -66,11 +66,14 @@ Tabs: **Edit rules** (draft) / **Rules** (published), **Compare**, **Inputs chec
 - **Compare** (C): one real table per section (caption, column and row headers), Field · version in use · this
   version (with unsaved edits) · Change (Added / Removed / Changed / Same in words). "Show unchanged fields"
   checkbox. Values are what each version states; Unknown/None/Off/Manual check are never shown as zero.
-- **Inputs check** (D): first, `UnavailableState` "Preview unavailable — rule evaluator not connected". Then,
-  read-only: the Build 15.5 inputs for an explicit cutoff (now, to the minute) and, per rule, the evidence it
-  needs and this account's state (Available (you reported it), Missing, Incomplete, Stale, Conflicting, Not
-  supported in this version, Needs your manual check). The user may state whether trades, fees and ledger are
-  complete for this check only; it is not saved. Nothing is written.
+- **Preview** (D): a **simulation** on the Build 16 engine, labelled "Simulation: not this account's status" and
+  "Simulated: {status}". The account's canonical inputs are read for an explicit cutoff (now, to the minute; "Use
+  now" moves it) through `loadRiskCalculation` (no write), and `simulateRulebookVersion` evaluates this version,
+  with the editor's unsaved edits when they are valid (otherwise the saved draft, with a warning). The trader
+  states, for this calculation only: whether trades, fees and ledger are complete; the currency of the rule
+  amounts; whether touching a limit is a breach; an optional personal caution buffer. Nothing is assumed: an
+  unstated value leaves the affected rules Unknown with the reason. Prior breaches from earlier engine
+  calculations are passed to the engine. Nothing is assigned, published or saved.
 - **Review and publish** (E): server publish checks for the saved revision; "Save your edits first" while dirty;
   required acknowledgement checkbox; `ConfirmDialog` naming what changes. Catalogue versions in review get
   **Verify** (reviewer name + checkbox). Publishing a private draft opens **Assign**. **Discard draft…** asks
@@ -82,12 +85,22 @@ Tabs: **Edit rules** (draft) / **Rules** (published), **Compare**, **Inputs chec
   assignment the dialog saw; a different one is a conflict.
 
 ## Calculation explanation (block F)
-`CalculationExplanation` / `CalculationExplanationDrawer` show the latest stored snapshot **as recorded**:
-estimated status, why, trading day, data as of and calculated at (separate rows), rulebook version, engine
-version, inputs hash, data source, fees/unrealized included, and the engine's explanation JSON as nested rows. A
-snapshot calculated with another version than the one in use says so and is not recalculated. Manual-only,
-unsupported and needs-setup rules are listed as "Not part of any calculation". With no snapshot: "No
-calculation recorded" (the engine isn't connected). React computes nothing.
+`CalculationExplanation` / `CalculationExplanationDrawer` show the latest stored snapshot **as recorded**, never
+recalculated:
+- A Build 16 snapshot is shown typed (`EngineResultView`): status with its assurance in words (verified rules and
+  reported data / your own rules / not verified), why it isn't Safe, cutoff vs newest data used vs calculated at,
+  trading day, rulebook version (name and state), assignment, engine version, inputs hash, qualified balance,
+  today's realized P&L, trading days; then per rule: outcome, reason, formula, operands, results, missing inputs,
+  evidence, assumptions and the source/contributing record ids.
+- **Freshness**: its sources are read again for its own cutoff, coverage statement and frozen policy and compared
+  with `isEngineResultCurrent`: "Sources unchanged for its cutoff" or "Sources changed since it was calculated".
+  A calculation for an earlier trading day says "Calculated for {day}, not today". One made with another version
+  than the one in use says so. The latest row is never called current because it is the latest.
+- A snapshot from before Build 16 shows "Recorded before the rules engine" and its explanation as nested rows.
+- **Calculate now** (account page, not archived): the same statements as the preview, then "Calculate and save"
+  runs `calculateAndSaveRisk` as of now and saves a new snapshot; earlier ones are kept.
+- Manual-only, unsupported and needs-setup rules are listed as "Not part of any calculation". With no snapshot:
+  "No calculation recorded". React computes nothing.
 
 ## Keyboard and focus
 - Every control is a native or Radix control from the design system: Tab order follows the layout; Selects open
@@ -97,11 +110,12 @@ calculation recorded" (the engine isn't connected). React computes nothing.
 - Status lines (`role="status"`) announce save state and comparison counts; errors are alerts.
 
 ## Blockers and open decisions
-- **Build 16 (rules engine) does not exist** on main or any branch (card "In development", no PR). Missing
-  contracts: a pure `evaluate(version: RulebookVersionDetail, inputs: AccountRiskInputs, asOf, policy)` returning
-  per-rule results, reasons, formula operands/steps, contributing ids, engine version and inputs hash; a read-only
-  native preview command that runs it for a draft without writing; the snapshot mapper with nullable
-  balance/day P&L. Until then preview and live explanation are unavailable, by design.
+- Read, evaluate and save are separate operations (Build 16 gate): a source edit in between can save a result for
+  inputs that changed; the freshness check then reports "Sources changed".
+- Catalogue rulebooks need reviewed provider claims for every parameter (and for currency and breach boundary)
+  before the engine produces figures for them; the catalogue data here has none, so they stay Unknown.
+- Publishing the account's own rules records the user's confirmation (`user_confirmed_at`), which the engine
+  needs; the checkbox says so.
 - Applicability rows of a catalogue draft are copied from its source and shown, not edited (catalogue authoring
   is Build 9's screens).
 - Source claims are not copied into drafts: they are evidence for the version they were recorded against.
