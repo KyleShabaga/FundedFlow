@@ -34,6 +34,7 @@ specification). When a spec and a card disagree, the card wins; fix the spec in 
 | [10 Trade detail](screens/10-trade-detail.md) | 20; candles in 42–43 | P0 / P2 | Chart is P2 |
 | [11 Library](screens/11-library.md) | 20 (strategy, tag, checklist management) and 22 | P0 | A Journal sub-view, not top-level navigation |
 | [12 Economic calendar](screens/12-economic-calendar.md) | 41 Economic calendar and market sessions | P2 | Not V1 |
+| [13 Account rulebook](screens/13-rulebook.md) | 19 Rulebook version editor and calculation explanation | P0 | Needs 16 for preview/explanation (blocked) |
 
 Shared patterns ([components.md](components.md)) belong to **Build 13**; their visual specification to **Build 7**.
 

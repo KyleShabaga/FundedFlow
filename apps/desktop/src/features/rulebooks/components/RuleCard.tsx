@@ -20,7 +20,8 @@ export function RuleSources({ claims, names }: { claims: readonly RuleClaim[]; n
         return (
           <li key={c.id}>
             <Badge tone={CLAIM_TONE[c.claimStatus]}>{c.claimStatus === "conflicting" ? "Conflicting" : c.claimStatus.charAt(0).toUpperCase() + c.claimStatus.slice(1)}</Badge>{" "}
-            {s?.url ? <a href={s.url} target="_blank" rel="noreferrer">{s.label}</a> : <span>{s?.label ?? "Source"}</span>}
+            {/* The address is shown, not linked: the desktop webview has no external-link handling yet. */}
+            <span>{s?.label ?? "Source"}</span>{s?.url && <span className="ds-faint ds-mono rb-hash"> {s.url}</span>}
             {c.field && <span className="ds-faint"> · {c.field}</span>}
             {c.providerText && <span className="ds-faint"> · “{c.providerText}”</span>}
             {c.note && <span className="ds-faint"> · {c.note}</span>}

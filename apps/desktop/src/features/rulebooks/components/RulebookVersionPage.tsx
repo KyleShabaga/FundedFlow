@@ -284,7 +284,7 @@ function VersionView({ d, ctx }: { d: RulebookVersionDetail; ctx: AccountRuleboo
   const editable = isEditable(d) && account.archivedAt === null;
   const [dirty, setDirty] = useState(false);
   const [form, setForm] = useState<DraftForm | null>(null);
-  const [tab, setTab] = useState(editable ? "rules" : "rules");
+  const [tab, setTab] = useState("rules");
   const [leaveTo, setLeaveTo] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [assigning, setAssigning] = useState<RulebookVersionDetail | null>(null);

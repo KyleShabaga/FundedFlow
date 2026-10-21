@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 14 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql` and `0014_financial_evidence.sql`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 15 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql` and `0015_rulebook_events.sql`; see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -299,6 +299,32 @@ until a correction supersedes it.
 
 `validate_rulebook_draft` returns what would stop the next step.
 
+### Editing, guarded writes and the audit log (Build 19)
+
+Store: `store/rulebooks.rs`; tests: `db/rulebook_editor_tests.rs`; table: `migrations/0015_rulebook_events.sql`.
+
+- **Revision.** A version's `updated_at` is its revision. Every write that changes a version sets it to now, but
+  always at least one millisecond later than before, so two saves in one millisecond still differ.
+- **`update_rulebook_draft(id, expectedUpdatedAt, input, context)`** replaces a never-published draft's rules,
+  applicability, provider-stated dates, captured time and reason in one transaction (its rules' claims go with
+  them). The rulebook, number and superseded version stay. A different `expectedUpdatedAt`, or a version that is
+  no longer a draft, is a **conflict**: nothing is written. Validation is the same as for a new draft.
+- **`discard_rulebook_draft(id, expectedUpdatedAt, context)`** moves a draft to `rejected` with a required
+  reason. It is kept, listed with the versions and can never be published. Nothing is deleted.
+- **`publish_rulebook_version(id, reviewer?, expectedUpdatedAt?, context?)`**: the optional arguments refuse a
+  version changed since it was read. Publishing a draft that supersedes `S` is a **conflict** when another
+  version of the rulebook newer than `S` has been published meanwhile (the draft is stale; start again from the
+  newest version). Old callers without the new arguments behave as before.
+- **`assign_rulebook_to_account(input, guard?)`**: the guard names the open assignment the caller saw
+  (`expectedOpenAssignmentId`, null for none) and the actor and reason. A different open assignment is a
+  **conflict**, so a stale window never ends an assignment it did not show.
+- **Audit log.** `rulebook_events` is append-only (no update; no delete while the rulebook exists): one row per
+  draft created, saved or discarded, version published or verified, assignment (with its id and account), and
+  source conflict, with the actor label and reason. Resets that assign a rulebook log it too. Actor labels are
+  local and unauthenticated (`local_user`). `list_rulebook_events({ rulebookId } | { accountId })` reads them
+  oldest first; the account query also returns the events of the account's private rulebooks. Nothing was
+  backfilled: versions and assignments from before v15 keep only their own timestamps.
+
 ## Conventions
 
 | Concern | Decision |
@@ -468,6 +494,7 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 12 | `snapshot_rulebook_fk` | SQL | Rebuilds `account_snapshots` so `rulebook_version_id` references the reusable `rulebook_versions` (migration 9's rename had left it pointing at `legacy_account_rulebook_versions`, so no snapshot of an account on a reusable rulebook could be stored). Rows are kept; a reference to an id that was never converted becomes null; the key is `RESTRICT` instead of `CASCADE` |
 | 13 | `account_offer_selections` | SQL | Append-only `account_offer_selections`: the offer and promotion an account was bought under, with a frozen JSON copy of the terms and provenance. Offer, promotion and version keys are `RESTRICT`. Changes no other rows |
 | 14 | `financial_evidence` | SQL | Dedicated immutable financial observations, ledger revisions (including migration-time current-state baseline), frozen reconciliations and append-only review resolutions. No inferred financial history or calculated snapshot changes |
+| 15 | `rulebook_events` | SQL | Append-only [rulebook audit log](#editing-guarded-writes-and-the-audit-log-build-19): who created, saved, discarded, published, verified or assigned a version, and why. Nothing backfilled; changes no other rows |
 
 How an upgrade runs:
 
@@ -775,7 +802,7 @@ Limitations:
 | Trades | `list_trades(accountId)`, `create_trade(input)`, `update_trade(id, input)`, `delete_trade(id)` |
 | Journal | `list_journal_entries(accountId)`, `create_journal_entry(input)`, `update_journal_entry(id, input)`, `delete_journal_entry(id)` |
 | CSV | `preview_csv_import(request)`, `commit_csv_import(request)`, `list_csv_imports(accountId)`, `list_csv_import_problem_rows(batchId)` |
-| Rulebooks | `list_rulebooks(accountId?)`, `list_rulebook_versions(rulebookId)`, `get_rulebook_version(id)`, `get_applicable_rulebook(query)`, `create_rulebook_draft(input)`, `validate_rulebook_draft(id)`, `publish_rulebook_version(id, reviewer?)`, `assign_rulebook_to_account(input)`, `list_account_rulebook_assignments(accountId)`, `flag_rulebook_source_conflict(input)` |
+| Rulebooks | `list_rulebooks(accountId?)`, `list_rulebook_versions(rulebookId)`, `get_rulebook_version(id)`, `get_applicable_rulebook(query)`, `create_rulebook_draft(input, context?)`, `update_rulebook_draft(id, expectedUpdatedAt, input, context)`, `discard_rulebook_draft(id, expectedUpdatedAt, context)`, `validate_rulebook_draft(id)`, `publish_rulebook_version(id, reviewer?, expectedUpdatedAt?, context?)`, `assign_rulebook_to_account(input, guard?)`, `list_account_rulebook_assignments(accountId)`, `flag_rulebook_source_conflict(input)`, `list_rulebook_events(query)` |
 
 Updates replace all editable fields. Inputs are validated in TypeScript (Zod) and again in Rust before any write.
 Errors are `{ kind: "validation" | "notFound" | "conflict" | "database" | "unavailable", message, issues? }`, with `issues` naming
