@@ -3,52 +3,20 @@
 from __future__ import annotations
 
 import shutil
-import sys
-from importlib import metadata
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from fundedflow_collector import __version__
+from fundedflow_collector import services
 from fundedflow_collector.cli import exit_codes
 from fundedflow_collector.cli.common import clock, fail, handle_errors, state
-from fundedflow_collector.config import ConfigError
-from fundedflow_collector.db import registry
+from fundedflow_collector.config import EXAMPLE_CONFIG
 from fundedflow_collector.db.connection import RunLock
-from fundedflow_collector.db.migrate import bundled_migrations, current_version
+from fundedflow_collector.db.migrate import current_version
 from fundedflow_collector.db.snapshots import prune_raw
-from fundedflow_collector.net.client import build_user_agent
-from fundedflow_collector.outcomes import HostRole
 from fundedflow_collector.paths import guard_against_app_database
-from fundedflow_collector.policy import circuit
-from fundedflow_collector.policy.terms import review_expires, terms_block_reason
 from fundedflow_collector.render.browser import browser_status
-from fundedflow_collector.safety import banned_installed
-
-PINNED = {"httpx": "0.28.1", "httpcore": "1.0.9"}
-EXAMPLE_CONFIG = """# FundedFlow collector settings. Every value has a safe default; see the README for the full list.
-
-[user_agent]
-# Required before live fetching: a page that explains this collector (your repository or a page you control).
-# info_url = "https://github.com/KyleShabaga/FundedFlow"
-# Optional contact shown in the User-Agent, e.g. an email address.
-# contact = "you@example.com"
-
-[pacing]
-# min_delay_seconds = 2.0            # floor 1.0
-# unclear_terms_delay_seconds = 5.0  # floor 5.0
-
-[budget]
-# fetches_per_firm_run = 75          # ceiling 300
-
-[browser]
-# enabled = "auto"                   # "auto" uses the optional [browser] extra when installed; "off" never does
-
-[raw]
-# retain = false                     # keep raw response bytes (default off)
-# retention_days = 90
-"""
 
 
 @handle_errors
@@ -73,75 +41,15 @@ def init_db(ctx: typer.Context) -> None:
 def doctor(ctx: typer.Context) -> None:
     """Check the installation and safety settings; list terms reviews and stopped hosts."""
     app = state(ctx)
-    problems = 0
-
-    def line(status: str, label: str, detail: str) -> None:
-        typer.echo(f"[{status:<4}] {label:<22} {detail}")
-
-    py = sys.version_info
-    ok_py = py >= (3, 12)
-    problems += 0 if ok_py else 1
-    line("ok" if ok_py else "FAIL", "python", f"{py.major}.{py.minor}.{py.micro}")
-    line("ok", "collector", __version__)
-    line("ok", "data folder", str(app.paths.data_dir))
-    try:
-        settings, _ = app.settings()
-        line("ok", "settings", str(app.config_file) + ("" if app.config_file.exists() else " (not found; defaults)"))
-    except ConfigError as exc:
-        line("FAIL", "settings", str(exc))
-        raise typer.Exit(exit_codes.CONFIG) from exc
-    if settings.user_agent.info_url:
-        line("ok", "user-agent info URL", settings.user_agent.info_url)
-        line("ok", "user-agent", build_user_agent(settings))
-    else:
-        line("WARN", "user-agent info URL", "not set: live fetching is refused until user_agent.info_url is set")
-    banned = banned_installed()
-    problems += len(banned)
-    line("FAIL" if banned else "ok", "banned packages", ", ".join(banned) if banned else "none installed")
-    for name, expected in PINNED.items():
-        actual = metadata.version(name)
-        good = actual == expected
-        problems += 0 if good else 1
-        line("ok" if good else "FAIL", f"{name} pin", actual if good else f"{actual} (tested with {expected})")
-    available, detail = browser_status()
-    line("ok" if available else "info", "browser extra", detail if available else f"not available: {detail}")
-    line("ok", "proxies/cookies", "system proxies ignored (trust_env=False); no cookies stored or sent")
-    if not app.paths.db.exists():
-        line("WARN", "database", "not created yet: run `collector init-db`")
-        raise typer.Exit(exit_codes.CONFIG if problems else exit_codes.OK)
-    conn = app.connect()
-    version = current_version(conn)
-    latest = len(bundled_migrations())
-    line("ok" if version == latest else "WARN", "database", f"{app.paths.db} (schema {version}/{latest})")
-    now = clock.now()
-    hosts = registry.list_hosts(conn)
-    if not hosts:
-        line("info", "hosts", "none registered")
-    for host in hosts:
-        firm = registry.get_firm_by_id(conn, host.firm_id)
-        if host.role is HostRole.ASSET:
-            line("info", f"terms {host.host}", f"{firm.firm_key}: asset host (browser sub-resources only)")
-            continue
-        reason = terms_block_reason(host, now)
-        expires = review_expires(host)
-        decision = host.terms_decision.value if host.terms_decision else "not reviewed"
-        if reason is None:
-            line(
-                "ok",
-                f"terms {host.host}",
-                f"{firm.firm_key}: {decision}, review valid until {expires:%Y-%m-%d}" if expires else decision,
-            )
-        else:
-            line("WARN", f"terms {host.host}", f"{firm.firm_key}: {decision}; manual capture only ({reason})")
-    open_circuits = circuit.list_open(conn, now)
-    if not open_circuits:
-        line("ok", "stopped hosts", "none")
-    for c in open_circuits:
-        until = f", cools down at {c.cooldown_until}" if c.cooldown_until else ", needs `collector host reenable`"
-        line("WARN", f"stopped {c.host}", f"{c.state.value}: {c.reason}{until}")
+    health = services.health_checks(app.paths, app.config_file, clock, browser_check=browser_status)
+    for check in health.checks:
+        typer.echo(f"[{check.status:<4}] {check.label:<22} {check.detail}")
+    if health.stopped_early:
+        failed_settings = any(c.label == "settings" and c.status == "FAIL" for c in health.checks)
+        raise typer.Exit(exit_codes.CONFIG if health.problems or failed_settings else exit_codes.OK)
     typer.echo("")
-    typer.echo("Healthy." if problems == 0 else f"{problems} problem(s) found.")
-    raise typer.Exit(exit_codes.CONFIG if problems else exit_codes.OK)
+    typer.echo("Healthy." if health.problems == 0 else f"{health.problems} problem(s) found.")
+    raise typer.Exit(exit_codes.CONFIG if health.problems else exit_codes.OK)
 
 
 @handle_errors

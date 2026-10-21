@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import importlib.util
 import sqlite3
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from fundedflow_collector import services
 from fundedflow_collector.capture import import_capture
 from fundedflow_collector.cli import exit_codes
 from fundedflow_collector.cli.common import AppState, clock, fail, handle_errors, state, table
@@ -17,15 +17,10 @@ from fundedflow_collector.db import registry
 from fundedflow_collector.db.connection import RunLock
 from fundedflow_collector.db.migrate import recover_interrupted_runs
 from fundedflow_collector.db.registry import RegistryError
-from fundedflow_collector.net.client import Fetcher, build_user_agent, make_client
-from fundedflow_collector.net.fixture_transport import FixtureSite
-from fundedflow_collector.net.pinned_backend import PinnedNetworkBackend
-from fundedflow_collector.net.resolver import SystemResolver
-from fundedflow_collector.net.transport import PinnedTransport
 from fundedflow_collector.outcomes import OUTCOME_INFO, Category
 from fundedflow_collector.parse.document import ParseError, ParseTimeout
-from fundedflow_collector.render.browser import PlaywrightRenderer, Renderer, browser_status
-from fundedflow_collector.runner import Command, Environment, RunOptions, RunSummary, run_firms, user_agent_suffix
+from fundedflow_collector.render.browser import browser_status
+from fundedflow_collector.runner import Command, Environment, RunOptions, RunSummary, run_firms
 
 
 def build_environment(
@@ -38,45 +33,17 @@ def build_environment(
     headed: bool,
     live: bool,
 ) -> Environment:
-    fixture = FixtureSite(fixture_dir) if fixture_dir is not None else None
-    if not live:
-        return Environment(
-            conn=conn,
-            settings=settings,
-            config_sha256=config_sha,
-            clock=clock,
-            fetcher=None,
-            resolver=None,
-            renderer=None,
-            fixture=fixture,
-        )
-    user_agent = build_user_agent(settings, required=fixture is None)
-    if fixture is not None:
-        fetcher = Fetcher(make_client(settings, fixture.transport(), user_agent), clock, settings)
-        resolver = None
-    else:
-        resolver = SystemResolver()
-        backend = PinnedNetworkBackend(resolver)
-        fetcher = Fetcher(make_client(settings, PinnedTransport(backend), user_agent), clock, settings, backend)
-    renderer: Renderer | None = None
-    if use_browser and settings.browser.enabled == "auto" and importlib.util.find_spec("playwright") is not None:
-        available, _ = browser_status()
-        if available:
-            renderer = PlaywrightRenderer(
-                user_agent_suffix=user_agent_suffix(settings.user_agent.info_url),
-                navigation_timeout_seconds=settings.browser.navigation_timeout_seconds,
-                headed=headed,
-            )
-    return Environment(
-        conn=conn,
-        settings=settings,
-        config_sha256=config_sha,
+    return services.build_environment(
+        conn,
+        settings,
+        config_sha,
         clock=clock,
-        fetcher=fetcher,
-        resolver=resolver,
-        renderer=renderer,
-        fixture=fixture,
-        progress=lambda text: typer.echo(text),
+        fixture_dir=fixture_dir,
+        use_browser=use_browser,
+        headed=headed,
+        live=live,
+        progress=typer.echo if live else None,
+        browser_check=browser_status,
     )
 
 

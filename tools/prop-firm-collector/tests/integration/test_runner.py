@@ -287,3 +287,24 @@ def test_nothing_becomes_verified_and_no_app_database_is_created(harness: Harnes
     assert not tables & {"rulebooks", "rule_candidates", "catalogue_sources", "reviews", "providers"}
     columns = {r["name"] for r in harness.conn.execute("PRAGMA table_info(source_snapshots)")}
     assert "verification_status" not in columns
+
+
+def test_stop_request_ends_the_run_cleanly(harness: Harness) -> None:
+    seeded(harness)
+    calls = {"n": 0}
+
+    def stop_after_three() -> bool:
+        calls["n"] += 1
+        return calls["n"] > 3
+
+    env = harness.env()
+    env.should_stop = stop_after_three
+    from fundedflow_collector.runner import FirmRunner, RunOptions
+
+    summary = FirmRunner(
+        env, registry.require_firm(harness.conn, "example-firm"), RunOptions(command="fetch"), "batch_stop"
+    ).run()
+    assert summary.status == "aborted"
+    run = harness.conn.execute("SELECT status, finished_at FROM crawl_runs").fetchone()
+    assert run["status"] == "aborted" and run["finished_at"] is not None
+    assert summary.exit_code() == 4
