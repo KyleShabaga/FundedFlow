@@ -102,3 +102,44 @@ export type ArchiveInspectRequest = z.infer<typeof archiveInspectRequestSchema>;
 export type ArchiveRestorePreview = z.infer<typeof archiveRestorePreviewSchema>;
 export type ArchiveRestoreRequest = z.infer<typeof archiveRestoreRequestSchema>;
 export type ArchiveRestoreResult = z.infer<typeof archiveRestoreResultSchema>;
+export const deletionScopeSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("account"), accountId: z.string().min(1) }),
+  z.strictObject({ kind: z.literal("journal") }),
+]);
+export const permanentDeletionPreviewRequestSchema = z.strictObject({
+  scope: deletionScopeSchema,
+});
+export const permanentDeletionPreviewSchema = z.object({
+  scope: deletionScopeSchema,
+  accountName: z.string().nullable(),
+  affectedEntities: dataControlCountsSchema,
+  attachments: z.array(archiveAttachmentSchema),
+  linkedAccountIds: z.array(z.string()),
+  blockers: z.array(z.string()),
+  previewToken: z.string(),
+  requiredConfirmation: z.string(),
+  warnings: z.array(z.string()),
+  localRecoveryCopies: z.number().int().nonnegative(),
+});
+export const permanentDeletionRequestSchema = z.strictObject({
+  scope: deletionScopeSchema,
+  previewToken: z.string().min(1),
+  confirmation: z.string().min(1),
+});
+export const permanentDeletionResultSchema = z.object({
+  operationId: z.string(),
+  state: z.enum(["completed", "cleanup_pending"]),
+  affectedEntities: dataControlCountsSchema,
+});
+export type PermanentDeletionPreviewRequest = z.infer<
+  typeof permanentDeletionPreviewRequestSchema
+>;
+export type PermanentDeletionPreview = z.infer<
+  typeof permanentDeletionPreviewSchema
+>;
+export type PermanentDeletionRequest = z.infer<
+  typeof permanentDeletionRequestSchema
+>;
+export type PermanentDeletionResult = z.infer<
+  typeof permanentDeletionResultSchema
+>;

@@ -308,3 +308,211 @@ fn second_runtime_cannot_access_a_journal_owned_by_another_process_handle() {
         crate::runtime::RuntimeState::Ready
     );
 }
+fn journal_note(c: &mut Connection, id: &str) -> String {
+    crate::store::journal::create(
+        c,
+        crate::store::journal::JournalEntryInput {
+            account_id: id.into(),
+            trade_id: None,
+            entry_at: "2026-10-19T14:00:00Z".into(),
+            title: "note".into(),
+            body: "private".into(),
+            tags: vec!["shared-tag".into()],
+        },
+    )
+    .unwrap()
+    .id
+}
+fn image(c: &Connection, root: &Path, entry: &str, id: &str, key: &str) {
+    let bytes = b"private screenshot";
+    let hash = filesystem::digest(bytes);
+    c.execute("INSERT OR IGNORE INTO attachments(id,kind,storage_key,mime_type,byte_size,sha256,created_at,updated_at) VALUES(?1,'screenshot',?2,'image/png',?3,?4,'t','t')",rusqlite::params![id,key,bytes.len() as i64,hash]).unwrap();
+    c.execute("INSERT INTO attachment_links(id,attachment_id,journal_entry_id,created_at,updated_at) VALUES(?1,?2,?3,'t','t')",rusqlite::params![crate::domain::new_id(),id,entry]).unwrap();
+    fs::create_dir_all(root.join("attachments")).unwrap();
+    fs::write(root.join("attachments").join(key), bytes).unwrap();
+}
+fn approved(p: &deletion::DeletionPreview) -> deletion::DeleteRequest {
+    deletion::DeleteRequest {
+        scope: p.scope.clone(),
+        preview_token: p.preview_token.clone(),
+        confirmation: p.required_confirmation.clone(),
+    }
+}
+#[test]
+fn account_delete_counts_real_cascades_preserves_shared_data_and_other_accounts() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut c = journal(&dir.path().join("live.db"));
+    let a = account(&mut c, "A");
+    let b = account(&mut c, "B");
+    let ja = journal_note(&mut c, &a);
+    let jb = journal_note(&mut c, &b);
+    image(&c, dir.path(), &ja, "shared", "shared.png");
+    image(&c, dir.path(), &jb, "shared", "shared.png");
+    image(&c, dir.path(), &ja, "private", "private.png");
+    crate::store::ledger::create(
+        &mut c,
+        crate::store::ledger::LedgerEntryInput {
+            account_id: a.clone(),
+            kind: "payout".into(),
+            amount: "-0.000001".into(),
+            affects_balance: None,
+            effective_at: "2026-10-19T14:00:00Z".into(),
+            note: None,
+        },
+    )
+    .unwrap();
+    let p = deletion::preview(
+        &c,
+        dir.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Account {
+                account_id: a.clone(),
+            },
+        },
+    )
+    .unwrap();
+    assert!(p.blockers.is_empty(), "{:?}", p.blockers);
+    assert_eq!(p.affected_entities["accounts"], 1);
+    assert_eq!(p.affected_entities["ledger_revisions"], 1);
+    assert_eq!(p.attachments.len(), 1);
+    assert_eq!(p.attachments[0].id, "private");
+    let result = deletion::execute(&mut c, dir.path(), approved(&p)).unwrap();
+    assert_eq!(result.state, "completed");
+    assert_eq!(archive::account_ids(&c).unwrap(), vec![b]);
+    assert!(dir.path().join("attachments/shared.png").exists());
+    assert!(!dir.path().join("attachments/private.png").exists());
+    assert_eq!(
+        c.query_row("SELECT count(*) FROM tags", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+    assert!(
+        !c.prepare("PRAGMA foreign_key_check")
+            .unwrap()
+            .exists([])
+            .unwrap()
+    );
+}
+#[test]
+fn linked_and_phase_history_accounts_are_blocked_without_mutation() {
+    for phase in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let mut c = journal(&dir.path().join("live.db"));
+        let a = account(&mut c, "A");
+        let b = account(&mut c, "B");
+        if phase {
+            c.execute("INSERT INTO account_phase_events(id,account_id,to_phase,recorded_at,source,actor) VALUES('phase',?1,'unknown','2026-10-19T14:00:00.000Z','user_entered','user')",[&a]).unwrap();
+        } else {
+            c.execute(
+                "UPDATE accounts SET parent_account_id=?1 WHERE id=?2",
+                rusqlite::params![a, b],
+            )
+            .unwrap();
+        }
+        let before = archive::dump(&c).unwrap();
+        let p = deletion::preview(
+            &c,
+            dir.path(),
+            deletion::PreviewRequest {
+                scope: deletion::Scope::Account { account_id: a },
+            },
+        )
+        .unwrap();
+        assert!(!p.blockers.is_empty());
+        assert!(deletion::execute(&mut c, dir.path(), approved(&p)).is_err());
+        assert_eq!(archive::dump(&c).unwrap(), before);
+    }
+}
+#[test]
+fn account_delete_transaction_failure_rolls_back_and_cleanup_keeps_owned_bytes() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut c = journal(&dir.path().join("live.db"));
+    let a = account(&mut c, "A");
+    let j = journal_note(&mut c, &a);
+    image(&c, dir.path(), &j, "image", "image.png");
+    let p = deletion::preview(
+        &c,
+        dir.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Account { account_id: a },
+        },
+    )
+    .unwrap();
+    let before = archive::dump(&c).unwrap();
+    // TEMP trigger is deliberately absent from the read-only preview's cloned main database.
+    c.execute_batch("CREATE TEMP TRIGGER fail_delete BEFORE DELETE ON main.accounts BEGIN SELECT RAISE(ABORT,'disk failure'); END;").unwrap();
+    assert!(deletion::execute(&mut c, dir.path(), approved(&p)).is_err());
+    assert_eq!(archive::dump(&c).unwrap(), before);
+    deletion::recover_cleanup(&c, dir.path()).unwrap();
+    assert!(dir.path().join("attachments/image.png").exists());
+}
+#[test]
+fn whole_journal_erase_is_distinct_atomic_and_cleans_managed_recovery_copies_only() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut c = journal(&dir.path().join("live.db"));
+    let a = account(&mut c, "A");
+    let j = journal_note(&mut c, &a);
+    image(&c, dir.path(), &j, "image", "image.png");
+    fs::write(
+        dir.path().join("fundedflow.db.before-v14.bak"),
+        b"old secret backup",
+    )
+    .unwrap();
+    fs::write(dir.path().join("user-export.zip"), b"user controlled").unwrap();
+    let p = deletion::preview(
+        &c,
+        dir.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Journal,
+        },
+    )
+    .unwrap();
+    assert_eq!(p.local_recovery_copies, 1);
+    let mut wrong = approved(&p);
+    wrong.confirmation = "DELETE ACCOUNT".into();
+    assert_eq!(
+        deletion::execute(&mut c, dir.path(), wrong)
+            .unwrap_err()
+            .code,
+        Code::ConfirmationRequired
+    );
+    assert_eq!(
+        deletion::execute(&mut c, dir.path(), approved(&p))
+            .unwrap()
+            .state,
+        "completed"
+    );
+    assert!(archive::account_ids(&c).unwrap().is_empty());
+    assert_eq!(
+        c.query_row("SELECT count(*) FROM journal_entries", [], |r| r
+            .get::<_, i64>(0))
+            .unwrap(),
+        0
+    );
+    assert!(!dir.path().join("attachments/image.png").exists());
+    assert!(!dir.path().join("fundedflow.db.before-v14.bak").exists());
+    assert!(dir.path().join("user-export.zip").exists());
+}
+#[test]
+fn deletion_stale_preview_and_missing_confirmation_cannot_erase_new_data() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut c = journal(&dir.path().join("live.db"));
+    account(&mut c, "old");
+    let p = deletion::preview(
+        &c,
+        dir.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Journal,
+        },
+    )
+    .unwrap();
+    account(&mut c, "new");
+    let before = archive::dump(&c).unwrap();
+    assert_eq!(
+        deletion::execute(&mut c, dir.path(), approved(&p))
+            .unwrap_err()
+            .code,
+        Code::StalePreview
+    );
+    assert_eq!(archive::dump(&c).unwrap(), before);
+}

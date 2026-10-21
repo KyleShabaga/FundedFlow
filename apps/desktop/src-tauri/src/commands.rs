@@ -475,3 +475,15 @@ pub async fn inspect_journal_archive(db: State<'_, Runtime>, request: crate::dat
 pub async fn restore_journal_archive(db: State<'_, Runtime>, request: crate::data_controls::RestoreRequest) -> crate::data_controls::Result<crate::data_controls::RestoreResult> {
     db.prepare_restore(request)
 }
+#[tauri::command]
+pub async fn preview_permanent_deletion(db: State<'_, Runtime>, request: crate::data_controls::PreviewRequest) -> crate::data_controls::Result<crate::data_controls::DeletionPreview> {
+    db.with_controls(|c, root| crate::data_controls::preview_deletion(c, root, request))
+}
+#[tauri::command]
+pub async fn permanently_delete_data(db: State<'_, Runtime>, request: crate::data_controls::DeleteRequest) -> crate::data_controls::Result<crate::data_controls::DeleteResult> {
+    db.with_controls(|c, root| crate::data_controls::delete_data(c, root, request))
+}
+#[tauri::command]
+pub async fn retry_data_cleanup(db: State<'_, Runtime>) -> crate::data_controls::Result<()> {
+    db.with_controls(|c, root| crate::data_controls::recover_cleanup(c, root))
+}

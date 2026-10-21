@@ -1,4 +1,12 @@
 import {
+  permanentDeletionPreviewRequestSchema,
+  permanentDeletionPreviewSchema,
+  permanentDeletionRequestSchema,
+  permanentDeletionResultSchema,
+  type PermanentDeletionPreviewRequest,
+  type PermanentDeletionRequest,
+} from "@fundedflow/domain";
+import {
   archiveInspectRequestSchema,
   archiveRestorePreviewSchema,
   archiveRestoreRequestSchema,
@@ -47,6 +55,20 @@ export function createDataControls(invoke: Invoke) {
     return output.parse(raw);
   }
   return {
+    previewDeletion: (request: PermanentDeletionPreviewRequest) =>
+      call(
+        "preview_permanent_deletion",
+        permanentDeletionPreviewRequestSchema.parse(request),
+        permanentDeletionPreviewSchema,
+      ),
+    deletePermanently: (request: PermanentDeletionRequest) =>
+      call(
+        "permanently_delete_data",
+        permanentDeletionRequestSchema.parse(request),
+        permanentDeletionResultSchema,
+      ),
+    retryCleanup: () =>
+      call("retry_data_cleanup", undefined, z.null()).then(() => undefined),
     inspectArchive: (request: ArchiveInspectRequest) =>
       call(
         "inspect_journal_archive",

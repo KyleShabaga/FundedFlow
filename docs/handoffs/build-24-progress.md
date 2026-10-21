@@ -51,3 +51,13 @@ Last completed implementation commit before B: `398a7be` (Block A). Implemented 
 Verification: 8 native data-control tests pass, including wrong/stale confirmations, same-ID/table restore to a second profile, failed/mid-interruption rollback, safety copy retention and a second Runtime ownership refusal. Typecheck passes. Windows rename/power-loss semantics remain unverified. New native warnings concern only unused Block C error variants; final Clippy remains pending.
 
 Next: Block C deletion previews/confirmation, account isolation + lineage/provenance blockers, transactional removal and recoverable attachment cleanup. Then Block D malicious/older-schema/wire tests, full checks and final matrix. PR #43 remains draft; all completed blocks must be pushed.
+
+## Block C checkpoint
+
+Prior completed commit: `8e97bba` (B). Implemented authoritative isolated-cascade previews and full-data-bound confirmations, transactional single-account deletion, shared attachment/catalogue/tag preservation, lineage/phase/audit ownership blockers, separate SQLite-atomic whole-journal erasure, persistent post-commit cleanup queue and startup/manual retries. Whole-journal scope includes app-managed recovery copies; externally saved archives remain untouched. No automatic pre-delete backup or claim of forensic secure erasure.
+
+Verification: 13 native tests pass; typecheck passes. New tests cover actual ledger revision/note/attachment cascades, shared attachment and other-account isolation, linked/phase-history blocking, injected live-only delete rollback, stale confirmations and whole-journal scope versus user exports. No applied migration changed.
+
+Known dependency: schema 14 unconditionally restricts phase-history deletion. Such account deletes remain blocked pending a reviewed policy/forward-only migration; no speculative migration 15 conflicts with unmerged Build 16 #42. Unknown audit/sync ownership also blocks account deletion. Exact current behavior is documented in build-24-data-controls.md.
+
+Next: Block D expand corrupt/malicious/resource/legacy/native-wire coverage, test cleanup failures and attachment rollback, run full npm/native/Clippy checks, record final matrix and Windows/Build 20/25 gates. All previous checkpoints are pushed to PR #43.

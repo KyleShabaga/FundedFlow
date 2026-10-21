@@ -227,6 +227,7 @@ impl Runtime {
         let root=path.parent().ok_or_else(|| crate::data_controls::fail(crate::data_controls::Code::UnsafePath))?;
         let mut conn=lock(&self.conn);
         let c=conn.as_mut().ok_or_else(|| crate::data_controls::fail(crate::data_controls::Code::Busy))?;
+        crate::data_controls::recover_cleanup(c,root)?;
         let result=crate::data_controls::prepare_restore(c,root,request)?;
         // The safety image already contains the committed WAL. Closing prevents stale writes after confirmation.
         *conn=None;
@@ -342,6 +343,7 @@ impl Runtime {
             }
         }
         let conn = db::open_file(path).map_err(|e| classify(&e, path))?;
+        crate::data_controls::recover_cleanup(&conn, root).map_err(|e| (failure(FailureCategory::OpenFailed, e.message), None))?;
         let version = conn
             .pragma_query_value(None, "user_version", |r| r.get(0))
             .map_err(|e| (failure(FailureCategory::OpenFailed, e.to_string()), None))?;

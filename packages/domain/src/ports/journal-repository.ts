@@ -1,3 +1,4 @@
+import type { PermanentDeletionPreviewRequest, PermanentDeletionPreview, PermanentDeletionRequest, PermanentDeletionResult } from "../contracts/data-controls.js";
 import type { ArchiveInspectRequest, ArchiveRestorePreview, ArchiveRestoreRequest, ArchiveRestoreResult } from "../contracts/data-controls.js";
 import type { ArchiveExportRequest, CsvExportRequest, DataExportResult } from "../contracts/data-controls.js";
 import type { AccountRiskInputs, RiskInputsQuery, ObservationInput, ObservationCorrection, FinancialObservation, LedgerRevision, ReconciliationRequest, Reconciliation, ReconciliationResolutionInput, ReconciliationResolution } from "../risk/contracts.js";
@@ -236,6 +237,9 @@ export interface FinancialEvidenceRepository {
 
 /** The local journal. */
 export interface DataControlsRepository {
+  previewDeletion(request: PermanentDeletionPreviewRequest): Promise<PermanentDeletionPreview>;
+  deletePermanently(request: PermanentDeletionRequest): Promise<PermanentDeletionResult>;
+  retryCleanup(): Promise<void>;
   inspectArchive(request: ArchiveInspectRequest): Promise<ArchiveRestorePreview>;
   restoreArchive(request: ArchiveRestoreRequest): Promise<ArchiveRestoreResult>;
   exportArchive(request: ArchiveExportRequest): Promise<DataExportResult>;

@@ -1,5 +1,8 @@
 //! Offline data controls. No content or caller-selected paths are logged.
 mod archive;
+mod deletion;
+pub use deletion::{DeleteRequest, DeleteResult, DeletionPreview, PreviewRequest};
+pub use deletion::{execute as delete_data, preview as preview_deletion, recover_cleanup};
 mod filesystem;
 mod restore;
 pub use restore::{InspectRequest, RestorePreview, RestoreRequest, RestoreResult};
