@@ -106,6 +106,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "financial_evidence",
         step: Step::Sql(include_str!("../../migrations/0014_financial_evidence.sql")),
     },
+    Migration {
+        version: 15,
+        name: "rulebook_events",
+        step: Step::Sql(include_str!("../../migrations/0015_rulebook_events.sql")),
+    },
 ];
 
 /// Latest schema version this build understands.
@@ -262,3 +267,5 @@ pub(crate) fn catalogue_tests_seeded() -> Connection {
 mod legacy_rulebook_tests;
 #[cfg(test)]
 mod rulebook_tests;
+#[cfg(test)]
+mod rulebook_editor_tests;

@@ -37,6 +37,11 @@ import {
   resetResultSchema,
   statusChangeInputSchema,
   accountRulebookAssignmentSchema,
+  assignmentGuardSchema,
+  changeContextSchema,
+  rulebookDraftUpdateSchema,
+  rulebookEventQuerySchema,
+  rulebookEventSchema,
   accountSchema,
   appErrorSchema,
   applicableRulebookQuerySchema,
@@ -193,12 +198,37 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
       getVersion: (id) => call("get_rulebook_version", { id }, rulebookVersionDetailSchema),
       getApplicable: (query) =>
         call("get_applicable_rulebook", { query: validate(applicableRulebookQuerySchema, query) }, applicableRulebookSchema),
-      createDraft: (input) =>
-        call("create_rulebook_draft", { input: validate(rulebookDraftInputSchema, input) }, rulebookVersionDetailSchema),
+      createDraft: (input, context) =>
+        call(
+          "create_rulebook_draft",
+          { input: validate(rulebookDraftInputSchema, input), ...(context ? { context: validate(changeContextSchema, context) } : {}) },
+          rulebookVersionDetailSchema,
+        ),
+      updateDraft: (id, expectedUpdatedAt, input, context) =>
+        call(
+          "update_rulebook_draft",
+          { id, expectedUpdatedAt, input: validate(rulebookDraftUpdateSchema, input), context: validate(changeContextSchema, context) },
+          rulebookVersionDetailSchema,
+        ),
+      discardDraft: (id, expectedUpdatedAt, context) =>
+        call("discard_rulebook_draft", { id, expectedUpdatedAt, context: validate(changeContextSchema, context) }, rulebookVersionDetailSchema),
+      listEvents: (query) =>
+        call("list_rulebook_events", { query: validate(rulebookEventQuerySchema, query) }, z.array(rulebookEventSchema)),
       validateDraft: (id) => call("validate_rulebook_draft", { id }, z.array(draftIssueSchema)),
-      publish: (id, reviewer) => call("publish_rulebook_version", { id, reviewer }, rulebookVersionDetailSchema),
-      assign: (input) =>
-        call("assign_rulebook_to_account", { input: validate(assignmentInputSchema, input) }, accountRulebookAssignmentSchema),
+      publish: (id, reviewer, options) =>
+        call(
+          "publish_rulebook_version",
+          options
+            ? { id, reviewer, expectedUpdatedAt: options.expectedUpdatedAt, context: validate(changeContextSchema, options.context) }
+            : { id, reviewer },
+          rulebookVersionDetailSchema,
+        ),
+      assign: (input, guard) =>
+        call(
+          "assign_rulebook_to_account",
+          { input: validate(assignmentInputSchema, input), ...(guard ? { guard: validate(assignmentGuardSchema, guard) } : {}) },
+          accountRulebookAssignmentSchema,
+        ),
       listAssignments: (accountId) =>
         call("list_account_rulebook_assignments", { accountId }, z.array(accountRulebookAssignmentSchema)),
       flagSourceConflict: (input) =>

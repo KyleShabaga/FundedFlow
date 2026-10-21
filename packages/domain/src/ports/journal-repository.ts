@@ -46,11 +46,16 @@ import type {
   AccountRulebookAssignment,
   ApplicableRulebook,
   ApplicableRulebookQuery,
+  AssignmentGuard,
   AssignmentInput,
+  ChangeContext,
   DraftIssue,
   RuleClaim,
   Rulebook,
   RulebookDraftInput,
+  RulebookDraftUpdate,
+  RulebookEvent,
+  RulebookEventQuery,
   RulebookVersionDetail,
   SourceConflictInput,
 } from "../rulebook/versions.js";
@@ -130,16 +135,32 @@ export interface RulebookRepository {
   /** The verified version governing a phase or path; never guessed. */
   getApplicable(query: ApplicableRulebookQuery): Promise<ApplicableRulebook>;
   /** A new draft version, of an existing rulebook or a new one, with its rules and applicability. */
-  createDraft(input: RulebookDraftInput): Promise<RulebookVersionDetail>;
+  createDraft(input: RulebookDraftInput, context?: ChangeContext): Promise<RulebookVersionDetail>;
+  /**
+   * Replaces a never-published draft's content (Build 19). `expectedUpdatedAt` is the draft as last read;
+   * a later change by anyone is a conflict, never an overwrite.
+   */
+  updateDraft(id: string, expectedUpdatedAt: string, input: RulebookDraftUpdate, context: ChangeContext): Promise<RulebookVersionDetail>;
+  /** Sets a draft aside: it becomes `rejected` and stays in the history with the reason (Build 19). */
+  discardDraft(id: string, expectedUpdatedAt: string, context: ChangeContext): Promise<RulebookVersionDetail>;
+  /** The append-only audit log of a rulebook or of an account (Build 19). */
+  listEvents(query: RulebookEventQuery): Promise<RulebookEvent[]>;
   /** What stops the version from being published now; empty when nothing does. */
   validateDraft(id: string): Promise<DraftIssue[]>;
   /**
    * One publication step: a draft goes to `needs_review` (a private rulebook
    * is then in use); a catalogue version in review is verified by `reviewer`.
    */
-  publish(id: string, reviewer: string | null): Promise<RulebookVersionDetail>;
-  /** From a trading day; the account's open assignment ends that day. */
-  assign(input: AssignmentInput): Promise<AccountRulebookAssignment>;
+  publish(
+    id: string,
+    reviewer: string | null,
+    options?: { expectedUpdatedAt: string; context: ChangeContext },
+  ): Promise<RulebookVersionDetail>;
+  /**
+   * From a trading day; the account's open assignment ends that day. With a guard, a different open
+   * assignment than the caller saw is a conflict, and the actor and reason are logged.
+   */
+  assign(input: AssignmentInput, guard?: AssignmentGuard): Promise<AccountRulebookAssignment>;
   listAssignments(accountId: string): Promise<AccountRulebookAssignment[]>;
   /** Records a contradicting source; a verified version it contradicts becomes stale. */
   flagSourceConflict(input: SourceConflictInput): Promise<RuleClaim>;

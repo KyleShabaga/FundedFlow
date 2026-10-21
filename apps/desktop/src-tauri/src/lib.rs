@@ -108,6 +108,9 @@ pub fn run() {
             commands::assign_rulebook_to_account,
             commands::list_account_rulebook_assignments,
             commands::flag_rulebook_source_conflict,
+            commands::update_rulebook_draft,
+            commands::discard_rulebook_draft,
+            commands::list_rulebook_events,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

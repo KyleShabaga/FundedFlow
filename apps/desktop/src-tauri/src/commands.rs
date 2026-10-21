@@ -12,8 +12,9 @@ use crate::store::accounts::{self, Account, AccountHistory, AccountInput, Status
 use crate::store::attempts::{self, AttemptSummary, DeletionPreview, ResetInput, ResetResult};
 use crate::error::FieldIssue;
 use crate::rulebook::{
-    AccountRulebookAssignment, ApplicableRulebook, ApplicableRulebookQuery, AssignmentInput, RuleClaim, Rulebook,
-    RulebookDraftInput, RulebookVersionDetail, SourceConflictInput,
+    AccountRulebookAssignment, ApplicableRulebook, ApplicableRulebookQuery, AssignmentGuard, AssignmentInput,
+    ChangeContext, RuleClaim, Rulebook, RulebookDraftInput, RulebookDraftUpdate, RulebookEvent, RulebookEventQuery,
+    RulebookVersionDetail, SourceConflictInput,
 };
 use crate::catalogue::{AccountCatalogueLink, AccountPhaseEvent, CatalogueVersion};
 use crate::store::catalogue::{self as catalogue_store, AccountLinkInput, CatalogueSnapshot, PhaseEventInput};
@@ -170,8 +171,40 @@ pub async fn get_applicable_rulebook(db: State<'_, Runtime>, query: ApplicableRu
 }
 
 #[tauri::command]
-pub async fn create_rulebook_draft(db: State<'_, Runtime>, input: RulebookDraftInput) -> AppResult<RulebookVersionDetail> {
-    db.with(|c| rulebooks::create_draft(c, input))
+pub async fn create_rulebook_draft(
+    db: State<'_, Runtime>,
+    input: RulebookDraftInput,
+    context: Option<ChangeContext>,
+) -> AppResult<RulebookVersionDetail> {
+    db.with(|c| rulebooks::create_draft_with(c, input, context.unwrap_or_else(ChangeContext::local)))
+}
+
+/// Build 19: save a draft's content; a stale `expected_updated_at` is a conflict.
+#[tauri::command]
+pub async fn update_rulebook_draft(
+    db: State<'_, Runtime>,
+    id: String,
+    expected_updated_at: String,
+    input: RulebookDraftUpdate,
+    context: ChangeContext,
+) -> AppResult<RulebookVersionDetail> {
+    db.with(|c| rulebooks::update_draft(c, &id, &expected_updated_at, input, context))
+}
+
+/// Build 19: set a draft aside (rejected, kept in history).
+#[tauri::command]
+pub async fn discard_rulebook_draft(
+    db: State<'_, Runtime>,
+    id: String,
+    expected_updated_at: String,
+    context: ChangeContext,
+) -> AppResult<RulebookVersionDetail> {
+    db.with(|c| rulebooks::discard_draft(c, &id, &expected_updated_at, context))
+}
+
+#[tauri::command]
+pub async fn list_rulebook_events(db: State<'_, Runtime>, query: RulebookEventQuery) -> AppResult<Vec<RulebookEvent>> {
+    db.with(|c| rulebooks::list_events(c, &query))
 }
 
 #[tauri::command]
@@ -184,13 +217,21 @@ pub async fn publish_rulebook_version(
     db: State<'_, Runtime>,
     id: String,
     reviewer: Option<String>,
+    expected_updated_at: Option<String>,
+    context: Option<ChangeContext>,
 ) -> AppResult<RulebookVersionDetail> {
-    db.with(|c| rulebooks::publish(c, &id, reviewer))
+    db.with(|c| {
+        rulebooks::publish_with(c, &id, reviewer, expected_updated_at.as_deref(), context.unwrap_or_else(ChangeContext::local))
+    })
 }
 
 #[tauri::command]
-pub async fn assign_rulebook_to_account(db: State<'_, Runtime>, input: AssignmentInput) -> AppResult<AccountRulebookAssignment> {
-    db.with(|c| rulebooks::assign(c, input))
+pub async fn assign_rulebook_to_account(
+    db: State<'_, Runtime>,
+    input: AssignmentInput,
+    guard: Option<AssignmentGuard>,
+) -> AppResult<AccountRulebookAssignment> {
+    db.with(|c| rulebooks::assign_with(c, input, guard))
 }
 
 #[tauri::command]

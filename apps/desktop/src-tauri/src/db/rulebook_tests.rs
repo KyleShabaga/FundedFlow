@@ -17,7 +17,7 @@ use crate::store::{accounts, tests::account_input};
 const FIXTURE: &str = include_str!("../../../../../packages/domain/test/fixtures/rulebook.json");
 
 /// The fixture rules of one version, as draft inputs.
-fn fixture_rules(version: u32) -> Vec<RuleDefinitionInput> {
+pub(super) fn fixture_rules(version: u32) -> Vec<RuleDefinitionInput> {
     let f: Value = serde_json::from_str(FIXTURE).unwrap();
     f["rules"]
         .as_array()
@@ -34,7 +34,7 @@ fn fixture_rules(version: u32) -> Vec<RuleDefinitionInput> {
         .collect()
 }
 
-fn draft(rules: Vec<RuleDefinitionInput>, phase: u32, catalogue_version: u32) -> RulebookDraftInput {
+pub(super) fn draft(rules: Vec<RuleDefinitionInput>, phase: u32, catalogue_version: u32) -> RulebookDraftInput {
     RulebookDraftInput {
         rulebook_id: Some(id(0x90)),
         new_rulebook: None,
@@ -52,11 +52,11 @@ fn draft(rules: Vec<RuleDefinitionInput>, phase: u32, catalogue_version: u32) ->
     }
 }
 
-fn account(conn: &mut Connection, name: &str) -> String {
+pub(super) fn account(conn: &mut Connection, name: &str) -> String {
     accounts::create(conn, account_input(name)).unwrap().id
 }
 
-fn assign(account_id: &str, version: &str, from: &str) -> AssignmentInput {
+pub(super) fn assign(account_id: &str, version: &str, from: &str) -> AssignmentInput {
     AssignmentInput {
         account_id: account_id.into(),
         rulebook_version_id: version.into(),
@@ -67,7 +67,7 @@ fn assign(account_id: &str, version: &str, from: &str) -> AssignmentInput {
     }
 }
 
-fn fields(e: AppError) -> Vec<String> {
+pub(super) fn fields(e: AppError) -> Vec<String> {
     match e {
         AppError::Validation { issues, .. } => issues.into_iter().map(|i| i.field).collect(),
         other => panic!("expected a validation error, got {other:?}"),
@@ -75,7 +75,7 @@ fn fields(e: AppError) -> Vec<String> {
 }
 
 /// A verified catalogue version for the 100K evaluation phase (0x43).
-fn verified_100k(conn: &mut Connection) -> String {
+pub(super) fn verified_100k(conn: &mut Connection) -> String {
     let v = store::create_draft(conn, draft(fixture_rules(0xa1), 0x43, 0x32)).unwrap().version.id;
     store::publish(conn, &v, None).unwrap();
     store::publish(conn, &v, Some("kyle".into())).unwrap();

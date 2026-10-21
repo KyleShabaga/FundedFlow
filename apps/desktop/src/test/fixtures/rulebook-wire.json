@@ -1,0 +1,1579 @@
+[
+  {
+    "args": {
+      "accountId": "00000000-0000-4000-8000-000000000001"
+    },
+    "command": "list_rulebooks",
+    "output": [
+      {
+        "createdAt": "2026-10-21T00:00:00.000Z",
+        "description": "Synthetic terms; not a real provider's rules.",
+        "displayName": "Example 50K FLEX",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "ownerAccountId": null,
+        "providerId": "00000000-0000-4000-8000-000000000003",
+        "recordStatus": "active",
+        "slug": "example-50k-flex",
+        "updatedAt": "2026-10-21T00:00:00.000Z"
+      },
+      {
+        "createdAt": "2026-10-21T00:00:00.000Z",
+        "description": null,
+        "displayName": "Wire rules",
+        "id": "00000000-0000-4000-8000-000000000004",
+        "ownerAccountId": "00000000-0000-4000-8000-000000000001",
+        "providerId": "00000000-0000-4000-8000-000000000003",
+        "recordStatus": "active",
+        "slug": "wire-rules",
+        "updatedAt": "2026-10-21T00:00:00.000Z"
+      }
+    ]
+  },
+  {
+    "args": {
+      "context": {
+        "actor": "tester",
+        "reason": "Start my rules"
+      },
+      "input": {
+        "applicability": [],
+        "capturedAt": "2026-10-20T09:00:00Z",
+        "changeReason": "Copied",
+        "effectiveFrom": null,
+        "effectiveTo": null,
+        "newRulebook": {
+          "description": null,
+          "displayName": "Wire rules",
+          "ownerAccountId": "00000000-0000-4000-8000-000000000001",
+          "providerId": "00000000-0000-4000-8000-000000000003",
+          "slug": "wire-rules"
+        },
+        "rulebookId": null,
+        "rules": [
+          {
+            "displayLabel": null,
+            "displayOrder": 0,
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "amount": {
+                "state": "value",
+                "value": "3000"
+              },
+              "basis": "unknown"
+            },
+            "providerLabel": "Profit Target",
+            "ruleKey": "profit_target",
+            "ruleType": "profit_target",
+            "sourceText": "$3,000",
+            "supportStatus": "supported"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 1,
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "basis": "unknown",
+              "breach": "unknown",
+              "condition": "always",
+              "limit": {
+                "state": "disabled"
+              },
+              "resetBasis": "unknown"
+            },
+            "providerLabel": "DLL",
+            "ruleKey": "daily_loss_limit",
+            "ruleType": "daily_loss_limit",
+            "sourceText": "OFF",
+            "supportStatus": "supported"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 2,
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "amount": {
+                "state": "value",
+                "value": "2000"
+              },
+              "basis": "unknown",
+              "lock": {
+                "state": "unknown"
+              },
+              "method": "unknown"
+            },
+            "providerLabel": "Max Loss (EOD)",
+            "ruleKey": "max_drawdown",
+            "ruleType": "max_drawdown",
+            "sourceText": "$2,000 EOD",
+            "supportStatus": "needs_setup"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 3,
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "appliesTo": "evaluation",
+              "denominator": "unknown",
+              "maxBestDayShare": {
+                "state": "value",
+                "value": "0.5"
+              }
+            },
+            "providerLabel": "Consistency",
+            "ruleKey": "consistency",
+            "ruleType": "consistency",
+            "sourceText": "50%",
+            "supportStatus": "supported"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 4,
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "combination": "unknown",
+              "limits": {
+                "state": "value",
+                "value": [
+                  {
+                    "contractClass": "mini",
+                    "maxContracts": 4,
+                    "symbolRoot": null
+                  },
+                  {
+                    "contractClass": "micro",
+                    "maxContracts": 40,
+                    "symbolRoot": null
+                  }
+                ]
+              },
+              "microsPerMini": {
+                "state": "unknown"
+              }
+            },
+            "providerLabel": "Max Contracts",
+            "ruleKey": "max_position_size",
+            "ruleType": "max_position_size",
+            "sourceText": "4 minis OR 40 micros",
+            "supportStatus": "needs_setup"
+          }
+        ],
+        "supersedesVersionId": null
+      }
+    },
+    "command": "create_rulebook_draft",
+    "output": {
+      "applicability": [],
+      "claims": [],
+      "rulebook": {
+        "createdAt": "2026-10-21T00:00:00.000Z",
+        "description": null,
+        "displayName": "Wire rules",
+        "id": "00000000-0000-4000-8000-000000000004",
+        "ownerAccountId": "00000000-0000-4000-8000-000000000001",
+        "providerId": "00000000-0000-4000-8000-000000000003",
+        "recordStatus": "active",
+        "slug": "wire-rules",
+        "updatedAt": "2026-10-21T00:00:00.000Z"
+      },
+      "rules": [
+        {
+          "displayLabel": null,
+          "displayOrder": 0,
+          "id": "00000000-0000-4000-8000-000000000005",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "amount": {
+              "state": "value",
+              "value": "3000"
+            },
+            "basis": "unknown"
+          },
+          "providerLabel": "Profit Target",
+          "ruleKey": "profit_target",
+          "ruleType": "profit_target",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "$3,000",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 1,
+          "id": "00000000-0000-4000-8000-000000000007",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "basis": "unknown",
+            "breach": "unknown",
+            "condition": "always",
+            "limit": {
+              "state": "disabled"
+            },
+            "resetBasis": "unknown"
+          },
+          "providerLabel": "DLL",
+          "ruleKey": "daily_loss_limit",
+          "ruleType": "daily_loss_limit",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "OFF",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 2,
+          "id": "00000000-0000-4000-8000-000000000008",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "amount": {
+              "state": "value",
+              "value": "2000"
+            },
+            "basis": "unknown",
+            "lock": {
+              "state": "unknown"
+            },
+            "method": "unknown"
+          },
+          "providerLabel": "Max Loss (EOD)",
+          "ruleKey": "max_drawdown",
+          "ruleType": "max_drawdown",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "$2,000 EOD",
+          "supportStatus": "needs_setup"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 3,
+          "id": "00000000-0000-4000-8000-000000000009",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "appliesTo": "evaluation",
+            "denominator": "unknown",
+            "maxBestDayShare": {
+              "state": "value",
+              "value": "0.5"
+            }
+          },
+          "providerLabel": "Consistency",
+          "ruleKey": "consistency",
+          "ruleType": "consistency",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "50%",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 4,
+          "id": "00000000-0000-4000-8000-000000000010",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "combination": "unknown",
+            "limits": {
+              "state": "value",
+              "value": [
+                {
+                  "contractClass": "mini",
+                  "maxContracts": 4,
+                  "symbolRoot": null
+                },
+                {
+                  "contractClass": "micro",
+                  "maxContracts": 40,
+                  "symbolRoot": null
+                }
+              ]
+            },
+            "microsPerMini": {
+              "state": "unknown"
+            }
+          },
+          "providerLabel": "Max Contracts",
+          "ruleKey": "max_position_size",
+          "ruleType": "max_position_size",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "4 minis OR 40 micros",
+          "supportStatus": "needs_setup"
+        }
+      ],
+      "version": {
+        "capturedAt": "2026-10-20T09:00:00.000Z",
+        "changeReason": "Copied",
+        "createdAt": "2026-10-21T00:00:00.000Z",
+        "effectiveFrom": null,
+        "effectiveTo": null,
+        "id": "00000000-0000-4000-8000-000000000006",
+        "origin": "user_authored",
+        "recordStatus": "active",
+        "rulebookId": "00000000-0000-4000-8000-000000000004",
+        "schemaVersion": 1,
+        "supersedesVersionId": null,
+        "updatedAt": "2026-10-21T00:00:00.000Z",
+        "userConfirmedAt": null,
+        "verificationStatus": "draft",
+        "verifiedAt": null,
+        "verifiedBy": null,
+        "versionNumber": 1
+      }
+    }
+  },
+  {
+    "args": {
+      "context": {
+        "actor": "tester",
+        "reason": "Lower target"
+      },
+      "expectedUpdatedAt": "2026-10-21T00:00:00.000Z",
+      "id": "00000000-0000-4000-8000-000000000006",
+      "input": {
+        "applicability": [],
+        "capturedAt": "2026-10-20T09:00:00.000Z",
+        "changeReason": "Lower target",
+        "effectiveFrom": null,
+        "effectiveTo": null,
+        "rules": [
+          {
+            "displayLabel": null,
+            "displayOrder": 0,
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "amount": {
+                "state": "value",
+                "value": "2500"
+              },
+              "basis": "balance"
+            },
+            "providerLabel": "Profit Target",
+            "ruleKey": "profit_target",
+            "ruleType": "profit_target",
+            "sourceText": "$3,000",
+            "supportStatus": "supported"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 1,
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "basis": "unknown",
+              "breach": "unknown",
+              "condition": "always",
+              "limit": {
+                "state": "disabled"
+              },
+              "resetBasis": "unknown"
+            },
+            "providerLabel": "DLL",
+            "ruleKey": "daily_loss_limit",
+            "ruleType": "daily_loss_limit",
+            "sourceText": "OFF",
+            "supportStatus": "supported"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 2,
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "amount": {
+                "state": "value",
+                "value": "2000"
+              },
+              "basis": "unknown",
+              "lock": {
+                "state": "unknown"
+              },
+              "method": "unknown"
+            },
+            "providerLabel": "Max Loss (EOD)",
+            "ruleKey": "max_drawdown",
+            "ruleType": "max_drawdown",
+            "sourceText": "$2,000 EOD",
+            "supportStatus": "needs_setup"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 3,
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "appliesTo": "evaluation",
+              "denominator": "unknown",
+              "maxBestDayShare": {
+                "state": "value",
+                "value": "0.5"
+              }
+            },
+            "providerLabel": "Consistency",
+            "ruleKey": "consistency",
+            "ruleType": "consistency",
+            "sourceText": "50%",
+            "supportStatus": "supported"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 4,
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "combination": "unknown",
+              "limits": {
+                "state": "value",
+                "value": [
+                  {
+                    "contractClass": "mini",
+                    "maxContracts": 4,
+                    "symbolRoot": null
+                  },
+                  {
+                    "contractClass": "micro",
+                    "maxContracts": 40,
+                    "symbolRoot": null
+                  }
+                ]
+              },
+              "microsPerMini": {
+                "state": "unknown"
+              }
+            },
+            "providerLabel": "Max Contracts",
+            "ruleKey": "max_position_size",
+            "ruleType": "max_position_size",
+            "sourceText": "4 minis OR 40 micros",
+            "supportStatus": "needs_setup"
+          }
+        ]
+      }
+    },
+    "command": "update_rulebook_draft",
+    "output": {
+      "applicability": [],
+      "claims": [],
+      "rulebook": {
+        "createdAt": "2026-10-21T00:00:00.000Z",
+        "description": null,
+        "displayName": "Wire rules",
+        "id": "00000000-0000-4000-8000-000000000004",
+        "ownerAccountId": "00000000-0000-4000-8000-000000000001",
+        "providerId": "00000000-0000-4000-8000-000000000003",
+        "recordStatus": "active",
+        "slug": "wire-rules",
+        "updatedAt": "2026-10-21T00:00:00.000Z"
+      },
+      "rules": [
+        {
+          "displayLabel": null,
+          "displayOrder": 0,
+          "id": "00000000-0000-4000-8000-000000000011",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "amount": {
+              "state": "value",
+              "value": "2500"
+            },
+            "basis": "balance"
+          },
+          "providerLabel": "Profit Target",
+          "ruleKey": "profit_target",
+          "ruleType": "profit_target",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "$3,000",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 1,
+          "id": "00000000-0000-4000-8000-000000000012",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "basis": "unknown",
+            "breach": "unknown",
+            "condition": "always",
+            "limit": {
+              "state": "disabled"
+            },
+            "resetBasis": "unknown"
+          },
+          "providerLabel": "DLL",
+          "ruleKey": "daily_loss_limit",
+          "ruleType": "daily_loss_limit",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "OFF",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 2,
+          "id": "00000000-0000-4000-8000-000000000013",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "amount": {
+              "state": "value",
+              "value": "2000"
+            },
+            "basis": "unknown",
+            "lock": {
+              "state": "unknown"
+            },
+            "method": "unknown"
+          },
+          "providerLabel": "Max Loss (EOD)",
+          "ruleKey": "max_drawdown",
+          "ruleType": "max_drawdown",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "$2,000 EOD",
+          "supportStatus": "needs_setup"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 3,
+          "id": "00000000-0000-4000-8000-000000000014",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "appliesTo": "evaluation",
+            "denominator": "unknown",
+            "maxBestDayShare": {
+              "state": "value",
+              "value": "0.5"
+            }
+          },
+          "providerLabel": "Consistency",
+          "ruleKey": "consistency",
+          "ruleType": "consistency",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "50%",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 4,
+          "id": "00000000-0000-4000-8000-000000000015",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "combination": "unknown",
+            "limits": {
+              "state": "value",
+              "value": [
+                {
+                  "contractClass": "mini",
+                  "maxContracts": 4,
+                  "symbolRoot": null
+                },
+                {
+                  "contractClass": "micro",
+                  "maxContracts": 40,
+                  "symbolRoot": null
+                }
+              ]
+            },
+            "microsPerMini": {
+              "state": "unknown"
+            }
+          },
+          "providerLabel": "Max Contracts",
+          "ruleKey": "max_position_size",
+          "ruleType": "max_position_size",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "4 minis OR 40 micros",
+          "supportStatus": "needs_setup"
+        }
+      ],
+      "version": {
+        "capturedAt": "2026-10-20T09:00:00.000Z",
+        "changeReason": "Lower target",
+        "createdAt": "2026-10-21T00:00:00.000Z",
+        "effectiveFrom": null,
+        "effectiveTo": null,
+        "id": "00000000-0000-4000-8000-000000000006",
+        "origin": "user_authored",
+        "recordStatus": "active",
+        "rulebookId": "00000000-0000-4000-8000-000000000004",
+        "schemaVersion": 1,
+        "supersedesVersionId": null,
+        "updatedAt": "2026-10-21T00:00:00.000Z",
+        "userConfirmedAt": null,
+        "verificationStatus": "draft",
+        "verifiedAt": null,
+        "verifiedBy": null,
+        "versionNumber": 1
+      }
+    }
+  },
+  {
+    "args": {
+      "id": "00000000-0000-4000-8000-000000000006"
+    },
+    "command": "validate_rulebook_draft",
+    "output": []
+  },
+  {
+    "args": {
+      "context": {
+        "actor": "tester",
+        "reason": "Use it"
+      },
+      "expectedUpdatedAt": "2026-10-21T00:00:00.000Z",
+      "id": "00000000-0000-4000-8000-000000000006",
+      "reviewer": null
+    },
+    "command": "publish_rulebook_version",
+    "output": {
+      "applicability": [],
+      "claims": [],
+      "rulebook": {
+        "createdAt": "2026-10-21T00:00:00.000Z",
+        "description": null,
+        "displayName": "Wire rules",
+        "id": "00000000-0000-4000-8000-000000000004",
+        "ownerAccountId": "00000000-0000-4000-8000-000000000001",
+        "providerId": "00000000-0000-4000-8000-000000000003",
+        "recordStatus": "active",
+        "slug": "wire-rules",
+        "updatedAt": "2026-10-21T00:00:00.000Z"
+      },
+      "rules": [
+        {
+          "displayLabel": null,
+          "displayOrder": 0,
+          "id": "00000000-0000-4000-8000-000000000011",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "amount": {
+              "state": "value",
+              "value": "2500"
+            },
+            "basis": "balance"
+          },
+          "providerLabel": "Profit Target",
+          "ruleKey": "profit_target",
+          "ruleType": "profit_target",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "$3,000",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 1,
+          "id": "00000000-0000-4000-8000-000000000012",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "basis": "unknown",
+            "breach": "unknown",
+            "condition": "always",
+            "limit": {
+              "state": "disabled"
+            },
+            "resetBasis": "unknown"
+          },
+          "providerLabel": "DLL",
+          "ruleKey": "daily_loss_limit",
+          "ruleType": "daily_loss_limit",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "OFF",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 2,
+          "id": "00000000-0000-4000-8000-000000000013",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "amount": {
+              "state": "value",
+              "value": "2000"
+            },
+            "basis": "unknown",
+            "lock": {
+              "state": "unknown"
+            },
+            "method": "unknown"
+          },
+          "providerLabel": "Max Loss (EOD)",
+          "ruleKey": "max_drawdown",
+          "ruleType": "max_drawdown",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "$2,000 EOD",
+          "supportStatus": "needs_setup"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 3,
+          "id": "00000000-0000-4000-8000-000000000014",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "appliesTo": "evaluation",
+            "denominator": "unknown",
+            "maxBestDayShare": {
+              "state": "value",
+              "value": "0.5"
+            }
+          },
+          "providerLabel": "Consistency",
+          "ruleKey": "consistency",
+          "ruleType": "consistency",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "50%",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 4,
+          "id": "00000000-0000-4000-8000-000000000015",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "combination": "unknown",
+            "limits": {
+              "state": "value",
+              "value": [
+                {
+                  "contractClass": "mini",
+                  "maxContracts": 4,
+                  "symbolRoot": null
+                },
+                {
+                  "contractClass": "micro",
+                  "maxContracts": 40,
+                  "symbolRoot": null
+                }
+              ]
+            },
+            "microsPerMini": {
+              "state": "unknown"
+            }
+          },
+          "providerLabel": "Max Contracts",
+          "ruleKey": "max_position_size",
+          "ruleType": "max_position_size",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+          "sourceText": "4 minis OR 40 micros",
+          "supportStatus": "needs_setup"
+        }
+      ],
+      "version": {
+        "capturedAt": "2026-10-20T09:00:00.000Z",
+        "changeReason": "Lower target",
+        "createdAt": "2026-10-21T00:00:00.000Z",
+        "effectiveFrom": null,
+        "effectiveTo": null,
+        "id": "00000000-0000-4000-8000-000000000006",
+        "origin": "user_authored",
+        "recordStatus": "active",
+        "rulebookId": "00000000-0000-4000-8000-000000000004",
+        "schemaVersion": 1,
+        "supersedesVersionId": null,
+        "updatedAt": "2026-10-21T00:00:00.000Z",
+        "userConfirmedAt": null,
+        "verificationStatus": "needs_review",
+        "verifiedAt": null,
+        "verifiedBy": null,
+        "versionNumber": 1
+      }
+    }
+  },
+  {
+    "args": {
+      "guard": {
+        "actor": "tester",
+        "expectedOpenAssignmentId": null,
+        "reason": "Assign"
+      },
+      "input": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "accountPhaseEventId": null,
+        "effectiveFrom": "2026-10-05",
+        "phasePathId": null,
+        "programmePhaseId": null,
+        "rulebookVersionId": "00000000-0000-4000-8000-000000000006"
+      }
+    },
+    "command": "assign_rulebook_to_account",
+    "output": {
+      "accountId": "00000000-0000-4000-8000-000000000001",
+      "accountPhaseEventId": null,
+      "assignedAt": "2026-10-21T00:00:00.000Z",
+      "assignmentSource": "user",
+      "effectiveFrom": "2026-10-05",
+      "effectiveTo": null,
+      "id": "00000000-0000-4000-8000-000000000016",
+      "phasePathId": null,
+      "programmePhaseId": null,
+      "rulebookVersionId": "00000000-0000-4000-8000-000000000006"
+    }
+  },
+  {
+    "args": {
+      "accountId": "00000000-0000-4000-8000-000000000001"
+    },
+    "command": "list_account_rulebook_assignments",
+    "output": [
+      {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "accountPhaseEventId": null,
+        "assignedAt": "2026-10-21T00:00:00.000Z",
+        "assignmentSource": "user",
+        "effectiveFrom": "2026-10-05",
+        "effectiveTo": null,
+        "id": "00000000-0000-4000-8000-000000000016",
+        "phasePathId": null,
+        "programmePhaseId": null,
+        "rulebookVersionId": "00000000-0000-4000-8000-000000000006"
+      }
+    ]
+  },
+  {
+    "args": {
+      "context": {
+        "actor": "tester",
+        "reason": "Not needed"
+      },
+      "expectedUpdatedAt": "2026-10-21T00:00:00.000Z",
+      "id": "00000000-0000-4000-8000-000000000017"
+    },
+    "command": "discard_rulebook_draft",
+    "output": {
+      "applicability": [],
+      "claims": [],
+      "rulebook": {
+        "createdAt": "2026-10-21T00:00:00.000Z",
+        "description": null,
+        "displayName": "Wire rules",
+        "id": "00000000-0000-4000-8000-000000000004",
+        "ownerAccountId": "00000000-0000-4000-8000-000000000001",
+        "providerId": "00000000-0000-4000-8000-000000000003",
+        "recordStatus": "active",
+        "slug": "wire-rules",
+        "updatedAt": "2026-10-21T00:00:00.000Z"
+      },
+      "rules": [
+        {
+          "displayLabel": null,
+          "displayOrder": 0,
+          "id": "00000000-0000-4000-8000-000000000018",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "amount": {
+              "state": "value",
+              "value": "3000"
+            },
+            "basis": "unknown"
+          },
+          "providerLabel": "Profit Target",
+          "ruleKey": "profit_target",
+          "ruleType": "profit_target",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000017",
+          "sourceText": "$3,000",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 1,
+          "id": "00000000-0000-4000-8000-000000000019",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "basis": "unknown",
+            "breach": "unknown",
+            "condition": "always",
+            "limit": {
+              "state": "disabled"
+            },
+            "resetBasis": "unknown"
+          },
+          "providerLabel": "DLL",
+          "ruleKey": "daily_loss_limit",
+          "ruleType": "daily_loss_limit",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000017",
+          "sourceText": "OFF",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 2,
+          "id": "00000000-0000-4000-8000-000000000020",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "amount": {
+              "state": "value",
+              "value": "2000"
+            },
+            "basis": "unknown",
+            "lock": {
+              "state": "unknown"
+            },
+            "method": "unknown"
+          },
+          "providerLabel": "Max Loss (EOD)",
+          "ruleKey": "max_drawdown",
+          "ruleType": "max_drawdown",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000017",
+          "sourceText": "$2,000 EOD",
+          "supportStatus": "needs_setup"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 3,
+          "id": "00000000-0000-4000-8000-000000000021",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "appliesTo": "evaluation",
+            "denominator": "unknown",
+            "maxBestDayShare": {
+              "state": "value",
+              "value": "0.5"
+            }
+          },
+          "providerLabel": "Consistency",
+          "ruleKey": "consistency",
+          "ruleType": "consistency",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000017",
+          "sourceText": "50%",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 4,
+          "id": "00000000-0000-4000-8000-000000000022",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "combination": "unknown",
+            "limits": {
+              "state": "value",
+              "value": [
+                {
+                  "contractClass": "mini",
+                  "maxContracts": 4,
+                  "symbolRoot": null
+                },
+                {
+                  "contractClass": "micro",
+                  "maxContracts": 40,
+                  "symbolRoot": null
+                }
+              ]
+            },
+            "microsPerMini": {
+              "state": "unknown"
+            }
+          },
+          "providerLabel": "Max Contracts",
+          "ruleKey": "max_position_size",
+          "ruleType": "max_position_size",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000017",
+          "sourceText": "4 minis OR 40 micros",
+          "supportStatus": "needs_setup"
+        }
+      ],
+      "version": {
+        "capturedAt": "2026-10-20T09:00:00.000Z",
+        "changeReason": "Try another",
+        "createdAt": "2026-10-21T00:00:00.000Z",
+        "effectiveFrom": null,
+        "effectiveTo": null,
+        "id": "00000000-0000-4000-8000-000000000017",
+        "origin": "user_authored",
+        "recordStatus": "active",
+        "rulebookId": "00000000-0000-4000-8000-000000000004",
+        "schemaVersion": 1,
+        "supersedesVersionId": "00000000-0000-4000-8000-000000000006",
+        "updatedAt": "2026-10-21T00:00:00.000Z",
+        "userConfirmedAt": null,
+        "verificationStatus": "rejected",
+        "verifiedAt": null,
+        "verifiedBy": null,
+        "versionNumber": 2
+      }
+    }
+  },
+  {
+    "args": {
+      "rulebookId": "00000000-0000-4000-8000-000000000004"
+    },
+    "command": "list_rulebook_versions",
+    "output": [
+      {
+        "applicability": [],
+        "claims": [],
+        "rulebook": {
+          "createdAt": "2026-10-21T00:00:00.000Z",
+          "description": null,
+          "displayName": "Wire rules",
+          "id": "00000000-0000-4000-8000-000000000004",
+          "ownerAccountId": "00000000-0000-4000-8000-000000000001",
+          "providerId": "00000000-0000-4000-8000-000000000003",
+          "recordStatus": "active",
+          "slug": "wire-rules",
+          "updatedAt": "2026-10-21T00:00:00.000Z"
+        },
+        "rules": [
+          {
+            "displayLabel": null,
+            "displayOrder": 0,
+            "id": "00000000-0000-4000-8000-000000000018",
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "amount": {
+                "state": "value",
+                "value": "3000"
+              },
+              "basis": "unknown"
+            },
+            "providerLabel": "Profit Target",
+            "ruleKey": "profit_target",
+            "ruleType": "profit_target",
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000017",
+            "sourceText": "$3,000",
+            "supportStatus": "supported"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 1,
+            "id": "00000000-0000-4000-8000-000000000019",
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "basis": "unknown",
+              "breach": "unknown",
+              "condition": "always",
+              "limit": {
+                "state": "disabled"
+              },
+              "resetBasis": "unknown"
+            },
+            "providerLabel": "DLL",
+            "ruleKey": "daily_loss_limit",
+            "ruleType": "daily_loss_limit",
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000017",
+            "sourceText": "OFF",
+            "supportStatus": "supported"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 2,
+            "id": "00000000-0000-4000-8000-000000000020",
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "amount": {
+                "state": "value",
+                "value": "2000"
+              },
+              "basis": "unknown",
+              "lock": {
+                "state": "unknown"
+              },
+              "method": "unknown"
+            },
+            "providerLabel": "Max Loss (EOD)",
+            "ruleKey": "max_drawdown",
+            "ruleType": "max_drawdown",
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000017",
+            "sourceText": "$2,000 EOD",
+            "supportStatus": "needs_setup"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 3,
+            "id": "00000000-0000-4000-8000-000000000021",
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "appliesTo": "evaluation",
+              "denominator": "unknown",
+              "maxBestDayShare": {
+                "state": "value",
+                "value": "0.5"
+              }
+            },
+            "providerLabel": "Consistency",
+            "ruleKey": "consistency",
+            "ruleType": "consistency",
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000017",
+            "sourceText": "50%",
+            "supportStatus": "supported"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 4,
+            "id": "00000000-0000-4000-8000-000000000022",
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "combination": "unknown",
+              "limits": {
+                "state": "value",
+                "value": [
+                  {
+                    "contractClass": "mini",
+                    "maxContracts": 4,
+                    "symbolRoot": null
+                  },
+                  {
+                    "contractClass": "micro",
+                    "maxContracts": 40,
+                    "symbolRoot": null
+                  }
+                ]
+              },
+              "microsPerMini": {
+                "state": "unknown"
+              }
+            },
+            "providerLabel": "Max Contracts",
+            "ruleKey": "max_position_size",
+            "ruleType": "max_position_size",
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000017",
+            "sourceText": "4 minis OR 40 micros",
+            "supportStatus": "needs_setup"
+          }
+        ],
+        "version": {
+          "capturedAt": "2026-10-20T09:00:00.000Z",
+          "changeReason": "Try another",
+          "createdAt": "2026-10-21T00:00:00.000Z",
+          "effectiveFrom": null,
+          "effectiveTo": null,
+          "id": "00000000-0000-4000-8000-000000000017",
+          "origin": "user_authored",
+          "recordStatus": "active",
+          "rulebookId": "00000000-0000-4000-8000-000000000004",
+          "schemaVersion": 1,
+          "supersedesVersionId": "00000000-0000-4000-8000-000000000006",
+          "updatedAt": "2026-10-21T00:00:00.000Z",
+          "userConfirmedAt": null,
+          "verificationStatus": "rejected",
+          "verifiedAt": null,
+          "verifiedBy": null,
+          "versionNumber": 2
+        }
+      },
+      {
+        "applicability": [],
+        "claims": [],
+        "rulebook": {
+          "createdAt": "2026-10-21T00:00:00.000Z",
+          "description": null,
+          "displayName": "Wire rules",
+          "id": "00000000-0000-4000-8000-000000000004",
+          "ownerAccountId": "00000000-0000-4000-8000-000000000001",
+          "providerId": "00000000-0000-4000-8000-000000000003",
+          "recordStatus": "active",
+          "slug": "wire-rules",
+          "updatedAt": "2026-10-21T00:00:00.000Z"
+        },
+        "rules": [
+          {
+            "displayLabel": null,
+            "displayOrder": 0,
+            "id": "00000000-0000-4000-8000-000000000011",
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "amount": {
+                "state": "value",
+                "value": "2500"
+              },
+              "basis": "balance"
+            },
+            "providerLabel": "Profit Target",
+            "ruleKey": "profit_target",
+            "ruleType": "profit_target",
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+            "sourceText": "$3,000",
+            "supportStatus": "supported"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 1,
+            "id": "00000000-0000-4000-8000-000000000012",
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "basis": "unknown",
+              "breach": "unknown",
+              "condition": "always",
+              "limit": {
+                "state": "disabled"
+              },
+              "resetBasis": "unknown"
+            },
+            "providerLabel": "DLL",
+            "ruleKey": "daily_loss_limit",
+            "ruleType": "daily_loss_limit",
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+            "sourceText": "OFF",
+            "supportStatus": "supported"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 2,
+            "id": "00000000-0000-4000-8000-000000000013",
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "amount": {
+                "state": "value",
+                "value": "2000"
+              },
+              "basis": "unknown",
+              "lock": {
+                "state": "unknown"
+              },
+              "method": "unknown"
+            },
+            "providerLabel": "Max Loss (EOD)",
+            "ruleKey": "max_drawdown",
+            "ruleType": "max_drawdown",
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+            "sourceText": "$2,000 EOD",
+            "supportStatus": "needs_setup"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 3,
+            "id": "00000000-0000-4000-8000-000000000014",
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "appliesTo": "evaluation",
+              "denominator": "unknown",
+              "maxBestDayShare": {
+                "state": "value",
+                "value": "0.5"
+              }
+            },
+            "providerLabel": "Consistency",
+            "ruleKey": "consistency",
+            "ruleType": "consistency",
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+            "sourceText": "50%",
+            "supportStatus": "supported"
+          },
+          {
+            "displayLabel": null,
+            "displayOrder": 4,
+            "id": "00000000-0000-4000-8000-000000000015",
+            "overrideKind": null,
+            "parameterSchemaVersion": 1,
+            "parameters": {
+              "combination": "unknown",
+              "limits": {
+                "state": "value",
+                "value": [
+                  {
+                    "contractClass": "mini",
+                    "maxContracts": 4,
+                    "symbolRoot": null
+                  },
+                  {
+                    "contractClass": "micro",
+                    "maxContracts": 40,
+                    "symbolRoot": null
+                  }
+                ]
+              },
+              "microsPerMini": {
+                "state": "unknown"
+              }
+            },
+            "providerLabel": "Max Contracts",
+            "ruleKey": "max_position_size",
+            "ruleType": "max_position_size",
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000006",
+            "sourceText": "4 minis OR 40 micros",
+            "supportStatus": "needs_setup"
+          }
+        ],
+        "version": {
+          "capturedAt": "2026-10-20T09:00:00.000Z",
+          "changeReason": "Lower target",
+          "createdAt": "2026-10-21T00:00:00.000Z",
+          "effectiveFrom": null,
+          "effectiveTo": null,
+          "id": "00000000-0000-4000-8000-000000000006",
+          "origin": "user_authored",
+          "recordStatus": "active",
+          "rulebookId": "00000000-0000-4000-8000-000000000004",
+          "schemaVersion": 1,
+          "supersedesVersionId": null,
+          "updatedAt": "2026-10-21T00:00:00.000Z",
+          "userConfirmedAt": null,
+          "verificationStatus": "needs_review",
+          "verifiedAt": null,
+          "verifiedBy": null,
+          "versionNumber": 1
+        }
+      }
+    ]
+  },
+  {
+    "args": {
+      "id": "00000000-0000-4000-8000-000000000023"
+    },
+    "command": "get_rulebook_version",
+    "output": {
+      "applicability": [
+        {
+          "catalogueVersionId": "00000000-0000-4000-8000-000000000024",
+          "id": "00000000-0000-4000-8000-000000000025",
+          "phasePathId": null,
+          "programmePhaseId": "00000000-0000-4000-8000-000000000026",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000023"
+        }
+      ],
+      "claims": [],
+      "rulebook": {
+        "createdAt": "2026-10-21T00:00:00.000Z",
+        "description": "Synthetic terms; not a real provider's rules.",
+        "displayName": "Example 50K FLEX",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "ownerAccountId": null,
+        "providerId": "00000000-0000-4000-8000-000000000003",
+        "recordStatus": "active",
+        "slug": "example-50k-flex",
+        "updatedAt": "2026-10-21T00:00:00.000Z"
+      },
+      "rules": [
+        {
+          "displayLabel": null,
+          "displayOrder": 0,
+          "id": "00000000-0000-4000-8000-000000000027",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "amount": {
+              "state": "value",
+              "value": "3000"
+            },
+            "basis": "unknown"
+          },
+          "providerLabel": "Profit Target",
+          "ruleKey": "profit_target",
+          "ruleType": "profit_target",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000023",
+          "sourceText": "$3,000",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 1,
+          "id": "00000000-0000-4000-8000-000000000028",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "basis": "unknown",
+            "breach": "unknown",
+            "condition": "always",
+            "limit": {
+              "state": "disabled"
+            },
+            "resetBasis": "unknown"
+          },
+          "providerLabel": "DLL",
+          "ruleKey": "daily_loss_limit",
+          "ruleType": "daily_loss_limit",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000023",
+          "sourceText": "OFF",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 2,
+          "id": "00000000-0000-4000-8000-000000000029",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "amount": {
+              "state": "value",
+              "value": "2000"
+            },
+            "basis": "unknown",
+            "lock": {
+              "state": "unknown"
+            },
+            "method": "unknown"
+          },
+          "providerLabel": "Max Loss (EOD)",
+          "ruleKey": "max_drawdown",
+          "ruleType": "max_drawdown",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000023",
+          "sourceText": "$2,000 EOD",
+          "supportStatus": "needs_setup"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 3,
+          "id": "00000000-0000-4000-8000-000000000030",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "appliesTo": "evaluation",
+            "denominator": "unknown",
+            "maxBestDayShare": {
+              "state": "value",
+              "value": "0.5"
+            }
+          },
+          "providerLabel": "Consistency",
+          "ruleKey": "consistency",
+          "ruleType": "consistency",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000023",
+          "sourceText": "50%",
+          "supportStatus": "supported"
+        },
+        {
+          "displayLabel": null,
+          "displayOrder": 4,
+          "id": "00000000-0000-4000-8000-000000000031",
+          "overrideKind": null,
+          "parameterSchemaVersion": 1,
+          "parameters": {
+            "combination": "unknown",
+            "limits": {
+              "state": "value",
+              "value": [
+                {
+                  "contractClass": "mini",
+                  "maxContracts": 4,
+                  "symbolRoot": null
+                },
+                {
+                  "contractClass": "micro",
+                  "maxContracts": 40,
+                  "symbolRoot": null
+                }
+              ]
+            },
+            "microsPerMini": {
+              "state": "unknown"
+            }
+          },
+          "providerLabel": "Max Contracts",
+          "ruleKey": "max_position_size",
+          "ruleType": "max_position_size",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000023",
+          "sourceText": "4 minis OR 40 micros",
+          "supportStatus": "needs_setup"
+        }
+      ],
+      "version": {
+        "capturedAt": "2026-10-20T09:00:00.000Z",
+        "changeReason": null,
+        "createdAt": "2026-10-21T00:00:00.000Z",
+        "effectiveFrom": null,
+        "effectiveTo": null,
+        "id": "00000000-0000-4000-8000-000000000023",
+        "origin": "catalogue",
+        "recordStatus": "active",
+        "rulebookId": "00000000-0000-4000-8000-000000000002",
+        "schemaVersion": 1,
+        "supersedesVersionId": null,
+        "updatedAt": "2026-10-21T00:00:00.000Z",
+        "userConfirmedAt": null,
+        "verificationStatus": "verified",
+        "verifiedAt": "2026-10-21T00:00:00.000Z",
+        "verifiedBy": "kyle",
+        "versionNumber": 4
+      }
+    }
+  },
+  {
+    "args": {
+      "query": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "rulebookId": null
+      }
+    },
+    "command": "list_rulebook_events",
+    "output": [
+      {
+        "accountId": null,
+        "action": "draft_created",
+        "actor": "tester",
+        "assignmentId": null,
+        "id": "00000000-0000-4000-8000-000000000032",
+        "occurredAt": "2026-10-21T00:00:00.000Z",
+        "reason": "Start my rules",
+        "rulebookId": "00000000-0000-4000-8000-000000000004",
+        "rulebookVersionId": "00000000-0000-4000-8000-000000000006"
+      },
+      {
+        "accountId": null,
+        "action": "draft_saved",
+        "actor": "tester",
+        "assignmentId": null,
+        "id": "00000000-0000-4000-8000-000000000033",
+        "occurredAt": "2026-10-21T00:00:00.000Z",
+        "reason": "Lower target",
+        "rulebookId": "00000000-0000-4000-8000-000000000004",
+        "rulebookVersionId": "00000000-0000-4000-8000-000000000006"
+      },
+      {
+        "accountId": null,
+        "action": "published",
+        "actor": "tester",
+        "assignmentId": null,
+        "id": "00000000-0000-4000-8000-000000000034",
+        "occurredAt": "2026-10-21T00:00:00.000Z",
+        "reason": "Use it",
+        "rulebookId": "00000000-0000-4000-8000-000000000004",
+        "rulebookVersionId": "00000000-0000-4000-8000-000000000006"
+      },
+      {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "action": "assigned",
+        "actor": "tester",
+        "assignmentId": "00000000-0000-4000-8000-000000000016",
+        "id": "00000000-0000-4000-8000-000000000035",
+        "occurredAt": "2026-10-21T00:00:00.000Z",
+        "reason": "Assign",
+        "rulebookId": "00000000-0000-4000-8000-000000000004",
+        "rulebookVersionId": "00000000-0000-4000-8000-000000000006"
+      },
+      {
+        "accountId": null,
+        "action": "draft_created",
+        "actor": "tester",
+        "assignmentId": null,
+        "id": "00000000-0000-4000-8000-000000000036",
+        "occurredAt": "2026-10-21T00:00:00.000Z",
+        "reason": "Try another",
+        "rulebookId": "00000000-0000-4000-8000-000000000004",
+        "rulebookVersionId": "00000000-0000-4000-8000-000000000017"
+      },
+      {
+        "accountId": null,
+        "action": "draft_discarded",
+        "actor": "tester",
+        "assignmentId": null,
+        "id": "00000000-0000-4000-8000-000000000037",
+        "occurredAt": "2026-10-21T00:00:00.000Z",
+        "reason": "Not needed",
+        "rulebookId": "00000000-0000-4000-8000-000000000004",
+        "rulebookVersionId": "00000000-0000-4000-8000-000000000017"
+      }
+    ]
+  }
+]
