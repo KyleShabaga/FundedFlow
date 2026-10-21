@@ -37,6 +37,57 @@ fn normalization_v1_golden_baseline_matches_rust() {
             .collect();
         let (batch, commit_error) = match commit(&mut conn, &req) {
             Ok(batch) => {
+                // Counters alone cannot establish preview/commit equivalence:
+                // inspect every source row and every newly persisted trade too.
+                for report in &p.rows {
+                    let raw: String = conn
+                        .query_row(
+                            "SELECT raw_json FROM import_rows WHERE batch_id = ?1 AND row_number = ?2",
+                            rusqlite::params![batch.id, report.row_number],
+                            |r| r.get(0),
+                        )
+                        .unwrap();
+                    assert_eq!(
+                        serde_json::from_str::<Vec<String>>(&raw).unwrap(),
+                        report.raw,
+                        "{}: source row {}",
+                        case["name"],
+                        report.row_number
+                    );
+                    if report.status != "new" {
+                        continue;
+                    }
+                    let id: String = conn
+                        .query_row(
+                            "SELECT t.id FROM trades t JOIN import_rows r ON r.id = t.import_row_id
+                         WHERE t.import_batch_id = ?1 AND r.row_number = ?2",
+                            rusqlite::params![batch.id, report.row_number],
+                            |r| r.get(0),
+                        )
+                        .unwrap();
+                    let saved = serde_json::to_value(trade_store::get(&conn, &id).unwrap()).unwrap();
+                    let preview = serde_json::to_value(report.trade.as_ref().unwrap()).unwrap();
+                    for field in [
+                        "symbol",
+                        "side",
+                        "quantity",
+                        "entryAt",
+                        "entryPrice",
+                        "exitAt",
+                        "exitPrice",
+                        "fees",
+                        "tradingDay",
+                        "realizedPnl",
+                        "reportedPnl",
+                        "pnlStatus",
+                    ] {
+                        assert_eq!(
+                            saved[field], preview[field],
+                            "{}: row {} persisted {field}",
+                            case["name"], report.row_number
+                        );
+                    }
+                }
                 let mut value = serde_json::to_value(batch).unwrap();
                 value["id"] = json!("<batch-id>");
                 value["accountId"] = json!("<account-id>");

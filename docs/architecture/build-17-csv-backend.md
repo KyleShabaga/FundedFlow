@@ -116,10 +116,10 @@ calls. The initial default-sandbox runner denial is an execution restriction, no
 | Check | Result |
 | --- | --- |
 | Baseline `cargo test --locked --lib csv_import` before edits | 26 passed |
-| Final `cargo test --locked --lib csv_import -- --test-threads=4` | **41 passed**, 1 ignored worker; parent invokes that worker explicitly and verifies exit code 37 |
+| CSV subset of re-review `cargo test --locked -- --test-threads=4` | **43 passed** during the re-review full run, 1 ignored worker; parent invokes that worker explicitly and verifies exit code 37 |
 | Rust golden baseline (normal update flag absent) | Passed during final CSV suite; 15 synthetic cases |
 | `cargo clippy --locked --all-targets -- -D warnings` | Passed |
-| Full `cargo test --locked` | **164 passed, 4 failed, 2 ignored**; the same four pre-existing legacy-rulebook failures also reproduce with 4 workers |
+| Full `cargo test --locked -- --test-threads=4` | **166 passed, 4 failed, 2 ignored** after re-review; the same four pre-existing legacy-rulebook failures also reproduce with 4 workers |
 | Untouched main `cargo test --locked --lib db::legacy_rulebook_tests -- --test-threads=1` | **3 passed, the same 4 failed** at main `475807d`, from disposable `/tmp/fundedflow-build17-main-check` |
 | `npm run typecheck` | Passed domain and desktop |
 | `npm test` | **338 domain + 161 desktop = 499 passed**; 31 new CSV contract/primitive checks |
@@ -146,3 +146,34 @@ edits), a separate synthetic test fixture and this new architecture document. No
 provider, routing, design file, command/adapter contract, migration, manifest or lockfile was changed.
 Build 17 stays **In development** pending portable-boundary decisions/parity, the identity/wire dependencies,
 representative-source approval and native Windows/recovery evidence. Build 18 UI is not claimed complete.
+
+## Card re-review and follow-up verification
+
+The complete current card was compared again with PR #34. The original backend hardening did not satisfy
+the entire card, and the portable-engine requirement has not been waived. Against the card's six explicit
+acceptance-test bullets:
+
+| Card acceptance test | Verified coverage / remaining limit |
+| --- | --- |
+| Both supported formats and lossless source cells | Existing Performance compatibility fixture plus synthetic generic/paired cases; the golden test now compares every persisted source row and each new trade's money/time/P&L fields against preview. Real provider/export-version cohort approval is still pending. |
+| Zero-trade/invalid/duplicate/warning/limits/date/timezone cases | Native regressions cover these. A new test changes account currency/zone/reset after preview: commit uses current account context for day/P&L and retains the request's original source-zone interpretation and raw timestamps. |
+| Rollback and restart idempotence | File-backed ABORT/ROLLBACK, reopen/reimport and abrupt exit before confirmation are covered. Mid-commit OS kill/power-loss and packaged Windows confirmation/cancel remain unverified. |
+| Account-isolated dedup | All existing key strategies are covered. The known fill-ID delimiter collision remains a correctness blocker requiring a compatible identity change; isolated account tests do not certify all IDs. |
+| Partial-fill/scaling limitations | Pair rows retain separate buy/sell provenance; arbitrary execution regrouping is neither implemented nor claimed. Supported-export selection and user-facing explanations still require their owning work. |
+| Versioned Stage 2 domain parity | **Not satisfied.** The v1 golden artifact is a Rust behavior baseline with TypeScript DTO/primitive compatibility only. An approved portable execution contract and actual Rust↔TS algorithm parity remain open. |
+
+The review found an additional provenance defect: if the first row matched an active saved trade, later
+copies of that row were classified as in-file duplicates without retaining its known trade ID. Because
+commit's inserted-ID map only held new/restored trades, those later import-row records lost their
+`duplicate_of_trade_id` link. Classification now carries the known saved ID forward while preserving the
+same key, duplicate count, first source line and account scope. A new file-backed regression reproduced the
+failure and verifies generic fallback, broker IDs and fill pairs through reimport and another reopen.
+No persisted keys, shared schemas, migrations or frontend files changed.
+
+The pre-review head `4786028` also completed the actual Windows CI workflow successfully:
+[CI run 39518499869](https://github.com/KyleShabaga/FundedFlow/actions/runs/39518499869), including typecheck,
+frontend tests/build, cargo test and cargo clippy. This is automated Windows build/test evidence, **not**
+packaged Tauri UI acceptance. The four Linux legacy-fixture failures remain separately recorded. Any
+follow-up head must receive its own CI result; the successful prior run does not validate later commits.
+
+Re-review validation: all 43 CSV tests passed in the full native run, with only the same four pre-existing Linux legacy-rulebook failures (166 passed / 4 failed / 2 ignored overall). The 31 TypeScript CSV contract checks and diff checks also passed. No existing golden outputs needed regeneration: key identity and initial-preview behavior remain unchanged.

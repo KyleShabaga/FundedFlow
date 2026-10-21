@@ -427,3 +427,86 @@ fn submillisecond_fill_order_cannot_be_previewed_as_a_persistable_trade() {
     }
     assert_eq!(count(&conn, "SELECT count(*) FROM trades"), 0);
 }
+
+#[test]
+fn repeated_saved_duplicates_keep_trade_references_through_restart() {
+    let paired = single_performance();
+    let content = format!(
+        "{}\n{}\n{}\n{}\n",
+        paired.lines().next().unwrap(),
+        paired.lines().nth(1).unwrap(),
+        paired.lines().nth(1).unwrap(),
+        paired.lines().nth(1).unwrap()
+    );
+    for csv in [
+        format!("{HEADER}\n{}", format!("{TRADE}\n").repeat(3)),
+        format!("Trade ID,{HEADER}\n{}", format!("T17,{TRADE}\n").repeat(3)),
+        content,
+    ] {
+        let file = JournalFile::new();
+        let (account, original_trade);
+        {
+            let mut conn = file.open();
+            account = accounts::create(&mut conn, account_input("Duplicate provenance")).unwrap().id;
+            assert_eq!(commit(&mut conn, &request(&account, &csv)).unwrap().imported_count, 1);
+            original_trade = trade_store::list(&conn, &account).unwrap().remove(0);
+        }
+        let batch;
+        {
+            let mut conn = file.open();
+            let p = preview(&conn, &request(&account, &csv)).unwrap();
+            assert_eq!((p.new_count, p.duplicate_count), (0, 3));
+            assert_eq!(p.rows[0].duplicate.as_ref().unwrap().of, "saved");
+            assert_eq!(p.rows[1].duplicate.as_ref().unwrap().of, "file");
+            assert!(
+                p.rows
+                    .iter()
+                    .all(|r| r.duplicate.as_ref().unwrap().trade_id.as_deref() == Some(original_trade.id.as_str())),
+                "every duplicate can trace the saved trade, including repeated lines"
+            );
+            batch = commit(&mut conn, &request(&account, &csv)).unwrap();
+            assert_eq!((batch.imported_count, batch.duplicate_count), (0, 3));
+        }
+        let conn = file.open();
+        let problems = list_problem_rows(&conn, &batch.id).unwrap();
+        assert_eq!(problems.len(), 3);
+        assert!(problems.iter().all(|r| r.duplicate_of_trade_id.as_deref() == Some(original_trade.id.as_str())));
+        assert_eq!(trade_store::list(&conn, &account).unwrap(), [original_trade]);
+    }
+}
+
+#[test]
+fn commit_uses_current_account_context_without_reinterpreting_source_times() {
+    let (mut conn, account) = setup();
+    let csv = format!("{HEADER}\nMNQZ6,Buy,1,2026-10-19 16:30:00,21000,2026-10-19 16:31:00,21001,0,,source time\n");
+    let req = request(&account, &csv);
+    let before = preview(&conn, &req).unwrap();
+    let before_trade = before.rows[0].trade.as_ref().unwrap();
+    assert_eq!(before_trade.trading_day, "2026-10-19");
+    assert_eq!(before_trade.realized_pnl.as_deref(), Some("2"));
+    accounts::update(
+        &mut conn,
+        &account,
+        crate::store::accounts::AccountInput {
+            currency: "EUR".into(),
+            timezone: "Asia/Tokyo".into(),
+            trading_day_reset_time: "00:00".into(),
+            ..account_input("Updated account context")
+        },
+    )
+    .unwrap();
+    let batch = commit(&mut conn, &req).unwrap();
+    assert_eq!(batch.imported_count, 1);
+    let saved = trade_store::list(&conn, &account).unwrap().remove(0);
+    assert_eq!(saved.entry_at, before_trade.entry_at, "source zone in the request still determines the instant");
+    assert_eq!(saved.exit_at, before_trade.exit_at);
+    assert_eq!(saved.trading_day, "2026-10-20", "current account zone/reset determine the trading day");
+    assert_eq!(saved.pnl_status, "currency_mismatch");
+    assert_eq!(saved.realized_pnl, None, "commit must not persist the old USD calculation");
+    let source_zone: String =
+        conn.query_row("SELECT source_timezone FROM import_batches WHERE id = ?1", [&batch.id], |r| r.get(0)).unwrap();
+    assert_eq!(source_zone, "America/New_York");
+    let raw: String =
+        conn.query_row("SELECT raw_json FROM import_rows WHERE batch_id = ?1", [&batch.id], |r| r.get(0)).unwrap();
+    assert_eq!(serde_json::from_str::<Vec<String>>(&raw).unwrap()[3], "2026-10-19 16:30:00");
+}

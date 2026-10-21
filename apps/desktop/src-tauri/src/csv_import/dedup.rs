@@ -79,7 +79,9 @@ pub enum Match {
 
 /// Classify each row against the file and the account's trades.
 pub fn classify(conn: &Connection, account_id: &str, rows: &[(&RawRow, &Outcome)]) -> AppResult<Vec<Match>> {
-    let mut first_seen: HashMap<String, u64> = HashMap::new();
+    // Retain an existing trade's identity when later rows duplicate the first
+    // occurrence. Commit can then persist every duplicate's provenance link.
+    let mut first_seen: HashMap<String, (u64, Option<String>)> = HashMap::new();
     let mut lookup = conn.prepare(
         "SELECT t.id, t.created_at, t.deleted_at, b.file_name
          FROM trades t LEFT JOIN import_batches b ON b.id = t.import_batch_id
@@ -93,17 +95,16 @@ pub fn classify(conn: &Connection, account_id: &str, rows: &[(&RawRow, &Outcome)
         };
         let key = key(&trade.identity);
         let basis = basis(&trade.identity);
-        if let Some(line) = first_seen.get(&key) {
+        if let Some((line, trade_id)) = first_seen.get(&key) {
             out.push(Match::Duplicate(Duplicate {
                 of: "file",
                 reason: format!("Same {basis} as line {line} of this file."),
                 key,
                 line_number: Some(*line),
-                trade_id: None,
+                trade_id: trade_id.clone(),
             }));
             continue;
         }
-        first_seen.insert(key.clone(), raw.line_number);
         let saved = lookup
             .query_row(params![account_id, key], |r| {
                 Ok((
@@ -114,6 +115,7 @@ pub fn classify(conn: &Connection, account_id: &str, rows: &[(&RawRow, &Outcome)
                 ))
             })
             .optional()?;
+        first_seen.insert(key.clone(), (raw.line_number, saved.as_ref().map(|(id, ..)| id.clone())));
         out.push(match saved {
             None => Match::New,
             Some((id, created, deleted, file)) => {
