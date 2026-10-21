@@ -17,7 +17,7 @@ RuntimeProvider. No provider, route or shared UI change is required to install t
 | Ledger | `useLedger(accountId)`, `useLedgerBalanceAdjustment(accountId)` | `useCreateLedgerEntry(accountId)`, `useUpdateLedgerEntry(accountId, entryId)` / LedgerEntryInput; `useDeleteLedgerEntry(accountId, entryId)` / void |
 | Settings | `useSettings()`, `useSetting(key)` | `useSetSetting(key)` / JSON-compatible value, maximum 64 KiB; `useRemoveSetting(key)` / void |
 | Reference data | `useCatalogue()`, `useAccountCatalogueLink(accountId)`, `useAccountPhaseEvents(accountId)`, `useAccountOfferSelections(accountId)`, `useRulebooks(accountId = null)`, `useRulebookVersions(rulebookId)`, `useRulebookVersion(versionId)`, `useApplicableRulebook(query)`, `useAccountRulebookAssignments(accountId)` | Existing catalogue/rulebook editor operations remain outside this build |
-| Capabilities | `useTodayCapability()`, `useReviewCapability()` | No requests or fabricated records |
+| Capabilities | `useTodayCapability()` (removed in Build 21), `useReviewCapability()` (removed in Build 22) | No requests or fabricated records |
 
 Mutation input types above come from `@fundedflow/domain`. A null identity disables a read, except
 `useRulebooks(null)` explicitly requests all rulebooks. Account list filters reuse the domain AccountFilter.

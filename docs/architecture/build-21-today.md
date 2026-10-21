@@ -16,7 +16,8 @@ Screen spec: [`08-today.md`](../design/screens/08-today.md) (with [`09-home-merg
 | 20 journal | merged (PR #45) | `useTrades`, journal statistics, `/journal?view=log`, `/journal/trades/:tradeId` |
 
 No Rust command, migration or stored calculation was added: every fact Today needs already had a read. The
-`today-summary` placeholder capability is removed; `insights-aggregates` and `structured-reviews` stay unsupported.
+`today-summary` placeholder capability is removed; `insights-aggregates` stays unsupported. (`structured-reviews` was
+removed by Build 22, which enabled Review session; see [build-22-daily-review.md](build-22-daily-review.md).)
 
 ## The truth model (when is a saved estimate current?)
 
@@ -72,7 +73,7 @@ or when the window becomes visible in a later minute, never on a timer.
 | Review rulebook | `/accounts/:id/rulebook` | |
 | View trades | `/journal?view=log` | |
 | Add account | `/accounts` | |
-| Review session | disabled with its reason | Build 22 owns daily review; no screen is invented |
+| Review session | `/journal/days/:currentTradingDay?account=` (Build 22) | Rust's current trading day from `list_daily_reviews`; "Continue review" for a draft; unavailable with its reason while unread. Independent of the risk truth model |
 | Show (account card) | sets the active account | The only way Today changes the shared selection |
 
 ## Query keys and invalidation

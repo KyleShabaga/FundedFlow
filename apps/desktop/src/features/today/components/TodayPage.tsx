@@ -21,7 +21,9 @@ import { useCommitCsvImport, useImportHistory } from "../../imports/hooks/import
 import { groupByDay, joinRows, stats } from "../../journal/components/journal-model";
 import { useAccountRulebookContext } from "../../rulebooks/components/context";
 import { useTrades } from "../../trades/hooks/trades";
-import { useCheckTime, useReviewCapability, useTodayAccount } from "../hooks/today";
+import { useCheckTime, useTodayAccount } from "../hooks/today";
+import { useDailyReviewIndex } from "../../daily-reviews/hooks/daily-reviews";
+import { dailyReviewPath } from "../../daily-reviews/view-models/daily-review";
 import { checkpointSummary, splitAttempts } from "../view-models/today";
 import { AccountsOverview } from "./AccountsOverview";
 import { FreshnessPanel } from "./FreshnessPanel";
@@ -140,8 +142,13 @@ function SelectedAccount({ account, checkedAt, overview, predecessor }: { accoun
 
 function TodayActions({ account, onVerify }: { account: AccountViewModel; onVerify: () => void }) {
   const navigate = useNavigate();
-  const review = useReviewCapability();
   const id = encodeURIComponent(account.id);
+  // The review opens for this account and its current trading day as Rust reports it (zone, reset, weekends), read
+  // separately from the risk estimate: it never waits for, refreshes or changes a saved calculation.
+  const reviews = useDailyReviewIndex(account.id);
+  const current = reviews.data?.accountId === account.id ? reviews.data : undefined;
+  const todays = current?.reviews.find(r => r.tradingDay === current.currentTradingDay) ?? null;
+  const reviewLabel = todays?.status === "draft" ? "Continue review" : todays?.status === "completed" ? "Open review" : "Review session";
   return (
     <section className="ds-card td-panel" aria-labelledby="td-actions-title">
       <h2 id="td-actions-title" className="ds-title">Next steps</h2>
@@ -151,7 +158,11 @@ function TodayActions({ account, onVerify }: { account: AccountViewModel; onVeri
         <Button icon={<BookOpen size={16} aria-hidden="true" />} onClick={() => navigate(`/accounts/${id}/rulebook`)}>Review rulebook</Button>
         <Button icon={<ClipboardList size={16} aria-hidden="true" />} onClick={() => navigate("/journal?view=log")}>View trades</Button>
         <Button icon={<Plus size={16} aria-hidden="true" />} onClick={() => navigate("/accounts")}>Add account</Button>
-        <Button icon={<CircleCheck size={16} aria-hidden="true" />} disabled disabledReason={`Not available yet. ${review.message}`}>Review session</Button>
+        <Button icon={<CircleCheck size={16} aria-hidden="true" />} disabled={!current}
+          disabledReason={!current ? (reviews.error ? "The trading day couldn't be read. Try again." : "Finding the trading day…") : undefined}
+          onClick={() => current && navigate(dailyReviewPath(account.id, current.currentTradingDay))}>
+          {reviewLabel}
+        </Button>
       </div>
     </section>
   );

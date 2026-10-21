@@ -23,6 +23,7 @@ import {
 } from "@fundedflow/domain";
 import { createTestStore, T } from "../accounts/test-store";
 import { ACTIVE_ACCOUNT_SETTING } from "../accounts/active-account";
+import { createDailyReviewFake } from "../daily-reviews/test-store";
 
 const notFound = (what: string) => new RepositoryError({ kind: "notFound", message: `${what} was not found` });
 const conflict = (message: string) => new RepositoryError({ kind: "conflict", message });
@@ -42,7 +43,7 @@ export function pngBytes(salt = 1): Uint8Array<ArrayBuffer> {
   return new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, salt]);
 }
 
-export function createJournalStore(accounts: Account[], trades: Trade[] = [], activeId: string | null = accounts[0]?.id ?? null) {
+export function createJournalStore(accounts: Account[], trades: Trade[] = [], activeId: string | null = accounts[0]?.id ?? null, currentDay = "2026-10-20") {
   const base = createTestStore(accounts);
   if (activeId) base.settings.set(ACTIVE_ACCOUNT_SETTING, activeId);
   const all = new Map(trades.map(t => [t.id, { trade: { ...t }, deletedAt: null as string | null }]));
@@ -80,6 +81,11 @@ export function createJournalStore(accounts: Account[], trades: Trade[] = [], ac
   };
   const meta = (a: AttachmentMeta) => ({ ...a, fileStatus: files.get(a.id)?.status === "missing" ? "missing" as const : "ok" as const });
 
+  const daily = createDailyReviewFake({
+    account: accountId => base.accounts.get(accountId),
+    trades: accountId => [...all.values()].filter(r => r.deletedAt === null && r.trade.accountId === accountId).map(r => ({ ...r.trade })),
+    checklists: () => structuredClone([...checklists.values()]),
+  }, { currentDay });
   const repository = {
     ...base.repository,
     journal: { list: async () => [] },
@@ -196,6 +202,7 @@ export function createJournalStore(accounts: Account[], trades: Trade[] = [], ac
         r.attachments = r.attachments.filter(a => a.id !== attachmentId);
       },
     },
+    dailyReviews: daily.repository,
     library: {
       load: async () => ({ strategies: [...strategies.values()].map(s => ({ ...s })), tags: [...tags.values()].map(t => ({ ...t })), checklists: structuredClone([...checklists.values()]) }),
       saveStrategy: async (sid: string | null, input: StrategyInput) => {
@@ -231,5 +238,5 @@ export function createJournalStore(accounts: Account[], trades: Trade[] = [], ac
       },
     },
   };
-  return { repository, calls, reviews, files, strategies, tags, checklists, all, base };
+  return { repository, calls, reviews, files, strategies, tags, checklists, all, base, daily };
 }

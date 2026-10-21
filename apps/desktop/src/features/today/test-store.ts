@@ -20,6 +20,7 @@ import {
 } from "@fundedflow/domain";
 import { loadRiskCalculation } from "../../lib/data/calculate-risk";
 import { createRulebookStore } from "../rulebooks/test-store";
+import { createDailyReviewFake } from "../daily-reviews/test-store";
 
 export function createTodayStore(seed: Account[], options: { syntheticOpening?: boolean } = {}) {
   const base = createRulebookStore(seed);
@@ -71,9 +72,11 @@ export function createTodayStore(seed: Account[], options: { syntheticOpening?: 
     reconciliations: async (accountId: string) => { guard("reconciliations"); return structuredClone(reconciliations.filter(r => r.accountId === accountId)); },
     resolutions: async () => [],
   };
+  const daily = createDailyReviewFake({ account: id => base.accounts.get(id), trades: id => base.trades.get(id) ?? [] }, { currentDay: "2026-10-21" });
   const repository = {
     ...base.repository,
     evidence,
+    dailyReviews: daily.repository,
     snapshots: {
       ...base.repository.snapshots,
       latest: async (accountId: string) => { guard("latest"); return base.repository.snapshots.latest(accountId); },
@@ -104,7 +107,7 @@ export function createTodayStore(seed: Account[], options: { syntheticOpening?: 
     });
   }
 
-  return { ...base, repository, observations, reconciliations, imports, failing, saveEstimate };
+  return { ...base, repository, observations, reconciliations, imports, failing, saveEstimate, daily };
 }
 
 /** A Build 16-shaped drawdown outcome for fixtures: the values are what the screen must show, never compute. */

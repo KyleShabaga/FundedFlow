@@ -1,8 +1,8 @@
-// Journal library (Build 20), a sub-view of the Journal: the account's trade notes, its daily journal entries (read
-// only; daily plans and reflections are Build 22), and the shared review library: playbooks (strategies), templates
+// Journal library (Build 20), a sub-view of the Journal: the account's trade notes, its daily reviews (Build 22; earlier
+// day notes are listed apart, read only), and the shared review library: playbooks (strategies), templates
 // (checklists) and tags. Nothing a review used is deleted: archiving hides it from new choices, and past reviews keep
 // the labels they recorded.
-import { tagKinds, type Checklist, type ChecklistInput, type Strategy, type Tag, type TagKind } from "@fundedflow/domain";
+import { tagKinds, type LegacyDayNote, type Checklist, type ChecklistInput, type Strategy, type Tag, type TagKind } from "@fundedflow/domain";
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -20,6 +20,7 @@ import {
   MoneyCell,
   RadioGroup,
   SearchField,
+  SegmentedControl,
   Select,
   StateBoundary,
   TabPanel,
@@ -33,6 +34,10 @@ import { useLibrary, useSaveChecklist, useSaveStrategy, useSaveTag, useSetArchiv
 import { useReviewSummaries } from "../../reviews/hooks/reviews";
 import { fieldErrors, retryRead, toAsyncState } from "../../shared/presentation";
 import { useTrades } from "../../trades/hooks/trades";
+import { DayChooser } from "../../daily-reviews/components/DayChooser";
+import "../../daily-reviews/components/daily-review.css";
+import { useDailyReviewIndex } from "../../daily-reviews/hooks/daily-reviews";
+import { adherenceShort, dailyReviewPath, statusView } from "../../daily-reviews/view-models/daily-review";
 import { useJournalEntries } from "../hooks/journal";
 import { longDay, TagList, tradePath } from "./presentation";
 
@@ -123,32 +128,106 @@ function TradeNotes({ account }: { account: AccountViewModel }) {
   );
 }
 
-/* ---------- Daily journals (read only; Build 22 owns the daily review) ---------- */
+/* ---------- Daily journals: the account's daily reviews (Build 22) and earlier day notes ---------- */
+
+type ReviewFilter = "all" | "draft" | "completed";
 
 function DailyJournals({ account }: { account: AccountViewModel }) {
+  const navigate = useNavigate();
+  const index = useDailyReviewIndex(account.id);
   const entries = useJournalEntries(account.id);
-  const daily = (entries.data ?? []).filter(e => !e.tradeId);
+  const [filter, setFilter] = useState<ReviewFilter>("all");
+  const open = (day: string) => navigate(dailyReviewPath(account.id, day));
   return (
     <div className="jr-notes">
-      <InlineNotice tone="info">Daily plans, reflections and plan adherence come with the daily review. Entries already written for this account are listed here, read only.</InlineNotice>
-      <StateBoundary state={toAsyncState(entries)} label="daily journals" onRetry={retryRead(entries.refresh)} loading={<LoadingState label="Loading journal entries" rows={3} />}
-        empty={{ "no-records": <div className="ds-card"><EmptyState kind="no-records" size="compact" title="No daily journal entries" description="The daily review will add them." /></div> }}>
-        {() => daily.length === 0 ? (
-          <div className="ds-card"><EmptyState kind="no-records" size="compact" title="No daily journal entries" description="Entries about a trade are under Trade notes." /></div>
-        ) : (
-          <ul className="jr-note-list">
-            {daily.map(e => (
-              <li key={e.id} className="ds-card jr-note-item">
-                <div className="jr-note-head"><Badge>Journal entry</Badge><span className="ds-faint">{formatInstant(e.entryAt, { timeZone: account.timezone, year: true })}</span></div>
-                <strong>{e.title}</strong>
-                <p className="jr-excerpt">{e.body}</p>
-                {e.tags.length > 0 && <span className="jr-tags">{e.tags.map(t => <Badge key={t} variant="outline">{t}</Badge>)}</span>}
-              </li>
-            ))}
-          </ul>
-        )}
+      <StateBoundary state={toAsyncState(index)} label="daily reviews" onRetry={retryRead(index.refresh)} loading={<LoadingState label="Loading daily reviews" rows={3} />}>
+        {data => {
+          const reviews = data.reviews.filter(r => filter === "all" || r.status === filter);
+          const drafts = data.reviews.filter(r => r.status === "draft").length;
+          return (
+            <>
+              <div className="jr-days-bar">
+                <SegmentedControl<ReviewFilter> label="Show" value={filter} onValueChange={setFilter} options={[
+                  { value: "all", label: "All", count: data.reviews.length }, { value: "draft", label: "Drafts", count: drafts },
+                  { value: "completed", label: "Completed", count: data.reviews.length - drafts },
+                ]} />
+                <div className="jr-row">
+                  <Button size="sm" onClick={() => open(data.currentTradingDay)}>Review today</Button>
+                  <DayChooser initial={data.currentTradingDay} label="Review a day" onChoose={open} />
+                </div>
+              </div>
+              {reviews.length === 0 ? (
+                <div className="ds-card"><EmptyState kind={data.reviews.length ? "no-matches" : "no-records"} size="compact"
+                  title={data.reviews.length ? undefined : "No daily reviews yet"}
+                  description={data.reviews.length ? "No reviews match this filter." : "Plan a session or review a day, with or without trades. Each review is kept per account and trading day."} /></div>
+              ) : (
+                <ul className="dr-list" aria-label="Daily reviews">
+                  {reviews.map(r => {
+                    const status = statusView(r);
+                    return (
+                      <li key={r.id} className="ds-card dr-list-item">
+                        <div className="dr-list-head">
+                          <strong>{longDay(r.tradingDay)}</strong>
+                          <Badge tone={status.tone}>{status.label}</Badge>
+                          {r.planTiming === "retrospective" && <Badge tone="warn">Plan written afterwards</Badge>}
+                          {r.tradesChanged && <Badge tone="warn">Trades changed since</Badge>}
+                          <span className="dr-spacer" />
+                          {r.status === "draft"
+                            ? <Button size="sm" variant="primary" onClick={() => open(r.tradingDay)} aria-label={`Resume draft, ${longDay(r.tradingDay)}`}>Resume draft</Button>
+                            : <>
+                                <Button size="sm" variant="ghost" onClick={() => open(r.tradingDay)} aria-label={`Open review, ${longDay(r.tradingDay)}`}>Open</Button>
+                                <Button size="sm" onClick={() => open(r.tradingDay)} disabled={data.archived} disabledReason={data.archived ? "Archived accounts are read-only" : undefined} aria-label={`Edit review, ${longDay(r.tradingDay)}`}>Edit</Button>
+                              </>}
+                        </div>
+                        <div className="dr-list-head ds-faint">
+                          <span>{adherenceShort(r.adherence)}</span>
+                          <span aria-hidden="true">·</span>
+                          {r.outcome.trades === 0
+                            ? <span>{r.noTradeDay ? "No-trade day" : "No trades recorded"}</span>
+                            : <span>Closed trades <MoneyCell value={r.outcome.net} currency={account.currency} />{r.outcome.unknownPnl > 0 && ` (${r.outcome.unknownPnl} unknown P&L left out)`}</span>}
+                        </div>
+                        {r.keyLesson && <p className="jr-excerpt"><b>Key lesson:</b> {r.keyLesson.length > 300 ? `${r.keyLesson.slice(0, 300)}…` : r.keyLesson}</p>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <LegacyNotes account={account} notes={data.legacyNotes} entries={entries.data ?? []} onOpenDay={open} />
+            </>
+          );
+        }}
       </StateBoundary>
     </div>
+  );
+}
+
+/** Journal entries without a trade written before daily reviews: kept as they are, never counted as reviews. */
+function LegacyNotes({ account, notes, entries, onOpenDay }: {
+  account: AccountViewModel; notes: readonly LegacyDayNote[]; entries: readonly { id: string; body: string; tags: readonly string[] }[]; onOpenDay: (day: string) => void;
+}) {
+  if (notes.length === 0) return null;
+  return (
+    <details className="ds-card dr-history">
+      <summary>Earlier day notes ({notes.length})</summary>
+      <p className="ds-faint">Notes written before daily reviews existed. They are kept unchanged and read only, and are not counted as reviews.</p>
+      <ul className="jr-note-list">
+        {notes.map(n => {
+          const entry = entries.find(e => e.id === n.id);
+          return (
+            <li key={n.id} className="jr-note-item">
+              <div className="jr-note-head">
+                <Badge>Day note</Badge>
+                <span className="ds-faint">{formatInstant(n.entryAt, { timeZone: account.timezone, year: true })} · trading day {n.tradingDay}</span>
+                <Button size="sm" variant="ghost" onClick={() => onOpenDay(n.tradingDay)}>Open that day's review</Button>
+              </div>
+              <strong>{n.title}</strong>
+              {entry && <p className="jr-excerpt">{entry.body}</p>}
+              {entry && entry.tags.length > 0 && <span className="jr-tags">{entry.tags.map(t => <Badge key={t} variant="outline">{t}</Badge>)}</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </details>
   );
 }
 

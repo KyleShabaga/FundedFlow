@@ -379,16 +379,46 @@ describe("freshness, imports and checkpoints", () => {
 });
 
 describe("actions and accessibility", () => {
-  it("connects every action to a real route, and Review session says it isn't available", async () => {
+  it("connects every action to a real route, and Review session opens the selected account's current trading day", async () => {
     const user = userEvent.setup();
     renderToday();
     const actions = await screen.findByRole("region", { name: "Next steps" });
-    const review = within(actions).getByRole("button", { name: "Review session" });
-    expect(review.getAttribute("aria-disabled")).toBe("true");
+    const review = await within(actions).findByRole("button", { name: "Review session" });
+    await waitFor(() => expect(review.getAttribute("aria-disabled")).not.toBe("true"));
     await user.click(review);
-    expect(location).toBe("/");
+    // The day is Rust's current trading day for this account (the store's), never the browser's date.
+    expect(location).toBe(`/journal/days/2026-10-21?account=${A}`);
+  });
+
+  it("links Review rulebook to the account's rulebook", async () => {
+    const user = userEvent.setup();
+    renderToday();
+    const actions = await screen.findByRole("region", { name: "Next steps" });
     await user.click(within(actions).getByRole("button", { name: "Review rulebook" }));
     expect(location).toBe(`/accounts/${A}/rulebook`);
+  });
+
+  it("offers to continue today's draft review, and opening it never touches the saved estimate", async () => {
+    await holder.store.repository.dailyReviews.save({
+      accountId: A, tradingDay: "2026-10-21", expectedRevision: null, plan: { focus: "A+ only" }, reflection: {}, noTradeDay: false, answers: [], action: "save",
+    });
+    const user = userEvent.setup();
+    renderToday();
+    const actions = await screen.findByRole("region", { name: "Next steps" });
+    const review = await within(actions).findByRole("button", { name: "Continue review" });
+    const before = { writes: holder.store.writes.length, snapshots: holder.store.snapshots.length };
+    await user.click(review);
+    expect(location).toBe(`/journal/days/2026-10-21?account=${A}`);
+    expect({ writes: holder.store.writes.length, snapshots: holder.store.snapshots.length }).toEqual(before);
+  });
+
+  it("keeps Review session unavailable, with its reason, while the trading day can't be read", async () => {
+    holder.store.daily.failing.add("list");
+    renderToday();
+    const actions = await screen.findByRole("region", { name: "Next steps" });
+    const review = within(actions).getByRole("button", { name: "Review session" });
+    await waitFor(() => expect(review.getAttribute("aria-disabled")).toBe("true"));
+    await waitFor(() => expect(review.getAttribute("title")).toMatch(/couldn.t be read/));
   });
 
   it.each([

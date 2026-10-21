@@ -1,18 +1,21 @@
 // The Journal (Build 20): the selected account's trades by trading day and as a trade log, and the Library sub-view.
 // Trades come from list_trades (Rust-stored values) joined with their review summaries; day groups use the stored
-// trading day. Manual trade entry lives here. Day plans and reflections are Build 22; aggregate analytics are Build 23.
+// trading day. Manual trade entry lives here. Each day's daily review (Build 22) opens from By day and the Library;
+// aggregate analytics are Build 23.
 import { Plus, Upload } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button, EmptyState, InlineNotice, LoadingState, StateBoundary, TabPanel, Tabs } from "../../../design-system";
 import type { AccountViewModel } from "../../accounts/view-models/account";
+import { useDailyReviewIndex } from "../../daily-reviews/hooks/daily-reviews";
 import { useReviewSummaries } from "../../reviews/hooks/reviews";
 import { retryRead, toAsyncState } from "../../shared/presentation";
 import { useTrades } from "../../trades/hooks/trades";
 import { ByDayView } from "./ByDayView";
 import { joinRows } from "./journal-model";
 import { LibraryView } from "./LibraryView";
+import { dailyReviewPath } from "../../daily-reviews/view-models/daily-review";
 import { JournalAccountGate, tradePath, zoneLabel } from "./presentation";
 import { TradeFormDialog } from "./TradeFormDialog";
 import { TradeLogView } from "./TradeLogView";
@@ -34,6 +37,8 @@ function AccountJournal({ account }: { account: AccountViewModel }) {
   const setView = (v: string) => setParams(p => { const next = new URLSearchParams(p); next.set("view", v); return next; }, { replace: true });
   const trades = useTrades(account.id);
   const summaries = useReviewSummaries(account.id);
+  const dailyReviews = useDailyReviewIndex(account.id);
+  const reviewsState = dailyReviews.data ?? (dailyReviews.error ? "error" as const : "loading" as const);
   const [adding, setAdding] = useState(false);
   const rows = useMemo(() => joinRows(trades.data ?? [], summaries.data ?? []), [trades.data, summaries.data]);
   const readOnly = account.archivedAt !== null;
@@ -58,9 +63,14 @@ function AccountJournal({ account }: { account: AccountViewModel }) {
       <Tabs label="Journal views" value={view} onValueChange={setView}
         items={[{ value: "day", label: "By day" }, { value: "log", label: "Trade log", count: trades.data?.length }, { value: "library", label: "Library" }]}>
         <TabPanel value="day">
-          <TradesBoundary trades={trades} empty={<NoTrades add={addButton} importButton={importButton} />}>
-            {() => <>{summaries.error && <SummariesNotice />}<ByDayView rows={rows} account={account} onOpen={t => navigate(tradePath(t.id))} /></>}
-          </TradesBoundary>
+          {trades.data?.length === 0 && (dailyReviews.data?.reviews.length ?? 0) > 0 ? (
+            // No trades yet, but reviewed days (no-trade days, or trades not imported yet) still list here.
+            <ByDayView rows={[]} account={account} onOpen={t => navigate(tradePath(t.id))} reviews={reviewsState} />
+          ) : (
+            <TradesBoundary trades={trades} empty={<NoTrades add={addButton} importButton={importButton} review={dailyReviews.data ? <Button onClick={() => navigate(dailyReviewPath(account.id, dailyReviews.data!.currentTradingDay))}>Review today</Button> : null} />}>
+              {() => <>{summaries.error && <SummariesNotice />}<ByDayView rows={rows} account={account} onOpen={t => navigate(tradePath(t.id))} reviews={reviewsState} /></>}
+            </TradesBoundary>
+          )}
         </TabPanel>
         <TabPanel value="log">
           <TradesBoundary trades={trades} empty={<NoTrades add={addButton} importButton={importButton} />}>
@@ -85,12 +95,12 @@ function TradesBoundary({ trades, empty, children }: { trades: ReturnType<typeof
   );
 }
 
-function NoTrades({ add, importButton }: { add: ReactNode; importButton: ReactNode }) {
+function NoTrades({ add, importButton, review }: { add: ReactNode; importButton: ReactNode; review?: ReactNode }) {
   return (
     <div className="ds-card">
       <EmptyState kind="no-records" title="No trades in this account yet"
-        description="Enter a trade by hand, or import your broker's CSV. Either way you can review each trade with notes, tags, a checklist and screenshots."
-        action={<div className="jr-row">{importButton}{add}</div>} />
+        description="Enter a trade by hand, or import your broker's CSV. Either way you can review each trade with notes, tags, a checklist and screenshots. A day's plan and review don't need trades."
+        action={<div className="jr-row">{importButton}{add}{review}</div>} />
     </div>
   );
 }

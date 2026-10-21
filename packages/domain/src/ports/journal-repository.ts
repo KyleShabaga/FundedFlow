@@ -26,6 +26,7 @@ import type {
   SourceInput,
 } from "../catalogue/index.js";
 import type { SourceReference } from "../catalogue/index.js";
+import type { DailyReviewDay, DailyReviewIndex, DailyReviewInput, DailyReviewRef } from "../contracts/daily-reviews.js";
 import type { LedgerEntry, LedgerEntryInput } from "../contracts/ledger.js";
 import type { Setting } from "../contracts/settings.js";
 import type { Snapshot, SnapshotInput, SnapshotQuery } from "../contracts/snapshots.js";
@@ -150,6 +151,22 @@ export interface ReviewRepository {
   readScreenshot(accountId: string, id: string): Promise<ScreenshotData>;
   /** Detaches it; the row and bytes stay for backups until permanent deletion (Build 24). */
   removeScreenshot(accountId: string, id: string): Promise<void>;
+}
+
+/**
+ * Daily reviews (Build 22): one per account attempt and trading day (Rust's trading day). Reads return the day with
+ * its review (or none), its trades with their link status and the closed-trade outcome. Writes name the revision
+ * they started from, so a stale form is a conflict. Archived accounts are read-only.
+ */
+export interface DailyReviewRepository {
+  getDay(accountId: string, tradingDay: string): Promise<DailyReviewDay>;
+  /** The account's reviews (newest first), its current trading day and legacy day notes. */
+  list(accountId: string): Promise<DailyReviewIndex>;
+  save(input: DailyReviewInput): Promise<DailyReviewDay>;
+  /** Back to draft; the first completion and the history are kept. */
+  reopen(ref: DailyReviewRef): Promise<DailyReviewDay>;
+  /** Accept the day's trades as they are now without changing the review's text or status. */
+  relinkTrades(ref: DailyReviewRef): Promise<DailyReviewDay>;
 }
 
 /** Strategies (playbooks), tags and checklists (templates), shared by every account. Archived, never deleted. */
@@ -317,6 +334,7 @@ export interface JournalRepository {
   readonly trades: TradeRepository;
   readonly journal: JournalEntryRepository;
   readonly reviews: ReviewRepository;
+  readonly dailyReviews: DailyReviewRepository;
   readonly library: LibraryRepository;
   readonly imports: ImportRepository;
   readonly rulebooks: RulebookRepository;

@@ -78,6 +78,10 @@ import {
   tradeChangeOptionsSchema,
   tradeDetailSchema,
   tradeReviewSchema,
+  dailyReviewDaySchema,
+  dailyReviewIndexSchema,
+  dailyReviewInputSchema,
+  dailyReviewRefSchema,
 } from "./schemas";
 
 /** The shape of Tauri's `invoke`, injected so the adapter can be tested without a webview. */
@@ -162,6 +166,13 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
         call("add_trade_screenshot", { input: validate(screenshotInputSchema, input) }, attachmentMetaSchema),
       readScreenshot: (accountId, id) => call("read_trade_screenshot", { accountId, id }, screenshotDataSchema),
       removeScreenshot: (accountId, id) => done("remove_trade_screenshot", { accountId, id }),
+    },
+    dailyReviews: {
+      getDay: (accountId, tradingDay) => call("get_daily_review", { accountId, tradingDay }, dailyReviewDaySchema),
+      list: (accountId) => call("list_daily_reviews", { accountId }, dailyReviewIndexSchema),
+      save: (input) => call("save_daily_review", { input: validate(dailyReviewInputSchema, input) }, dailyReviewDaySchema),
+      reopen: (ref) => call("reopen_daily_review", { input: validate(dailyReviewRefSchema, ref) }, dailyReviewDaySchema),
+      relinkTrades: (ref) => call("relink_daily_review_trades", { input: validate(dailyReviewRefSchema, ref) }, dailyReviewDaySchema),
     },
     library: {
       load: () => call("get_review_library", {}, librarySchema),

@@ -11,6 +11,7 @@ import { ImportHistoryPage } from "./features/imports/components/ImportHistoryPa
 import { ImportWizardPage } from "./features/imports/components/ImportWizardPage";
 import { JournalPage } from "./features/journal/components/JournalPage";
 import { TradeDetailPage } from "./features/journal/components/TradeDetailPage";
+import { DailyReviewPage } from "./features/daily-reviews/components/DailyReviewPage";
 import { TodayPage } from "./features/today/components/TodayPage";
 import "./App.css";
 
@@ -26,6 +27,7 @@ export default function App() {
           <Route index element={<RuntimeGate showStatus={false}><TodayPage /></RuntimeGate>} />
           <Route path="journal" element={<RuntimeGate showStatus={false}><JournalPage /></RuntimeGate>} />
           <Route path="journal/trades/:tradeId" element={<RuntimeGate showStatus={false}><TradeDetailPage /></RuntimeGate>} />
+          <Route path="journal/days/:tradingDay" element={<RuntimeGate showStatus={false}><DailyReviewPage /></RuntimeGate>} />
           <Route path="insights" element={<RuntimeGate showStatus={false}><RoutePlaceholder name="Insights" /></RuntimeGate>} />
           <Route path="accounts" element={<RuntimeGate showStatus={false}><AccountsPage /></RuntimeGate>} />
           <Route path="accounts/:accountId" element={<RuntimeGate showStatus={false}><AccountDetailPage /></RuntimeGate>} />

@@ -11,12 +11,18 @@ Review trading day by day, with notes, and browse every trade in one table.
 
 ## By day (default)
 - One collapsible card per trading day, newest first; the latest day expanded, others collapsed. "Collapse all".
-- Header: long date, net P&L, "n trades · win rate", Collapse/Expand (`aria-expanded`). The plan adherence badge and
-  Add note belong to the daily review (Build 22) and are not shown until it exists.
+- Header: long date, net P&L, "n trades · win rate", Collapse/Expand (`aria-expanded`).
+- Daily review row (Build 22, [14-daily-review.md](14-daily-review.md)): review status (No review / Draft / Completed),
+  plan adherence ("Plan adherence 75% · 3/4", or "—" when Unknown), "Trades changed since" when the review's trades
+  changed, and **Plan / review day**, **Continue review** or **Open review**. Adherence is process only, beside but
+  separate from the day's P&L.
 - Stats strip: net P&L (large `Pnl`), trades, win rate, gross P&L, contracts, fees, winners, losers, profit factor.
 - Expanded: cumulative P&L through the day (`EquityCurve`, `step={false}`) and the day's trades in a `DataTable`:
   result, symbol, side, source (Imported/Manual), open, close, qty, entry, exit, hold, net P&L, tags, review. First 8
-  rows, then "Show all n". Session notes (plan, review) come with Build 22.
+  rows, then "Show all n". The day's plan and reflection open in its daily review.
+- Days with a review but no trades (a no-trade day, or trades not imported yet) are listed in date order as compact
+  cards. The bar has **Review a day** (a date field; Monday to Friday) to plan or review any day, including one with
+  no trades; an account without trades offers **Review today**.
 - Collapsed: date, net P&L, "n trades · win rate · account", Expand.
 
 ## Trade log
@@ -31,7 +37,9 @@ Review trading day by day, with notes, and browse every trade in one table.
 ## Data
 - `list_trades(accountId)` per selected account, grouped by `tradingDay` (never by local date).
 - Review status, strategy and tags per trade: `list_trade_review_summaries(accountId)` (Build 20).
-- Day notes (entries without `tradeId`) are Build 22; mapping an entry's time to a trading day needs Rust's derivation.
+- Daily reviews: `list_daily_reviews(accountId)` (status, adherence and the current Rust trading day per account);
+  the review is keyed by account and stored trading day. Earlier day notes (entries without `tradeId`) are listed in
+  the Library with their trading day derived by Rust, never treated as reviews.
 - Day stats are display aggregations (exact sums with `sumMoney`); win rate and profit factor are ratios.
 - Hold time from `entryAt`/`exitAt`; for imported performance rows use `roundTrip.durationSeconds` when present.
 
@@ -48,4 +56,4 @@ Review trading day by day, with notes, and browse every trade in one table.
 - Manual trade entry: Add trade on the Journal opens the trade form (account time zone; P&L computed on save).
 
 ## Open questions
-- Plan adherence ("Followed plan") is Build 22's daily review; keep it separate from P&L (Build 6).
+- Plan adherence is the daily review's (Build 22) and stays separate from P&L (Build 6) and from firm rules.

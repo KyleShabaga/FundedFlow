@@ -24,6 +24,14 @@ export const featureKeys = {
   tradeReview: (id: string | null, tradeId: string | null) => [...root, "reviews", id, "trade", tradeId] as const,
   reviewSummaries: (id: string | null) => [...root, "reviews", id, "summaries"] as const,
   screenshot: (id: string | null, attachmentId: string | null) => [...root, "reviews", id, "screenshot", attachmentId] as const,
+  /**
+   * Build 22 daily reviews of an account: the index and one key per trading day. Trade, import and account writes
+   * invalidate the account's; library edits invalidate every account's (checklist labels).
+   */
+  dailyReviewsAll: [...root, "daily-reviews"] as const,
+  dailyReviewsRoot: (id: string | null) => [...root, "daily-reviews", id] as const,
+  dailyReviewIndex: (id: string | null) => [...root, "daily-reviews", id, "index"] as const,
+  dailyReviewDay: (id: string | null, day: string | null) => [...root, "daily-reviews", id, "day", day] as const,
   library: [...root, "library"] as const,
   trades: (id: string | null, filters: TradeFilters = {}) => [...account(id), "trades", { from: filters.from ?? null, to: filters.to ?? null, symbol: filters.symbol ?? null, side: filters.side ?? null }] as const,
   journalDetail: (id: string | null, entryId: string | null) => [...account(id), "journal", "detail", entryId] as const,

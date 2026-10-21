@@ -588,3 +588,32 @@ pub async fn list_reconciliation_resolutions(
 ) -> AppResult<Vec<reconciliation::Resolution>> {
     db.with(|c| reconciliation::resolutions(c, &id))
 }
+
+use crate::store::daily_reviews::{self, DailyReviewDay, DailyReviewIndex, DailyReviewInput, DailyReviewRef};
+
+/// Build 22: one trading day of an account with its daily review (if any), its trades and their link status.
+#[tauri::command]
+pub async fn get_daily_review(db: State<'_, Runtime>, account_id: String, trading_day: String) -> AppResult<DailyReviewDay> {
+    db.with(|c| daily_reviews::get_day(c, &account_id, &trading_day))
+}
+
+/// Build 22: an account's daily reviews, its current trading day and legacy day notes.
+#[tauri::command]
+pub async fn list_daily_reviews(db: State<'_, Runtime>, account_id: String) -> AppResult<DailyReviewIndex> {
+    db.with(|c| daily_reviews::list(c, &account_id))
+}
+
+#[tauri::command]
+pub async fn save_daily_review(db: State<'_, Runtime>, input: DailyReviewInput) -> AppResult<DailyReviewDay> {
+    db.with(|c| daily_reviews::save(c, input))
+}
+
+#[tauri::command]
+pub async fn reopen_daily_review(db: State<'_, Runtime>, input: DailyReviewRef) -> AppResult<DailyReviewDay> {
+    db.with(|c| daily_reviews::reopen(c, input))
+}
+
+#[tauri::command]
+pub async fn relink_daily_review_trades(db: State<'_, Runtime>, input: DailyReviewRef) -> AppResult<DailyReviewDay> {
+    db.with(|c| daily_reviews::relink_trades(c, input))
+}

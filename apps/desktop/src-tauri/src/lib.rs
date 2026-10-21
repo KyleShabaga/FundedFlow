@@ -125,6 +125,11 @@ pub fn run() {
             commands::update_rulebook_draft,
             commands::discard_rulebook_draft,
             commands::list_rulebook_events,
+            commands::get_daily_review,
+            commands::list_daily_reviews,
+            commands::save_daily_review,
+            commands::reopen_daily_review,
+            commands::relink_daily_review_trades,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

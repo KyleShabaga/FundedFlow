@@ -5,7 +5,7 @@ import { useFeatureQuery } from "../../shared/hooks/use-feature-query";
 import { useFeatureMutation } from "../../shared/hooks/use-feature-mutation";
 
 // Reviews show a template's current name beside the one they recorded, so library edits refresh every review.
-const affected = () => [keys.library, keys.reviewsAll];
+const affected = () => [keys.library, keys.reviewsAll, keys.dailyReviewsAll];
 const scope = JSON.stringify(["library"]);
 
 export const useLibrary = () => useFeatureQuery({ key: keys.library, read: signal => readLibrary(signal), isEmpty: () => false });

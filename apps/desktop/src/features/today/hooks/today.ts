@@ -9,7 +9,6 @@ import type { AccountViewModel } from "../../accounts/view-models/account";
 import { useObservations, useReconciliations } from "../../evidence/hooks/evidence";
 import { useLatestSnapshot } from "../../insights/hooks/insights";
 import { useCalculationFreshness, useCalculationInputs } from "../../rulebooks/hooks/rulebooks";
-import { getCapability } from "../../shared/capabilities";
 import { deriveRiskTruth, headline, type Loadable } from "../view-models/today";
 
 /**
@@ -61,6 +60,3 @@ export function useTodayAccount(account: AccountViewModel, checkedAt: string) {
   return { snapshot, freshness, facts, observations, reconciliations, truth, headline: headline(truth) };
 }
 export type TodayAccount = ReturnType<typeof useTodayAccount>;
-
-/** Daily session review is Build 22; until then Today says so instead of linking to a screen that doesn't exist. */
-export const useReviewCapability = () => getCapability("structured-reviews");
