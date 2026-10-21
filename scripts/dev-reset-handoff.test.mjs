@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { appIsRunning } from './reset-test-data.mjs';
 import { parseArgs, reportPathFor, runHandoff } from './dev-reset-handoff.mjs';
-import { commandFor, testJournalDir } from './dev-test-journal.mjs';
+import { commandFor, debugBinary, testJournalDir, windowJournalDir } from './dev-test-journal.mjs';
 
 const identifier = 'com.fundedflow.desktop';
 const quiet = () => {};
@@ -133,4 +133,17 @@ test('the test-journal launcher always passes an isolated, explicit directory', 
   const reset = commandFor(['reset'], '/t/com.fundedflow.desktop');
   assert.deepEqual(reset.args.slice(1), ['--all', '--data-dir', '/t/com.fundedflow.desktop'], 'preview unless --yes is added');
   assert.throws(() => commandFor(['wipe']), /Unknown subcommand/);
+});
+
+test('each extra window gets its own isolated journal and reuses the debug build', () => {
+  const second = commandFor(['window'], '/t/com.fundedflow.desktop', 'win32');
+  assert.equal(second.copyFrom, debugBinary('win32'));
+  assert.equal(second.command, path.join(path.dirname(windowJournalDir('2')), 'fundedflow.exe'), 'runs a copy, never the build output');
+  assert.deepEqual(second.env, { FUNDEDFLOW_DEV_DATA_DIR: windowJournalDir('2') });
+  const third = commandFor(['window', '3'], '/t/com.fundedflow.desktop', 'linux');
+  assert.equal(third.env.FUNDEDFLOW_DEV_DATA_DIR, windowJournalDir('3'));
+  assert.equal(path.basename(third.env.FUNDEDFLOW_DEV_DATA_DIR), identifier);
+  assert.notEqual(windowJournalDir('2'), testJournalDir({}));
+  assert.throws(() => commandFor(['window', '1']), /2 or more/);
+  assert.throws(() => commandFor(['window', 'x']), /2 or more/);
 });

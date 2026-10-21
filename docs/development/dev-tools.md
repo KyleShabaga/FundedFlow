@@ -26,6 +26,24 @@ real journal.
 Plain `npm run tauri dev` still opens the per-user journal. The two buttons are visible there, but their dialogs show
 *Isolated test journal required* and the native commands refuse: neither tool ever acts on the per-user journal.
 
+### More than one window at a time
+
+Each FundedFlow process locks the journal it opens (`fundedflow.lock`), so a second process on the same journal shows
+*Another FundedFlow process owns this journal*, and a second `tauri dev` cannot start either (port 1420 is taken and
+Windows will not rebuild a running exe). To test side by side, leave the first window running and, in another
+terminal:
+
+```sh
+npm run dev:another-window        # window 2
+npm run dev:another-window -- 3   # window 3, and so on
+```
+
+Each extra window runs a copy of the debug build `tauri dev` already made (so `tauri dev` can still rebuild), loads
+the same dev server (so it hot-reloads too) and opens its own isolated journal in
+`<repo>/.dev-journal/window-<n>/com.fundedflow.desktop`, with the developer tools enabled. Rust changes reach extra
+windows only when you start them again after `tauri dev` has rebuilt. To seed one
+from the command line, set `FUNDEDFLOW_DEV_DATA_DIR` to its directory and run `npm run seed:test-journal`.
+
 ## 2. Add Fake Data
 
 Click **Add Fake Data**. The dialog shows the resolved test-journal directory, the presets and an optional seed.
