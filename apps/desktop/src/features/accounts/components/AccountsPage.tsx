@@ -4,7 +4,7 @@
 // known net P&L per attempt, and rulebook assignment. Current balance, drawdown and
 // target meters wait for Builds 15.5/16 and are marked unavailable, never computed here.
 import { accountFilterLabels, filterAccounts, type AccountFilter } from "@fundedflow/domain";
-import { Ellipsis, Plus } from "lucide-react";
+import { Ellipsis, Plus, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -181,6 +181,11 @@ export function AccountsPage() {
         <div className="acct-head-actions">
           {all.length > 0 && (
             <SegmentedControl label="Layout" value={view} onValueChange={setView} options={[{ value: "table", label: "Table" }, { value: "cards", label: "Cards" }]} />
+          )}
+          {all.length > 0 && (
+            <Button icon={<Upload size={16} aria-hidden="true" />} onClick={() => navigate("/import", { state: { accountId: active.activeId } })}>
+              Import trades
+            </Button>
           )}
           {addButton}
         </div>

@@ -127,7 +127,9 @@ it("keeps recovery and Settings available on safe and unknown routes", async () 
   expect(screen.getAllByRole("alert")).toHaveLength(1);
   expect(screen.getByText(/Keep your journal and pre-upgrade backup in place/)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
-  expect((screen.getByRole("button", { name: "Import CSV" }) as HTMLButtonElement).disabled).toBe(true);
+  // Import CSV stays available as navigation; the import wizard itself is behind the runtime gate.
+  expect(screen.getByRole("button", { name: "Import CSV" })).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: /Choose a CSV file/ })).toBeNull();
 });
 
 it("explains unsupported schema without exposing a retry, reset or downgrade action", async () => {

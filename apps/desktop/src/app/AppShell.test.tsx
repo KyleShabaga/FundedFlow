@@ -137,10 +137,12 @@ it("keeps navigation and Settings available when runtime fails and never enables
   invoke.mockRejectedValue(new Error("bridge unavailable"));
   render(<App />);
   await screen.findByRole("alert");
-  const button = screen.getByRole("button", { name: "Import CSV" }) as HTMLButtonElement;
-  expect(button.disabled).toBe(true);
-  expect(screen.getByText("Not yet available").id).toBe(button.getAttribute("aria-describedby"));
+  // Import CSV (Build 18) only opens the wizard; the wizard stays behind the runtime gate, so nothing is read or sent.
+  await userEvent.setup().click(screen.getByRole("button", { name: "Import CSV" }));
+  await waitFor(() => expect(window.location.hash).toBe("#/import"));
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Import trades");
   expect(screen.queryByRole("link", { name: "Import CSV" })).toBeNull();
+  expect(screen.queryByRole("navigation", { name: "Primary navigation" })!.querySelector('[aria-current="page"]')).toBeNull();
   await userEvent.setup().click(screen.getByRole("link", { name: "Settings" }));
   await screen.findByRole("heading", { name: "Settings is not built yet" });
   await waitFor(() => expect(invoke.mock.calls).toEqual([["runtime_status"]]));

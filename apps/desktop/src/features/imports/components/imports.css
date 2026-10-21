@@ -1,0 +1,35 @@
+/*
+ * Import wizard and history (Build 18). Layout follows docs/design/mockups/Import.dc.html: stepper, file and
+ * account cards, KPI row, row table with a segmented filter, and a sticky confirm bar. Tokens only.
+ */
+.imp-page { display: grid; gap: var(--space-4); max-width: 1600px; min-width: 0; grid-template-columns: minmax(0, 1fr); font-family: var(--font-sans); color: var(--ink); padding-bottom: var(--space-2); }
+.imp-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; }
+.imp-sub { margin: 0; color: var(--ink-muted); }
+.imp-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.imp-panel { display: grid; gap: var(--space-4); min-width: 0; }
+.imp-panel h2 { margin: 0; }
+.imp-panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+.imp-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: var(--space-4); align-items: start; }
+.imp-mapping { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: var(--space-4); align-items: start; }
+.imp-inline-field { margin-top: var(--space-2); max-width: 320px; }
+.imp-target { display: grid; gap: var(--space-3); min-width: 0; }
+.imp-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-4); }
+.imp-list { margin: 4px 0 var(--space-2); padding-left: 18px; display: grid; gap: 2px; }
+.imp-details { display: grid; gap: 2px; white-space: normal; min-width: 240px; max-width: 420px; font-size: 12.5px; line-height: 17px; overflow-wrap: anywhere; }
+.imp-fills { font: 500 11.5px/16px var(--font-mono); color: var(--ink-faint); overflow-wrap: anywhere; }
+.imp-raw { display: inline-block; max-width: 360px; white-space: normal; overflow-wrap: anywhere; font: 500 11.5px/16px var(--font-mono); color: var(--ink-muted); }
+.imp-file-cell { display: inline-block; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.imp-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.imp-bar { position: sticky; bottom: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); flex-wrap: wrap; padding: 14px 20px; background: var(--bg-100); border: 1px solid var(--line-200); border-radius: var(--radius-lg); box-shadow: var(--shadow-pop); }
+.imp-bar-note { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.imp-bar-note svg { color: var(--flow); flex: none; }
+.imp-foot { margin: 0; }
+.imp-foot a { color: var(--flow); }
+.imp-drawer { display: grid; gap: var(--space-4); }
+.imp-drawer h3 { margin: 0; }
+.imp-fail { margin: 0; color: var(--loss); }
+.imp-history-target { max-width: 720px; }
+
+@media (max-width: 900px) {
+  .imp-grid { grid-template-columns: minmax(0, 1fr); }
+}

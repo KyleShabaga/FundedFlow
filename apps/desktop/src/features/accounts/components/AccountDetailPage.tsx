@@ -2,7 +2,7 @@
 // activity, lifecycle history and attempt lineage. Archived and historical
 // attempts are browsable and clearly not live.
 import { isHistorical, statusLabels } from "@fundedflow/domain";
-import { ArrowLeft, Ellipsis, Pencil } from "lucide-react";
+import { ArrowLeft, Ellipsis, History, Pencil, Upload } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -217,6 +217,8 @@ export function AccountDetailPage() {
                 </div>
                 <div className="acct-head-actions">
                   {!archived && !isActive && <Button onClick={() => dialogs.activate(a)}>Use as active account</Button>}
+                  {!archived && <Button icon={<Upload size={16} aria-hidden="true" />} onClick={() => navigate("/import", { state: { accountId: a.id } })}>Import trades</Button>}
+                  <Button variant="ghost" icon={<History size={16} aria-hidden="true" />} onClick={() => navigate("/import/history", { state: { accountId: a.id } })}>Import history</Button>
                   {!archived && <Button variant="primary" icon={<Pencil size={16} aria-hidden="true" />} onClick={() => dialogs.open({ kind: "edit", account: a, tradeCount })}>Edit</Button>}
                   {archived && <Button variant="primary" onClick={() => dialogs.open({ kind: "restore", account: a })}>Restore from archive</Button>}
                   <DropdownMenu
