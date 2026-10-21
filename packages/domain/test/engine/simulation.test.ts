@@ -10,9 +10,12 @@ import {
 } from "../../src/index.js";
 import { drawdown, id, inputs, instant, policy, trade } from "./fixtures.js";
 
+/** The domain package has no DOM or Node types, so no structuredClone. */
+const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+
 /** A private draft copied from the assigned catalogue version, with a different drawdown amount. */
 function privateDraft(i: AccountRiskInputs, amount = "1000") {
-  const p = structuredClone(i.rulebookVersions[0]!);
+  const p = clone(i.rulebookVersions[0]!);
   const versionId = id(900);
   p.rulebook = { ...p.rulebook, id: id(901), ownerAccountId: i.account.id, providerId: null, slug: "own" };
   p.version = { ...p.version, id: versionId, rulebookId: id(901), verificationStatus: "draft", verifiedBy: null, verifiedAt: null, origin: "user_authored" };
@@ -28,7 +31,7 @@ describe("simulateRulebookVersion", () => {
   it("evaluates an unconfirmed private draft with exact figures, labelled and never active", () => {
     const i = inputs([drawdown()]);
     i.trades = [trade("-500")];
-    const before = structuredClone(i);
+    const before = clone(i);
     const sim = simulateRulebookVersion(i, privateDraft(i), policy(i));
     expect(sim).toMatchObject({ kind: "simulation", proposedVersionId: id(900), replacesAssignmentId: id(30) });
     expect(sim.result.assignmentId).toBe(`${SIMULATION_ASSIGNMENT_PREFIX}${id(900)}`);
@@ -58,7 +61,7 @@ describe("simulateRulebookVersion", () => {
 
   it("is never provider-verified and never matches a stored active result", () => {
     const i = inputs([drawdown()]);
-    const copy = structuredClone(i.rulebookVersions[0]!);
+    const copy = clone(i.rulebookVersions[0]!);
     const sim = simulateRulebookVersion(i, copy, policy(i));
     expect(sim.result.assurance).toBe("unverified");
     const active = evaluateAccountRisk(i, policy(i));
@@ -69,7 +72,7 @@ describe("simulateRulebookVersion", () => {
   it("does not borrow a phase: a catalogue proposal without an assignment in force stays Unknown", () => {
     const i = inputs([drawdown()]);
     const none = { ...i, assignments: [], applicableAssignment: null, rulebookVersions: [] };
-    const sim = simulateRulebookVersion(none, structuredClone(i.rulebookVersions[0]!), policy(i));
+    const sim = simulateRulebookVersion(none, clone(i.rulebookVersions[0]!), policy(i));
     expect(sim.replacesAssignmentId).toBeNull();
     expect(sim.result.reasons).toContain("phase_path_context_unresolved");
     expect(sim.result.status).toBe("Unknown");
