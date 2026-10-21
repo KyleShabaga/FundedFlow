@@ -55,6 +55,8 @@ npm run tauri build
 | `npm test` | Domain unit/parity tests and desktop component tests (Vitest) |
 | `npm run check` | Domain boundary check and a plain-Node import of the built package |
 | `npm run dev:domain` | `tsc --watch` for `packages/domain` on its own |
+| `npm run dev:test-journal` | `tauri dev` on an isolated, git-ignored test journal, with the developer-only **Add Fake Data** and **Reset All Data** sidebar actions enabled ([`docs/development/dev-tools.md`](docs/development/dev-tools.md)) |
+| `npm run seed:test-journal` / `npm run reset:test-journal` | Seed or reset that test journal from the command line (FundedFlow closed) |
 
 FundedFlow is a desktop app: its React UI runs inside the app's own window, not in a web browser. SQLite is bundled through `rusqlite` and accessed only through Rust commands.
 

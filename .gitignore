@@ -13,6 +13,8 @@ dist-ssr
 *.local
 
 # Local databases and secrets
+# Isolated developer test journal (Build 26.9: npm run dev:test-journal)
+.dev-journal/
 *.db
 *.db-wal
 *.db-shm

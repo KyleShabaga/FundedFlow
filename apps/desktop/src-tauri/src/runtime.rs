@@ -360,6 +360,25 @@ impl Runtime {
         Ok((conn, version))
     }
 
+    /// Developer reset handoff (Build 26.9, debug builds only): checkpoint and close the journal and
+    /// release the data-directory lock, so an external process can move the directory once the app
+    /// has quit. Data commands report the journal unavailable from here on; `initialize` reopens it.
+    #[cfg(any(debug_assertions, test))]
+    pub fn release_for_handoff(&self) {
+        let mut conn = lock(&self.conn);
+        if let Some(c) = conn.as_ref() {
+            let _ = c.execute_batch("PRAGMA wal_checkpoint(TRUNCATE)");
+        }
+        *conn = None;
+        *lock(&self.ownership) = None;
+        let mut status = lock(&self.status);
+        status.state = RuntimeState::Failed;
+        status.stage = RuntimeStage::Open;
+        let mut f = failure(FailureCategory::OpenFailed, "Developer reset handed off".into());
+        f.message = "Reset All Data was handed off. FundedFlow is closing so the reset tool can run; the journal is closed.".into();
+        status.failure = Some(f);
+    }
+
     /// The per-user data folder that holds the journal (and its `attachments/` folder), when known.
     pub fn data_dir(&self) -> Option<PathBuf> {
         self.path.as_ref().ok().and_then(|p| p.parent()).map(Path::to_path_buf)

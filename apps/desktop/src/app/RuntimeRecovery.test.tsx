@@ -139,7 +139,9 @@ it("explains unsupported schema without exposing a retry, reset or downgrade act
   render(<App />);
   await screen.findByRole("alert");
   expect(screen.getByText(/Install a FundedFlow version that supports this journal/)).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /retry|reset|restore|downgrade/i })).toBeNull();
+  // The Build 26.9 developer tools group exists only in development builds and sits outside recovery.
+  const offered = screen.queryAllByRole("button", { name: /retry|reset|restore|downgrade/i }).filter(b => !b.closest('[aria-label="Developer tools"]'));
+  expect(offered).toEqual([]);
   expect(screen.queryByRole("heading", { name: "Today is not built yet" })).toBeNull();
 });
 
