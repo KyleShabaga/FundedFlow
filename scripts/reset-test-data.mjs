@@ -7,6 +7,8 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+export const RESET_SCOPE = 'All local journal data: accounts, trades, imports, journal entries, rulebooks, catalogue edits, settings, snapshots and app-data attachments.';
+
 export function defaultDataDir(platform, env, home, identifier) {
   if (platform === 'win32') return path.win32.join(env.APPDATA || path.win32.join(home, 'AppData', 'Roaming'), identifier);
   if (platform === 'darwin') return path.posix.join(home, 'Library', 'Application Support', identifier);
@@ -49,23 +51,25 @@ export function resetTestData({ dataDir, identifier, apply = false, isRunning = 
     if (!existsSync(target)) renameSync(backup, target);
     throw error;
   }
-  return { target, backup, changed: true, reason: 'Reset complete. Restart FundedFlow to create and seed a fresh journal.' };
+  return { target, backup, changed: true, reason: 'All active journal data reset, including accounts and trades. Restart FundedFlow to create and seed a fresh journal.' };
 }
 
 export function main(args = process.argv.slice(2)) {
   let apply = false;
   let override;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--yes') apply = true;
+    if (args[i] === '--all') continue; // The reset always covers the entire journal; retain legacy --yes usage.
+    else if (args[i] === '--yes') apply = true;
     else if (args[i] === '--data-dir' && args[i + 1] && !args[i + 1].startsWith('--')) override = args[++i];
     else if (args[i] === '--help' || args[i] === '-h') {
-      console.log('Usage: node scripts/reset-test-data.mjs [--yes] [--data-dir <app-data-directory>]\nPreview by default. Close FundedFlow before --yes. Existing data is moved to a sibling backup.');
+      console.log('Usage: node scripts/reset-test-data.mjs [--all] [--yes] [--data-dir <app-data-directory>]\nResets all local journal data, including accounts and trades.\nPreview by default. Close FundedFlow before --yes. Existing data is moved to a sibling backup.');
       return;
     } else throw new Error(`Unknown or incomplete argument: ${args[i]}`);
   }
   const config = JSON.parse(readFileSync(new URL('../apps/desktop/src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
   const result = resetTestData({ dataDir: override || defaultDataDir(process.platform, process.env, homedir(), config.identifier), identifier: config.identifier, apply });
   console.log(`Data directory: ${result.target}`);
+  console.log(RESET_SCOPE);
   if (result.backup) console.log(`Backup: ${result.backup}`);
   console.log(result.reason);
 }
