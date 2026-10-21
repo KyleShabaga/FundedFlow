@@ -9,6 +9,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Read-only token: the jobs only check out, build and test.
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: windows-latest
