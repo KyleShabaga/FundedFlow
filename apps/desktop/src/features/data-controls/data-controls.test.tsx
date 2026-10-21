@@ -120,6 +120,7 @@ describe("data information and export", () => {
     expect(screen.getByText(/FundedFlow doesn't back up your journal by itself/)).toBeTruthy();
     expect(screen.getByText(/Not encrypted\. Anyone who can open the file/)).toBeTruthy();
     expect(await screen.findByText("No export yet")).toBeTruthy();
+    expect(screen.getByText("18 (backup format 1)")).toBeTruthy();
   });
 
   it("requires the plaintext acknowledgement before opening the save dialog", async () => {
@@ -234,6 +235,8 @@ describe("restore", () => {
       source: "C:\\Users\\me\\Backups\\old.ffj.zip", previewToken: restorePreview.previewToken, confirmation: "REPLACE ENTIRE JOURNAL",
     }));
     expect(runtime.retry).toHaveBeenCalledTimes(1);
+    // Any in-flight status check settles first, so the retry really runs retry_runtime.
+    expect(runtime.check.mock.invocationCallOrder[0]).toBeLessThan(runtime.retry.mock.invocationCallOrder[0]);
     expect(await screen.findByRole("dialog", { name: "Journal restored" })).toBeTruthy();
   });
 

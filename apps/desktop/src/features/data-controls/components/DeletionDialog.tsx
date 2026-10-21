@@ -12,7 +12,7 @@ import { useDataControlOperation } from "../hooks/data-controls";
 import { DestructiveActionDialog } from "./DestructiveActionDialog";
 
 export type DeletionTarget =
-  | { kind: "account"; accountId: string; accountLabel: string; status: string; archived: boolean }
+  | { kind: "account"; accountId: string; accountLabel: string; status: string; archived: boolean; attemptNumber?: number }
   | { kind: "journal" };
 
 export interface DeletionDialogProps {
@@ -123,6 +123,7 @@ function DeletionDialogBody({ target, open, onOpenChange, onDeleted, onArchiveIn
         <StatList label="Account to delete" bordered items={[
           { label: "Account", value: target.accountLabel },
           { label: "Account ID", value: <code className="dc-id">{target.accountId}</code> },
+          ...(target.attemptNumber ? [{ label: "Attempt", value: `Attempt ${target.attemptNumber}` }] : []),
           { label: "Current status", value: `${target.status}${target.archived ? " · archived" : ""}` },
         ]} />
       )}

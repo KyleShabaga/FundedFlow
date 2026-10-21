@@ -73,7 +73,7 @@ function RestoreArchiveBody({ source, open, onOpenChange, supportedSchema }: Res
     settled.current = false;
     setPhase({ kind: "installing", retried: false });
     try {
-      await op.retryRuntime();
+      await op.installStagedRestore();
     } finally {
       setPhase({ kind: "installing", retried: true });
     }

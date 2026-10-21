@@ -1,5 +1,26 @@
 # Build 24 backend progress / session recovery
 
+## Card review checkpoint (Builds 24 and 25, 2026-10-21)
+
+Build 25's Settings UI now shares this branch and PR #43 at the owner's request (`0337885`); its spec is
+[15-settings-data-controls.md](../design/screens/15-settings-data-controls.md). The original Build 24 brief's "no UI
+files in this PR" rule therefore no longer holds for the PR as a whole; the Build 24 commits themselves contain no UI.
+
+A line-by-line review of both builds against their Notion cards and the Build 24 brief found and fixed:
+
+- **Stuck staged restore.** If the staged candidate could no longer be read or validated at startup, the `prepared`
+  marker stayed and every start failed although nothing had been replaced. Recovery now abandons that operation
+  (keeping its directory and safety copy), reports once, and the original journal opens on the next retry. Test:
+  `an_unreadable_staged_restore_is_abandoned_without_touching_the_original`.
+- **Restore install race (UI).** The runtime provider joins an in-flight status check instead of starting a retry,
+  so a focus-triggered check could skip `retry_runtime` and the dialog would wrongly report a failed install. The
+  dialog now waits for any check, then retries.
+- **Card wording.** Account deletion from the Accounts menu names the attempt number; Settings shows the journal
+  version.
+
+Next steps: Windows CI on the new head; packaged-app check of native dialogs, export, restore/restart and deletion
+with a scratch journal; review of the deletion policy blockers; then acceptance on both cards. No merge or Done.
+
 ## Verification checkpoint (Windows desktop, 2026-10-21)
 
 Head `9bc37be` (schema 18), verified from a Windows worktree `.claude/worktrees/build-24` on the owner's PC (the `/workspace` paths below were the previous Linux session's).

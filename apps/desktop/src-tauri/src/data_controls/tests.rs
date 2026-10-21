@@ -874,3 +874,34 @@ fn archived_failed_passed_attempts_reset_lineage_and_reused_numbers_survive_rest
     })
     .unwrap();
 }
+#[test]
+fn an_unreadable_staged_restore_is_abandoned_without_touching_the_original() {
+    let source = tempfile::tempdir().unwrap();
+    let archive = backup_with_account(source.path(), "incoming");
+    let target = tempfile::tempdir().unwrap();
+    let path = target.path().join(db::DB_FILE_NAME);
+    let mut c = journal(&path);
+    account(&mut c, "original");
+    let before = archive::dump(&c).unwrap();
+    let p = restore::inspect(&c, target.path(), restore::InspectRequest { source: archive.to_string_lossy().into() }).unwrap();
+    let staged = restore::prepare(
+        &c,
+        target.path(),
+        restore::RestoreRequest {
+            source: archive.to_string_lossy().into(),
+            preview_token: p.preview_token,
+            confirmation: "REPLACE ENTIRE JOURNAL".into(),
+        },
+    )
+    .unwrap();
+    drop(c);
+    let op = target.path().join("data-controls").join(&staged.operation_id);
+    fs::write(op.join("candidate.db"), b"damaged after staging").unwrap();
+    // The first start reports the abandoned restore; nothing was replaced.
+    assert_eq!(restore::recover(target.path(), &path).unwrap_err().code, Code::RecoveryRequired);
+    assert!(!target.path().join("data-controls-pending.json").exists());
+    assert!(op.join("safety.db").exists());
+    // The next start opens the original journal.
+    restore::recover(target.path(), &path).unwrap();
+    assert_eq!(archive::dump(&journal(&path)).unwrap(), before);
+}

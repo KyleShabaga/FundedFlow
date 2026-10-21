@@ -21,7 +21,7 @@ export type AccountDialog =
   | { kind: "archive"; account: AccountViewModel }
   | { kind: "restore"; account: AccountViewModel }
   | { kind: "reset"; account: AccountViewModel; attemptNumber?: number }
-  | { kind: "delete"; account: AccountViewModel };
+  | { kind: "delete"; account: AccountViewModel; attemptNumber?: number };
 
 export function useAccountDialogs() {
   const [dialog, setDialog] = useState<AccountDialog | null>(null);
@@ -59,7 +59,7 @@ export function useAccountDialogs() {
       {dialog.kind === "delete" && (
         <DeletionDialog
           open
-          target={{ kind: "account", accountId: dialog.account.id, accountLabel: accountLabel(dialog.account), status: statusLabels[dialog.account.status], archived: dialog.account.archivedAt !== null }}
+          target={{ kind: "account", accountId: dialog.account.id, accountLabel: accountLabel(dialog.account), status: statusLabels[dialog.account.status], archived: dialog.account.archivedAt !== null, attemptNumber: dialog.attemptNumber }}
           onOpenChange={close}
           onDeleted={() => navigate("/accounts")}
           onArchiveInstead={dialog.account.archivedAt === null ? () => setDialog({ kind: "archive", account: dialog.account }) : undefined}
@@ -103,7 +103,7 @@ export function accountMenu(
     entries.push(
       { type: "separator" },
       { label: "Restore from archive", onSelect: () => open({ kind: "restore", account }) },
-      { label: "Delete permanently…", tone: "danger", onSelect: () => open({ kind: "delete", account }) },
+      { label: "Delete permanently…", tone: "danger", onSelect: () => open({ kind: "delete", account, attemptNumber }) },
     );
     return entries;
   }
@@ -118,7 +118,7 @@ export function accountMenu(
   entries.push(
     { type: "separator" },
     { label: "Archive…", onSelect: () => open({ kind: "archive", account }) },
-    { label: "Delete permanently…", tone: "danger", onSelect: () => open({ kind: "delete", account }) },
+    { label: "Delete permanently…", tone: "danger", onSelect: () => open({ kind: "delete", account, attemptNumber }) },
   );
   return entries;
 }

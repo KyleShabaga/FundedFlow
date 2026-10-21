@@ -299,14 +299,23 @@ fn recover_with(
     }
     let mut pending: Pending = serde_json::from_slice(&fs::read(&marker)?)?;
     let op = operation(root, &pending.operation_id)?;
-    let safety: Vec<super::Attachment> =
-        serde_json::from_slice(&fs::read(op.join("safety-inventory.json"))?)?;
-    let candidate: Vec<super::Attachment> =
-        serde_json::from_slice(&fs::read(op.join("candidate-inventory.json"))?)?;
+    let read_inventory = |name: &str| -> Result<Vec<super::Attachment>> {
+        Ok(serde_json::from_slice(&fs::read(op.join(name))?)?)
+    };
     match pending.phase.as_str() {
         "committed" => {}
         "prepared" => {
-            archive::validate_database(&op.join("candidate.db"), db::latest_version())?;
+            // Nothing is replaced before "installing". A staged restore that can no longer be read or validated
+            // is abandoned (the operation directory stays for inspection) so the original journal opens on retry.
+            let staged = read_inventory("safety-inventory.json").and_then(|safety| {
+                archive::validate_database(&op.join("candidate.db"), db::latest_version())?;
+                Ok((safety, read_inventory("candidate-inventory.json")?))
+            });
+            let Ok((safety, candidate)) = staged else {
+                fs::remove_file(&marker)?;
+                sync_dir(root)?;
+                return Err(fail(Code::RecoveryRequired));
+            };
             pending.phase = "installing".into();
             write_pending(root, &pending)?;
             let install: Result<()> = (|| {
@@ -325,7 +334,7 @@ fn recover_with(
             write_pending(root, &pending)?;
         }
         "installing" => {
-            rollback(root, live, &op, &safety)?;
+            rollback(root, live, &op, &read_inventory("safety-inventory.json")?)?;
         }
         _ => return Err(fail(Code::RecoveryRequired)),
     }

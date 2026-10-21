@@ -52,5 +52,14 @@ export function useDataControlOperation() {
     await client.resetQueries({ queryKey: featureKeys.root });
   };
 
-  return { busy, ready, canStart: ready && busy === null, run, forgetJournal, retryRuntime: runtime.retry, runtimeKind: runtime.state.kind };
+  /**
+   * Install a staged restore. The runtime joins an in-flight status check instead of starting a retry, so wait
+   * for any check to settle first; otherwise retry_runtime might never run.
+   */
+  const installStagedRestore = async () => {
+    await runtime.check();
+    await runtime.retry();
+  };
+
+  return { busy, ready, canStart: ready && busy === null, run, forgetJournal, installStagedRestore, runtimeKind: runtime.state.kind };
 }

@@ -115,6 +115,7 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
       <FormSection title="Your data on this computer" description="Where your journal lives and what is backed up.">
         <StatList bordered items={[
           { label: "Stored", value: "In FundedFlow's app-data folder for your Windows user account" },
+          { label: "Journal version", value: runtime.state.kind === "ready" ? `${runtime.state.status.schemaVersion ?? "Unknown"} (backup format 1)` : null },
           { label: "Automatic backups", value: "None. FundedFlow doesn't back up your journal by itself; export a full backup yourself." },
           { label: "Backup protection", value: "Not encrypted. Anyone who can open the file can read your trades, notes and screenshots." },
           { label: "Last export from this journal", value: last
