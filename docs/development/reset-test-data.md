@@ -2,6 +2,10 @@
 
 Task: [Developer reset tool](https://app.notion.com/p/4001bd4b6bde819eb773f32b50deb1c0).
 
+In a development build, the sidebar's **Reset All Data** (Build 26.9) runs this same tool on the isolated test
+journal through a safe app-close handoff, and `npm run reset:test-journal` runs it on that journal from the command
+line: see [dev-tools.md](dev-tools.md). Both keep every safeguard below.
+
 Close every FundedFlow instance first. From the repository root, preview the data directory:
 
 ```sh
