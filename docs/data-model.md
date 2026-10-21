@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 19 (Build 10.5; Build 23 adds no migration) (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`) `0017_trade_reviews.sql` `0018_daily_reviews.sql` and `0019_rulebook_binding_provider.sql`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 20 (Build 10.5; Build 23 adds no migration) (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`) `0017_trade_reviews.sql` `0018_daily_reviews.sql` `0019_rulebook_binding_provider.sql` and `0020_source_fact_immutability.sql`; see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks, reviews, library, attachments),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -88,6 +88,10 @@ offer selections). `commands.rs` exposes these through the existing `JournalRepo
 adapter. Provider/family/variant/promotion creation is importer tooling, not a shipped authoring command.
 Migrations 8 and 13 add ever-verified freeze protection and account offer snapshots. The previous schema-only
 description described migration 6 before these commands shipped; it is superseded.
+
+Captured source facts (identity, URL/descriptor, publisher, capture/publication/effective dates and hash)
+are immutable under migration 20, including direct SQL updates. Corrections capture a new source;
+reviewer/verification metadata remains independent. Referenced source deletion remains FK-restricted.
 
 The model keeps six layers apart:
 
@@ -513,6 +517,7 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 17 | `trade_reviews` | SQL | Build 20: append-only `trade_corrections`; `trade_reviews` gains `account_id` (filled from the trade), `revision` and strategy/checklist label snapshots; `trade_review_tags` gains label and kind snapshots; `tags.archived_at`, `checklists.description_md`; `attachments` gains `account_id`, `width`, `height`. Same-account and append-only triggers. Changes no other rows. See [Trade journal and reviews](#trade-journal-and-reviews-build-20) |
 | 18 | `daily_reviews` | SQL | Build 22: `daily_reviews` (unique per account and trading day, revision, plan with authored time and timing, reflection, no-trade day, daily checklist snapshot, completion fields), `daily_review_answers` (item label and order snapshots), `daily_review_trades` (links by trade id with the values saved), append-only `daily_review_events`. New tables only; no existing row changes and no journal entry becomes a review. See [Daily reviews](#daily-reviews-build-22) |
 | 19 | `rulebook_binding_provider` | SQL | Build 10.5: additive INSERT/UPDATE guards prevent phase/path bindings to another provider's rulebook. Existing rows and historical references remain unchanged; production applicability reads fail closed for inconsistent or archived bindings. |
+| 20 | `source_fact_immutability` | SQL | Build 10.5: freezes captured source identity/content/date/hash facts without rewriting existing rows; independent reviewer/verification metadata remains updateable. |
 
 How an upgrade runs:
 
