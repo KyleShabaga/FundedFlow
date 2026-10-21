@@ -59,8 +59,10 @@ Where this differs from the layout above (the card wins):
   preview command before showing one.
 - **Extra columns and filter.** The table adds Fees and a Restores filter; invalid rows show their source cells.
 - **Separate confirm step.** Step 4 restates every count and the destination attempt before the import button.
-  Finished attempts and trades outside the attempt's window (`assessImportTarget`) need a confirmation tick; the
-  account is reloaded and re-checked just before the import is sent.
+  Native `targetAssessment` blocks rows outside the exact attempt interval or spanning a reset; these cannot be
+  overridden by a tick. In-window non-active attempts need explicit confirmation. The reviewed preview digest is
+  sent to commit, which rechecks account settings, lineage and every candidate inside the write transaction.
+  Input, account-context and lineage changes clear confirmation and require another preview.
 - **Row limit.** The 10 MiB limit is checked on the file's bytes before it is read. The 50,000-row limit needs
   a parse, so it comes back from Rust as a blocking file issue; the wizard has no CSV parser of its own.
 - **Large files.** When the preview leaves rows out (`rowsOmitted`), the counts still cover the whole file and a

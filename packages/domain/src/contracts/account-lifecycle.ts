@@ -222,7 +222,9 @@ export interface ImportTargetAssessment {
 }
 
 /**
- * Protects the account chosen for a CSV import. `attempts` is the account's
+ * @deprecated Date-only advisory; never authorizes an import. Use the native
+ * CsvPreview.targetAssessment and its acknowledgement for exact boundaries.
+ * `attempts` is the account's
  * lineage (empty when it has none); `tradingDays` are the file's trading days
  * (YYYY-MM-DD). Dates are compared to the reset's effective day in UTC, so a
  * file straddling the reset is flagged for the user to decide, never split.

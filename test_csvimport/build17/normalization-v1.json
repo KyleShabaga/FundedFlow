@@ -214,6 +214,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 1,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 0
         }
       },
@@ -412,6 +420,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 1,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 1
         }
       },
@@ -618,6 +634,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 1,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 1
         }
       },
@@ -815,6 +839,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 0,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 0
         }
       },
@@ -992,6 +1024,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 1,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 0
         }
       },
@@ -1213,6 +1253,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 2,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 0
         }
       },
@@ -1390,6 +1438,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 1,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 0
         }
       },
@@ -1643,6 +1699,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 2,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 0
         }
       },
@@ -1820,6 +1884,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 1,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 0
         }
       },
@@ -1997,6 +2069,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 1,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 0
         }
       },
@@ -2195,6 +2275,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 1,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 1
         }
       },
@@ -2314,6 +2402,14 @@
           "rowCount": 1,
           "rows": [],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 0,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 0
         }
       },
@@ -2491,6 +2587,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 0,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 0
         }
       },
@@ -2654,6 +2758,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 0,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 0
         }
       },
@@ -2885,6 +2997,14 @@
             }
           ],
           "rowsOmitted": 0,
+          "targetAssessment": {
+            "blocked": null,
+            "candidateCount": 1,
+            "confirmations": [],
+            "endExclusive": null,
+            "previewToken": "<preview-token>",
+            "startInclusive": null
+          },
           "warningCount": 0
         }
       },

@@ -87,6 +87,12 @@ Open the developer panel, pick an account, choose a CSV under **CSV import**, re
 
 **Saving.** Imports are atomic: the import record, every row (with its original cells, errors and warnings) and every trade are written in one SQLite transaction in the local database above, or none are. Limits: 10 MB and 50,000 rows per file.
 
+**Destination attempt.** Rust checks every importable row's exact entry and exit against the selected attempt's
+reset interval, including rows omitted from display and the saved timestamps of restores. Outside/spanning rows
+block import; historical imports within a non-active attempt require confirmation. Commit requires the reviewed
+preview digest and rejects changed inputs, account settings, lineage or dedup state. See the
+[exact-attempt handoff](docs/handoffs/build-18-exact-import-attempts.md) for policy and acceptance evidence.
+
 Full rules, field mappings and known limitations: [`docs/data-model.md#csv-import`](docs/data-model.md#csv-import). The test fixture `test_csvimport/Performance.csv` is read by the Rust tests and must stay unedited.
 
 ## Tests

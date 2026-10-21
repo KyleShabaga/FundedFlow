@@ -465,8 +465,11 @@ into each attempt independently and is a duplicate only within the attempt that 
 **Backup and restore.** Lineage, status history and archive history are ordinary tables, so the pre-upgrade backup
 (`VACUUM INTO`) and a restored copy carry them (tested).
 
-**Import protection (UI).** `assessImportTarget` blocks archived accounts, asks for confirmation on non-active accounts
-and on files whose trading days fall after the attempt was reset or before it started.
+**Import protection (native).** `CsvPreview.targetAssessment` checks exact entry/exit instants against immutable
+reset intervals, including restores and rows omitted from display. Out-of-window or reset-spanning rows block the
+file; in-window non-active attempts require explicit confirmation. Commit requires the reviewed preview token and
+rechecks it with current account settings, lineage and dedup state inside its write transaction. The older
+`assessImportTarget` date-only helper is deprecated and does not authorize production imports.
 
 ### Permanent deletion: decisions still needed (Builds 24–25)
 
@@ -715,12 +718,36 @@ before the Monday rollover were corrected once, by migration 5 (see [Migrations]
 
 Code: `apps/desktop/src-tauri/src/csv_import/` — `parse` (CSV reading, limits), `detect` (format and header mapping),
 `values` (strict value parsers), `normalize` (row → trade, errors and warnings), `dedup` (identity keys),
-`mod.rs` (preview, atomic commit, history). UI: `apps/desktop/src/components/CsvImportSection.tsx`.
+`target` (exact attempt assessment and preview acknowledgement), `mod.rs` (preview, atomic commit, history).
+Production UI: `apps/desktop/src/features/imports/`; developer UI: `apps/desktop/src/components/CsvImportSection.tsx`.
 
 Flow: the UI reads the chosen file as text on this computer and calls `preview_csv_import` (writes nothing).
 The preview shows the detected format and mapping, every row's original line number, parsed values, warnings,
 errors and duplicate status. Only after the user confirms does `commit_csv_import` save, re-running the same
 analysis. Nothing is sent over the network: the file goes from the webview to the Rust process over Tauri IPC.
+
+### Attempt assessment and acknowledgement
+
+`targetAssessment` contains `previewToken`, `blocked`, `confirmations`, nullable `startInclusive`/`endExclusive`
+UTC instants, and `candidateCount` (new rows plus restores, excluding duplicates/invalid rows). Every candidate's
+entry and any exit must fit `[predecessor reset, successor reset)`. The root has no invented start date; the last
+attempt has no invented end date. A trade spanning a reset blocks the whole file. Missing/non-monotonic reset
+timestamps, cycles and legacy parent-only boundaries block rather than guess. Invalid source DST gap/overlap times
+retain the existing row errors; offset-bearing times resolve exactly. Source timezone interprets file times;
+account timezone/session reset derive trading days in Rust and do not round the attempt interval to a date.
+
+Commit requires `targetAcknowledgement: { previewToken, historicalConfirmed }`. The SHA-256 digest binds the
+exact request (including file bytes/name, mapping, date order and source timezone), normalized/classified rows,
+saved restore timestamps, account state/session settings and the connected immutable reset links. It is an
+agreement digest, not a security credential. Native commit re-analyzes and verifies under `BEGIN IMMEDIATE` before
+any batch/row/trade write. Missing, blocked or stale acknowledgement rejects the import; non-active targets also
+require `historicalConfirmed: true`. The mapping snapshot retains the acknowledgement and contract version 1.
+The existing separate failed-batch log may record a rejected attempt after rollback; no committed batch, import
+rows or partial trade writes survive. A fresh preview is required after input, account, lineage or dedup changes.
+
+The existing wizard shows native reasons and clears confirmation when inputs, account context or lineage change.
+It never derives interval permission from the displayed row subset. The developer importer sends a preview token
+for ordinary imports and directs non-active cases to the production wizard for explicit review.
 
 ### Parsing
 
