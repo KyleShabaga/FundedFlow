@@ -22,3 +22,7 @@ export * from "./catalogue/index.js";
 export * from "./rulebook/index.js";
 
 export * from "./ports/journal-repository.js";
+
+export * from "./risk/contracts.js";
+export * from "./risk/reconciliation.js";
+export * from "./risk/sufficiency.js";

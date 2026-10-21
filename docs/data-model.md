@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 13 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` and `0013_account_offer_selections.sql`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 14 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql` and `0014_financial_evidence.sql`; see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -64,8 +64,9 @@ that feeds the same `trades` table.
 | Status | Tables |
 |---|---|
 | **Implemented** (commands, store code and tests) | `accounts`, `firms` (find-or-create by name), `account_status_events` (written on create and status change), `instruments` (seeded by 0002, read-only), `trades`, `trade_round_trips`, `import_batches`, `import_rows`, `journal_entries`, `tags`, `journal_entry_tags`, and the [rulebooks](#rulebooks): `rulebooks`, `rulebook_versions`, `rule_definitions`, `rule_claims`, `rule_applicability`, `account_rulebook_assignments` |
-| **Reserved** (created and constraint-tested in 0001, no commands) | `app_meta` (journal_id etc. not yet written), `settings`, `programmes`, `account_ledger_entries`, `csv_mapping_profiles`, `strategies`, `checklists`, `checklist_items`, `checklist_results`, `trade_reviews`, `trade_review_tags`, `attachments`, `attachment_links`, `account_snapshots`, `audit_events`, `sync_outbox` (inert) |
-| **Schema only** (Zod DTOs in `packages/domain/src/catalogue`, tables in migration 6, Rust DTOs in `src/catalogue.rs`; no commands yet) | provider catalogue: `providers`, `programme_families`, `programme_variants`, `catalogue_versions`, `catalogue_version_sources`, `catalogue_field_claims`, `catalogue_sources`, `programme_phases`, `phase_paths`, `commercial_offers`, `commercial_offer_sources`, `promotions`, `promotion_sources`, `promotion_offers`, `account_phase_events`, and the `accounts` link columns; see [Provider catalogue](#provider-catalogue). The account store keeps `providers` in step with `firms` (`provider_for_firm`). |
+| **Implemented** (Builds 10 and 15.5) | `settings`, `account_ledger_entries`, `account_snapshots`, `financial_observations`, `ledger_revisions`, `financial_reconciliations`, `reconciliation_resolutions`; see [financial evidence](#financial-evidence-and-reconciliation-build-155) |
+| **Reserved** (created and constraint-tested in 0001, no commands) | `app_meta` (journal_id etc. not yet written), `programmes`, `csv_mapping_profiles`, `strategies`, `checklists`, `checklist_items`, `checklist_results`, `trade_reviews`, `trade_review_tags`, `attachments`, `attachment_links`, `audit_events`, `sync_outbox` (inert) |
+| **Implemented** (Builds 9/10 authoring and read commands; not merely schema) | provider catalogue: `providers`, `programme_families`, `programme_variants`, `catalogue_versions`, `catalogue_version_sources`, `catalogue_field_claims`, `catalogue_sources`, `programme_phases`, `phase_paths`, `commercial_offers`, `commercial_offer_sources`, `promotions`, `promotion_sources`, `promotion_offers`, `account_phase_events`, and the `accounts` link columns; see [Provider catalogue](#provider-catalogue). The account store keeps `providers` in step with `firms` (`provider_for_firm`). |
 | **Legacy, kept unchanged** | `legacy_account_rulebook_versions`, `legacy_account_rules`: the 0001 account-owned rulebook tables, renamed by migration 9 and converted by step 10. No code writes them. |
 | **Not in the schema** (future extensions) | `executions`, `execution_fees`, `trade_executions` (execution-first) |
 
@@ -329,7 +330,7 @@ until a correction supersedes it.
 Repositories in `apps/desktop/src-tauri/src/store/` behind the `JournalRepository` port; contracts in
 `packages/domain/src/contracts/{ledger,settings,snapshots}.ts` and `catalogue/operations.ts`.
 
-- **Ledger** (`account_ledger_entries`): payouts, resets and corrections change the balance the rules see; evaluation,
+- **Ledger** (`account_ledger_entries`): payouts, resets and corrections change bookkeeping balance; firm risk-floor effects require separately verified rule semantics; evaluation,
   activation and reset fees never do (they are kept for the V1.5 account-ROI report, which is not built). Amounts are
   signed decimal text: payouts and fees are negative, zero is refused, and `other` must state whether it affects the
   balance. The trading day is derived in Rust from the account's time zone and trading-day reset time. An entry never
@@ -337,7 +338,7 @@ Repositories in `apps/desktop/src-tauri/src/store/` behind the `JournalRepositor
   `balanceAdjustment` sums only balance-affecting, non-deleted entries.
 - **Settings** (`settings`): lower-case dotted keys to JSON values up to 64 KiB, upserted. No secrets belong here.
 - **Snapshots** (`account_snapshots`): the rule engine (Build 16) computes figures; this repository stores and reads
-  them and calculates nothing. Unknown figures are null, never zero; an `unknown` status needs reasons; an
+  them and calculates nothing. Optional unknown figures are null, never zero; balance and realizedDayPnl remain required, so Build 16 must evolve that boundary before persisting genuinely unavailable values; an `unknown` status needs reasons; an
   `explanation` object is required. An end-of-day save with the same account, day, engine version and inputs hash
   returns the stored row. Not built: the "commit bundle" that writes a trade or import change and a snapshot in one
   transaction, because no engine produces snapshots yet; the first engine slice owns that bundle.
@@ -466,6 +467,7 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 11 | `account_attempts` | SQL | `account_status_events.cause`; `account_attempt_links` (append-only) and `account_archive_events`; broker account numbers are unique only among active or paused, unarchived accounts. Existing archived accounts get an `archived` event from their `archived_at`. Changes no other rows |
 | 12 | `snapshot_rulebook_fk` | SQL | Rebuilds `account_snapshots` so `rulebook_version_id` references the reusable `rulebook_versions` (migration 9's rename had left it pointing at `legacy_account_rulebook_versions`, so no snapshot of an account on a reusable rulebook could be stored). Rows are kept; a reference to an id that was never converted becomes null; the key is `RESTRICT` instead of `CASCADE` |
 | 13 | `account_offer_selections` | SQL | Append-only `account_offer_selections`: the offer and promotion an account was bought under, with a frozen JSON copy of the terms and provenance. Offer, promotion and version keys are `RESTRICT`. Changes no other rows |
+| 14 | `financial_evidence` | SQL | Dedicated immutable financial observations, ledger revisions (including migration-time current-state baseline), frozen reconciliations and append-only review resolutions. No inferred financial history or calculated snapshot changes |
 
 How an upgrade runs:
 
@@ -520,7 +522,8 @@ or SQLite types, so a Stage 2 adapter can implement the same interface.
 |---|---|
 | `accounts` | `list({ includeArchived? })`, `get`, `listActive`, `create`, `update`, `archive`, `restore`, `changeStatus`, `history`, `resetAttempt`, `lineage`, `previewDeletion` |
 | `trades` | `list`, `create`, `update`, `remove` |
-| `ledger` | `list`, `create`, `update`, `remove`, `balanceAdjustment` |
+| `ledger` | `list`, `create`, `update`, `remove`, `balanceAdjustment` (writes now append immutable revisions) |
+| `evidence` | `inputs`, `create`, `get`, `list`, `correct`, `ledgerHistory`, `correctLedger`, `removeLedger`, `reconcile`, `reconciliations`, `resolve`, `resolutions`; [contracts and commands](handoffs/build-15-5.md) |
 | `settings` | `get`, `list`, `set`, `remove` |
 | `snapshots` | `save`, `list`, `latest` |
 | `catalogue` | `load`, `transitionVersion`, `getAccountLink`, `setAccountLink`, `listPhaseEvents`, `recordPhaseEvent`, `createSource`, `createDraft`, `replaceDraft`, `selectOffer`, `listOfferSelections` |
@@ -539,8 +542,8 @@ or SQLite types, so a Stage 2 adapter can implement the same interface.
   round-trip sources are one bundle, and so is an account settings change together with its trade re-derive.
   If any part fails, nothing is kept. Tests in `store/tests.rs`, `csv_import/tests.rs` and `db/upgrade_tests.rs`
   inject failures part-way through.
-- Account snapshots (Build 15.5) join the port when their persistence exists. The provider catalogue (Build 9)
-  has tables but no operations yet; rulebooks reference its phases and paths.
+- Calculated account snapshots and provider catalogue operations are already implemented (Build 10).
+  Build 15.5 adds raw financial evidence separately; see the [backend handoff](handoffs/build-15-5.md).
 
 ## Startup and recovery
 
@@ -777,3 +780,7 @@ Limitations:
 Updates replace all editable fields. Inputs are validated in TypeScript (Zod) and again in Rust before any write.
 Errors are `{ kind: "validation" | "notFound" | "conflict" | "database" | "unavailable", message, issues? }`, with `issues` naming
 each invalid field.
+
+## Financial evidence and reconciliation (Build 15.5)
+
+Schema 14 adds source observations separately from calculated account snapshots, immutable ledger revisions and frozen exact reconciliation comparisons. New contracts, command payloads, precision/time policy, migration baseline limitations, per-rule evidence requirements and acceptance evidence are documented in the [Build 15.5 backend handoff](handoffs/build-15-5.md). Existing ledger APIs remain callable and record explicit legacy correction metadata. No risk-floor policy, live-equity feed, automatic balancing or compliance verdict is introduced.

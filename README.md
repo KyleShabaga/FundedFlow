@@ -66,6 +66,8 @@ FundedFlow stores accounts, trades, journal entries and CSV import history in a 
 - TypeScript: `packages/domain/src/contracts` (types and Zod schemas, re-exported by `apps/desktop/src/lib/data/schemas.ts`) and `apps/desktop/src/lib/data/api.ts` (typed command wrappers)
 - `apps/desktop/src/components/DataModelPanel.tsx` is available under **Data model** at `#/settings/developer` in development for trying these out
 
+Financial evidence, immutable ledger corrections and exact balance reconciliation: [Build 15.5 backend/API handoff](docs/handoffs/build-15-5.md). These operations are backend APIs; Claude owns their future UI.
+
 ## CSV trade import
 
 Open the developer panel, pick an account, choose a CSV under **CSV import**, review the preview, then confirm. Nothing is saved before you confirm, and the file never leaves the computer: it is read in the app and validated by the Rust backend.
