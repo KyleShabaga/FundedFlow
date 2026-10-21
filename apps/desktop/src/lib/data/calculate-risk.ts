@@ -16,25 +16,19 @@ export interface RiskCalculationInputs {
 }
 
 /**
- * Loads the canonical inputs and reconciliation review history for one calculation, exactly as
- * `calculateAndSaveRisk` hashes them. Reads only. Use it to re-evaluate (a preview) or to check a
- * stored result against fresh sources (`isEngineResultCurrent`) with the same identity rules.
- * Reconciliation revision ids are merged into the policy without duplicates, so passing a stored
- * snapshot's frozen policy back in yields the same identity when nothing changed.
+ * Loads one calculation's sources (P0-02): the canonical inputs, reconciliation revisions and prior-breach history,
+ * captured natively from one database state (`evidence.capture`). Reads only. The engine must evaluate exactly
+ * these: the reconciliation revisions and prior breaches are sources, so they replace whatever the caller's policy
+ * carried, and promotion re-reads them natively and refuses if anything changed. The caller's own statements
+ * (coverage, rule currency, boundary, caution buffer) are kept as statements; capture never verifies them.
  */
 export async function loadRiskCalculation(
   repository: JournalRepository,
   query: RiskInputsQuery,
   policy: EnginePolicy,
 ): Promise<RiskCalculationInputs> {
-  const [inputs, reviews] = await Promise.all([
-    repository.evidence.inputs(query),
-    repository.evidence.reconciliations(query.accountId),
-  ]);
-  if (
-    inputs.account.id !== query.accountId ||
-    reviews.some((r) => r.accountId !== query.accountId)
-  )
+  const captured = await repository.evidence.capture(query);
+  if (captured.inputs.account.id !== query.accountId)
     throw new RepositoryError({
       kind: "validation",
       message: "Risk sources belong to a different account attempt",
@@ -45,40 +39,12 @@ export async function loadRiskCalculation(
         },
       ],
     });
-  const resolutions = await Promise.all(
-    reviews.map((r) => repository.evidence.resolutions(r.id)),
-  );
-  const calculationInputs = {
-    ...inputs,
-    missingInputs: [...inputs.missingInputs],
-  };
-  const superseded = new Set(inputs.observations.map((o) => o.supersedesId));
-  const latest = new Map<string, (typeof reviews)[number]>();
-  for (const r of reviews)
-    if (
-      r.accountId === query.accountId &&
-      !superseded.has(r.observation.id) &&
-      Date.parse(r.request.asOf) <= Date.parse(query.asOf)
-    )
-      latest.set(r.observation.id, r);
-  for (const r of latest.values())
-    if (r.result.reconciliationStatus !== "matched")
-      calculationInputs.missingInputs.push(
-        `reconciliation_review:${r.id}:${r.result.reconciliationStatus}`,
-      );
   return {
-    inputs: calculationInputs,
+    inputs: captured.inputs,
     policy: {
       ...policy,
-      reconciliationRevisionIds: [
-        ...new Set([
-          ...policy.reconciliationRevisionIds,
-          ...reviews
-            .filter((r) => r.accountId === query.accountId)
-            .map((r) => r.id),
-          ...resolutions.flat().map((r) => r.id),
-        ]),
-      ].sort(),
+      reconciliationRevisionIds: [...captured.reconciliationRevisionIds],
+      priorBreaches: captured.priorBreaches.map((b) => ({ ...b, sourceReferences: [...b.sourceReferences] })),
     },
   };
 }
@@ -93,7 +59,11 @@ export async function evaluateRisk(
   return { ...loaded, result: evaluateAccountRisk(loaded.inputs, loaded.policy) };
 }
 
-/** Non-visual orchestration, on the existing repository. No new gateway or state owner. */
+/**
+ * Captures, evaluates and promotes (P0-02). The calculation becomes the account's current result only if native
+ * finds its sources unchanged inside the write transaction; otherwise it rejects with a `conflict` and writes
+ * nothing. Never retried here: a new calculation is the trader's deliberate choice.
+ */
 export async function calculateAndSaveRisk(
   repository: JournalRepository,
   query: RiskInputsQuery,
@@ -101,7 +71,7 @@ export async function calculateAndSaveRisk(
   isEndOfDay: boolean,
 ): Promise<Snapshot> {
   const loaded = await loadRiskCalculation(repository, query, policy);
-  return repository.snapshots.save(
+  return repository.snapshots.promote(
     calculateRiskSnapshot(loaded.inputs, loaded.policy, isEndOfDay),
   );
 }

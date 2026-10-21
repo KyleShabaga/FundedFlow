@@ -16,3 +16,12 @@ export async function readLatestSnapshot(accountId: string, signal?: AbortSignal
   const account = (await readAccount(accountId, signal)).value;
   return readOperation(() => repository.snapshots.latest(accountId), row => row === null ? null : toSnapshotViewModel(row, account), signal);
 }
+/** P0-02: the account's current (newest promoted) calculation, and whether its sources are unchanged now. */
+export async function readCurrentRisk(accountId: string, signal?: AbortSignal) {
+  const account = (await readAccount(accountId, signal)).value;
+  return readOperation(() => repository.snapshots.current(accountId), current => ({
+    snapshot: current.snapshot === null ? null : toSnapshotViewModel(current.snapshot, account),
+    promotedAt: current.promotedAt,
+    sourcesUnchanged: current.sourcesUnchanged,
+  }), signal);
+}

@@ -7,8 +7,6 @@ import type { EnginePolicy, EvidenceState, RulebookVersionDetail, RiskInputsQuer
 import { useMemo, useState } from "react";
 
 import { Select, TextField } from "../../../design-system";
-import { useSnapshotHistory } from "../../insights/hooks/insights";
-import { priorBreachesFrom } from "../api/risk";
 
 type Coverage = RiskInputsQuery["coverage"];
 const ASSERTABLE = [
@@ -30,12 +28,11 @@ function backingClaims(version: RulebookVersionDetail | null, field: string): st
     .map(c => c.id);
 }
 
-export function useCalculationSettings(accountId: string, currency: string, version: RulebookVersionDetail | null) {
+export function useCalculationSettings(currency: string, version: RulebookVersionDetail | null) {
   const [assert, setAssert] = useState<Record<(typeof ASSERTABLE)[number][0], EvidenceState>>({ closedTrades: "incomplete", fees: "incomplete", ledger: "incomplete" });
   const [ruleCurrency, setRuleCurrency] = useState<string>(NOT_STATED);
   const [boundary, setBoundary] = useState<string>(NOT_STATED);
   const [caution, setCaution] = useState("");
-  const history = useSnapshotHistory(accountId);
   const coverage: Coverage = useMemo(() => ({
     // Checked natively against recorded checkpoints; these are never promoted by a statement.
     baseline: "available", eodHistory: "available",
@@ -51,8 +48,10 @@ export function useCalculationSettings(accountId: string, currency: string, vers
     boundarySourceClaimIds: backingClaims(version, "breach_boundary"),
     personalCautionHeadroom: caution.trim() === "" || !cautionValid ? null : caution.trim(),
     reconciliationRevisionIds: [],
-    priorBreaches: priorBreachesFrom((history.data ?? []).map(s => s.explanation), accountId),
-  }), [ruleCurrency, boundary, caution, cautionValid, version, history.data, accountId]);
+    // Sources, not statements: native capture supplies the reconciliation revisions and the continuing breaches
+    // recorded by this account's stored calculations, from the same database state as the inputs (P0-02).
+    priorBreaches: [],
+  }), [ruleCurrency, boundary, caution, cautionValid, version]);
   const element = (
     <fieldset className="rb-assert">
       <legend className="ds-label">What you state for this calculation</legend>
@@ -72,5 +71,5 @@ export function useCalculationSettings(accountId: string, currency: string, vers
       </div>
     </fieldset>
   );
-  return { coverage, policy, element, historyLoaded: history.data !== undefined || history.error !== null };
+  return { coverage, policy, element };
 }

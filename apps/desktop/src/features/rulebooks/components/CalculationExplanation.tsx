@@ -11,7 +11,7 @@ import {
   Badge, Button, Drawer, formatInstant, InlineNotice, MutationFeedback, StateBoundary, StatList, StatusIndicator, type StatusKind,
   UnavailableState, useToast, zonedDay,
 } from "../../../design-system";
-import { useLatestSnapshot, useSnapshotHistory } from "../../insights/hooks/insights";
+import { useCurrentRisk, useLatestSnapshot, useSnapshotHistory } from "../../insights/hooks/insights";
 import type { SnapshotViewModel as Snapshot } from "../../insights/view-models/snapshot";
 import { useRulebookVersion } from "../../references/hooks/references";
 import { retryRead, toAsyncState, toMutationState } from "../../shared/presentation";
@@ -125,20 +125,26 @@ export function ManualRulesList({ version }: { version: RulebookVersionDetail })
 }
 
 /**
- * P0-03: what an uncertain calculation is checked against: the account's saved calculations, newest first. A saved
- * one from after the request was sent means it did save. `sentAt` is known only while the form that sent it is open.
+ * P0-03: what an uncertain calculation is checked against: the account's saved calculations, newest first, and
+ * which of them is the current result (P0-02: stored is not the same as current). A saved one from after the
+ * request was sent means it did save. `sentAt` is known only while the form that sent it is open.
  */
 function CalculationWriteReview({ write, accountId, timeZone, sentAt }: { write: UncertainWrite; accountId: string; timeZone: string; sentAt: string | null }) {
   const history = useSnapshotHistory(accountId);
+  const current = useCurrentRisk(accountId);
   const at = (instant: string) => formatInstant(instant, { timeZone, year: true, zoneName: true });
   const saved = [...(history.data ?? [])].sort((a, b) => (a.calculatedAt < b.calculatedAt ? 1 : -1));
   const after = sentAt ? saved.filter(s => s.calculatedAt >= sentAt) : [];
+  const currentId = current.data?.snapshot?.id ?? null;
+  const role = (id: string) => id !== currentId ? "stored, not the current result"
+    : current.data?.sourcesUnchanged ? "the current result (its records are unchanged)" : "the current result, but its records have changed since";
   return (
-    <UncertainOutcomeReview write={write} what="the saved calculations" reviewReady={history.data !== undefined && !history.error} readReviewed={history.refresh}>
+    <UncertainOutcomeReview write={write} what="the saved calculations" reviewReady={[history, current].every(q => q.data !== undefined && !q.error)}
+      readReviewed={() => Promise.all([history.refresh(), current.refresh()])}>
       {sentAt && <p>{after.length ? `${after.length === 1 ? "A calculation was" : `${after.length} calculations were`} saved after you pressed Calculate at ${at(sentAt)}.` : `No calculation was saved after you pressed Calculate at ${at(sentAt)}.`}</p>}
       {saved.length
         ? <StatList label="Saved calculations, newest first" items={saved.slice(0, 5).map(s => ({
-          label: at(s.calculatedAt), value: `${STATUS[s.status].label} · trading day ${s.tradingDay}`,
+          label: at(s.calculatedAt), value: `${STATUS[s.status].label} · trading day ${s.tradingDay} · ${role(s.id)}`,
         }))} />
         : <p>No calculation is saved for this account.</p>}
     </UncertainOutcomeReview>
@@ -147,7 +153,7 @@ function CalculationWriteReview({ write, accountId, timeZone, sentAt }: { write:
 
 /** The explicit "calculate and save" action (also Today's Calculate estimate, Build 21). Never runs on its own. */
 export function CalculateNow({ accountId, currency, current, onSaved, timeZone = "UTC" }: { accountId: string; currency: string; current: RulebookVersionDetail | null; onSaved?: () => void; timeZone?: string }) {
-  const settings = useCalculationSettings(accountId, currency, current);
+  const settings = useCalculationSettings(currency, current);
   const calculate = useCalculateRisk(accountId);
   const toast = useToast();
   const [sentAt, setSentAt] = useState<string | null>(null);
@@ -163,14 +169,21 @@ export function CalculateNow({ accountId, currency, current, onSaved, timeZone =
   return (
     <section className="ds-card rb-panel" aria-labelledby="rb-calc-now">
       <h3 id="rb-calc-now" className="ds-title">Calculate now</h3>
-      <p className="ds-faint">Runs the rules engine on this account's records as of now and saves the result as a new calculation. Nothing else changes.</p>
+      <p className="ds-faint">Runs the rules engine on this account's records as of now and saves the result as a new calculation, which becomes the current one only if the records are still the same when it is saved. Nothing else changes.</p>
       {settings.element}
       <div className="rb-actions">
-        <Button variant="primary" onClick={run} loading={calculate.isPending} disabled={!calculate.canSubmit || !settings.historyLoaded}>Calculate and save</Button>
+        <Button variant="primary" onClick={run} loading={calculate.isPending} disabled={!calculate.canSubmit}>Calculate and save</Button>
       </div>
       {calculate.outcome === "uncertain-outcome"
         ? <CalculationWriteReview write={calculate} accountId={accountId} timeZone={timeZone} sentAt={sentAt} />
-        : <MutationFeedback state={toMutationState(calculate, { success: "Calculation saved." })} />}
+        : calculate.outcome === "failed" && calculate.error?.category === "conflict"
+          ? (
+            <InlineNotice tone="warning" live="assertive" title="Not saved: the records changed">
+              Trades, checkpoints, reviews, rules or an earlier calculation changed while this was calculating, or a calculation with a later cutoff is
+              already current. Nothing was saved, so nothing is shown as current from it. Your statements above are kept; calculate again to use the records as they are now.
+            </InlineNotice>
+          )
+          : <MutationFeedback state={toMutationState(calculate, { success: "Calculation saved." })} />}
     </section>
   );
 }

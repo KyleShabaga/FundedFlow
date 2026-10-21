@@ -245,7 +245,10 @@ describe("the selected account", () => {
     holder.store.failing.add("inputs");
     renderToday();
     await waitFor(async () => expect(await headlineText()).toMatch(/^Unknown/));
-    expect(within(riskSection()).getByText(/Its sources couldn't be checked again/)).toBeTruthy();
+    // P0-02: the current result and its sources are read together natively, so a failed source read fails that
+    // read as a whole: nothing from it is shown, never the saved Safe.
+    expect(within(riskSection()).queryByText(/Safe \(estimate\)/)).toBeNull();
+    expect(screen.getByText("The last estimate couldn't be read")).toBeTruthy();
   });
 });
 
@@ -478,5 +481,65 @@ describe("actions and accessibility", () => {
     const status = within(riskSection()).getByText("Safe (estimate)").closest(".ds-status") as HTMLElement;
     expect(status.querySelector("svg")).toBeTruthy();
     expect(screen.getAllByText(/Estimate\. Verify with your firm's dashboard\./).length).toBeGreaterThan(0);
+  });
+});
+
+describe("P0-02: the current result", () => {
+  it("a trade recorded after the Safe was promoted makes it not current, so the Safe is not shown", async () => {
+    await assign(A);
+    await saveSafe();
+    expect(holder.store.promotions).toHaveLength(1);
+    renderToday();
+    await waitFor(async () => expect(await headlineText()).toContain("Safe (estimate)"));
+    holder.store.trades.set(A, [...holder.store.trades.get(A)!, closedTrade(A, 3, "-900", "2026-10-21")]);
+    await act(async () => { await client.invalidateQueries(); });
+    await waitFor(async () => expect(await headlineText()).toMatch(/^Unknown/));
+    // The old Safe is only listed as labelled history, never as the headline.
+    expect(await headlineText()).toMatch(/^Unknown(?!.*Stop)/);
+    expect(within(riskSection()).getByText(/Last saved estimate: Safe \(estimate\)/)).toBeTruthy();
+    expect(within(riskSection()).getByText(/Trades, checkpoints, ledger or rules it used have changed/)).toBeTruthy();
+  });
+
+  it("a cached current answer is re-verified when Today checks again, never trusted as newly verified", async () => {
+    await assign(A);
+    await saveSafe();
+    const user = userEvent.setup();
+    renderToday();
+    await waitFor(async () => expect(await headlineText()).toContain("Safe (estimate)"));
+    // Another window records a trade; nothing here invalidated the cached answer.
+    holder.store.trades.set(A, [...holder.store.trades.get(A)!, closedTrade(A, 3, "-900", "2026-10-21")]);
+    vi.setSystemTime(new Date(Date.parse(NOW) + 2 * 60_000));
+    await user.click(screen.getByRole("button", { name: "Check again" }));
+    await waitFor(async () => expect(await headlineText()).toMatch(/^Unknown/));
+    expect(await headlineText()).toMatch(/^Unknown(?!.*Stop)/);
+  });
+
+  it("history stored before promotion existed is shown as not current; a recorded Stop stays Stop", async () => {
+    await assign(A);
+    const ids = (holder.store.trades.get(A) ?? []).map(t => t.id);
+    await holder.store.saveEstimate(A, CUTOFF, r => ({ ...r, status: "Safe", reasons: [], balance: "52125.5",
+      rules: [drawdownOutcome({ headroom: "2125.5", sourceReferences: ids })] }), {}, { historyOnly: true });
+    expect(holder.store.promotions).toHaveLength(0);
+    const first = renderToday();
+    await waitFor(async () => expect(await headlineText()).toMatch(/^Unknown/));
+    expect(within(riskSection()).getByText(/stored without being confirmed as the current result/)).toBeTruthy();
+    expect(await headlineText()).toMatch(/^Unknown(?!.*Stop)/);
+    first.unmount();
+    client.clear();
+    await holder.store.saveEstimate(A, CUTOFF, r => ({ ...r, status: "Stop", reasons: ["loss_threshold_breached"], balance: "52125.5",
+      rules: [drawdownOutcome({ headroom: "0", sourceReferences: ids, state: "breached", reasonCode: "loss_threshold_breached" })] }), {}, { historyOnly: true });
+    renderToday();
+    await waitFor(async () => expect(await headlineText()).toContain("Stop (last saved, not current)"));
+  });
+
+  it("a promoted Stop is carried into the next calculation's prior breaches", async () => {
+    await assign(A);
+    await saveSafe(A, "0", "Stop");
+    const captured = await (holder.store.repository.evidence as unknown as { capture: (q: unknown) => Promise<{ priorBreaches: unknown[] }> })
+      .capture({ accountId: A, asOf: NOW, coverage: { baseline: "available", eodHistory: "available", closedTrades: "available", fees: "available", ledger: "available",
+        openPositions: "unsupported", intradayHistory: "unsupported", sourceReference: "test" } });
+    expect(captured.priorBreaches).toHaveLength(1);
+    renderToday();
+    await waitFor(async () => expect(await headlineText()).toContain("Stop"));
   });
 });

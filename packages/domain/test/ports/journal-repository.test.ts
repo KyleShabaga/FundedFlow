@@ -25,7 +25,7 @@ describe("JournalRepository", () => {
     const fail = () => Promise.reject(new RepositoryError({ kind: "unavailable", message: "offline" }));
     const repo: JournalRepository = {
       dataControls: { exportArchive: fail, exportCsv: fail, inspectArchive: fail, restoreArchive: fail, previewDeletion: fail, deletePermanently: fail, retryCleanup: fail },
-      evidence: { inputs: fail, create: fail, get: fail, list: none, correct: fail, ledgerHistory: none, correctLedger: fail, removeLedger: fail, reconcile: fail, reconciliations: none, resolve: fail, resolutions: none },
+      evidence: { inputs: fail, capture: fail, create: fail, get: fail, list: none, correct: fail, ledgerHistory: none, correctLedger: fail, removeLedger: fail, reconcile: fail, reconciliations: none, resolve: fail, resolutions: none },
       accounts: {
         list: none, get: fail, listActive: none, create: fail, update: fail, archive: fail, restore: fail,
         changeStatus: fail, history: fail, resetAttempt: fail, lineage: none, previewDeletion: fail,
@@ -39,7 +39,7 @@ describe("JournalRepository", () => {
       imports: { preview: fail, commit: fail, list: none, problemRows: none },
       ledger: { list: none, create: fail, update: fail, remove: fail, balanceAdjustment: fail },
       settings: { get: fail, list: none, set: fail, remove: fail },
-      snapshots: { save: fail, list: none, latest: fail },
+      snapshots: { save: fail, promote: fail, current: fail, freshness: fail, list: none, latest: fail },
       catalogue: {
         load: fail, transitionVersion: fail, getAccountLink: fail, setAccountLink: fail,
         listPhaseEvents: none, recordPhaseEvent: fail, createSource: fail, createDraft: fail, replaceDraft: fail,

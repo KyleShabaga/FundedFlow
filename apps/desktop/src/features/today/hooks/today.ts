@@ -7,8 +7,10 @@ import { useEffect, useState } from "react";
 
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import { useObservations, useReconciliations } from "../../evidence/hooks/evidence";
-import { useLatestSnapshot } from "../../insights/hooks/insights";
-import { useCalculationFreshness, useCalculationInputs } from "../../rulebooks/hooks/rulebooks";
+import { useCurrentRisk, useLatestSnapshot } from "../../insights/hooks/insights";
+import type { SnapshotViewModel } from "../../insights/view-models/snapshot";
+import type { Freshness } from "../../rulebooks/api/risk";
+import { useCalculationInputs } from "../../rulebooks/hooks/rulebooks";
 import { deriveRiskTruth, headline, type Loadable } from "../view-models/today";
 
 /**
@@ -45,8 +47,21 @@ function loadable<T>(query: { data: T | undefined; error: unknown; isRuntimePend
 }
 
 export function useTodayAccount(account: AccountViewModel, checkedAt: string) {
-  const snapshot = useLatestSnapshot(account.id);
-  const freshness = useCalculationFreshness(account.id, snapshot.data ?? null);
+  // P0-02: the subject is the account's current (promoted) result, re-verified natively at each check time. Only
+  // when nothing was ever promoted (history saved before this version) is the latest stored calculation shown,
+  // and then never as current.
+  const current = useCurrentRisk(account.id, checkedAt);
+  const latest = useLatestSnapshot(account.id);
+  const promoted = current.data?.snapshot ?? null;
+  const fallback = current.data !== undefined && promoted === null;
+  const snapshot: { data: SnapshotViewModel | null | undefined; error: unknown } = {
+    data: current.data === undefined ? undefined : promoted ?? (fallback ? latest.data : undefined),
+    error: current.error ?? (fallback ? latest.error : null),
+  };
+  const freshness: Loadable<Freshness> = current.error ? { state: "error" }
+    : current.data === undefined ? { state: "loading" }
+    : promoted ? { state: "ready", value: { kind: current.data.sourcesUnchanged === null ? "not-engine" : current.data.sourcesUnchanged ? "current" : "changed" } }
+    : { state: "ready", value: { kind: "not-promoted" } };
   const facts = useCalculationInputs(account.id, checkedAt, TODAY_FACTS_COVERAGE, defaultEnginePolicy);
   const observations = useObservations(account.id);
   const reconciliations = useReconciliations(account.id);
@@ -54,9 +69,9 @@ export function useTodayAccount(account: AccountViewModel, checkedAt: string) {
     account,
     snapshot: loadable(snapshot),
     // No snapshot means nothing to check; the truth is "none" before freshness is consulted.
-    freshness: snapshot.data ? loadable(freshness) : { state: "loading" },
+    freshness: snapshot.data ? freshness : { state: "loading" },
     facts: loadable({ data: facts.data?.inputs, error: facts.error }),
   });
-  return { snapshot, freshness, facts, observations, reconciliations, truth, headline: headline(truth) };
+  return { snapshot, current, freshness, facts, observations, reconciliations, truth, headline: headline(truth) };
 }
 export type TodayAccount = ReturnType<typeof useTodayAccount>;

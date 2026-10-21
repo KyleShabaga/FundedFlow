@@ -92,7 +92,7 @@ describe("Build 15 on real Rust payloads through the merged adapter", () => {
   it("exposes the Build 15.5 evidence capability without changing the account operations", () => {
     const repository = createTauriRepository(bridge.invoke as never);
     expect(Object.keys(repository.evidence).sort()).toEqual(
-      ["correct", "correctLedger", "create", "get", "inputs", "ledgerHistory", "list", "reconcile", "reconciliations", "removeLedger", "resolutions", "resolve"],
+      ["capture", "correct", "correctLedger", "create", "get", "inputs", "ledgerHistory", "list", "reconcile", "reconciliations", "removeLedger", "resolutions", "resolve"],
     );
     expect(typeof repository.accounts.resetAttempt).toBe("function");
   });

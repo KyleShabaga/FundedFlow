@@ -21,6 +21,7 @@ import {
 import { loadRiskCalculation } from "../../lib/data/calculate-risk";
 import { createRulebookStore } from "../rulebooks/test-store";
 import { createDailyReviewFake } from "../daily-reviews/test-store";
+import { attachRiskPromotion } from "../../test/risk-promotion-fake";
 
 export function createTodayStore(seed: Account[], options: { syntheticOpening?: boolean } = {}) {
   const base = createRulebookStore(seed);
@@ -87,11 +88,17 @@ export function createTodayStore(seed: Account[], options: { syntheticOpening?: 
     imports: { list: async (accountId: string) => structuredClone(imports.get(accountId) ?? []) },
   };
 
+  const promotion = attachRiskPromotion(repository as never, () => base.snapshots);
+  // Reading the saved (current) calculation can be made to fail like the other reads.
+  const readCurrent = (repository.snapshots as unknown as { current: (id: string) => Promise<unknown> }).current;
+  Object.assign(repository.snapshots, { current: async (accountId: string) => { guard("latest"); return readCurrent(accountId); } });
+
   /**
    * Saves a snapshot whose inputs hash is the real engine's for these records (so the unchanged-inputs check is
    * genuine), with the engine's verdict replaced by `verdict`: a fixture of what Build 16 might say, for the screen.
    */
-  async function saveEstimate(accountId: string, asOf: string, verdict: (r: EngineResult) => EngineResult, coverage: Partial<RiskInputsQuery["coverage"]> = {}): Promise<Snapshot> {
+  async function saveEstimate(accountId: string, asOf: string, verdict: (r: EngineResult) => EngineResult, coverage: Partial<RiskInputsQuery["coverage"]> = {},
+    { historyOnly = false }: { historyOnly?: boolean } = {}): Promise<Snapshot> {
     const query: RiskInputsQuery = {
       accountId, asOf,
       coverage: { baseline: "available", eodHistory: "available", closedTrades: "available", fees: "available", ledger: "available",
@@ -101,13 +108,15 @@ export function createTodayStore(seed: Account[], options: { syntheticOpening?: 
     const real = evaluateAccountRisk(loaded.inputs, loaded.policy);
     const engine = verdict(structuredClone(real));
     const input = calculateRiskSnapshot(loaded.inputs, loaded.policy, false);
-    return base.repository.snapshots.save({
+    // A calculation the trader made is promoted (P0-02); `historyOnly` stores one as pre-P0-02 history.
+    const store = historyOnly ? base.repository.snapshots.save : (repository.snapshots as unknown as { promote: typeof base.repository.snapshots.save }).promote;
+    return store({
       ...input, status: engine.status.toLowerCase() as Snapshot["status"], statusReasons: engine.reasons.length ? engine.reasons : engine.status === "Unknown" ? ["fixture"] : [],
       balance: engine.balance, explanation: { ...input.explanation, engine },
     });
   }
 
-  return { ...base, repository, observations, reconciliations, imports, failing, saveEstimate, daily };
+  return { ...base, repository, observations, reconciliations, imports, failing, saveEstimate, daily, promotions: promotion.promotions };
 }
 
 /** A Build 16-shaped drawdown outcome for fixtures: the values are what the screen must show, never compute. */

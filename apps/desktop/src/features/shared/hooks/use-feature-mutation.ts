@@ -9,6 +9,8 @@ interface WriteSpec<Input, Output> {
   run: (input: Input, assertReady: () => void) => Promise<Output>;
   invalidate: (result?: Output) => readonly QueryKey[];
   confirmedFailure?: (result: Output) => boolean;
+  /** Definite failures that still mean the affected reads are out of date (e.g. a native "sources changed" refusal). */
+  refreshOn?: readonly FeatureDataError["category"][];
 }
 export function useFeatureMutation<Input, Output>(spec: WriteSpec<Input, Output>) {
   const client = useQueryClient();
@@ -25,7 +27,11 @@ export function useFeatureMutation<Input, Output>(spec: WriteSpec<Input, Output>
     retry: false, networkMode: "always",
     mutationFn: ({ operation }) => operation,
     onSuccess: (result, { snapshot }) => invalidate(snapshot, result),
-    onError: error => { if (error.category === "unavailable" && current.current.state.kind === "ready") void current.current.check(); },
+    onError: (error, { snapshot }) => {
+      if (error.category === "unavailable" && current.current.state.kind === "ready") void current.current.check();
+      // A definite refusal committed nothing; refreshing what it was checked against never resends anything.
+      if (snapshot.refreshOn?.includes(error.category)) void invalidate(snapshot);
+    },
   });
   const scopeStatus = submissions.status(spec.scope);
   const submit = (input: Input): Promise<Output> => {

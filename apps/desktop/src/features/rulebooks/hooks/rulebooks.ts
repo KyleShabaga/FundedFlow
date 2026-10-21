@@ -28,7 +28,7 @@ export const useCalculationFreshness = (accountId: string | null, snapshot: { id
   useFeatureQuery({
     key: [...keys.snapshotsRoot(accountId), "freshness", snapshot?.id ?? null],
     enabled: accountId !== null && snapshot !== null,
-    read: signal => risk.readFreshness(accountId!, snapshot!.explanation, signal),
+    read: signal => risk.readFreshness(accountId!, snapshot!, signal),
     isEmpty: () => false,
   });
 
@@ -36,6 +36,8 @@ export const useCalculateRisk = (accountId: string) => useFeatureMutation({
   scope: JSON.stringify(["risk-calculation", accountId]),
   run: ({ query, policy }: { query: RiskInputsQuery; policy: EnginePolicy }) => risk.calculateNow(query, policy),
   invalidate: () => [keys.snapshotsRoot(accountId)],
+  // P0-02: a native "records changed" refusal saved nothing, so it unlocks at once; the stored results are re-read.
+  refreshOn: ["conflict"],
 });
 
 // One write at a time per account's rulebook: a second click or window gets duplicate-submission.

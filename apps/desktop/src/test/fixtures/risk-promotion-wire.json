@@ -1,0 +1,1274 @@
+[
+  {
+    "args": {
+      "query": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "asOf": "2026-10-20T20:00:00.000Z",
+        "coverage": {
+          "baseline": "available",
+          "closedTrades": "available",
+          "eodHistory": "available",
+          "fees": "available",
+          "intradayHistory": "unsupported",
+          "ledger": "available",
+          "openPositions": "unsupported",
+          "sourceReference": "synthetic statement"
+        }
+      }
+    },
+    "command": "capture_account_risk",
+    "output": {
+      "inputs": {
+        "account": {
+          "accountType": "evaluation",
+          "archivedAt": null,
+          "broker": "Tradovate",
+          "createdAt": "2026-10-21T00:00:00.000Z",
+          "currency": "USD",
+          "externalRef": null,
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "Eval A",
+          "notes": null,
+          "predecessorAccountId": null,
+          "propFirm": "Topstep",
+          "startingBalance": "50000",
+          "status": "active",
+          "successorAccountId": null,
+          "timezone": "America/New_York",
+          "tradingDayResetTime": "17:00",
+          "updatedAt": "2026-10-21T00:00:00.000Z"
+        },
+        "applicableAssignment": {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "accountPhaseEventId": null,
+          "assignedAt": "2026-10-21T00:00:00.000Z",
+          "assignmentSource": "user",
+          "effectiveFrom": "2026-10-19",
+          "effectiveTo": null,
+          "id": "00000000-0000-4000-8000-000000000002",
+          "phasePathId": null,
+          "programmePhaseId": null,
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000003"
+        },
+        "applicableRulebook": null,
+        "asOf": "2026-10-20T20:00:00.000Z",
+        "assignments": [
+          {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "accountPhaseEventId": null,
+            "assignedAt": "2026-10-21T00:00:00.000Z",
+            "assignmentSource": "user",
+            "effectiveFrom": "2026-10-19",
+            "effectiveTo": null,
+            "id": "00000000-0000-4000-8000-000000000002",
+            "phasePathId": null,
+            "programmePhaseId": null,
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000003"
+          }
+        ],
+        "catalogueLink": {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "catalogueVersionId": null,
+          "parentAccountId": null,
+          "programmeVariantId": null,
+          "providerId": "00000000-0000-4000-8000-000000000004",
+          "selectedPhasePathId": null,
+          "sizeSource": "unknown"
+        },
+        "coverage": {
+          "baseline": "available",
+          "closedTrades": "available",
+          "eodHistory": "missing",
+          "fees": "available",
+          "intradayHistory": "unsupported",
+          "ledger": "available",
+          "openPositions": "unsupported",
+          "sourceReference": "synthetic statement"
+        },
+        "effectiveTradingDay": "2026-10-20",
+        "ledger": [
+          {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "affectsBalance": true,
+            "amount": "-25",
+            "createdAt": "2026-10-21T00:00:00.000Z",
+            "effectiveAt": "2026-10-19T20:00:00.000Z",
+            "id": "00000000-0000-4000-8000-000000000005",
+            "kind": "payout",
+            "note": null,
+            "tradingDay": "2026-10-19",
+            "updatedAt": "2026-10-21T00:00:00.000Z"
+          }
+        ],
+        "ledgerHistory": [
+          {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "actor": "local_user:legacy_api",
+            "deleted": false,
+            "entry": {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "affectsBalance": true,
+              "amount": "-25",
+              "createdAt": "2026-10-21T00:00:00.000Z",
+              "effectiveAt": "2026-10-19T20:00:00.000Z",
+              "id": "00000000-0000-4000-8000-000000000005",
+              "kind": "payout",
+              "note": null,
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-21T00:00:00.000Z"
+            },
+            "entryId": "00000000-0000-4000-8000-000000000005",
+            "id": "00000000-0000-4000-8000-000000000006",
+            "operation": "create",
+            "reason": "Legacy ledger.create; no reason supplied by caller",
+            "recordedAt": "2026-10-21T00:00:00.000Z",
+            "supersedesId": null
+          }
+        ],
+        "missingInputs": [
+          "openPositions",
+          "eodHistory",
+          "intradayHistory",
+          "reconciliation_review:00000000-0000-4000-8000-000000000014:unsupported"
+        ],
+        "observations": [
+          {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "actor": "tester",
+            "basis": "balance",
+            "confidence": "user_reported",
+            "confirmation": "user_confirmed",
+            "correctionReason": null,
+            "currency": "USD",
+            "effectiveTradingDay": "2026-10-19",
+            "id": "00000000-0000-4000-8000-000000000007",
+            "kind": "opening_balance",
+            "note": null,
+            "observedAt": "2026-10-19T12:00:00.000Z",
+            "recordedAt": "2026-10-21T00:00:00.000Z",
+            "sourceCategory": "firm_dashboard",
+            "sourceReference": "synthetic dashboard",
+            "supersedesId": null,
+            "timezone": "America/New_York",
+            "tradingDayResetTime": "17:00",
+            "validUntil": null,
+            "value": "50000"
+          },
+          {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "actor": "tester",
+            "basis": "balance",
+            "confidence": "user_reported",
+            "confirmation": "user_confirmed",
+            "correctionReason": null,
+            "currency": "USD",
+            "effectiveTradingDay": "2026-10-20",
+            "id": "00000000-0000-4000-8000-000000000008",
+            "kind": "balance",
+            "note": null,
+            "observedAt": "2026-10-20T19:00:00.000Z",
+            "recordedAt": "2026-10-21T00:00:00.000Z",
+            "sourceCategory": "firm_dashboard",
+            "sourceReference": "synthetic dashboard",
+            "supersedesId": null,
+            "timezone": "America/New_York",
+            "tradingDayResetTime": "17:00",
+            "validUntil": null,
+            "value": "50100"
+          }
+        ],
+        "phaseHistory": [],
+        "rulebookVersions": [
+          {
+            "applicability": [],
+            "claims": [],
+            "rulebook": {
+              "createdAt": "2026-10-21T00:00:00.000Z",
+              "description": null,
+              "displayName": "Synthetic",
+              "id": "00000000-0000-4000-8000-000000000009",
+              "ownerAccountId": null,
+              "providerId": "00000000-0000-4000-8000-000000000010",
+              "recordStatus": "active",
+              "slug": "synthetic",
+              "updatedAt": "2026-10-21T00:00:00.000Z"
+            },
+            "rules": [
+              {
+                "displayLabel": null,
+                "displayOrder": 0,
+                "id": "00000000-0000-4000-8000-000000000011",
+                "overrideKind": null,
+                "parameterSchemaVersion": 1,
+                "parameters": {
+                  "basis": "realized",
+                  "breach": "hard",
+                  "condition": "always",
+                  "limit": {
+                    "state": "value",
+                    "value": "1000"
+                  },
+                  "resetBasis": "account_trading_day"
+                },
+                "providerLabel": null,
+                "ruleKey": "daily_loss",
+                "ruleType": "daily_loss_limit",
+                "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+                "sourceText": null,
+                "supportStatus": "supported"
+              }
+            ],
+            "version": {
+              "capturedAt": "2026-10-21T00:00:00.000Z",
+              "changeReason": null,
+              "createdAt": "2026-10-21T00:00:00.000Z",
+              "effectiveFrom": null,
+              "effectiveTo": null,
+              "id": "00000000-0000-4000-8000-000000000003",
+              "origin": "catalogue",
+              "recordStatus": "active",
+              "rulebookId": "00000000-0000-4000-8000-000000000009",
+              "schemaVersion": 1,
+              "supersedesVersionId": null,
+              "updatedAt": "2026-10-21T00:00:00.000Z",
+              "userConfirmedAt": null,
+              "verificationStatus": "verified",
+              "verifiedAt": "2026-10-21T00:00:00.000Z",
+              "verifiedBy": "synthetic reviewer",
+              "versionNumber": 1
+            }
+          }
+        ],
+        "schemaVersion": 1,
+        "trades": [
+          {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "brokerTradeId": null,
+            "createdAt": "2026-10-21T00:00:00.000Z",
+            "entryAt": "2026-10-19T13:30:00.000Z",
+            "entryPrice": "5000.25",
+            "exitAt": "2026-10-19T18:00:00.000Z",
+            "exitPrice": "5004.5",
+            "fees": "4.12",
+            "grossPnl": "212.5",
+            "id": "00000000-0000-4000-8000-000000000012",
+            "importBatchId": null,
+            "notes": "breakout retest",
+            "pnlStatus": "calculated",
+            "quantity": "1",
+            "realizedPnl": "208.38",
+            "reportedPnl": null,
+            "roundTrip": null,
+            "side": "long",
+            "source": "manual",
+            "symbol": "ESZ6",
+            "tradingDay": "2026-10-19",
+            "updatedAt": "2026-10-21T00:00:00.000Z"
+          }
+        ]
+      },
+      "priorBreaches": [
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "assignmentId": "00000000-0000-4000-8000-000000000002",
+          "observedAt": "2026-10-20T19:58:00.000Z",
+          "ruleKey": "daily_loss",
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+          "sourceReferences": [
+            "00000000-0000-4000-8000-000000000013"
+          ]
+        }
+      ],
+      "reconciliationRevisionIds": [
+        "00000000-0000-4000-8000-000000000014"
+      ],
+      "sourceFingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    }
+  },
+  {
+    "args": {
+      "input": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "balance": null,
+        "dailyLossLimit": null,
+        "dailyLossRemaining": null,
+        "dataAsOf": null,
+        "dataSource": "manual",
+        "drawdownFloor": null,
+        "drawdownHeadroom": null,
+        "drawdownLocked": null,
+        "drawdownMode": null,
+        "engineVersion": "fundedflow-risk/1",
+        "explanation": {
+          "engine": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "asOf": "2026-10-20T20:00:00.000Z",
+            "assignmentId": "00000000-0000-4000-8000-000000000002",
+            "balance": null,
+            "dataAsOf": null,
+            "engineVersion": "fundedflow-risk/1",
+            "inputsHash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "phasePathId": null,
+            "programmePhaseId": null,
+            "realizedDayPnl": null,
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+            "rules": [],
+            "status": "Unknown",
+            "tradingDay": "2026-10-20",
+            "tradingDaysCompleted": null
+          },
+          "inputs": {
+            "account": {
+              "accountType": "evaluation",
+              "archivedAt": null,
+              "broker": "Tradovate",
+              "createdAt": "2026-10-21T00:00:00.000Z",
+              "currency": "USD",
+              "externalRef": null,
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Eval A",
+              "notes": null,
+              "predecessorAccountId": null,
+              "propFirm": "Topstep",
+              "startingBalance": "50000",
+              "status": "active",
+              "successorAccountId": null,
+              "timezone": "America/New_York",
+              "tradingDayResetTime": "17:00",
+              "updatedAt": "2026-10-21T00:00:00.000Z"
+            },
+            "applicableAssignment": {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "accountPhaseEventId": null,
+              "assignedAt": "2026-10-21T00:00:00.000Z",
+              "assignmentSource": "user",
+              "effectiveFrom": "2026-10-19",
+              "effectiveTo": null,
+              "id": "00000000-0000-4000-8000-000000000002",
+              "phasePathId": null,
+              "programmePhaseId": null,
+              "rulebookVersionId": "00000000-0000-4000-8000-000000000003"
+            },
+            "applicableRulebook": null,
+            "asOf": "2026-10-20T20:00:00.000Z",
+            "assignments": [
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "accountPhaseEventId": null,
+                "assignedAt": "2026-10-21T00:00:00.000Z",
+                "assignmentSource": "user",
+                "effectiveFrom": "2026-10-19",
+                "effectiveTo": null,
+                "id": "00000000-0000-4000-8000-000000000002",
+                "phasePathId": null,
+                "programmePhaseId": null,
+                "rulebookVersionId": "00000000-0000-4000-8000-000000000003"
+              }
+            ],
+            "catalogueLink": {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "catalogueVersionId": null,
+              "parentAccountId": null,
+              "programmeVariantId": null,
+              "providerId": "00000000-0000-4000-8000-000000000004",
+              "selectedPhasePathId": null,
+              "sizeSource": "unknown"
+            },
+            "coverage": {
+              "baseline": "available",
+              "closedTrades": "available",
+              "eodHistory": "missing",
+              "fees": "available",
+              "intradayHistory": "unsupported",
+              "ledger": "available",
+              "openPositions": "unsupported",
+              "sourceReference": "synthetic statement"
+            },
+            "effectiveTradingDay": "2026-10-20",
+            "ledger": [
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "affectsBalance": true,
+                "amount": "-25",
+                "createdAt": "2026-10-21T00:00:00.000Z",
+                "effectiveAt": "2026-10-19T20:00:00.000Z",
+                "id": "00000000-0000-4000-8000-000000000005",
+                "kind": "payout",
+                "note": null,
+                "tradingDay": "2026-10-19",
+                "updatedAt": "2026-10-21T00:00:00.000Z"
+              }
+            ],
+            "ledgerHistory": [
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "actor": "local_user:legacy_api",
+                "deleted": false,
+                "entry": {
+                  "accountId": "00000000-0000-4000-8000-000000000001",
+                  "affectsBalance": true,
+                  "amount": "-25",
+                  "createdAt": "2026-10-21T00:00:00.000Z",
+                  "effectiveAt": "2026-10-19T20:00:00.000Z",
+                  "id": "00000000-0000-4000-8000-000000000005",
+                  "kind": "payout",
+                  "note": null,
+                  "tradingDay": "2026-10-19",
+                  "updatedAt": "2026-10-21T00:00:00.000Z"
+                },
+                "entryId": "00000000-0000-4000-8000-000000000005",
+                "id": "00000000-0000-4000-8000-000000000006",
+                "operation": "create",
+                "reason": "Legacy ledger.create; no reason supplied by caller",
+                "recordedAt": "2026-10-21T00:00:00.000Z",
+                "supersedesId": null
+              }
+            ],
+            "missingInputs": [
+              "openPositions",
+              "eodHistory",
+              "intradayHistory",
+              "reconciliation_review:00000000-0000-4000-8000-000000000014:unsupported"
+            ],
+            "observations": [
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "actor": "tester",
+                "basis": "balance",
+                "confidence": "user_reported",
+                "confirmation": "user_confirmed",
+                "correctionReason": null,
+                "currency": "USD",
+                "effectiveTradingDay": "2026-10-19",
+                "id": "00000000-0000-4000-8000-000000000007",
+                "kind": "opening_balance",
+                "note": null,
+                "observedAt": "2026-10-19T12:00:00.000Z",
+                "recordedAt": "2026-10-21T00:00:00.000Z",
+                "sourceCategory": "firm_dashboard",
+                "sourceReference": "synthetic dashboard",
+                "supersedesId": null,
+                "timezone": "America/New_York",
+                "tradingDayResetTime": "17:00",
+                "validUntil": null,
+                "value": "50000"
+              },
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "actor": "tester",
+                "basis": "balance",
+                "confidence": "user_reported",
+                "confirmation": "user_confirmed",
+                "correctionReason": null,
+                "currency": "USD",
+                "effectiveTradingDay": "2026-10-20",
+                "id": "00000000-0000-4000-8000-000000000008",
+                "kind": "balance",
+                "note": null,
+                "observedAt": "2026-10-20T19:00:00.000Z",
+                "recordedAt": "2026-10-21T00:00:00.000Z",
+                "sourceCategory": "firm_dashboard",
+                "sourceReference": "synthetic dashboard",
+                "supersedesId": null,
+                "timezone": "America/New_York",
+                "tradingDayResetTime": "17:00",
+                "validUntil": null,
+                "value": "50100"
+              }
+            ],
+            "phaseHistory": [],
+            "rulebookVersions": [
+              {
+                "applicability": [],
+                "claims": [],
+                "rulebook": {
+                  "createdAt": "2026-10-21T00:00:00.000Z",
+                  "description": null,
+                  "displayName": "Synthetic",
+                  "id": "00000000-0000-4000-8000-000000000009",
+                  "ownerAccountId": null,
+                  "providerId": "00000000-0000-4000-8000-000000000010",
+                  "recordStatus": "active",
+                  "slug": "synthetic",
+                  "updatedAt": "2026-10-21T00:00:00.000Z"
+                },
+                "rules": [
+                  {
+                    "displayLabel": null,
+                    "displayOrder": 0,
+                    "id": "00000000-0000-4000-8000-000000000011",
+                    "overrideKind": null,
+                    "parameterSchemaVersion": 1,
+                    "parameters": {
+                      "basis": "realized",
+                      "breach": "hard",
+                      "condition": "always",
+                      "limit": {
+                        "state": "value",
+                        "value": "1000"
+                      },
+                      "resetBasis": "account_trading_day"
+                    },
+                    "providerLabel": null,
+                    "ruleKey": "daily_loss",
+                    "ruleType": "daily_loss_limit",
+                    "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+                    "sourceText": null,
+                    "supportStatus": "supported"
+                  }
+                ],
+                "version": {
+                  "capturedAt": "2026-10-21T00:00:00.000Z",
+                  "changeReason": null,
+                  "createdAt": "2026-10-21T00:00:00.000Z",
+                  "effectiveFrom": null,
+                  "effectiveTo": null,
+                  "id": "00000000-0000-4000-8000-000000000003",
+                  "origin": "catalogue",
+                  "recordStatus": "active",
+                  "rulebookId": "00000000-0000-4000-8000-000000000009",
+                  "schemaVersion": 1,
+                  "supersedesVersionId": null,
+                  "updatedAt": "2026-10-21T00:00:00.000Z",
+                  "userConfirmedAt": null,
+                  "verificationStatus": "verified",
+                  "verifiedAt": "2026-10-21T00:00:00.000Z",
+                  "verifiedBy": "synthetic reviewer",
+                  "versionNumber": 1
+                }
+              }
+            ],
+            "schemaVersion": 1,
+            "trades": [
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "brokerTradeId": null,
+                "createdAt": "2026-10-21T00:00:00.000Z",
+                "entryAt": "2026-10-19T13:30:00.000Z",
+                "entryPrice": "5000.25",
+                "exitAt": "2026-10-19T18:00:00.000Z",
+                "exitPrice": "5004.5",
+                "fees": "4.12",
+                "grossPnl": "212.5",
+                "id": "00000000-0000-4000-8000-000000000012",
+                "importBatchId": null,
+                "notes": "breakout retest",
+                "pnlStatus": "calculated",
+                "quantity": "1",
+                "realizedPnl": "208.38",
+                "reportedPnl": null,
+                "roundTrip": null,
+                "side": "long",
+                "source": "manual",
+                "symbol": "ESZ6",
+                "tradingDay": "2026-10-19",
+                "updatedAt": "2026-10-21T00:00:00.000Z"
+              }
+            ]
+          },
+          "policy": {
+            "boundary": null,
+            "boundarySourceClaimIds": [],
+            "personalCautionHeadroom": null,
+            "priorBreaches": [
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "assignmentId": "00000000-0000-4000-8000-000000000002",
+                "observedAt": "2026-10-20T19:58:00.000Z",
+                "ruleKey": "daily_loss",
+                "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+                "sourceReferences": [
+                  "00000000-0000-4000-8000-000000000013"
+                ]
+              }
+            ],
+            "reconciliationRevisionIds": [
+              "00000000-0000-4000-8000-000000000014"
+            ],
+            "ruleCurrency": null,
+            "ruleCurrencySourceClaimIds": []
+          }
+        },
+        "feesIncluded": true,
+        "highWaterMark": null,
+        "inputsHash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "isEndOfDay": false,
+        "profitTarget": null,
+        "realizedDayPnl": null,
+        "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+        "status": "unknown",
+        "statusReasons": [
+          "synthetic"
+        ],
+        "tradingDay": "2026-10-20",
+        "tradingDaysCompleted": null,
+        "tradingDaysRequired": null,
+        "unrealizedIncluded": false,
+        "unrealizedPnl": null
+      }
+    },
+    "command": "promote_account_risk",
+    "output": {
+      "accountId": "00000000-0000-4000-8000-000000000001",
+      "balance": null,
+      "calculatedAt": "2026-10-21T00:00:00.000Z",
+      "dailyLossLimit": null,
+      "dailyLossRemaining": null,
+      "dataAsOf": null,
+      "dataSource": "manual",
+      "drawdownFloor": null,
+      "drawdownHeadroom": null,
+      "drawdownLocked": null,
+      "drawdownMode": null,
+      "engineVersion": "fundedflow-risk/1",
+      "explanation": {
+        "engine": {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "asOf": "2026-10-20T20:00:00.000Z",
+          "assignmentId": "00000000-0000-4000-8000-000000000002",
+          "balance": null,
+          "dataAsOf": null,
+          "engineVersion": "fundedflow-risk/1",
+          "inputsHash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "phasePathId": null,
+          "programmePhaseId": null,
+          "realizedDayPnl": null,
+          "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+          "rules": [],
+          "status": "Unknown",
+          "tradingDay": "2026-10-20",
+          "tradingDaysCompleted": null
+        },
+        "inputs": {
+          "account": {
+            "accountType": "evaluation",
+            "archivedAt": null,
+            "broker": "Tradovate",
+            "createdAt": "2026-10-21T00:00:00.000Z",
+            "currency": "USD",
+            "externalRef": null,
+            "id": "00000000-0000-4000-8000-000000000001",
+            "name": "Eval A",
+            "notes": null,
+            "predecessorAccountId": null,
+            "propFirm": "Topstep",
+            "startingBalance": "50000",
+            "status": "active",
+            "successorAccountId": null,
+            "timezone": "America/New_York",
+            "tradingDayResetTime": "17:00",
+            "updatedAt": "2026-10-21T00:00:00.000Z"
+          },
+          "applicableAssignment": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "accountPhaseEventId": null,
+            "assignedAt": "2026-10-21T00:00:00.000Z",
+            "assignmentSource": "user",
+            "effectiveFrom": "2026-10-19",
+            "effectiveTo": null,
+            "id": "00000000-0000-4000-8000-000000000002",
+            "phasePathId": null,
+            "programmePhaseId": null,
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000003"
+          },
+          "applicableRulebook": null,
+          "asOf": "2026-10-20T20:00:00.000Z",
+          "assignments": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "accountPhaseEventId": null,
+              "assignedAt": "2026-10-21T00:00:00.000Z",
+              "assignmentSource": "user",
+              "effectiveFrom": "2026-10-19",
+              "effectiveTo": null,
+              "id": "00000000-0000-4000-8000-000000000002",
+              "phasePathId": null,
+              "programmePhaseId": null,
+              "rulebookVersionId": "00000000-0000-4000-8000-000000000003"
+            }
+          ],
+          "catalogueLink": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "catalogueVersionId": null,
+            "parentAccountId": null,
+            "programmeVariantId": null,
+            "providerId": "00000000-0000-4000-8000-000000000004",
+            "selectedPhasePathId": null,
+            "sizeSource": "unknown"
+          },
+          "coverage": {
+            "baseline": "available",
+            "closedTrades": "available",
+            "eodHistory": "missing",
+            "fees": "available",
+            "intradayHistory": "unsupported",
+            "ledger": "available",
+            "openPositions": "unsupported",
+            "sourceReference": "synthetic statement"
+          },
+          "effectiveTradingDay": "2026-10-20",
+          "ledger": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "affectsBalance": true,
+              "amount": "-25",
+              "createdAt": "2026-10-21T00:00:00.000Z",
+              "effectiveAt": "2026-10-19T20:00:00.000Z",
+              "id": "00000000-0000-4000-8000-000000000005",
+              "kind": "payout",
+              "note": null,
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-21T00:00:00.000Z"
+            }
+          ],
+          "ledgerHistory": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "actor": "local_user:legacy_api",
+              "deleted": false,
+              "entry": {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "affectsBalance": true,
+                "amount": "-25",
+                "createdAt": "2026-10-21T00:00:00.000Z",
+                "effectiveAt": "2026-10-19T20:00:00.000Z",
+                "id": "00000000-0000-4000-8000-000000000005",
+                "kind": "payout",
+                "note": null,
+                "tradingDay": "2026-10-19",
+                "updatedAt": "2026-10-21T00:00:00.000Z"
+              },
+              "entryId": "00000000-0000-4000-8000-000000000005",
+              "id": "00000000-0000-4000-8000-000000000006",
+              "operation": "create",
+              "reason": "Legacy ledger.create; no reason supplied by caller",
+              "recordedAt": "2026-10-21T00:00:00.000Z",
+              "supersedesId": null
+            }
+          ],
+          "missingInputs": [
+            "openPositions",
+            "eodHistory",
+            "intradayHistory",
+            "reconciliation_review:00000000-0000-4000-8000-000000000014:unsupported"
+          ],
+          "observations": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "actor": "tester",
+              "basis": "balance",
+              "confidence": "user_reported",
+              "confirmation": "user_confirmed",
+              "correctionReason": null,
+              "currency": "USD",
+              "effectiveTradingDay": "2026-10-19",
+              "id": "00000000-0000-4000-8000-000000000007",
+              "kind": "opening_balance",
+              "note": null,
+              "observedAt": "2026-10-19T12:00:00.000Z",
+              "recordedAt": "2026-10-21T00:00:00.000Z",
+              "sourceCategory": "firm_dashboard",
+              "sourceReference": "synthetic dashboard",
+              "supersedesId": null,
+              "timezone": "America/New_York",
+              "tradingDayResetTime": "17:00",
+              "validUntil": null,
+              "value": "50000"
+            },
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "actor": "tester",
+              "basis": "balance",
+              "confidence": "user_reported",
+              "confirmation": "user_confirmed",
+              "correctionReason": null,
+              "currency": "USD",
+              "effectiveTradingDay": "2026-10-20",
+              "id": "00000000-0000-4000-8000-000000000008",
+              "kind": "balance",
+              "note": null,
+              "observedAt": "2026-10-20T19:00:00.000Z",
+              "recordedAt": "2026-10-21T00:00:00.000Z",
+              "sourceCategory": "firm_dashboard",
+              "sourceReference": "synthetic dashboard",
+              "supersedesId": null,
+              "timezone": "America/New_York",
+              "tradingDayResetTime": "17:00",
+              "validUntil": null,
+              "value": "50100"
+            }
+          ],
+          "phaseHistory": [],
+          "rulebookVersions": [
+            {
+              "applicability": [],
+              "claims": [],
+              "rulebook": {
+                "createdAt": "2026-10-21T00:00:00.000Z",
+                "description": null,
+                "displayName": "Synthetic",
+                "id": "00000000-0000-4000-8000-000000000009",
+                "ownerAccountId": null,
+                "providerId": "00000000-0000-4000-8000-000000000010",
+                "recordStatus": "active",
+                "slug": "synthetic",
+                "updatedAt": "2026-10-21T00:00:00.000Z"
+              },
+              "rules": [
+                {
+                  "displayLabel": null,
+                  "displayOrder": 0,
+                  "id": "00000000-0000-4000-8000-000000000011",
+                  "overrideKind": null,
+                  "parameterSchemaVersion": 1,
+                  "parameters": {
+                    "basis": "realized",
+                    "breach": "hard",
+                    "condition": "always",
+                    "limit": {
+                      "state": "value",
+                      "value": "1000"
+                    },
+                    "resetBasis": "account_trading_day"
+                  },
+                  "providerLabel": null,
+                  "ruleKey": "daily_loss",
+                  "ruleType": "daily_loss_limit",
+                  "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+                  "sourceText": null,
+                  "supportStatus": "supported"
+                }
+              ],
+              "version": {
+                "capturedAt": "2026-10-21T00:00:00.000Z",
+                "changeReason": null,
+                "createdAt": "2026-10-21T00:00:00.000Z",
+                "effectiveFrom": null,
+                "effectiveTo": null,
+                "id": "00000000-0000-4000-8000-000000000003",
+                "origin": "catalogue",
+                "recordStatus": "active",
+                "rulebookId": "00000000-0000-4000-8000-000000000009",
+                "schemaVersion": 1,
+                "supersedesVersionId": null,
+                "updatedAt": "2026-10-21T00:00:00.000Z",
+                "userConfirmedAt": null,
+                "verificationStatus": "verified",
+                "verifiedAt": "2026-10-21T00:00:00.000Z",
+                "verifiedBy": "synthetic reviewer",
+                "versionNumber": 1
+              }
+            }
+          ],
+          "schemaVersion": 1,
+          "trades": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "brokerTradeId": null,
+              "createdAt": "2026-10-21T00:00:00.000Z",
+              "entryAt": "2026-10-19T13:30:00.000Z",
+              "entryPrice": "5000.25",
+              "exitAt": "2026-10-19T18:00:00.000Z",
+              "exitPrice": "5004.5",
+              "fees": "4.12",
+              "grossPnl": "212.5",
+              "id": "00000000-0000-4000-8000-000000000012",
+              "importBatchId": null,
+              "notes": "breakout retest",
+              "pnlStatus": "calculated",
+              "quantity": "1",
+              "realizedPnl": "208.38",
+              "reportedPnl": null,
+              "roundTrip": null,
+              "side": "long",
+              "source": "manual",
+              "symbol": "ESZ6",
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-21T00:00:00.000Z"
+            }
+          ]
+        },
+        "policy": {
+          "boundary": null,
+          "boundarySourceClaimIds": [],
+          "personalCautionHeadroom": null,
+          "priorBreaches": [
+            {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "assignmentId": "00000000-0000-4000-8000-000000000002",
+              "observedAt": "2026-10-20T19:58:00.000Z",
+              "ruleKey": "daily_loss",
+              "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+              "sourceReferences": [
+                "00000000-0000-4000-8000-000000000013"
+              ]
+            }
+          ],
+          "reconciliationRevisionIds": [
+            "00000000-0000-4000-8000-000000000014"
+          ],
+          "ruleCurrency": null,
+          "ruleCurrencySourceClaimIds": []
+        }
+      },
+      "feesIncluded": true,
+      "highWaterMark": null,
+      "id": "00000000-0000-4000-8000-000000000015",
+      "inputsHash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "isEndOfDay": false,
+      "profitTarget": null,
+      "realizedDayPnl": null,
+      "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+      "status": "unknown",
+      "statusReasons": [
+        "synthetic"
+      ],
+      "tradingDay": "2026-10-20",
+      "tradingDaysCompleted": null,
+      "tradingDaysRequired": null,
+      "unrealizedIncluded": false,
+      "unrealizedPnl": null
+    }
+  },
+  {
+    "args": {
+      "accountId": "00000000-0000-4000-8000-000000000001"
+    },
+    "command": "get_current_account_risk",
+    "output": {
+      "promotedAt": "2026-10-21T00:00:00.000Z",
+      "snapshot": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "balance": null,
+        "calculatedAt": "2026-10-21T00:00:00.000Z",
+        "dailyLossLimit": null,
+        "dailyLossRemaining": null,
+        "dataAsOf": null,
+        "dataSource": "manual",
+        "drawdownFloor": null,
+        "drawdownHeadroom": null,
+        "drawdownLocked": null,
+        "drawdownMode": null,
+        "engineVersion": "fundedflow-risk/1",
+        "explanation": {
+          "engine": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "asOf": "2026-10-20T20:00:00.000Z",
+            "assignmentId": "00000000-0000-4000-8000-000000000002",
+            "balance": null,
+            "dataAsOf": null,
+            "engineVersion": "fundedflow-risk/1",
+            "inputsHash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "phasePathId": null,
+            "programmePhaseId": null,
+            "realizedDayPnl": null,
+            "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+            "rules": [],
+            "status": "Unknown",
+            "tradingDay": "2026-10-20",
+            "tradingDaysCompleted": null
+          },
+          "inputs": {
+            "account": {
+              "accountType": "evaluation",
+              "archivedAt": null,
+              "broker": "Tradovate",
+              "createdAt": "2026-10-21T00:00:00.000Z",
+              "currency": "USD",
+              "externalRef": null,
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Eval A",
+              "notes": null,
+              "predecessorAccountId": null,
+              "propFirm": "Topstep",
+              "startingBalance": "50000",
+              "status": "active",
+              "successorAccountId": null,
+              "timezone": "America/New_York",
+              "tradingDayResetTime": "17:00",
+              "updatedAt": "2026-10-21T00:00:00.000Z"
+            },
+            "applicableAssignment": {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "accountPhaseEventId": null,
+              "assignedAt": "2026-10-21T00:00:00.000Z",
+              "assignmentSource": "user",
+              "effectiveFrom": "2026-10-19",
+              "effectiveTo": null,
+              "id": "00000000-0000-4000-8000-000000000002",
+              "phasePathId": null,
+              "programmePhaseId": null,
+              "rulebookVersionId": "00000000-0000-4000-8000-000000000003"
+            },
+            "applicableRulebook": null,
+            "asOf": "2026-10-20T20:00:00.000Z",
+            "assignments": [
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "accountPhaseEventId": null,
+                "assignedAt": "2026-10-21T00:00:00.000Z",
+                "assignmentSource": "user",
+                "effectiveFrom": "2026-10-19",
+                "effectiveTo": null,
+                "id": "00000000-0000-4000-8000-000000000002",
+                "phasePathId": null,
+                "programmePhaseId": null,
+                "rulebookVersionId": "00000000-0000-4000-8000-000000000003"
+              }
+            ],
+            "catalogueLink": {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "catalogueVersionId": null,
+              "parentAccountId": null,
+              "programmeVariantId": null,
+              "providerId": "00000000-0000-4000-8000-000000000004",
+              "selectedPhasePathId": null,
+              "sizeSource": "unknown"
+            },
+            "coverage": {
+              "baseline": "available",
+              "closedTrades": "available",
+              "eodHistory": "missing",
+              "fees": "available",
+              "intradayHistory": "unsupported",
+              "ledger": "available",
+              "openPositions": "unsupported",
+              "sourceReference": "synthetic statement"
+            },
+            "effectiveTradingDay": "2026-10-20",
+            "ledger": [
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "affectsBalance": true,
+                "amount": "-25",
+                "createdAt": "2026-10-21T00:00:00.000Z",
+                "effectiveAt": "2026-10-19T20:00:00.000Z",
+                "id": "00000000-0000-4000-8000-000000000005",
+                "kind": "payout",
+                "note": null,
+                "tradingDay": "2026-10-19",
+                "updatedAt": "2026-10-21T00:00:00.000Z"
+              }
+            ],
+            "ledgerHistory": [
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "actor": "local_user:legacy_api",
+                "deleted": false,
+                "entry": {
+                  "accountId": "00000000-0000-4000-8000-000000000001",
+                  "affectsBalance": true,
+                  "amount": "-25",
+                  "createdAt": "2026-10-21T00:00:00.000Z",
+                  "effectiveAt": "2026-10-19T20:00:00.000Z",
+                  "id": "00000000-0000-4000-8000-000000000005",
+                  "kind": "payout",
+                  "note": null,
+                  "tradingDay": "2026-10-19",
+                  "updatedAt": "2026-10-21T00:00:00.000Z"
+                },
+                "entryId": "00000000-0000-4000-8000-000000000005",
+                "id": "00000000-0000-4000-8000-000000000006",
+                "operation": "create",
+                "reason": "Legacy ledger.create; no reason supplied by caller",
+                "recordedAt": "2026-10-21T00:00:00.000Z",
+                "supersedesId": null
+              }
+            ],
+            "missingInputs": [
+              "openPositions",
+              "eodHistory",
+              "intradayHistory",
+              "reconciliation_review:00000000-0000-4000-8000-000000000014:unsupported"
+            ],
+            "observations": [
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "actor": "tester",
+                "basis": "balance",
+                "confidence": "user_reported",
+                "confirmation": "user_confirmed",
+                "correctionReason": null,
+                "currency": "USD",
+                "effectiveTradingDay": "2026-10-19",
+                "id": "00000000-0000-4000-8000-000000000007",
+                "kind": "opening_balance",
+                "note": null,
+                "observedAt": "2026-10-19T12:00:00.000Z",
+                "recordedAt": "2026-10-21T00:00:00.000Z",
+                "sourceCategory": "firm_dashboard",
+                "sourceReference": "synthetic dashboard",
+                "supersedesId": null,
+                "timezone": "America/New_York",
+                "tradingDayResetTime": "17:00",
+                "validUntil": null,
+                "value": "50000"
+              },
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "actor": "tester",
+                "basis": "balance",
+                "confidence": "user_reported",
+                "confirmation": "user_confirmed",
+                "correctionReason": null,
+                "currency": "USD",
+                "effectiveTradingDay": "2026-10-20",
+                "id": "00000000-0000-4000-8000-000000000008",
+                "kind": "balance",
+                "note": null,
+                "observedAt": "2026-10-20T19:00:00.000Z",
+                "recordedAt": "2026-10-21T00:00:00.000Z",
+                "sourceCategory": "firm_dashboard",
+                "sourceReference": "synthetic dashboard",
+                "supersedesId": null,
+                "timezone": "America/New_York",
+                "tradingDayResetTime": "17:00",
+                "validUntil": null,
+                "value": "50100"
+              }
+            ],
+            "phaseHistory": [],
+            "rulebookVersions": [
+              {
+                "applicability": [],
+                "claims": [],
+                "rulebook": {
+                  "createdAt": "2026-10-21T00:00:00.000Z",
+                  "description": null,
+                  "displayName": "Synthetic",
+                  "id": "00000000-0000-4000-8000-000000000009",
+                  "ownerAccountId": null,
+                  "providerId": "00000000-0000-4000-8000-000000000010",
+                  "recordStatus": "active",
+                  "slug": "synthetic",
+                  "updatedAt": "2026-10-21T00:00:00.000Z"
+                },
+                "rules": [
+                  {
+                    "displayLabel": null,
+                    "displayOrder": 0,
+                    "id": "00000000-0000-4000-8000-000000000011",
+                    "overrideKind": null,
+                    "parameterSchemaVersion": 1,
+                    "parameters": {
+                      "basis": "realized",
+                      "breach": "hard",
+                      "condition": "always",
+                      "limit": {
+                        "state": "value",
+                        "value": "1000"
+                      },
+                      "resetBasis": "account_trading_day"
+                    },
+                    "providerLabel": null,
+                    "ruleKey": "daily_loss",
+                    "ruleType": "daily_loss_limit",
+                    "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+                    "sourceText": null,
+                    "supportStatus": "supported"
+                  }
+                ],
+                "version": {
+                  "capturedAt": "2026-10-21T00:00:00.000Z",
+                  "changeReason": null,
+                  "createdAt": "2026-10-21T00:00:00.000Z",
+                  "effectiveFrom": null,
+                  "effectiveTo": null,
+                  "id": "00000000-0000-4000-8000-000000000003",
+                  "origin": "catalogue",
+                  "recordStatus": "active",
+                  "rulebookId": "00000000-0000-4000-8000-000000000009",
+                  "schemaVersion": 1,
+                  "supersedesVersionId": null,
+                  "updatedAt": "2026-10-21T00:00:00.000Z",
+                  "userConfirmedAt": null,
+                  "verificationStatus": "verified",
+                  "verifiedAt": "2026-10-21T00:00:00.000Z",
+                  "verifiedBy": "synthetic reviewer",
+                  "versionNumber": 1
+                }
+              }
+            ],
+            "schemaVersion": 1,
+            "trades": [
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "brokerTradeId": null,
+                "createdAt": "2026-10-21T00:00:00.000Z",
+                "entryAt": "2026-10-19T13:30:00.000Z",
+                "entryPrice": "5000.25",
+                "exitAt": "2026-10-19T18:00:00.000Z",
+                "exitPrice": "5004.5",
+                "fees": "4.12",
+                "grossPnl": "212.5",
+                "id": "00000000-0000-4000-8000-000000000012",
+                "importBatchId": null,
+                "notes": "breakout retest",
+                "pnlStatus": "calculated",
+                "quantity": "1",
+                "realizedPnl": "208.38",
+                "reportedPnl": null,
+                "roundTrip": null,
+                "side": "long",
+                "source": "manual",
+                "symbol": "ESZ6",
+                "tradingDay": "2026-10-19",
+                "updatedAt": "2026-10-21T00:00:00.000Z"
+              }
+            ]
+          },
+          "policy": {
+            "boundary": null,
+            "boundarySourceClaimIds": [],
+            "personalCautionHeadroom": null,
+            "priorBreaches": [
+              {
+                "accountId": "00000000-0000-4000-8000-000000000001",
+                "assignmentId": "00000000-0000-4000-8000-000000000002",
+                "observedAt": "2026-10-20T19:58:00.000Z",
+                "ruleKey": "daily_loss",
+                "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+                "sourceReferences": [
+                  "00000000-0000-4000-8000-000000000013"
+                ]
+              }
+            ],
+            "reconciliationRevisionIds": [
+              "00000000-0000-4000-8000-000000000014"
+            ],
+            "ruleCurrency": null,
+            "ruleCurrencySourceClaimIds": []
+          }
+        },
+        "feesIncluded": true,
+        "highWaterMark": null,
+        "id": "00000000-0000-4000-8000-000000000015",
+        "inputsHash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "isEndOfDay": false,
+        "profitTarget": null,
+        "realizedDayPnl": null,
+        "rulebookVersionId": "00000000-0000-4000-8000-000000000003",
+        "status": "unknown",
+        "statusReasons": [
+          "synthetic"
+        ],
+        "tradingDay": "2026-10-20",
+        "tradingDaysCompleted": null,
+        "tradingDaysRequired": null,
+        "unrealizedIncluded": false,
+        "unrealizedPnl": null
+      },
+      "sourcesUnchanged": true
+    }
+  },
+  {
+    "args": {
+      "snapshotId": "00000000-0000-4000-8000-000000000016"
+    },
+    "command": "get_account_snapshot_freshness",
+    "output": {
+      "snapshotId": "00000000-0000-4000-8000-000000000016",
+      "sourcesUnchanged": true
+    }
+  }
+]
