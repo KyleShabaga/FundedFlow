@@ -513,6 +513,21 @@ pub fn validate_database(path: &Path, version: u32) -> Result<()> {
             }
         }
     }
+    if version >= 17 {
+        for sql in [
+            "SELECT 1 FROM trade_reviews r JOIN trades t ON t.id=r.trade_id WHERE r.account_id IS NOT t.account_id LIMIT 1",
+            "SELECT 1 FROM trade_corrections r JOIN trades t ON t.id=r.trade_id WHERE r.account_id<>t.account_id LIMIT 1",
+            "SELECT 1 FROM attachment_links l JOIN attachments a ON a.id=l.attachment_id JOIN trade_reviews r ON r.id=l.trade_review_id WHERE a.account_id IS NOT NULL AND a.account_id IS NOT r.account_id LIMIT 1",
+            "SELECT 1 FROM attachment_links l JOIN attachments a ON a.id=l.attachment_id JOIN journal_entries j ON j.id=l.journal_entry_id WHERE a.account_id IS NOT NULL AND a.account_id IS NOT j.account_id LIMIT 1",
+            "SELECT 1 FROM import_batches b JOIN attachments a ON a.id=b.source_attachment_id WHERE a.account_id IS NOT NULL AND a.account_id IS NOT b.account_id LIMIT 1",
+        ] {
+            if c.prepare(sql)?.exists([])? {
+                return Err(fail(Code::Integrity));
+            }
+        }
+    }
+    if version >= 18 && c.prepare("SELECT 1 FROM daily_review_trades l JOIN daily_reviews r ON r.id=l.daily_review_id JOIN trades t ON t.id=l.trade_id WHERE r.account_id<>t.account_id LIMIT 1")?.exists([])? {
+        return Err(fail(Code::Integrity));}
     // Cross-account provenance which FK checks alone cannot establish.
     for sql in [
         "SELECT 1 FROM trades t JOIN import_batches b ON b.id=t.import_batch_id WHERE t.account_id<>b.account_id LIMIT 1",

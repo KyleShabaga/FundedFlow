@@ -55,7 +55,7 @@ struct Cleanup {
     recovery_copies: Vec<String>,
 }
 fn owned_attachments(c: &Connection, id: &str) -> Result<Vec<super::Attachment>> {
-    let mut s=c.prepare("SELECT DISTINCT a.id FROM attachments a WHERE a.id IN (
+    let mut s=c.prepare("SELECT DISTINCT a.id FROM attachments a WHERE a.account_id=?1 OR a.id IN (
         SELECT source_attachment_id FROM import_batches WHERE account_id=?1
         UNION SELECT l.attachment_id FROM attachment_links l JOIN journal_entries j ON j.id=l.journal_entry_id WHERE j.account_id=?1
         UNION SELECT l.attachment_id FROM attachment_links l JOIN trade_reviews r ON r.id=l.trade_review_id JOIN trades t ON t.id=r.trade_id WHERE t.account_id=?1)")?;
@@ -71,7 +71,7 @@ fn remove_account(c: &mut Connection, id: &str, attachments: &[super::Attachment
     let tx = c.transaction()?;
     tx.execute("DELETE FROM accounts WHERE id=?1", [id])?;
     for a in attachments {
-        tx.execute("DELETE FROM attachments WHERE id=?1 AND NOT EXISTS(SELECT 1 FROM attachment_links WHERE attachment_id=?1) AND NOT EXISTS(SELECT 1 FROM import_batches WHERE source_attachment_id=?1)",[&a.id])?;
+        tx.execute("DELETE FROM attachments WHERE id=?1 AND (account_id IS NULL OR account_id=?2) AND NOT EXISTS(SELECT 1 FROM attachment_links WHERE attachment_id=?1) AND NOT EXISTS(SELECT 1 FROM import_batches WHERE source_attachment_id=?1)",rusqlite::params![a.id,id])?;
     }
     if tx.prepare("PRAGMA foreign_key_check")?.exists([])? {
         return Err(fail(Code::Integrity));
@@ -157,10 +157,16 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
             {
                 blockers.push("immutable_phase_history".into());
             }
+            if c.prepare("SELECT 1 FROM rulebook_events e JOIN rulebooks b ON b.id=e.rulebook_id WHERE e.account_id=?1 AND b.owner_account_id IS NOT ?1 LIMIT 1")?.exists([id])? {
+                blockers.push("immutable_shared_rulebook_history".into());
+            }
             if c.prepare("SELECT 1 FROM audit_events UNION ALL SELECT 1 FROM sync_outbox LIMIT 1")?
                 .exists([])?
             {
                 blockers.push("unsupported_audit_or_sync_ownership".into());
+            }
+            if c.prepare("SELECT 1 FROM attachment_links l JOIN attachments a ON a.id=l.attachment_id LEFT JOIN trade_reviews r ON r.id=l.trade_review_id LEFT JOIN journal_entries j ON j.id=l.journal_entry_id WHERE a.account_id IS NOT NULL AND ((a.account_id=?1 AND (coalesce(r.account_id,j.account_id) IS NOT ?1)) OR (coalesce(r.account_id,j.account_id)=?1 AND a.account_id IS NOT ?1)) LIMIT 1")?.exists([id])? {
+                blockers.push("attachment_owner_conflict".into());
             }
             attachments = owned_attachments(c, id)?;
             let mut simulation = clone_db(c)?;

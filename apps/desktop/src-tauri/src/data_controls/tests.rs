@@ -3,10 +3,10 @@ use crate::{db, store::accounts};
 use rusqlite::Connection;
 use std::{fs, path::Path};
 
-fn journal(path: &Path) -> Connection {
+pub(super) fn journal(path: &Path) -> Connection {
     db::open_file(path).unwrap()
 }
-fn account(c: &mut Connection, name: &str) -> String {
+pub(super) fn account(c: &mut Connection, name: &str) -> String {
     accounts::create(
         c,
         accounts::AccountInput {

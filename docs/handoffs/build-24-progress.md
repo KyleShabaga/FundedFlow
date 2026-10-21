@@ -1,8 +1,20 @@
 # Build 24 backend progress / session recovery
 
-## New-merge integration in progress
+## Claude Code takeover checkpoint
 
-Accepted main advanced to `e5e9f05`: Builds 16/19/20/21/22/29 are merged; journal schema is 18. The pre-integration Build 24 head `739678f` passed Windows CI run 39533908558. Merge reconciliation preserves both native command sets and domain exports; fixtures are being regenerated against accepted contracts. Build 20 screenshot storage follows the existing archive root convention. Required follow-up: owned/unlinked screenshot cleanup, shared rulebook-event retention blockers, trade-correction/review and all four daily-review tables in round-trip/deletion/integrity tests. Build 29 is an independent collector DB, outside journal backup/deletion. Full merged checks are pending; historical evidence below applies to schema 14 until updated. No UI changes are authored.
+Accepted main `e5e9f05` (Builds 16/19/20/21/22/29) is integrated by merge commit `7ce8ec5`; journal schema is 18. The accompanying backend checkpoint adds seven regression tests covering current-schema archive/restore, trade corrections, daily reviews, screenshot ownership, account deletion rollback and shared audit retention. It includes owned screenshots whose review links have disappeared, protects foreign-owned attachments, blocks ambiguous attachment/shared-rulebook audit deletion, and validates new cross-account relationships. No UI or migration is authored. Build 29's independent collector database remains outside journal backup/deletion.
+
+Latest checks on these changes:
+
+- Focused native data controls: **32 passed**, no fixture-update mode (`/tmp/build24-schema18-final-focus.log`).
+- Clippy all targets with warnings denied: **passed** (`/tmp/build24-schema18-clippy.log`).
+- Full native run immediately before the final ownership regression: **263 passed, same four known legacy SQLite IO failures, two ignored** (`/tmp/build24-schema18-full-native.log`). The final added test and ownership guard passed the focused run; the full suite has not been repeated afterward.
+- Merged TypeScript typecheck and production build: **passed** (`/tmp/build24-merged-typecheck.log`, `/tmp/build24-merged-build.log`).
+- Merged npm tests: **459 domain passed; 522 desktop passed, one unchanged DropdownMenu/dialog focus test timed out under concurrent native-test load** (`/tmp/build24-merged-npm-tests.log`). Its isolated overlay suite rerun passed all **15** tests (`/tmp/build24-overlay-retry.log`). Full npm rerun and `npm run check` remain pending; no UI fix was made.
+- Pre-integration head `739678f` passed Windows CI run **39533908558**. Latest integrated-head Windows CI has not been verified.
+- `git diff --check`: passed before checkpoint commit.
+
+Next owner: continue this branch and draft PR #43; rerun full npm tests without concurrent heavy native work and run `npm run check`, inspect latest Windows CI, and refresh the older architecture/acceptance documentation and Notion evidence to schema 18. The historical sections below describe the earlier schema-14 checkpoint and are superseded by this section where they differ. Do not mark the card Done or merge automatically. Preserve the phase/lineage policy blockers pending review. All current source and fixture changes are included in this takeover commit.
 
 
 Spec: https://app.notion.com/p/3fe1bd4b6bde81aaa955ded001bcf18d
