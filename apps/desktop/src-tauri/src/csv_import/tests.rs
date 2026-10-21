@@ -408,3 +408,6 @@ mod regressions;
 
 #[path = "target_tests.rs"]
 mod target_acceptance;
+
+#[path = "identity_tests.rs"]
+mod identity;
