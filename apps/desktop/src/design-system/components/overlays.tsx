@@ -316,7 +316,14 @@ export function DropdownMenu({ trigger, items, align = "end", label }: DropdownM
                 {it.label}
               </RadixMenu.Label>
             ) : (
-              <RadixMenu.Item key={i} className={cx("ds-menu-item", it.tone === "danger" && "is-danger")} disabled={it.disabled} onSelect={it.onSelect}>
+              <RadixMenu.Item
+                key={i}
+                className={cx("ds-menu-item", it.tone === "danger" && "is-danger")}
+                disabled={it.disabled}
+                // Run the action after the menu has closed and returned focus to its trigger. An action that opens
+                // a Dialog would otherwise see that focus return as "focus outside" and close straight away.
+                onSelect={() => window.setTimeout(it.onSelect, 0)}
+              >
                 {it.icon}
                 <span className="ds-menu-text">{it.label}</span>
                 {it.shortcut && <span className="ds-menu-shortcut">{it.shortcut}</span>}

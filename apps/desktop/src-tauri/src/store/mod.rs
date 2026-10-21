@@ -88,3 +88,9 @@ mod build10_tests;
 mod build9_tests;
 #[cfg(test)]
 pub(crate) mod tests;
+
+pub mod evidence;
+pub mod reconciliation;
+
+#[cfg(test)]
+mod evidence_tests;

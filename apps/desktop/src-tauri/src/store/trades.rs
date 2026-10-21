@@ -48,7 +48,7 @@ impl TradeInput {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Trade {
     pub id: String,
@@ -78,7 +78,7 @@ pub struct Trade {
 }
 
 /// The buy/sell fill pair a trade was normalized from, exactly as supplied.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RoundTripSource {
     pub buy_fill_id: Option<String>,

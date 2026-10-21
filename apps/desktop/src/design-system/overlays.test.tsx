@@ -209,7 +209,9 @@ describe("Toast", () => {
         </ToastProvider>,
       );
       await userEvent.click(screen.getByRole("button", { name: "Go" }));
-      expect(screen.getByRole("status").textContent).toContain("Imported 64 trades");
+      const polite = screen.getByRole("region", { name: "Notifications" }).querySelector("[data-toast-live='polite']")!;
+      expect(polite.getAttribute("aria-live")).toBe("polite");
+      expect(polite.textContent).toContain("Imported 64 trades");
       await act(async () => vi.advanceTimersByTime(5100));
       expect(screen.queryByText("Imported 64 trades")).toBeNull();
     } finally {
@@ -226,7 +228,9 @@ describe("Toast", () => {
       );
       await userEvent.click(screen.getByRole("button", { name: "Go" }));
       await act(async () => vi.advanceTimersByTime(60_000));
-      expect(screen.getByRole("alert").textContent).toContain("Couldn't export");
+      const assertive = screen.getByRole("region", { name: "Notifications" }).querySelector("[data-toast-live='assertive']")!;
+      expect(assertive.getAttribute("aria-live")).toBe("assertive");
+      expect(assertive.textContent).toContain("Couldn't export");
       await userEvent.click(screen.getByRole("button", { name: "Dismiss notification" }));
       expect(screen.queryByText("Couldn't export")).toBeNull();
     } finally {
@@ -253,5 +257,29 @@ describe("StatusIndicator", () => {
     expect(unknown.querySelector("svg")).toBeTruthy();
     expect(unknown.textContent).toContain("No rulebook for this account");
     expect(screen.getByText("Safe").parentElement!.className).toContain("ds-status-success");
+  });
+});
+
+describe("DropdownMenu opening a dialog", () => {
+  it("keeps a dialog opened from a menu item open, with focus inside it", async () => {
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <DropdownMenu trigger={<Button>Actions</Button>} items={[{ label: "Edit…", onSelect: () => setOpen(true) }]} />
+          <Dialog open={open} onOpenChange={setOpen} title="Edit account"><input aria-label="Name" /></Dialog>
+        </>
+      );
+    }
+    render(<Harness />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Edit…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit account" });
+    await act(async () => new Promise(r => setTimeout(r, 50)));
+    expect(screen.getByRole("dialog", { name: "Edit account" })).toBe(dialog);
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Actions" })));
   });
 });

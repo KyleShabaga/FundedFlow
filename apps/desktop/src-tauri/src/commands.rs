@@ -355,3 +355,106 @@ pub fn initialize_in_background(app: AppHandle) {
         app.state::<Runtime>().initialize();
     });
 }
+
+use crate::store::{evidence, reconciliation};
+
+#[tauri::command]
+pub async fn get_account_risk_inputs(
+    db: State<'_, Runtime>,
+    query: evidence::RiskInputsQuery,
+) -> AppResult<serde_json::Value> {
+    db.with(|c| evidence::risk_inputs(c, query))
+}
+
+#[tauri::command]
+pub async fn create_financial_observation(
+    db: State<'_, Runtime>,
+    input: evidence::ObservationInput,
+) -> AppResult<evidence::Observation> {
+    db.with(|c| evidence::create(c, input))
+}
+
+#[tauri::command]
+pub async fn get_financial_observation(
+    db: State<'_, Runtime>,
+    id: String,
+) -> AppResult<evidence::Observation> {
+    db.with(|c| evidence::get(c, &id))
+}
+
+#[tauri::command]
+pub async fn list_financial_observations(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<Vec<evidence::Observation>> {
+    db.with(|c| evidence::list(c, &account_id))
+}
+
+#[tauri::command]
+pub async fn correct_financial_observation(
+    db: State<'_, Runtime>,
+    id: String,
+    input: evidence::ObservationCorrection,
+) -> AppResult<evidence::Observation> {
+    db.with(|c| evidence::correct(c, &id, input))
+}
+
+#[tauri::command]
+pub async fn get_ledger_history(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<Vec<ledger::LedgerRevision>> {
+    db.with(|c| ledger::history(c, &account_id))
+}
+
+#[tauri::command]
+pub async fn correct_ledger_entry(
+    db: State<'_, Runtime>,
+    id: String,
+    input: LedgerEntryInput,
+    metadata: evidence::CorrectionMetadata,
+) -> AppResult<LedgerEntry> {
+    db.with(|c| ledger::update_with_metadata(c, &id, input, metadata))
+}
+
+#[tauri::command]
+pub async fn remove_ledger_entry_with_reason(
+    db: State<'_, Runtime>,
+    id: String,
+    metadata: evidence::CorrectionMetadata,
+) -> AppResult<()> {
+    db.with(|c| ledger::delete_with_metadata(c, &id, metadata))
+}
+
+#[tauri::command]
+pub async fn reconcile_financial_balance(
+    db: State<'_, Runtime>,
+    request: reconciliation::ReconciliationRequest,
+) -> AppResult<reconciliation::Reconciliation> {
+    db.with(|c| reconciliation::create(c, request))
+}
+
+#[tauri::command]
+pub async fn list_financial_reconciliations(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<Vec<reconciliation::Reconciliation>> {
+    db.with(|c| reconciliation::list(c, &account_id))
+}
+
+#[tauri::command]
+pub async fn resolve_financial_reconciliation(
+    db: State<'_, Runtime>,
+    id: String,
+    input: reconciliation::ResolutionInput,
+) -> AppResult<reconciliation::Resolution> {
+    db.with(|c| reconciliation::resolve(c, &id, input))
+}
+
+#[tauri::command]
+pub async fn list_reconciliation_resolutions(
+    db: State<'_, Runtime>,
+    id: String,
+) -> AppResult<Vec<reconciliation::Resolution>> {
+    db.with(|c| reconciliation::resolutions(c, &id))
+}

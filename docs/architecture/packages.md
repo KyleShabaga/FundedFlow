@@ -106,8 +106,7 @@ Money rules, all matching `apps/desktop/src-tauri/src/domain.rs`:
     These cases carry `tsDivergence` in the fixture.
 - Money arithmetic uses `bigint` micro-units, never `number`. Exact price/quantity arithmetic (Build 16) will use
   `decimal.js` with explicit rounding, never its default settings.
-- The contract input schemas still use `Number(v)` for the sign/positive checks they had before extraction. Those
-  checks only give early UI feedback, and Rust re-validates every input.
+- Some legacy account/trade input schemas still use `Number(v)` for sign/positive feedback. Build 15.5 removes that check from ledger amounts in favor of the existing exact money primitives. New financial evidence requires canonical exact micro-units; Rust re-validates every write.
 
 Time rules: instants cross boundaries as UTC ISO 8601 strings with an offset. A trading day comes from three
 separate inputs: an instant, the account's IANA `timezone`, and a wall-clock `tradingDayResetTime`. The reset is
@@ -174,3 +173,7 @@ Never change economics, rounding or dedup identity as a side effect of moving co
   workspace, and commit `package-lock.json`. CI uses `npm ci`.
 - **Domain edits not visible in the app:** start through `npm run dev`/`npm run tauri dev`, which runs the watch
   plugin, or run `npm run dev:domain` next to another Vite process.
+
+## Financial evidence (Build 15.5)
+
+`src/risk` exports canonical AccountRiskInputs, source observations, ledger revisions, deterministic reconciliation and rule-evidence prerequisites. It reuses existing account/trade/catalogue/rulebook schemas and money primitives. Rust remains authoritative for persisted trade economics and writes. Shared reconciliation outputs are pinned to Rust-generated fixtures; no React or provider rules engine is added. See [the API/Build 16 handoff](../handoffs/build-15-5.md).

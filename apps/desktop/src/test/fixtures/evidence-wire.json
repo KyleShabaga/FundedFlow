@@ -1,0 +1,994 @@
+[
+  {
+    "args": {
+      "input": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "actor": "tester",
+        "basis": "balance",
+        "confidence": "user_reported",
+        "confirmation": "user_confirmed",
+        "currency": "USD",
+        "kind": "opening_balance",
+        "note": null,
+        "observedAt": "2026-10-18T00:00:00Z",
+        "sourceCategory": "firm_dashboard",
+        "sourceReference": "synthetic dashboard",
+        "validUntil": "2026-11-01T00:00:00.000Z",
+        "value": "50000"
+      }
+    },
+    "command": "create_financial_observation",
+    "output": {
+      "accountId": "00000000-0000-4000-8000-000000000001",
+      "actor": "tester",
+      "basis": "balance",
+      "confidence": "user_reported",
+      "confirmation": "user_confirmed",
+      "correctionReason": null,
+      "currency": "USD",
+      "effectiveTradingDay": "2026-10-19",
+      "id": "00000000-0000-4000-8000-000000000002",
+      "kind": "opening_balance",
+      "note": null,
+      "observedAt": "2026-10-18T00:00:00.000Z",
+      "recordedAt": "2026-10-21T00:00:00.000Z",
+      "sourceCategory": "firm_dashboard",
+      "sourceReference": "synthetic dashboard",
+      "supersedesId": null,
+      "timezone": "America/New_York",
+      "tradingDayResetTime": "17:00",
+      "validUntil": "2026-11-01T00:00:00.000Z",
+      "value": "50000"
+    }
+  },
+  {
+    "args": {
+      "id": "00000000-0000-4000-8000-000000000003"
+    },
+    "command": "get_financial_observation",
+    "output": {
+      "accountId": "00000000-0000-4000-8000-000000000001",
+      "actor": "tester",
+      "basis": "balance",
+      "confidence": "user_reported",
+      "confirmation": "user_confirmed",
+      "correctionReason": null,
+      "currency": "USD",
+      "effectiveTradingDay": "2026-10-20",
+      "id": "00000000-0000-4000-8000-000000000003",
+      "kind": "balance",
+      "note": null,
+      "observedAt": "2026-10-20T20:00:00.000Z",
+      "recordedAt": "2026-10-21T00:00:00.000Z",
+      "sourceCategory": "firm_dashboard",
+      "sourceReference": "synthetic dashboard",
+      "supersedesId": null,
+      "timezone": "America/New_York",
+      "tradingDayResetTime": "17:00",
+      "validUntil": "2026-11-01T00:00:00.000Z",
+      "value": "50000"
+    }
+  },
+  {
+    "args": {
+      "accountId": "00000000-0000-4000-8000-000000000001"
+    },
+    "command": "list_financial_observations",
+    "output": [
+      {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "actor": "tester",
+        "basis": "balance",
+        "confidence": "user_reported",
+        "confirmation": "user_confirmed",
+        "correctionReason": null,
+        "currency": "USD",
+        "effectiveTradingDay": "2026-10-19",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "kind": "opening_balance",
+        "note": null,
+        "observedAt": "2026-10-18T00:00:00.000Z",
+        "recordedAt": "2026-10-21T00:00:00.000Z",
+        "sourceCategory": "firm_dashboard",
+        "sourceReference": "synthetic dashboard",
+        "supersedesId": null,
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00",
+        "validUntil": "2026-11-01T00:00:00.000Z",
+        "value": "50000"
+      },
+      {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "actor": "tester",
+        "basis": "balance",
+        "confidence": "user_reported",
+        "confirmation": "user_confirmed",
+        "correctionReason": null,
+        "currency": "USD",
+        "effectiveTradingDay": "2026-10-20",
+        "id": "00000000-0000-4000-8000-000000000003",
+        "kind": "balance",
+        "note": null,
+        "observedAt": "2026-10-20T20:00:00.000Z",
+        "recordedAt": "2026-10-21T00:00:00.000Z",
+        "sourceCategory": "firm_dashboard",
+        "sourceReference": "synthetic dashboard",
+        "supersedesId": null,
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00",
+        "validUntil": "2026-11-01T00:00:00.000Z",
+        "value": "50000"
+      },
+      {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "actor": "tester",
+        "basis": "balance",
+        "confidence": "user_reported",
+        "confirmation": "user_confirmed",
+        "correctionReason": "corrected dashboard",
+        "currency": "USD",
+        "effectiveTradingDay": "2026-10-20",
+        "id": "00000000-0000-4000-8000-000000000004",
+        "kind": "balance",
+        "note": null,
+        "observedAt": "2026-10-20T20:00:00.000Z",
+        "recordedAt": "2026-10-21T00:00:00.000Z",
+        "sourceCategory": "firm_dashboard",
+        "sourceReference": "synthetic dashboard",
+        "supersedesId": "00000000-0000-4000-8000-000000000003",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00",
+        "validUntil": "2026-11-01T00:00:00.000Z",
+        "value": "50001"
+      }
+    ]
+  },
+  {
+    "args": {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "input": {
+        "reason": "corrected dashboard",
+        "replacement": {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "actor": "tester",
+          "basis": "balance",
+          "confidence": "user_reported",
+          "confirmation": "user_confirmed",
+          "currency": "USD",
+          "kind": "balance",
+          "note": null,
+          "observedAt": "2026-10-20T20:00:00Z",
+          "sourceCategory": "firm_dashboard",
+          "sourceReference": "synthetic dashboard",
+          "validUntil": "2026-11-01T00:00:00.000Z",
+          "value": "50001"
+        }
+      }
+    },
+    "command": "correct_financial_observation",
+    "output": {
+      "accountId": "00000000-0000-4000-8000-000000000001",
+      "actor": "tester",
+      "basis": "balance",
+      "confidence": "user_reported",
+      "confirmation": "user_confirmed",
+      "correctionReason": "corrected dashboard",
+      "currency": "USD",
+      "effectiveTradingDay": "2026-10-20",
+      "id": "00000000-0000-4000-8000-000000000004",
+      "kind": "balance",
+      "note": null,
+      "observedAt": "2026-10-20T20:00:00.000Z",
+      "recordedAt": "2026-10-21T00:00:00.000Z",
+      "sourceCategory": "firm_dashboard",
+      "sourceReference": "synthetic dashboard",
+      "supersedesId": "00000000-0000-4000-8000-000000000003",
+      "timezone": "America/New_York",
+      "tradingDayResetTime": "17:00",
+      "validUntil": "2026-11-01T00:00:00.000Z",
+      "value": "50001"
+    }
+  },
+  {
+    "args": {
+      "accountId": "00000000-0000-4000-8000-000000000001"
+    },
+    "command": "get_ledger_history",
+    "output": [
+      {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "actor": "local_user:legacy_api",
+        "deleted": false,
+        "entry": {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "affectsBalance": true,
+          "amount": "-1",
+          "createdAt": "2026-10-21T00:00:00.000Z",
+          "effectiveAt": "2026-10-19T20:00:00.000Z",
+          "id": "00000000-0000-4000-8000-000000000005",
+          "kind": "payout",
+          "note": null,
+          "tradingDay": "2026-10-19",
+          "updatedAt": "2026-10-21T00:00:00.000Z"
+        },
+        "entryId": "00000000-0000-4000-8000-000000000005",
+        "id": "00000000-0000-4000-8000-000000000006",
+        "operation": "create",
+        "reason": "Legacy ledger.create; no reason supplied by caller",
+        "recordedAt": "2026-10-21T00:00:00.000Z",
+        "supersedesId": null
+      },
+      {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "actor": "tester",
+        "deleted": false,
+        "entry": {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "affectsBalance": true,
+          "amount": "-2",
+          "createdAt": "2026-10-21T00:00:00.000Z",
+          "effectiveAt": "2026-10-19T20:00:00.000Z",
+          "id": "00000000-0000-4000-8000-000000000005",
+          "kind": "payout",
+          "note": null,
+          "tradingDay": "2026-10-19",
+          "updatedAt": "2026-10-21T00:00:00.000Z"
+        },
+        "entryId": "00000000-0000-4000-8000-000000000005",
+        "id": "00000000-0000-4000-8000-000000000007",
+        "operation": "update",
+        "reason": "correct amount",
+        "recordedAt": "2026-10-21T00:00:00.000Z",
+        "supersedesId": "00000000-0000-4000-8000-000000000006"
+      }
+    ]
+  },
+  {
+    "args": {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "input": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "affectsBalance": null,
+        "amount": "-2",
+        "effectiveAt": "2026-10-19T20:00:00Z",
+        "kind": "payout",
+        "note": null
+      },
+      "metadata": {
+        "actor": "tester",
+        "reason": "correct amount"
+      }
+    },
+    "command": "correct_ledger_entry",
+    "output": {
+      "accountId": "00000000-0000-4000-8000-000000000001",
+      "affectsBalance": true,
+      "amount": "-2",
+      "createdAt": "2026-10-21T00:00:00.000Z",
+      "effectiveAt": "2026-10-19T20:00:00.000Z",
+      "id": "00000000-0000-4000-8000-000000000005",
+      "kind": "payout",
+      "note": null,
+      "tradingDay": "2026-10-19",
+      "updatedAt": "2026-10-21T00:00:00.000Z"
+    }
+  },
+  {
+    "args": {
+      "query": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "asOf": "2026-10-20T20:00:00Z",
+        "coverage": {
+          "baseline": "available",
+          "closedTrades": "available",
+          "eodHistory": "missing",
+          "fees": "available",
+          "intradayHistory": "unsupported",
+          "ledger": "available",
+          "openPositions": "missing",
+          "sourceReference": "synthetic interval checked by user"
+        }
+      }
+    },
+    "command": "get_account_risk_inputs",
+    "output": {
+      "account": {
+        "accountType": "evaluation",
+        "archivedAt": null,
+        "broker": "Tradovate",
+        "createdAt": "2026-10-21T00:00:00.000Z",
+        "currency": "USD",
+        "externalRef": null,
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": "Wire",
+        "notes": null,
+        "predecessorAccountId": null,
+        "propFirm": "Topstep",
+        "startingBalance": "50000",
+        "status": "active",
+        "successorAccountId": null,
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00",
+        "updatedAt": "2026-10-21T00:00:00.000Z"
+      },
+      "applicableAssignment": null,
+      "applicableRulebook": null,
+      "asOf": "2026-10-20T20:00:00.000Z",
+      "assignments": [],
+      "catalogueLink": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "catalogueVersionId": null,
+        "parentAccountId": null,
+        "programmeVariantId": null,
+        "providerId": "00000000-0000-4000-8000-000000000008",
+        "selectedPhasePathId": null,
+        "sizeSource": "unknown"
+      },
+      "coverage": {
+        "baseline": "available",
+        "closedTrades": "available",
+        "eodHistory": "missing",
+        "fees": "available",
+        "intradayHistory": "unsupported",
+        "ledger": "available",
+        "openPositions": "unsupported",
+        "sourceReference": "synthetic interval checked by user"
+      },
+      "effectiveTradingDay": "2026-10-20",
+      "ledger": [
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "affectsBalance": true,
+          "amount": "-2",
+          "createdAt": "2026-10-21T00:00:00.000Z",
+          "effectiveAt": "2026-10-19T20:00:00.000Z",
+          "id": "00000000-0000-4000-8000-000000000005",
+          "kind": "payout",
+          "note": null,
+          "tradingDay": "2026-10-19",
+          "updatedAt": "2026-10-21T00:00:00.000Z"
+        }
+      ],
+      "ledgerHistory": [
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "actor": "local_user:legacy_api",
+          "deleted": false,
+          "entry": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "affectsBalance": true,
+            "amount": "-1",
+            "createdAt": "2026-10-21T00:00:00.000Z",
+            "effectiveAt": "2026-10-19T20:00:00.000Z",
+            "id": "00000000-0000-4000-8000-000000000005",
+            "kind": "payout",
+            "note": null,
+            "tradingDay": "2026-10-19",
+            "updatedAt": "2026-10-21T00:00:00.000Z"
+          },
+          "entryId": "00000000-0000-4000-8000-000000000005",
+          "id": "00000000-0000-4000-8000-000000000006",
+          "operation": "create",
+          "reason": "Legacy ledger.create; no reason supplied by caller",
+          "recordedAt": "2026-10-21T00:00:00.000Z",
+          "supersedesId": null
+        },
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "actor": "tester",
+          "deleted": false,
+          "entry": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "affectsBalance": true,
+            "amount": "-2",
+            "createdAt": "2026-10-21T00:00:00.000Z",
+            "effectiveAt": "2026-10-19T20:00:00.000Z",
+            "id": "00000000-0000-4000-8000-000000000005",
+            "kind": "payout",
+            "note": null,
+            "tradingDay": "2026-10-19",
+            "updatedAt": "2026-10-21T00:00:00.000Z"
+          },
+          "entryId": "00000000-0000-4000-8000-000000000005",
+          "id": "00000000-0000-4000-8000-000000000007",
+          "operation": "update",
+          "reason": "correct amount",
+          "recordedAt": "2026-10-21T00:00:00.000Z",
+          "supersedesId": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "missingInputs": [
+        "openPositions",
+        "eodHistory",
+        "intradayHistory",
+        "rulebook_assignment"
+      ],
+      "observations": [
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "actor": "tester",
+          "basis": "balance",
+          "confidence": "user_reported",
+          "confirmation": "user_confirmed",
+          "correctionReason": null,
+          "currency": "USD",
+          "effectiveTradingDay": "2026-10-19",
+          "id": "00000000-0000-4000-8000-000000000002",
+          "kind": "opening_balance",
+          "note": null,
+          "observedAt": "2026-10-18T00:00:00.000Z",
+          "recordedAt": "2026-10-21T00:00:00.000Z",
+          "sourceCategory": "firm_dashboard",
+          "sourceReference": "synthetic dashboard",
+          "supersedesId": null,
+          "timezone": "America/New_York",
+          "tradingDayResetTime": "17:00",
+          "validUntil": "2026-11-01T00:00:00.000Z",
+          "value": "50000"
+        },
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "actor": "tester",
+          "basis": "balance",
+          "confidence": "user_reported",
+          "confirmation": "user_confirmed",
+          "correctionReason": null,
+          "currency": "USD",
+          "effectiveTradingDay": "2026-10-20",
+          "id": "00000000-0000-4000-8000-000000000003",
+          "kind": "balance",
+          "note": null,
+          "observedAt": "2026-10-20T20:00:00.000Z",
+          "recordedAt": "2026-10-21T00:00:00.000Z",
+          "sourceCategory": "firm_dashboard",
+          "sourceReference": "synthetic dashboard",
+          "supersedesId": null,
+          "timezone": "America/New_York",
+          "tradingDayResetTime": "17:00",
+          "validUntil": "2026-11-01T00:00:00.000Z",
+          "value": "50000"
+        },
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "actor": "tester",
+          "basis": "balance",
+          "confidence": "user_reported",
+          "confirmation": "user_confirmed",
+          "correctionReason": "corrected dashboard",
+          "currency": "USD",
+          "effectiveTradingDay": "2026-10-20",
+          "id": "00000000-0000-4000-8000-000000000004",
+          "kind": "balance",
+          "note": null,
+          "observedAt": "2026-10-20T20:00:00.000Z",
+          "recordedAt": "2026-10-21T00:00:00.000Z",
+          "sourceCategory": "firm_dashboard",
+          "sourceReference": "synthetic dashboard",
+          "supersedesId": "00000000-0000-4000-8000-000000000003",
+          "timezone": "America/New_York",
+          "tradingDayResetTime": "17:00",
+          "validUntil": "2026-11-01T00:00:00.000Z",
+          "value": "50001"
+        }
+      ],
+      "phaseHistory": [],
+      "rulebookVersions": [],
+      "schemaVersion": 1,
+      "trades": []
+    }
+  },
+  {
+    "args": {
+      "request": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "asOf": "2026-10-20T20:00:00.000Z",
+        "baselineObservationId": "00000000-0000-4000-8000-000000000002",
+        "coverage": {
+          "baseline": "available",
+          "closedTrades": "available",
+          "eodHistory": "missing",
+          "fees": "available",
+          "intradayHistory": "unsupported",
+          "ledger": "available",
+          "openPositions": "missing",
+          "sourceReference": "synthetic interval checked by user"
+        },
+        "evaluatedAt": "2026-10-20T20:00:00.000Z",
+        "observationId": "00000000-0000-4000-8000-000000000004"
+      }
+    },
+    "command": "reconcile_financial_balance",
+    "output": {
+      "accountId": "00000000-0000-4000-8000-000000000001",
+      "baseline": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "actor": "tester",
+        "basis": "balance",
+        "confidence": "user_reported",
+        "confirmation": "user_confirmed",
+        "correctionReason": null,
+        "currency": "USD",
+        "effectiveTradingDay": "2026-10-19",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "kind": "opening_balance",
+        "note": null,
+        "observedAt": "2026-10-18T00:00:00.000Z",
+        "recordedAt": "2026-10-21T00:00:00.000Z",
+        "sourceCategory": "firm_dashboard",
+        "sourceReference": "synthetic dashboard",
+        "supersedesId": null,
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00",
+        "validUntil": "2026-11-01T00:00:00.000Z",
+        "value": "50000"
+      },
+      "id": "00000000-0000-4000-8000-000000000009",
+      "ledger": [
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "affectsBalance": true,
+          "amount": "-2",
+          "createdAt": "2026-10-21T00:00:00.000Z",
+          "effectiveAt": "2026-10-19T20:00:00.000Z",
+          "id": "00000000-0000-4000-8000-000000000005",
+          "kind": "payout",
+          "note": null,
+          "tradingDay": "2026-10-19",
+          "updatedAt": "2026-10-21T00:00:00.000Z"
+        }
+      ],
+      "ledgerHistory": [
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "actor": "local_user:legacy_api",
+          "deleted": false,
+          "entry": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "affectsBalance": true,
+            "amount": "-1",
+            "createdAt": "2026-10-21T00:00:00.000Z",
+            "effectiveAt": "2026-10-19T20:00:00.000Z",
+            "id": "00000000-0000-4000-8000-000000000005",
+            "kind": "payout",
+            "note": null,
+            "tradingDay": "2026-10-19",
+            "updatedAt": "2026-10-21T00:00:00.000Z"
+          },
+          "entryId": "00000000-0000-4000-8000-000000000005",
+          "id": "00000000-0000-4000-8000-000000000006",
+          "operation": "create",
+          "reason": "Legacy ledger.create; no reason supplied by caller",
+          "recordedAt": "2026-10-21T00:00:00.000Z",
+          "supersedesId": null
+        },
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "actor": "tester",
+          "deleted": false,
+          "entry": {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "affectsBalance": true,
+            "amount": "-2",
+            "createdAt": "2026-10-21T00:00:00.000Z",
+            "effectiveAt": "2026-10-19T20:00:00.000Z",
+            "id": "00000000-0000-4000-8000-000000000005",
+            "kind": "payout",
+            "note": null,
+            "tradingDay": "2026-10-19",
+            "updatedAt": "2026-10-21T00:00:00.000Z"
+          },
+          "entryId": "00000000-0000-4000-8000-000000000005",
+          "id": "00000000-0000-4000-8000-000000000007",
+          "operation": "update",
+          "reason": "correct amount",
+          "recordedAt": "2026-10-21T00:00:00.000Z",
+          "supersedesId": "00000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "observation": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "actor": "tester",
+        "basis": "balance",
+        "confidence": "user_reported",
+        "confirmation": "user_confirmed",
+        "correctionReason": "corrected dashboard",
+        "currency": "USD",
+        "effectiveTradingDay": "2026-10-20",
+        "id": "00000000-0000-4000-8000-000000000004",
+        "kind": "balance",
+        "note": null,
+        "observedAt": "2026-10-20T20:00:00.000Z",
+        "recordedAt": "2026-10-21T00:00:00.000Z",
+        "sourceCategory": "firm_dashboard",
+        "sourceReference": "synthetic dashboard",
+        "supersedesId": "00000000-0000-4000-8000-000000000003",
+        "timezone": "America/New_York",
+        "tradingDayResetTime": "17:00",
+        "validUntil": "2026-11-01T00:00:00.000Z",
+        "value": "50001"
+      },
+      "observations": [
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "actor": "tester",
+          "basis": "balance",
+          "confidence": "user_reported",
+          "confirmation": "user_confirmed",
+          "correctionReason": null,
+          "currency": "USD",
+          "effectiveTradingDay": "2026-10-19",
+          "id": "00000000-0000-4000-8000-000000000002",
+          "kind": "opening_balance",
+          "note": null,
+          "observedAt": "2026-10-18T00:00:00.000Z",
+          "recordedAt": "2026-10-21T00:00:00.000Z",
+          "sourceCategory": "firm_dashboard",
+          "sourceReference": "synthetic dashboard",
+          "supersedesId": null,
+          "timezone": "America/New_York",
+          "tradingDayResetTime": "17:00",
+          "validUntil": "2026-11-01T00:00:00.000Z",
+          "value": "50000"
+        },
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "actor": "tester",
+          "basis": "balance",
+          "confidence": "user_reported",
+          "confirmation": "user_confirmed",
+          "correctionReason": null,
+          "currency": "USD",
+          "effectiveTradingDay": "2026-10-20",
+          "id": "00000000-0000-4000-8000-000000000003",
+          "kind": "balance",
+          "note": null,
+          "observedAt": "2026-10-20T20:00:00.000Z",
+          "recordedAt": "2026-10-21T00:00:00.000Z",
+          "sourceCategory": "firm_dashboard",
+          "sourceReference": "synthetic dashboard",
+          "supersedesId": null,
+          "timezone": "America/New_York",
+          "tradingDayResetTime": "17:00",
+          "validUntil": "2026-11-01T00:00:00.000Z",
+          "value": "50000"
+        },
+        {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "actor": "tester",
+          "basis": "balance",
+          "confidence": "user_reported",
+          "confirmation": "user_confirmed",
+          "correctionReason": "corrected dashboard",
+          "currency": "USD",
+          "effectiveTradingDay": "2026-10-20",
+          "id": "00000000-0000-4000-8000-000000000004",
+          "kind": "balance",
+          "note": null,
+          "observedAt": "2026-10-20T20:00:00.000Z",
+          "recordedAt": "2026-10-21T00:00:00.000Z",
+          "sourceCategory": "firm_dashboard",
+          "sourceReference": "synthetic dashboard",
+          "supersedesId": "00000000-0000-4000-8000-000000000003",
+          "timezone": "America/New_York",
+          "tradingDayResetTime": "17:00",
+          "validUntil": "2026-11-01T00:00:00.000Z",
+          "value": "50001"
+        }
+      ],
+      "recordedAt": "2026-10-21T00:00:00.000Z",
+      "request": {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "asOf": "2026-10-20T20:00:00.000Z",
+        "baselineObservationId": "00000000-0000-4000-8000-000000000002",
+        "coverage": {
+          "baseline": "available",
+          "closedTrades": "available",
+          "eodHistory": "missing",
+          "fees": "available",
+          "intradayHistory": "unsupported",
+          "ledger": "available",
+          "openPositions": "missing",
+          "sourceReference": "synthetic interval checked by user"
+        },
+        "evaluatedAt": "2026-10-20T20:00:00.000Z",
+        "observationId": "00000000-0000-4000-8000-000000000004"
+      },
+      "result": {
+        "asOf": "2026-10-20T20:00:00.000Z",
+        "derivedBalance": "49998",
+        "difference": "3",
+        "freshness": "current",
+        "missingInputs": [],
+        "nextVerificationAction": "Review missing trades, fees and movements; do not auto-balance",
+        "reasonCode": "variance_requires_review",
+        "reconciliationStatus": "mismatched",
+        "sourceReferences": [
+          "00000000-0000-4000-8000-000000000002",
+          "00000000-0000-4000-8000-000000000004",
+          "synthetic dashboard",
+          "synthetic dashboard",
+          "synthetic interval checked by user",
+          "00000000-0000-4000-8000-000000000005"
+        ],
+        "sourceSummary": "User-reported evidence compared with journal bookkeeping; no official compliance determination"
+      },
+      "supersededIds": [
+        "00000000-0000-4000-8000-000000000003"
+      ],
+      "trades": []
+    }
+  },
+  {
+    "args": {
+      "accountId": "00000000-0000-4000-8000-000000000001"
+    },
+    "command": "list_financial_reconciliations",
+    "output": [
+      {
+        "accountId": "00000000-0000-4000-8000-000000000001",
+        "baseline": {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "actor": "tester",
+          "basis": "balance",
+          "confidence": "user_reported",
+          "confirmation": "user_confirmed",
+          "correctionReason": null,
+          "currency": "USD",
+          "effectiveTradingDay": "2026-10-19",
+          "id": "00000000-0000-4000-8000-000000000002",
+          "kind": "opening_balance",
+          "note": null,
+          "observedAt": "2026-10-18T00:00:00.000Z",
+          "recordedAt": "2026-10-21T00:00:00.000Z",
+          "sourceCategory": "firm_dashboard",
+          "sourceReference": "synthetic dashboard",
+          "supersedesId": null,
+          "timezone": "America/New_York",
+          "tradingDayResetTime": "17:00",
+          "validUntil": "2026-11-01T00:00:00.000Z",
+          "value": "50000"
+        },
+        "id": "00000000-0000-4000-8000-000000000009",
+        "ledger": [
+          {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "affectsBalance": true,
+            "amount": "-2",
+            "createdAt": "2026-10-21T00:00:00.000Z",
+            "effectiveAt": "2026-10-19T20:00:00.000Z",
+            "id": "00000000-0000-4000-8000-000000000005",
+            "kind": "payout",
+            "note": null,
+            "tradingDay": "2026-10-19",
+            "updatedAt": "2026-10-21T00:00:00.000Z"
+          }
+        ],
+        "ledgerHistory": [
+          {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "actor": "local_user:legacy_api",
+            "deleted": false,
+            "entry": {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "affectsBalance": true,
+              "amount": "-1",
+              "createdAt": "2026-10-21T00:00:00.000Z",
+              "effectiveAt": "2026-10-19T20:00:00.000Z",
+              "id": "00000000-0000-4000-8000-000000000005",
+              "kind": "payout",
+              "note": null,
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-21T00:00:00.000Z"
+            },
+            "entryId": "00000000-0000-4000-8000-000000000005",
+            "id": "00000000-0000-4000-8000-000000000006",
+            "operation": "create",
+            "reason": "Legacy ledger.create; no reason supplied by caller",
+            "recordedAt": "2026-10-21T00:00:00.000Z",
+            "supersedesId": null
+          },
+          {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "actor": "tester",
+            "deleted": false,
+            "entry": {
+              "accountId": "00000000-0000-4000-8000-000000000001",
+              "affectsBalance": true,
+              "amount": "-2",
+              "createdAt": "2026-10-21T00:00:00.000Z",
+              "effectiveAt": "2026-10-19T20:00:00.000Z",
+              "id": "00000000-0000-4000-8000-000000000005",
+              "kind": "payout",
+              "note": null,
+              "tradingDay": "2026-10-19",
+              "updatedAt": "2026-10-21T00:00:00.000Z"
+            },
+            "entryId": "00000000-0000-4000-8000-000000000005",
+            "id": "00000000-0000-4000-8000-000000000007",
+            "operation": "update",
+            "reason": "correct amount",
+            "recordedAt": "2026-10-21T00:00:00.000Z",
+            "supersedesId": "00000000-0000-4000-8000-000000000006"
+          }
+        ],
+        "observation": {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "actor": "tester",
+          "basis": "balance",
+          "confidence": "user_reported",
+          "confirmation": "user_confirmed",
+          "correctionReason": "corrected dashboard",
+          "currency": "USD",
+          "effectiveTradingDay": "2026-10-20",
+          "id": "00000000-0000-4000-8000-000000000004",
+          "kind": "balance",
+          "note": null,
+          "observedAt": "2026-10-20T20:00:00.000Z",
+          "recordedAt": "2026-10-21T00:00:00.000Z",
+          "sourceCategory": "firm_dashboard",
+          "sourceReference": "synthetic dashboard",
+          "supersedesId": "00000000-0000-4000-8000-000000000003",
+          "timezone": "America/New_York",
+          "tradingDayResetTime": "17:00",
+          "validUntil": "2026-11-01T00:00:00.000Z",
+          "value": "50001"
+        },
+        "observations": [
+          {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "actor": "tester",
+            "basis": "balance",
+            "confidence": "user_reported",
+            "confirmation": "user_confirmed",
+            "correctionReason": null,
+            "currency": "USD",
+            "effectiveTradingDay": "2026-10-19",
+            "id": "00000000-0000-4000-8000-000000000002",
+            "kind": "opening_balance",
+            "note": null,
+            "observedAt": "2026-10-18T00:00:00.000Z",
+            "recordedAt": "2026-10-21T00:00:00.000Z",
+            "sourceCategory": "firm_dashboard",
+            "sourceReference": "synthetic dashboard",
+            "supersedesId": null,
+            "timezone": "America/New_York",
+            "tradingDayResetTime": "17:00",
+            "validUntil": "2026-11-01T00:00:00.000Z",
+            "value": "50000"
+          },
+          {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "actor": "tester",
+            "basis": "balance",
+            "confidence": "user_reported",
+            "confirmation": "user_confirmed",
+            "correctionReason": null,
+            "currency": "USD",
+            "effectiveTradingDay": "2026-10-20",
+            "id": "00000000-0000-4000-8000-000000000003",
+            "kind": "balance",
+            "note": null,
+            "observedAt": "2026-10-20T20:00:00.000Z",
+            "recordedAt": "2026-10-21T00:00:00.000Z",
+            "sourceCategory": "firm_dashboard",
+            "sourceReference": "synthetic dashboard",
+            "supersedesId": null,
+            "timezone": "America/New_York",
+            "tradingDayResetTime": "17:00",
+            "validUntil": "2026-11-01T00:00:00.000Z",
+            "value": "50000"
+          },
+          {
+            "accountId": "00000000-0000-4000-8000-000000000001",
+            "actor": "tester",
+            "basis": "balance",
+            "confidence": "user_reported",
+            "confirmation": "user_confirmed",
+            "correctionReason": "corrected dashboard",
+            "currency": "USD",
+            "effectiveTradingDay": "2026-10-20",
+            "id": "00000000-0000-4000-8000-000000000004",
+            "kind": "balance",
+            "note": null,
+            "observedAt": "2026-10-20T20:00:00.000Z",
+            "recordedAt": "2026-10-21T00:00:00.000Z",
+            "sourceCategory": "firm_dashboard",
+            "sourceReference": "synthetic dashboard",
+            "supersedesId": "00000000-0000-4000-8000-000000000003",
+            "timezone": "America/New_York",
+            "tradingDayResetTime": "17:00",
+            "validUntil": "2026-11-01T00:00:00.000Z",
+            "value": "50001"
+          }
+        ],
+        "recordedAt": "2026-10-21T00:00:00.000Z",
+        "request": {
+          "accountId": "00000000-0000-4000-8000-000000000001",
+          "asOf": "2026-10-20T20:00:00.000Z",
+          "baselineObservationId": "00000000-0000-4000-8000-000000000002",
+          "coverage": {
+            "baseline": "available",
+            "closedTrades": "available",
+            "eodHistory": "missing",
+            "fees": "available",
+            "intradayHistory": "unsupported",
+            "ledger": "available",
+            "openPositions": "missing",
+            "sourceReference": "synthetic interval checked by user"
+          },
+          "evaluatedAt": "2026-10-20T20:00:00.000Z",
+          "observationId": "00000000-0000-4000-8000-000000000004"
+        },
+        "result": {
+          "asOf": "2026-10-20T20:00:00.000Z",
+          "derivedBalance": "49998",
+          "difference": "3",
+          "freshness": "current",
+          "missingInputs": [],
+          "nextVerificationAction": "Review missing trades, fees and movements; do not auto-balance",
+          "reasonCode": "variance_requires_review",
+          "reconciliationStatus": "mismatched",
+          "sourceReferences": [
+            "00000000-0000-4000-8000-000000000002",
+            "00000000-0000-4000-8000-000000000004",
+            "synthetic dashboard",
+            "synthetic dashboard",
+            "synthetic interval checked by user",
+            "00000000-0000-4000-8000-000000000005"
+          ],
+          "sourceSummary": "User-reported evidence compared with journal bookkeeping; no official compliance determination"
+        },
+        "supersededIds": [
+          "00000000-0000-4000-8000-000000000003"
+        ],
+        "trades": []
+      }
+    ]
+  },
+  {
+    "args": {
+      "id": "00000000-0000-4000-8000-000000000009",
+      "input": {
+        "actor": "tester",
+        "reason": "needs review",
+        "status": "unresolved"
+      }
+    },
+    "command": "resolve_financial_reconciliation",
+    "output": {
+      "actor": "tester",
+      "id": "00000000-0000-4000-8000-000000000010",
+      "reason": "needs review",
+      "reconciliationId": "00000000-0000-4000-8000-000000000009",
+      "recordedAt": "2026-10-21T00:00:00.000Z",
+      "status": "unresolved"
+    }
+  },
+  {
+    "args": {
+      "id": "00000000-0000-4000-8000-000000000009"
+    },
+    "command": "list_reconciliation_resolutions",
+    "output": [
+      {
+        "actor": "tester",
+        "id": "00000000-0000-4000-8000-000000000010",
+        "reason": "needs review",
+        "reconciliationId": "00000000-0000-4000-8000-000000000009",
+        "recordedAt": "2026-10-21T00:00:00.000Z",
+        "status": "unresolved"
+      }
+    ]
+  },
+  {
+    "args": {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "metadata": {
+        "actor": "tester",
+        "reason": "correct amount"
+      }
+    },
+    "command": "remove_ledger_entry_with_reason",
+    "output": null
+  }
+]

@@ -58,3 +58,59 @@ Footer: count, "n archived" link (shows archived accounts), rows per page, pager
 
 ## Open questions
 - Account size label ("$100K"): `account_size_micros` exists in the schema but no command returns it yet.
+
+## Build 15 implementation (2026-10-21)
+
+Code: `apps/desktop/src/features/accounts/` (`components/`, `active-account.ts`, `setup.ts`); routes `/accounts` and
+`/accounts/:accountId`; header selector in the shell's account-context slot. Data only through the Build 14 hooks.
+
+### Decisions
+- **Active account.** One value, `accounts.active_account_id` in the local settings table (survives restarts; no
+  second copy in component state or browser storage). Selection is by id. Archived accounts can't be chosen;
+  finished attempts (passed, failed, closed) can, and are labelled. An archived or missing selection is shown in the
+  selector ("… was archived · choose an account") and never replaced silently. The first account added, or one added
+  while none is active, becomes active. Create/edit/lifecycle dialogs are modal, so the selector can't change the
+  account while a form is unsaved.
+- **Setup completeness** (`setup.ts`) is separate from validity, lifecycle, rulebook verification and risk. A stored
+  account is valid. Evaluation, sim-funded and live-funded accounts show **Needs setup** while the firm or a
+  rulebook assignment in force today (account zone) is missing; personal, demo and other accounts need neither.
+  Unknown while assignments can't be read: never "complete" without the facts. Nothing blocks journaling or imports.
+- **Risk** is shown as "Not calculated yet" (`StatusIndicator` unknown) until Builds 15.5/16. Never Safe.
+- **Archived accounts are read-only** in the UI: view and Restore only (domain contract), even though
+  `update_account` doesn't refuse them (see dependencies).
+- **Edits that re-derive trades.** Changing currency, time zone or day start warns with the trade count from the
+  lineage summary: Rust re-derives trading days and P&L in the same transaction; amounts are not converted. A
+  starting-balance change gets an informational note. A dirty form asks before discarding.
+- **Status changes** use `change_account_status` with an optional cause (empty = unknown), effective time in the
+  account zone and notes. Nothing is archived, deleted or inferred.
+- **New attempt** is a four-step dialog (previous result, new attempt, rulebook, confirm) on the atomic
+  `reset_account_attempt`. The prior result is prefilled only when the account already records it. Rulebook choices
+  are verified, active catalogue versions with their phase/path; "Decide later" is explicit. Catalogue programme
+  selection is not offered (`catalogue: null`): the reset's rulebook applicability already names the phase.
+
+### Differences from the mockup (and why)
+| Mockup | Build 15 | Why |
+|---|---|---|
+| Balance column, "combined balance" KPI | Starting balance column; Current balance KPI shown as unavailable | Build 15.5 stores user-reported balance/equity observations and exact reconciliations (`JournalRepository.evidence`), but no hook or screen enters or shows them yet, and a reconciled balance is not a live balance; currencies are never added together |
+| P&L column | Net P&L = Rust's lineage `netPnl` (known closed trades), with "n unknown" | Rust-computed, never a UI sum; unknown stays unknown |
+| Drawdown used / Profit target meters | Not shown; footnote explains | Needs Build 16 rule evaluation; no meters at zero |
+| "Closest to a limit" KPI | "Need setup" count | Same reason; a truthful, supported fact instead |
+| Status filter All/Active/Passed/Failed/Paused | Live (default)/All/Active/Paused/Passed/Failed/Closed/Archived | Card's history filters and the domain's `filterAccounts` |
+| Import trades button | Not shown | CSV import is Build 18 |
+| Row selection, bulk Archive/Export, Columns menu | Not shown | Not in the card's scope; per-row actions cover archive |
+| Default sort: balance descending | Name ascending; starting balance sorts within each currency | Amounts in different currencies aren't comparable |
+| Size label ("$100K") | Not shown | `account_size_micros` isn't returned by any command (open question above) |
+| Cards view balance | AccountCard with "—" and "Current balance not available yet" | Same as Balance |
+
+### Backend dependencies found (not built here)
+- `update_account` doesn't refuse archived accounts (domain says archived is read-only). The UI enforces it; Rust
+  should too. Owner: backend (Build 10 follow-up).
+- Per-account totals (trade count, net P&L, last import) come from `get_account_lineage` and `list_csv_imports` per
+  account. Fine for tens of accounts; a summary command would scale better. Owner: backend.
+- Restore conflicts carry the conflicting account's name in the Rust message, but Build 14 maps all conflicts to a
+  generic message; the UI explains the likely cause instead.
+- Rulebook assignment from the Accounts page waits for the Build 19 editor.
+- Account edits may change currency, time zone or day start after Build 15.5 observations exist. Observations keep the
+  units and session they were recorded with, so later comparisons refuse mismatches instead of converting. The edit
+  warning covers re-derived trades only; warning about recorded checkpoints needs an evidence hook (future Claude
+  card, with the checkpoint-entry UI).
