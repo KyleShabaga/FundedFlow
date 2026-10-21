@@ -173,13 +173,13 @@ Follow-up: a Triage card to trim those tests' per-step cost, or cap CI workers, 
 (domain + desktop components, journeys and axe accessibility). New script for focused runs:
 `npm run test:journeys -w @fundedflow/desktop`.
 
-Results on the final implementation commit are recorded in the pull request and the table below.
+Local results on the final implementation commit:
 
 | Command | Result |
 |---|---|
 | `npm ci` | ok |
 | `npm run typecheck` | pass |
-| `npm test` | see PR (final commit) |
+| `npm test` | 495 domain + 638 desktop passed (49 desktop files; +75 over the 563 baseline: 66 journey/axe tests in 4 new files, 5 design-system, 3 data-controls, 1 from the rulebook split) |
 | `npm run build` | pass |
 | `npm run check` | pass (domain boundaries; dist 299 exports) |
 | `git diff --check` | pass |
