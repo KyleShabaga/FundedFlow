@@ -21,7 +21,7 @@ from fundedflow_collector.clock import Clock, format_instant, parse_instant
 from fundedflow_collector.config import Settings
 from fundedflow_collector.db import registry, runs
 from fundedflow_collector.db.connection import transaction
-from fundedflow_collector.db.registry import Firm, Host, Source
+from fundedflow_collector.db.registry import Host, Owner, Publisher, Source
 from fundedflow_collector.db.runs import AttemptRecord
 from fundedflow_collector.db.snapshots import EvidenceInput, record_failure, record_unchanged, store_evidence
 from fundedflow_collector.discovery import relevance, sitemaps, zendesk
@@ -162,7 +162,7 @@ class _Target:
 
 
 class FirmRunner:
-    def __init__(self, env: Environment, firm: Firm, options: RunOptions, batch_id: str) -> None:
+    def __init__(self, env: Environment, firm: Owner, options: RunOptions, batch_id: str) -> None:
         self.env = env
         self.conn = env.conn
         self.settings = env.settings
@@ -197,14 +197,14 @@ class FirmRunner:
         }
         self._counter = itertools.count()
         self.run_id: str | None = None
-        self.summary = RunSummary(firm_key=firm.firm_key, run_id=None, status="running")
+        self.summary = RunSummary(firm_key=firm.owner_key, run_id=None, status="running")
 
     # ------------------------------------------------------------------ entry point
 
     def run(self) -> RunSummary:
         if not self.firm.enabled:
             self.summary.status = "skipped_disabled"
-            self.summary.message = f"{self.firm.firm_key} is disabled: {self.firm.disabled_reason}"
+            self.summary.message = f"{self.firm.owner_key} is disabled: {self.firm.disabled_reason}"
             return self.summary
         if self.options.dry_run:
             return self._dry_run()
@@ -218,7 +218,7 @@ class FirmRunner:
             config_sha256=self.env.config_sha256,
         )
         self.summary.run_id = self.run_id
-        log_event("run_started", run_id=self.run_id, firm=self.firm.firm_key, command=self.options.command)
+        log_event("run_started", run_id=self.run_id, firm=self.firm.owner_key, command=self.options.command)
         try:
             if self.options.command == "fetch":
                 self._enqueue_known()
@@ -241,7 +241,7 @@ class FirmRunner:
         log_event(
             "run_finished",
             run_id=self.run_id,
-            firm=self.firm.firm_key,
+            firm=self.firm.owner_key,
             status=status,
             fetches=self.budget.used,
             outcomes=dict(self.summary.counts()),
@@ -263,7 +263,7 @@ class FirmRunner:
         host = host_of(url)
         host_row = self.doc_hosts.get(host)
         if host_row is None:
-            return Block(Outcome.NOT_ALLOWLISTED, f"{host} is not an authorised host for {self.firm.firm_key}")
+            return Block(Outcome.NOT_ALLOWLISTED, f"{host} is not an authorised host for {self.firm.owner_key}")
         pattern = matches_excluded(url, self.firm.excluded_paths)
         if pattern is not None:
             return Block(Outcome.EXCLUDED_PATH, f"matches excluded pattern {pattern}")
@@ -366,7 +366,7 @@ class FirmRunner:
     # ------------------------------------------------------------------ discovery
 
     def _discover(self) -> None:
-        self._progress(f"Discovering {self.firm.firm_key}")
+        self._progress(f"Discovering {self.firm.owner_key}")
         candidates: list[tuple[str, int, str]] = []
         for source in registry.list_sources(self.conn, self.firm.id):
             if source.kind is SourceKind.SITEMAP and source.enabled:
@@ -635,7 +635,7 @@ class FirmRunner:
                 )
 
     def _drain(self) -> None:
-        self._progress(f"Fetching {self.firm.firm_key} (budget {self.budget.limit} requests)")
+        self._progress(f"Fetching {self.firm.owner_key} (budget {self.budget.limit} requests)")
         while self.queue:
             target = heapq.heappop(self.queue)
             self.pending.pop(target.url, None)
@@ -666,7 +666,7 @@ class FirmRunner:
     # ------------------------------------------------------------------ one URL
 
     def _process(self, target: _Target) -> None:
-        source = target.source or registry.get_source(self.conn, ids.source_id(self.firm.firm_key, target.url))
+        source = target.source or registry.get_source(self.conn, ids.source_id(self.firm.owner_key, target.url))
         started = format_instant(self.clock.now())
         block = self.check(target.url, source=source)
         if block is not None:
@@ -1141,7 +1141,7 @@ def user_agent_suffix(info_url: str | None) -> str:
     return f"{USER_AGENT_PRODUCT} (+{info_url or 'https://example.invalid/fundedflow-collector'})"
 
 
-def run_firms(env: Environment, firms: list[Firm], options: RunOptions) -> list[RunSummary]:
+def run_firms(env: Environment, firms: list[Owner], options: RunOptions) -> list[RunSummary]:
     """Run firms one after another (never in parallel)."""
     batch_id = ids.new_id("batch")
     summaries = []

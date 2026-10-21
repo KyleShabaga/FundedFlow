@@ -39,7 +39,7 @@ def test_backup_is_written_before_an_upgrade(tmp_path: Path) -> None:
     conn = open_database(path, create=True)
     extra = [*bundled_migrations(), Migration(len(bundled_migrations()) + 1, "extra", "CREATE TABLE t (x INTEGER);")]
     assert apply_migrations(conn, path, extra) == 1
-    assert (tmp_path / "c.db.bak-0001").exists()
+    assert (tmp_path / f"c.db.bak-{len(bundled_migrations()):04d}").exists()
 
 
 def test_missing_database_is_reported(tmp_path: Path) -> None:
