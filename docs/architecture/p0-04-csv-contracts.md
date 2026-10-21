@@ -27,7 +27,7 @@ Evidence classes: **native** (Rust tests on in-memory and file-backed SQLite), *
 | Duration boundaries agree and preserve exact values | **Gap.** Rust serialized `durationSeconds` as a JSON number up to 2^63 − 1; JavaScript rounds above 2^53 − 1 before Zod sees it. Affects the import preview **and** stored trades (trade DTO, risk-engine inputs) | `TradePreview`, `RoundTripSource`, `tradePreviewSchema`, `tradeSchema` | Fixed (§3) |
 | Invalid acknowledgement never replayed | Satisfied: request validation runs before the write call and throws a definite `validation` error; commit re-derives everything from the file | `imports.ts` (`validateInput` before `writeOperation`), `tauri-repository.ts` (`validate`) | Unchanged; new failures are definite validation failures |
 | Native commit stays authoritative | Satisfied | Build 17 native suites | Unchanged |
-| Real implementations agree on normalized rows, finances, findings, timestamps, identity and versions | **Open.** No TypeScript normalizer exists; the Build 17 golden file is a Rust baseline plus DTO checks, not algorithm parity. No approved V1 deferral is recorded | `build17-csv.test.ts`, `build-17-csv-backend.md` | **Not implemented; needs an owner decision** (§4) |
+| Real implementations agree on normalized rows, finances, findings, timestamps, identity and versions | No TypeScript normalizer exists; the Build 17 golden file is a Rust baseline plus DTO checks, not algorithm parity | `build17-csv.test.ts`, `build-17-csv-backend.md` | **Deferred out of V1 by owner decision** (§4); tracked on the [post-V1 card](https://app.notion.com/p/4001bd4b6bde81de9ad0dbcfdaece6c6) |
 
 ## 2. Byte limit and BOM policy
 
@@ -104,17 +104,24 @@ above 2^53 − 1. So there is no stored-data migration and no new version field.
 - `duration_wire_refuses_non_canonical_or_out_of_range_input` (Rust) and `csv-wire-limits.test.ts` (TypeScript)
   reject the same non-canonical and out-of-range forms.
 
-## 4. Portable normalization for V1: decision needed
+## 4. Portable normalization for V1: deferred (owner decision, 2026-10-21)
 
-**Finding.** No explicit, approved V1 deferral exists.
+**Decision.** The owner chose option A below. For V1 the Rust importer is the only CSV parser and normalizer, and
+the only commit authority. The criterion "real implementations agree on normalized rows, finances, findings,
+timestamps, identity, versions" is deferred out of V1, not met. Portable extraction and Rust↔TypeScript parity
+move to the [post-V1 card](https://app.notion.com/p/4001bd4b6bde81de9ad0dbcfdaece6c6), a Stage 2 prerequisite. The decision is recorded on
+[Build 17](https://app.notion.com/p/3fe1bd4b6bde810da797e8277b9011c9) and P0-04. The findings and options below
+are kept as the record of what was decided.
+
+
+**Finding before the decision.** No explicit, approved V1 deferral existed.
 - Build 17 still lists the portable parser/normalizer and Rust↔TypeScript parity as a P0 gap and says a decision
   to keep Rust authoritative for V1 "should be explicitly recorded".
 - P0-04's own decision text requires either that, or the implementation.
 - P0-04's finding type is "Decision".
 - Approval of P0-04 approves making this decision; it is not the decision itself.
 
-So this branch neither claims the acceptance criterion nor builds a second normalizer. **The criterion "real
-implementations agree on normalized rows, finances, findings, timestamps, identity, versions" remains open.**
+So PR #62 neither claimed the acceptance criterion nor built a second normalizer.
 
 What a portable normalizer needs that the domain package lacks today:
 - CSV parsing and header/format/date detection (Rust `parse.rs`, `detect.rs`, `values.rs`);
@@ -133,8 +140,7 @@ Findings (`FieldIssue`) have no stable codes.
 | B. Implement the portable normalizer for V1 | Port parse/detect/values/normalize/identity plus trading day, instruments and P&L to `packages/domain`; define stable finding codes and a normalizer version; dual-run Rust and TS on shared independent cases | Large: about 1,600 lines of Rust plus economics and time zones. There's a real risk of DST/tz-data divergence. V1 would still commit through Rust, so it adds no V1 user value |
 | C. Port a reduced subset now (for example value parsing, identity keys and trading days) with explicit acceptance of the subset | Parity on the pieces with no time-zone dependency | Needs explicit acceptance of the excluded parts; partial value |
 
-Recommendation: **A**. The owner records the deferral on Build 17 and P0-04. If B or C is chosen instead, it is
-the next step for this card.
+Recommendation: **A**. **Chosen by the owner on 2026-10-21.**
 
 ## 5. Native ownership (unchanged)
 
@@ -160,7 +166,7 @@ trades.rs 20, csv_import/mod.rs and tests.rs 0).
 
 ## 7. Remaining gates
 
-- Owner decision on §4. P0-04 is not complete without it.
+- None for §4: the normalizer is deferred out of V1 (owner decision) and tracked on the [post-V1 card](https://app.notion.com/p/4001bd4b6bde81de9ad0dbcfdaece6c6).
 - P0-05 source cohort: synthetic fixtures don't certify any real exporter version.
 - Windows CI on the PR, plus packaged Tauri and manual import acceptance on an isolated profile.
 - Import, account and Today UX changes belong to PR 4.
