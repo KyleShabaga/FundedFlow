@@ -74,6 +74,20 @@ app.command("prune-raw")(admin_cmds.prune_raw_cmd)
 app.command("reset")(admin_cmds.reset)
 
 
+@app.command("gui")
+def gui(ctx: typer.Context) -> None:
+    """Open the desktop window (same data folder and settings as these commands)."""
+    from fundedflow_collector.gui.app import main as gui_main
+
+    state = ctx.find_root().obj
+    argv: list[str] = []
+    if state.data_dir is not None:
+        argv += ["--data-dir", str(state.data_dir)]
+    if state.config_path is not None:
+        argv += ["--config", str(state.config_path)]
+    gui_main(argv)
+
+
 def run() -> None:
     configure_console()
     app()

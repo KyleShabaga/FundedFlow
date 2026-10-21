@@ -50,6 +50,7 @@ COMMANDS = [
     ["validate"],
     ["prune-raw"],
     ["reset"],
+    ["gui"],
 ]
 
 

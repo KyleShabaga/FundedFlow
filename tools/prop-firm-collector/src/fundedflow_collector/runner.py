@@ -138,6 +138,10 @@ class Environment:
     renderer: Renderer | None
     fixture: FixtureSite | None = None
     progress: Any = None  # callable(str) for console progress
+    should_stop: Any = None  # callable() -> bool; the GUI's Stop button
+
+    def stop_requested(self) -> bool:
+        return bool(self.should_stop is not None and self.should_stop())
 
     @property
     def fetch_method(self) -> FetchMethod:
@@ -227,7 +231,10 @@ class FirmRunner:
                 self.conn, self.run_id, status="aborted", fetches_used=self.budget.used, now=self.clock.now()
             )
             raise
-        status = "deadline_exceeded" if self.budget.deadline_passed else "completed"
+        if self.env.stop_requested():
+            status = "aborted"
+        else:
+            status = "deadline_exceeded" if self.budget.deadline_passed else "completed"
         runs.finish_run(self.conn, self.run_id, status=status, fetches_used=self.budget.used, now=self.clock.now())
         self.summary.status = status
         self.summary.fetches_used = self.budget.used
@@ -431,6 +438,8 @@ class FirmRunner:
         result = self._do_fetch(url, FetchRequest(url=url, accept=accept, max_bytes=max_bytes))
         if not result.ok:
             attempt = self._attempt_from(result, source_id=None)
+            if not counted and result.status == 404:
+                attempt.error_detail = "HTTP 404: no sitemap at this address (normal; not counted as a failure)"
             record_failure(self.conn, attempt=attempt, now=self.clock.now())
             self.summary.results.append(
                 TargetResult(
@@ -646,6 +655,8 @@ class FirmRunner:
                 self._process(target)
 
     def _budget_block(self) -> Block | None:
+        if self.env.stop_requested():
+            return Block(Outcome.DEADLINE_EXCEEDED, "stopped by the operator")
         if self.budget.deadline_passed:
             return Block(Outcome.DEADLINE_EXCEEDED, "run deadline reached")
         if self.budget.exhausted:
