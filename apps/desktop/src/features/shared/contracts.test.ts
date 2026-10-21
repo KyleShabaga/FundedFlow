@@ -6,7 +6,6 @@ import { toTradeViewModel } from "../trades/view-models/trade";
 import { toJournalViewModel } from "../journal/view-models/journal";
 import { toImportViewModel } from "../imports/view-models/import";
 import { toSnapshotViewModel } from "../insights/view-models/snapshot";
-import { getCapability } from "./capabilities";
 
 it("preserves decimal precision, nulls, zero, stored timestamps and financial basis", () => {
   expect(toAccountViewModel(account).startingBalance).toBe("9007199254740.993");
@@ -41,13 +40,10 @@ it("rejects unknown statuses, missing values, invalid times, dates and cross-acc
   expect(() => toTradeViewModel(trade, { ...account, id: "other" })).toThrow();
   expect(() => toSnapshotViewModel(snapshot, { ...account, id: "other" })).toThrow();
 });
-it("sanitizes stored import diagnostics and exposes unsupported capabilities without data", () => {
+it("sanitizes stored import diagnostics", () => {
   const failed = toImportViewModel({ ...batch, status: "failed", errorSummary: "SQL /private/path" });
   expect(failed.failureMessage).toContain("not completed"); expect(failed).not.toHaveProperty("errorSummary");
-  const capability = getCapability("insights-aggregates");
-  expect(capability.available).toBe(false); expect(capability).not.toHaveProperty("data");
-  // Build 22 implemented daily reviews, so their placeholder capability is gone.
-  expect(() => getCapability("structured-reviews" as never)).toThrow();
+  // Build 22 implemented daily reviews and Build 23 Insights aggregates, so the placeholder capabilities are gone.
 });
 it("keeps a Build 16 engine snapshot's unknown balance, day P&L, day count and lock state as null, never zero or false", () => {
   const unknown = { ...snapshot, balance: null, realizedDayPnl: null, tradingDaysCompleted: null, drawdownLocked: null };

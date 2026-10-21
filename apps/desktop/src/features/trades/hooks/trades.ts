@@ -4,7 +4,7 @@ import { featureKeys as keys } from "../../shared/query-keys";
 import { useFeatureQuery } from "../../shared/hooks/use-feature-query";
 import { useFeatureMutation } from "../../shared/hooks/use-feature-mutation";
 // A trade change can move P&L (and so R-multiples and risk snapshots): Build 16 risk views key off snapshotsRoot.
-const affected = (id: string) => [keys.tradesRoot(id), keys.reviewsRoot(id), keys.dailyReviewsRoot(id), keys.journalRoot(id), keys.snapshotsRoot(id), keys.deletion(id), keys.lineageRoot];
+const affected = (id: string) => [keys.tradesRoot(id), keys.reviewsRoot(id), keys.dailyReviewsRoot(id), keys.journalRoot(id), keys.snapshotsRoot(id), keys.deletion(id), keys.lineageRoot, keys.insightsRoot];
 const scope = (id: string) => JSON.stringify(["trades", id]);
 export const useTrades = (id: string | null, filters: TradeFilters = {}) => useFeatureQuery({ key: keys.trades(id, filters), enabled: id !== null, read: signal => readTrades(id!, filters, signal) });
 export const useCreateTrade = (id: string) => useFeatureMutation({ scope: scope(id), run: (input: TradeInput, guard) => saveTrade(id, input, undefined, guard), invalidate: () => affected(id) });

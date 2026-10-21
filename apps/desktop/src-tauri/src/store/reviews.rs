@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 
 use super::attachments::{self, AttachmentMeta};
 use super::{account_ctx, load_instruments, opt_text};
-use crate::domain::{canonical, micros_to_string, new_id, now, parse_decimal, resolve_instrument, to_micros};
+use crate::domain::{canonical, micros_to_string, new_id, now, parse_decimal, resolve_instrument, to_micros, Instrument};
 use crate::error::{AppError, AppResult, Issues};
 
 const MAX_NOTES_CHARS: usize = 20_000;
@@ -519,15 +519,19 @@ fn derived_risk(conn: &Connection, trade_id: &str, entry: &Option<String>, stop:
         })?;
     let currency: String = conn.query_row("SELECT currency FROM accounts WHERE id = ?1", [&account_id], |r| r.get(0))?;
     let instruments = load_instruments(conn)?;
-    let Some(instrument) = resolve_instrument(&symbol, &instruments).filter(|i| i.currency == currency) else {
-        return Ok(None);
-    };
-    let Ok(quantity) = Decimal::from_str(&quantity) else { return Ok(None) };
-    let risk = (entry - stop).abs().checked_mul(quantity).and_then(|r| r.checked_mul(instrument.point_value));
-    Ok(risk.and_then(to_micros).filter(|m| *m > 0))
+    Ok(risk_from_plan(entry, stop, &quantity, resolve_instrument(&symbol, &instruments), &currency))
 }
 
-fn r_multiple(net_micros: Option<i64>, risk_micros: Option<i64>) -> Option<String> {
+/// |entry − stop| × quantity × point value in micro-units, for an instrument quoted in the account currency; None
+/// otherwise. Shared with the Insights read (Build 23) so both derive 1R the same way.
+pub(crate) fn risk_from_plan(entry: Decimal, stop: Decimal, quantity: &str, instrument: Option<&Instrument>, currency: &str) -> Option<i64> {
+    let instrument = instrument.filter(|i| i.currency == currency)?;
+    let quantity = Decimal::from_str(quantity).ok()?;
+    let risk = (entry - stop).abs().checked_mul(quantity).and_then(|r| r.checked_mul(instrument.point_value));
+    risk.and_then(to_micros).filter(|m| *m > 0)
+}
+
+pub(crate) fn r_multiple(net_micros: Option<i64>, risk_micros: Option<i64>) -> Option<String> {
     let (net, risk) = (net_micros?, risk_micros?);
     let r = Decimal::new(net, 0).checked_div(Decimal::new(risk, 0))?;
     Some(canonical(r.round_dp_with_strategy(2, RoundingStrategy::MidpointAwayFromZero)))
