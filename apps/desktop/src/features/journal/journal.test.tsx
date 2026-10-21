@@ -221,11 +221,11 @@ describe("Review", () => {
     await within(card).findByRole("combobox", { name: "Strategy" });
     await chooseOption(user, "Strategy", "ORB", card);
     await chooseOption(user, "Checklist", "ORB entry", card);
-    const first = within(card).getByRole("group", { name: "Waited for range" });
+    const first = within(card).getByRole("radiogroup", { name: "Waited for range" });
     await user.click(within(first).getByRole("radio", { name: "Followed" }));
-    await user.click(within(within(card).getByRole("group", { name: "Stop below range" })).getByRole("radio", { name: "Missed" }));
+    await user.click(within(within(card).getByRole("radiogroup", { name: "Stop below range" })).getByRole("radio", { name: "Missed" }));
     await user.click(within(within(card).getByRole("group", { name: "Mistakes" })).getByRole("button", { name: "Chased" }));
-    await user.click(within(within(card).getByRole("group", { name: "Execution rating" })).getByRole("radio", { name: "4" }));
+    await user.click(within(within(card).getByRole("radiogroup", { name: "Execution rating" })).getByRole("radio", { name: "4" }));
     await user.type(within(card).getByLabelText(/^Notes and reflection/), "Entered late.");
     await user.click(within(card).getByRole("checkbox", { name: /Reviewed/ }));
     await user.click(within(card).getByRole("button", { name: "Save review" }));

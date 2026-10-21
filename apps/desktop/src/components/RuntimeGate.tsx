@@ -1,8 +1,9 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 
 import { SLOW_MS, useRuntime } from "../app/RuntimeProvider";
-import { Button } from "../design-system";
+import { Button, DiagnosticDetails } from "../design-system";
 import type { RuntimeFailure, RuntimeStatus } from "../lib/data/runtime";
+import { formatDiagnostics, newIncidentId, runtimeDiagnostics } from "../lib/diagnostics";
 import "./RuntimeGate.css";
 
 const TITLES: Record<RuntimeFailure["category"], string> = {
@@ -30,6 +31,17 @@ function versions(status: RuntimeStatus): string {
   return `Journal version ${status.schemaVersion ?? "unknown"}; this app supports ${status.supportedSchemaVersion}. Stage: ${status.stage}.`;
 }
 
+/**
+ * One incident per distinct problem: the id and time stay the same while the same failure is shown (polls
+ * re-create the state object), and a new one starts when the problem changes or after recovery.
+ */
+function useIncident(key: string | null, ready: boolean) {
+  const current = useRef<{ key: string; id: string; at: Date } | null>(null);
+  if (ready) current.current = null; // Recovered: the next problem is a new incident.
+  else if (key !== null && current.current?.key !== key) current.current = { key, id: newIncidentId(), at: new Date() };
+  return current.current;
+}
+
 /** Shell-level status, outside gated data content so navigation and recovery remain usable. */
 export function RuntimeRecoveryNotice() {
   const { state, now, retry, lastReadyAt } = useRuntime();
@@ -43,6 +55,8 @@ export function RuntimeRecoveryNotice() {
   const error = "error" in state ? state.error : undefined;
   const retryRequested = useRef(false);
   const retryButton = useRef<HTMLButtonElement>(null);
+  const showDetails = !busy && !ready && Boolean(failure || error || pending || state.kind === "unsupported-schema");
+  const incident = useIncident(showDetails ? `${state.kind}|${"reason" in state ? state.reason : ""}|${failure?.category ?? ""}|${failure?.failedMigration?.version ?? ""}` : null, ready);
   useEffect(() => {
     if (busy || !retryRequested.current) return;
     retryRequested.current = false;
@@ -79,11 +93,9 @@ export function RuntimeRecoveryNotice() {
         {lastReadyAt !== null && <p className="ff-stale">Local data is unavailable. Previously shown data may be out of date. Unsaved changes remain on this screen; saving is disabled.</p>}
         {retryable && <Button ref={retryButton} onClick={doRetry}>Retry</Button>}
         {state.kind === "recovering" && <Button disabled>Retrying…</Button>}
-        {!busy && (failure || error || pending) && <details>
-          <summary>Technical details</summary>
-          {state.status && <p>{versions(state.status)}</p>}
-          {(failure || error) && <code>{failure?.detail ?? error}</code>}
-        </details>}
+        {showDetails && state.status && <p>{versions(state.status)}</p>}
+        {/* Allowlisted fields only: the native detail and error text can hold paths, so they are never shown. */}
+        {showDetails && incident && <DiagnosticDetails text={formatDiagnostics(runtimeDiagnostics(state, incident.id, incident.at, window.location.hash))} />}
       </>}
     </section>
   );
@@ -106,4 +118,25 @@ export function RuntimeGate({ children, showStatus = true }: { children: ReactNo
       <div inert={!ready}>{children}</div>
     </fieldset>}
   </>;
+}
+
+/**
+ * Recovery inside a modal form (Build 26.5). A modal hides the shell's recovery notice, so a form that is
+ * open when local data becomes unavailable shows this instead: its values stay, saving stays disabled, and
+ * Retry runs the same single explicit recovery as the shell's notice (never a save).
+ */
+export function RuntimeInlineRecovery() {
+  const { state, retry } = useRuntime();
+  if (state.kind === "ready") return null;
+  const busy = state.kind === "checking" || state.kind === "recovering";
+  const retryable = !busy && state.kind !== "unsupported-schema" && (state.status?.failure?.retryable ?? true);
+  return (
+    <div role="status" aria-live="polite" className="ds-notice ds-notice-warning">
+      <div className="ds-notice-body">
+        <p className="ds-notice-title">{busy ? "Checking local data…" : "Local data isn't available"}</p>
+        <p>Your entries here are kept, but saving is paused until the journal is open again.</p>
+        {retryable && <Button size="sm" onClick={() => void retry()}>Retry</Button>}
+      </div>
+    </div>
+  );
 }

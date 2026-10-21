@@ -23,6 +23,7 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 import { createPortal } from "react-dom";
 
 import { cx } from "./cx";
+import { Button } from "./primitives";
 
 export type NoticeTone = "info" | "success" | "warning" | "error";
 
@@ -234,5 +235,45 @@ export function StatusIndicator({ status, label, detail, variant = "pill", class
       <span>{label}</span>
       {detail && <span className="ds-sr-only">: {detail}</span>}
     </span>
+  );
+}
+
+/* ---------- DiagnosticDetails (Build 26.5) ---------- */
+
+export interface DiagnosticDetailsProps {
+  /** Plain text the trader may copy. Build it from allowlisted fields only, never from error messages. */
+  text: string;
+  /** Summary line of the disclosure. */
+  label?: string;
+  className?: string;
+}
+
+/**
+ * A collapsed, copyable diagnostic summary for support. The text is always visible and selectable once
+ * opened, so a clipboard the app can't use (permissions, no focus) still leaves a way to copy it. The
+ * result of a copy is announced politely. Nothing is sent anywhere.
+ */
+export function DiagnosticDetails({ text, label = "Diagnostic summary", className }: DiagnosticDetailsProps) {
+  const [copy, setCopy] = useState<"idle" | "copied" | "failed">("idle");
+  const doCopy = async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(text);
+      setCopy("copied");
+    } catch {
+      setCopy("failed");
+    }
+  };
+  return (
+    <details className={cx("ds-diagnostics", className)}>
+      <summary>{label}</summary>
+      <pre className="ds-diagnostics-text" tabIndex={0} aria-label={label}>{text}</pre>
+      <div className="ds-row">
+        <Button size="sm" onClick={() => void doCopy()}>Copy summary</Button>
+        <span role="status" className="ds-faint">
+          {copy === "copied" ? "Copied." : copy === "failed" ? "Couldn't copy. Select the text above and copy it." : ""}
+        </span>
+      </div>
+    </details>
   );
 }

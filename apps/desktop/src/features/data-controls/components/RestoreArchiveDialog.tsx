@@ -155,11 +155,11 @@ function RestorePreviewDetails({ preview, supportedSchema }: { preview: ArchiveR
       ]} />
       <div className="dc-compare">
         <section aria-label="In the archive">
-          <h4 className="dc-subhead">In the archive</h4>
+          <h3 className="dc-subhead">In the archive</h3>
           {incoming.length ? <StatList bordered items={incoming.map(r => ({ label: r.label, value: r.value.toLocaleString("en-US") }))} /> : <p className="ds-faint">An empty journal.</p>}
         </section>
         <section aria-label="Replaced in this journal">
-          <h4 className="dc-subhead">Replaced in this journal</h4>
+          <h3 className="dc-subhead">Replaced in this journal</h3>
           {current.length ? <StatList bordered items={current.map(r => ({ label: r.label, value: r.value.toLocaleString("en-US") }))} /> : <p className="ds-faint">This journal is empty.</p>}
         </section>
       </div>

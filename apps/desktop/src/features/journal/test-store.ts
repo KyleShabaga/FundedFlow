@@ -44,8 +44,9 @@ export function pngBytes(salt = 1): Uint8Array<ArrayBuffer> {
   return new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, salt]);
 }
 
-export function createJournalStore(accounts: Account[], trades: Trade[] = [], activeId: string | null = accounts[0]?.id ?? null, currentDay = "2026-10-20") {
-  const base = createTestStore(accounts);
+/** `base` lets the Build 26 cross-feature store share one accounts/settings/rulebook store with Today. */
+export function createJournalStore<B extends { repository: object; accounts: Map<string, Account>; settings: Map<string, unknown> } = ReturnType<typeof createTestStore>>(
+  accounts: Account[], trades: Trade[] = [], activeId: string | null = accounts[0]?.id ?? null, currentDay = "2026-10-20", base: B = createTestStore(accounts) as unknown as B) {
   if (activeId) base.settings.set(ACTIVE_ACCOUNT_SETTING, activeId);
   const all = new Map(trades.map(t => [t.id, { trade: { ...t }, deletedAt: null as string | null }]));
   const corrections = new Map<string, TradeCorrection[]>();
@@ -61,7 +62,7 @@ export function createJournalStore(accounts: Account[], trades: Trade[] = [], ac
   const now = () => new Date((clock += 1000)).toISOString();
   const log = (method: string, ...args: unknown[]) => calls.push({ method, args: structuredClone(args) });
   const account = (accountId: string) => {
-    const a = accounts.find(x => x.id === accountId);
+    const a = base.accounts.get(accountId);
     if (!a) throw notFound("account");
     return a;
   };

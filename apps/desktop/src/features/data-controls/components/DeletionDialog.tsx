@@ -155,7 +155,7 @@ function PreviewDetails({ preview, isAccount }: { preview: PermanentDeletionPrev
         </InlineNotice>
       )}
       <section aria-label={preview.blockers.length > 0 ? "Records owned by this account" : "What will be deleted"}>
-        <h4 className="dc-subhead">{preview.blockers.length > 0 ? "Records owned by this account" : "What will be deleted"}</h4>
+        <h3 className="dc-subhead">{preview.blockers.length > 0 ? "Records owned by this account" : "What will be deleted"}</h3>
         {rows.length > 0
           ? <StatList bordered items={rows.map(r => ({ label: r.label, value: r.value.toLocaleString("en-US") }))} />
           : <p className="ds-faint">No records.</p>}

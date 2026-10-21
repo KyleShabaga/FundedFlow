@@ -14,22 +14,45 @@ import { Button } from "./primitives";
 
 /* ---------- Focus return ---------- */
 
+const TABBABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Where focus goes when the element that opened an overlay is gone (a row
+ * menu whose row was deleted or archived): the first tabbable control in the
+ * nearest surviving container, or that container if it takes focus itself.
+ */
+function survivingFocusTarget(ancestors: readonly HTMLElement[]): HTMLElement | null {
+  for (const ancestor of ancestors) {
+    if (!ancestor.isConnected || ancestor === document.body) continue;
+    const inside = Array.from(ancestor.querySelectorAll<HTMLElement>(TABBABLE)).find(el => !el.closest("[hidden], [aria-hidden='true'], [inert]"));
+    if (inside) return inside;
+    if (ancestor.hasAttribute("tabindex")) return ancestor;
+  }
+  return null;
+}
+
 /**
  * Radix returns focus to its own Trigger. Dialogs opened from elsewhere (a
  * menu item, a controlled `open`) would drop focus on the body, so remember
- * what had focus on open and put it back on close.
+ * what had focus on open and put it back on close. If that element has been
+ * removed meanwhile, focus a sensible surviving control near where it was.
  */
 function useFocusReturn() {
   const returnTo = useRef<HTMLElement | null>(null);
+  const ancestors = useRef<HTMLElement[]>([]);
   return {
     capture: () => {
-      returnTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const el = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null;
+      returnTo.current = el;
+      ancestors.current = [];
+      for (let at = el?.parentElement ?? null; at; at = at.parentElement) ancestors.current.push(at);
     },
     restore: (e: Event) => {
       const el = returnTo.current;
-      if (el && el.isConnected && el !== document.body) {
+      const target = el?.isConnected ? el : survivingFocusTarget(ancestors.current);
+      if (target) {
         e.preventDefault();
-        el.focus();
+        target.focus();
       }
     },
   };
@@ -303,11 +326,20 @@ export interface DropdownMenuProps {
  * items are skipped by the keyboard and announced as unavailable.
  */
 export function DropdownMenu({ trigger, items, align = "end", label }: DropdownMenuProps) {
+  const pending = useRef<(() => void) | null>(null);
   return (
     <RadixMenu.Root>
       <RadixMenu.Trigger asChild>{trigger}</RadixMenu.Trigger>
       <RadixMenu.Portal>
-        <RadixMenu.Content className="ds-pop ds-menu" align={align} sideOffset={4} collisionPadding={8} aria-label={label}>
+        <RadixMenu.Content className="ds-pop ds-menu" align={align} sideOffset={4} collisionPadding={8} aria-label={label}
+          // Radix calls this once the menu has unmounted, then focuses the trigger. The chosen action runs
+          // right after that, so a Dialog it opens records the trigger as its focus-return target and never
+          // sees the menu's focus return as "focus outside". (A fixed timer raced Radix's own timer.)
+          onCloseAutoFocus={() => {
+            const action = pending.current;
+            pending.current = null;
+            if (action) queueMicrotask(action);
+          }}>
           {items.map((it, i) =>
             it.type === "separator" ? (
               <RadixMenu.Separator key={i} className="ds-menu-sep" />
@@ -320,9 +352,8 @@ export function DropdownMenu({ trigger, items, align = "end", label }: DropdownM
                 key={i}
                 className={cx("ds-menu-item", it.tone === "danger" && "is-danger")}
                 disabled={it.disabled}
-                // Run the action after the menu has closed and returned focus to its trigger. An action that opens
-                // a Dialog would otherwise see that focus return as "focus outside" and close straight away.
-                onSelect={() => window.setTimeout(it.onSelect, 0)}
+                // Runs from onCloseAutoFocus above, after the menu has closed and returned focus to its trigger.
+                onSelect={() => { pending.current = it.onSelect; }}
               >
                 {it.icon}
                 <span className="ds-menu-text">{it.label}</span>

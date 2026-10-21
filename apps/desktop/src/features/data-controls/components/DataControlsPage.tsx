@@ -112,7 +112,7 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
       )}
       {working && <p role="status" className="dc-working">{working} Other data actions wait until this finishes.</p>}
 
-      <FormSection title="Your data on this computer" description="Where your journal lives and what is backed up.">
+      <FormSection headingLevel={2} title="Your data on this computer" description="Where your journal lives and what is backed up.">
         <StatList bordered items={[
           { label: "Stored", value: "In FundedFlow's app-data folder for your Windows user account" },
           { label: "Journal version", value: runtime.state.kind === "ready" ? `${runtime.state.status.schemaVersion ?? "Unknown"} (backup format 1)` : null },
@@ -124,7 +124,7 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
         ]} />
       </FormSection>
 
-      <FormSection title="Export" description="Save a copy of your data to a location you choose.">
+      <FormSection headingLevel={2} title="Export" description="Save a copy of your data to a location you choose.">
         <RadioGroup<api.ExportKind>
           label="What to export"
           value={kind}
@@ -164,18 +164,18 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
         </div>
       </FormSection>
 
-      <FormSection title="Restore from a full backup" description="Replace this journal with a full backup made on this or another computer. FundedFlow checks the file before anything is replaced.">
+      <FormSection headingLevel={2} title="Restore from a full backup" description="Replace this journal with a full backup made on this or another computer. FundedFlow checks the file before anything is replaced.">
         {restoreProblem && <InlineNotice tone="error" title="No archive was opened">{restoreProblem}</InlineNotice>}
         <div className="dc-actions">
           <Button icon={<FileUp size={16} aria-hidden="true" />} onClick={() => void chooseArchive()} disabled={disabled}>Choose backup to restore…</Button>
         </div>
       </FormSection>
 
-      <FormSection title="Delete data permanently" description="Failing or archiving an account keeps its history. Deleting removes it for good.">
+      <FormSection headingLevel={2} title="Delete data permanently" description="Failing or archiving an account keeps its history. Deleting removes it for good.">
         <div className="dc-danger">
           <div className="dc-danger-row">
             <div>
-              <h4 className="dc-subhead">Delete one trading account</h4>
+              <h3 className="dc-subhead">Delete one trading account</h3>
               <p className="dc-note">Removes one account or attempt and its trades, imports, notes, reviews and screenshots. Other accounts and shared data stay.</p>
               <Select
                 label="Account"
@@ -194,7 +194,7 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
           </div>
           <div className="dc-danger-row">
             <div>
-              <h4 className="dc-subhead">Erase the entire local journal</h4>
+              <h3 className="dc-subhead">Erase the entire local journal</h3>
               <p className="dc-note">Removes every account and all data in this journal, and FundedFlow's own recovery copies. Backups you exported yourself are not touched.</p>
             </div>
             <Button variant="danger" icon={<Eraser size={16} aria-hidden="true" />} disabled={disabled} onClick={() => setDeletion({ kind: "journal" })}>

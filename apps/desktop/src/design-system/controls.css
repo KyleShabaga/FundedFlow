@@ -222,3 +222,8 @@
   .ds-toast { animation: none; }
   .ds-switch-input, .ds-switch-input::after { transition: none; }
 }
+
+/* DiagnosticDetails (Build 26.5): a collapsed, selectable support summary. */
+.ds-diagnostics { margin-top: var(--space-3); }
+.ds-diagnostics > summary { cursor: pointer; font: 500 13px/18px var(--font-sans); }
+.ds-diagnostics-text { margin: var(--space-2) 0; padding: var(--space-3); max-width: 100%; overflow-x: auto; white-space: pre-wrap; border: 1px solid var(--line-200); border-radius: var(--radius-md); font: 400 12px/18px var(--font-mono); user-select: text; }

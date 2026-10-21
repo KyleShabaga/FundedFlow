@@ -68,13 +68,16 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/**
+ * Fills the minimum fields. Values are pasted (Build 26.7): typing them key by key cost ~20 ms a key and pushed
+ * these tests past 5 s under CPU contention. Per-key field behaviour is covered by the design-system tests.
+ */
 async function fillMinimumAccount(user: ReturnType<typeof userEvent.setup>, name = "Eval 50K") {
   const dialog = await screen.findByRole("dialog", { name: "Add account" });
-  await user.type(within(dialog).getByRole("textbox", { name: /Account name/ }), name);
-  await user.type(within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
-  const zone = within(dialog).getByRole("combobox", { name: /Time zone/ }) as HTMLInputElement;
-  await user.clear(zone);
-  await user.type(zone, "America/New_York");
+  const enter = async (field: HTMLElement, text: string) => { await user.clear(field); await user.click(field); await user.paste(text); };
+  await enter(within(dialog).getByRole("textbox", { name: /Account name/ }), name);
+  await enter(within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
+  await enter(within(dialog).getByRole("combobox", { name: /Time zone/ }), "America/New_York");
   return dialog;
 }
 

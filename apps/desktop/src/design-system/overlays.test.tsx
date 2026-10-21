@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -7,6 +7,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   Button,
   ConfirmDialog,
+  DiagnosticDetails,
   Dialog,
   Drawer,
   DropdownMenu,
@@ -260,6 +261,36 @@ describe("StatusIndicator", () => {
   });
 });
 
+describe("focus return when the opener is gone", () => {
+  it("moves focus to a surviving control in the same container, not the page body", async () => {
+    function Harness() {
+      const [rows, setRows] = useState(["a", "b"]);
+      const [open, setOpen] = useState<string | null>(null);
+      return (
+        <>
+          <ul aria-label="Accounts">
+            {rows.map(r => (
+              <li key={r}>
+                <DropdownMenu trigger={<Button>Actions {r}</Button>} items={[{ label: "Delete…", onSelect: () => setOpen(r) }]} />
+              </li>
+            ))}
+          </ul>
+          <Dialog open={open !== null} onOpenChange={next => !next && setOpen(null)} title="Delete account"
+            footer={<Button onClick={() => { setRows(rs => rs.filter(x => x !== open)); setOpen(null); }}>Delete</Button>} />
+        </>
+      );
+    }
+    render(<Harness />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Actions a" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Delete…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Delete account" });
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Actions b" })));
+  });
+});
+
 describe("DropdownMenu opening a dialog", () => {
   it("keeps a dialog opened from a menu item open, with focus inside it", async () => {
     function Harness() {
@@ -281,5 +312,23 @@ describe("DropdownMenu opening a dialog", () => {
     expect(dialog.contains(document.activeElement)).toBe(true);
     await user.keyboard("{Escape}");
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Actions" })));
+  });
+});
+
+describe("DiagnosticDetails", () => {
+  it("shows selectable text, copies it, and keeps it visible with a fallback when copying fails", async () => {
+    const user = userEvent.setup();
+    const summary = ["FundedFlow diagnostic summary", "Incident: FF-ABC"].join("\n");
+    render(<DiagnosticDetails text={summary} />);
+    const writeText = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("denied"));
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    await user.click(screen.getByText("Diagnostic summary"));
+    expect(screen.getByLabelText("Diagnostic summary").textContent).toContain("Incident: FF-ABC");
+    await user.click(screen.getByRole("button", { name: "Copy summary" }));
+    expect(writeText).toHaveBeenCalledWith(summary);
+    expect(screen.getByRole("status").textContent).toBe("Copied.");
+    await user.click(screen.getByRole("button", { name: "Copy summary" }));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toMatch(/Couldn't copy/));
+    expect(screen.getByLabelText("Diagnostic summary").textContent).toContain("FF-ABC");
   });
 });

@@ -1,14 +1,26 @@
 import { Component, createRef, type ReactNode } from "react";
 
-import { Button } from "../design-system";
+import { Button, DiagnosticDetails } from "../design-system";
+import { formatDiagnostics, newIncidentId, renderDiagnostics } from "../lib/diagnostics";
 
-/** Basic render containment only; diagnostic collection belongs to Build 26.5. */
-export class RootErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
+interface State {
+  failed: boolean;
+  /** Allowlisted summary of the failure; the error's message and stack are never kept. */
+  diagnostics: string | null;
+}
+
+/**
+ * Render containment with a safe, copyable diagnostic summary (Build 26.5). It sits inside AppProviders,
+ * whose QueryClient is created above it, so returning to the app keeps the cache and any unconfirmed
+ * (uncertain) write locks: nothing is replayed and no lock is silently released. The router, runtime owner
+ * and screens remount, so unsaved edits on the crashed screen are not preserved.
+ */
+export class RootErrorBoundary extends Component<{ children: ReactNode }, State> {
+  state: State = { failed: false, diagnostics: null };
   private heading = createRef<HTMLHeadingElement>();
 
-  static getDerivedStateFromError() {
-    return { failed: true };
+  static getDerivedStateFromError(error: unknown): State {
+    return { failed: true, diagnostics: formatDiagnostics(renderDiagnostics(error, newIncidentId(), new Date(), window.location.hash)) };
   }
 
   componentDidCatch() {
@@ -17,7 +29,7 @@ export class RootErrorBoundary extends Component<{ children: ReactNode }, { fail
 
   private returnToApp = (path = "/") => {
     window.location.hash = path;
-    this.setState({ failed: false });
+    this.setState({ failed: false, diagnostics: null });
   };
 
   render() {
@@ -26,11 +38,13 @@ export class RootErrorBoundary extends Component<{ children: ReactNode }, { fail
         <main className="ds-surface app-foundation" data-theme="dark">
           <section role="alert" aria-labelledby="root-error-title">
             <h1 id="root-error-title" ref={this.heading} tabIndex={-1}>FundedFlow couldn't display this screen</h1>
-            <p>Return to the app to check local data availability again.</p>
+            <p>Return to the app to check local data availability again. Unsaved changes on this screen may be lost; your saved journal isn't changed.</p>
+            <p>A save that hadn't been confirmed stays marked as unconfirmed until you check it.</p>
             <div className="ds-row">
               <Button onClick={() => this.returnToApp()}>Return to app</Button>
               <Button onClick={() => this.returnToApp("/settings")}>Open Settings</Button>
             </div>
+            {this.state.diagnostics && <DiagnosticDetails text={this.state.diagnostics} />}
           </section>
         </main>
       );
