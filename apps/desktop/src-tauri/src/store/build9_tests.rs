@@ -227,6 +227,31 @@ fn sources_validate_and_are_never_edited() {
     assert!(authoring::create_source(&mut conn, only_descriptor).is_ok());
 }
 
+#[test]
+fn captured_source_facts_are_immutable_even_when_written_through_sql() {
+    let mut conn = catalogue_tests_seeded();
+    let captured = authoring::create_source(&mut conn, source()).unwrap();
+    assert!(conn.execute("UPDATE catalogue_sources SET url = 'https://rewritten.example/' WHERE id = ?1", [&captured.id]).is_err());
+    assert!(conn.execute("UPDATE catalogue_sources SET captured_at = '2026-10-01T00:00:00.000Z' WHERE id = ?1", [&captured.id]).is_err());
+    let after = catalogue::load(&conn).unwrap().sources.into_iter().find(|s| s.id == captured.id).unwrap();
+    assert_eq!(after, captured);
+    conn.execute("UPDATE catalogue_sources SET verification_status = 'needs_review' WHERE id = ?1", [&captured.id]).unwrap();
+    assert_eq!(catalogue::load(&conn).unwrap().sources.into_iter().find(|s| s.id == captured.id).unwrap().verification_status,
+        crate::catalogue::VerificationStatus::NeedsReview);
+}
+
+#[test]
+fn source_guard_migration_failure_keeps_the_prior_schema_and_facts() {
+    let mut conn = Connection::open_in_memory().unwrap();
+    migrate_with(&mut conn, &MIGRATIONS[..19]).unwrap();
+    let captured = authoring::create_source(&mut conn, source()).unwrap();
+    conn.execute_batch("CREATE TRIGGER trg_catalogue_source_facts_immutable BEFORE UPDATE ON catalogue_sources BEGIN SELECT 1; END;").unwrap();
+    assert!(matches!(crate::db::migrate(&mut conn), Err(crate::db::MigrateError::Migration { version: 20, reached: 19, .. })));
+    let version: u32 = conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
+    assert_eq!(version, 19);
+    assert_eq!(catalogue::load(&conn).unwrap().sources.into_iter().find(|s| s.id == captured.id).unwrap(), captured);
+}
+
 // --- 9.1 populated upgrade ---------------------------------------------------
 
 #[test]

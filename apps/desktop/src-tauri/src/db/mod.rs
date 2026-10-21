@@ -131,6 +131,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "rulebook_binding_provider",
         step: Step::Sql(include_str!("../../migrations/0019_rulebook_binding_provider.sql")),
     },
+    Migration {
+        version: 20,
+        name: "source_fact_immutability",
+        step: Step::Sql(include_str!("../../migrations/0020_source_fact_immutability.sql")),
+    },
 ];
 
 /// Latest schema version this build understands.
