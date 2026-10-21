@@ -16,6 +16,13 @@ fn csv(lines: &[&str]) -> String {
     out
 }
 
+/// The account's one active trade. Failures panic with fixed text only: journal values stay out of test logs.
+fn only_trade(conn: &Connection, account: &str) -> trade_store::Trade {
+    let Ok(mut trades) = trade_store::list(conn, account) else { panic!("listing the account's trades failed") };
+    assert_eq!(trades.len(), 1, "one active trade");
+    trades.remove(0)
+}
+
 fn fill_pairs(conn: &Connection, account: &str) -> Vec<(String, String, String)> {
     conn.prepare(
         "SELECT t.id, rt.buy_fill_id, rt.sell_fill_id FROM trades t JOIN trade_round_trips rt ON rt.trade_id = t.id
@@ -33,7 +40,7 @@ fn colliding_fill_pairs_are_distinct_trades_in_one_file_and_across_imports() {
     let (mut conn, account) = setup();
     let both = csv(&[COLON_IN_BUY, COLON_IN_SELL]);
     let p = preview(&conn, &request(&account, &both)).unwrap();
-    assert_eq!((p.new_count, p.duplicate_count), (2, 0), "{:?}", p.rows.iter().map(|r| &r.duplicate).collect::<Vec<_>>());
+    assert_eq!((p.new_count, p.duplicate_count), (2, 0));
     let batch = commit(&mut conn, &request(&account, &both)).unwrap();
     assert_eq!((batch.imported_count, batch.duplicate_count), (2, 0));
     let saved = fill_pairs(&conn, &account);
@@ -142,7 +149,7 @@ fn restoring_a_deleted_trade_matches_its_exact_pair_and_keeps_its_id() {
         } else {
             commit(&mut conn, &request(&account, &saved)).unwrap();
         }
-        let original = trade_store::list(&conn, &account).unwrap().remove(0);
+        let original = only_trade(&conn, &account);
         trade_store::delete(&mut conn, &original.id).unwrap();
 
         // Only the colliding partner: it must not bring back (a:b, c).
@@ -193,7 +200,7 @@ fn a_legacy_trade_whose_stored_pair_is_unreadable_is_reported_not_guessed() {
     for r in &p.rows {
         assert_eq!(r.status, "invalid");
         assert_eq!(fields(&r.errors), ["identity"]);
-        assert!(r.errors[0].message.starts_with("Couldn't tell whether this row is already saved"), "{}", r.errors[0].message);
+        assert!(r.errors[0].message.starts_with("Couldn't tell whether this row is already saved"));
         assert!(!r.errors[0].message.contains("fills:"), "no internal key in the message");
     }
     assert_eq!(p.target_assessment.candidate_count, 0);
@@ -214,7 +221,7 @@ fn a_failed_write_rolls_back_legacy_restores_and_new_pairs_together() {
         let mut conn = file.open();
         account = accounts::create(&mut conn, account_input("Rollback")).unwrap().id;
         dedup::as_legacy_writer(|| commit(&mut conn, &request(&account, &csv(&[COLON_IN_BUY]))).unwrap());
-        legacy_colon = trade_store::list(&conn, &account).unwrap().remove(0).id;
+        legacy_colon = only_trade(&conn, &account).id;
         trade_store::delete(&mut conn, &legacy_colon).unwrap();
         conn.execute_batch(
             "CREATE TRIGGER interrupt_import BEFORE INSERT ON trade_round_trips WHEN NEW.sell_fill_id = 'b:c'
@@ -286,7 +293,7 @@ fn identity_vectors_match_the_versioned_contract() {
         // Each vector is a fill ID pair the importer accepts, so the key is one it can store.
         let p = preview(&conn, &request(&account, &csv(&[&format!("MNQ,1,21000,21001,{buy},{sell},10/19/2026 09:30:00,10/19/2026 09:31:00")])))
             .unwrap();
-        assert_eq!(p.rows[0].status, "new", "{v}: {:?}", p.rows[0].errors);
+        assert_eq!(p.rows[0].status, "new", "{v}");
     }
 }
 
