@@ -165,7 +165,7 @@ Unloaded, five consecutive full desktop runs passed 635/635 each. All failures u
 focus/race suites hit those budgets; the other 4 passed. CI runs `npm test` before cargo, so that overlap doesn't occur
 there. Journey design keeps each new test at or under about 1.3 s locally (typed phrases pasted, long journeys split).
 Remaining risk: the pre-existing Today, Accounts and presentation tests above still time out under heavy contention.
-Follow-up: a Triage card to trim those tests' per-step cost, or cap CI workers, if they appear in CI.
+Follow-up: [Triage card](https://app.notion.com/p/4001bd4b6bde819f9640ecfca19b2f01) to trim those tests' per-step cost.
 
 ## 7. CI and commands (Block E)
 
@@ -240,8 +240,10 @@ attempted. Build 26.5 (runtime recovery), 26.75 (installer) and 27 (release acce
   ([policy follow-up](https://app.notion.com/p/4001bd4b6bde81d09774d36d727b77be)).
 - Inherited presentation gaps (PR #43): no data-folder path command, no per-account status in the archive manifest,
   linked attempts shown by ID. Not faked.
-- Under heavy CPU contention, some existing feature tests exceed the 5 s default (§6). Suggested Triage card.
+- Under heavy CPU contention, some existing feature tests exceed the 5 s default (§6). Triage:
+  [Trim feature tests that time out under CPU contention](https://app.notion.com/p/4001bd4b6bde819f9640ecfca19b2f01).
 - After an uncertain account save, "Check result" closes the form, but a new Add account form still shows "Couldn't
   confirm it saved" and won't save until the app restarts: the account form never acknowledges the uncertain
   submission (the import wizard does, with "I've checked the history"). Seen with a jsdom probe; not changed here
-  because it is product behaviour outside this card. Recorded for Triage.
+  because it is product behaviour outside this card. Triage:
+  [Account form stays locked after an uncertain save](https://app.notion.com/p/4001bd4b6bde816c8fb5f654ff4704f8).
