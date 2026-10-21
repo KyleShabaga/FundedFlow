@@ -87,6 +87,12 @@ class RawSettings(_Section):
     retention_days: int = Field(default=90, ge=1, le=3650)
 
 
+class DirectorySettings(_Section):
+    """Comparison publishers (Build 29.25). There is no setting that widens scope or loosens any policy."""
+
+    stale_after_days: int = Field(default=30, ge=1, le=365)
+
+
 class Settings(_Section):
     user_agent: UserAgentSettings = UserAgentSettings()
     pacing: PacingSettings = PacingSettings()
@@ -95,6 +101,7 @@ class Settings(_Section):
     pdf: PdfSettings = PdfSettings()
     browser: BrowserSettings = BrowserSettings()
     raw: RawSettings = RawSettings()
+    directory: DirectorySettings = DirectorySettings()
 
 
 def load_settings(path: Path | None) -> tuple[Settings, str]:
@@ -142,6 +149,9 @@ EXAMPLE_CONFIG = """# FundedFlow collector settings. Every value has a safe defa
 [raw]
 # retain = false                     # keep raw response bytes (default off)
 # retention_days = 90
+
+[directory]
+# stale_after_days = 30              # comparison-publisher values older than this are marked stale
 """
 
 

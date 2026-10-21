@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fundedflow.invalid/contracts/collector-directory-observations-v1.schema.json",
+  "title": "FundedFlow collector: directory observations v1",
+  "description": "Unverified, field-level observations from third-party prop-firm comparison publishers, with full provenance. Separate from collector-snapshot-v1. Not rules, not official firm data, not approved. Build 31 does not accept this format; a mapping to it is a separate, tested hand-off.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schema_version", "export_id", "generated_at", "producer", "notice", "scope", "publishers", "pages", "records", "review_items", "summary"],
+  "properties": {
+    "kind": { "const": "fundedflow.collector.directory_observations" },
+    "schema_version": { "const": 1 },
+    "export_id": { "type": "string", "pattern": "^dexp_[0-9a-f]{24}$" },
+    "generated_at": { "$ref": "#/$defs/instant" },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "hash_algorithm"],
+      "properties": {
+        "name": { "const": "fundedflow-collector" },
+        "version": { "type": "string", "minLength": 1 },
+        "hash_algorithm": { "const": "sha256" }
+      }
+    },
+    "notice": { "type": "string", "minLength": 20 },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["publishers", "include_superseded", "stale_after_days"],
+      "properties": {
+        "publishers": { "type": "array", "items": { "$ref": "#/$defs/key" } },
+        "include_superseded": { "type": "boolean" },
+        "stale_after_days": { "type": "integer", "minimum": 1, "maximum": 365 }
+      }
+    },
+    "publishers": { "type": "array", "items": { "$ref": "#/$defs/publisher" } },
+    "pages": { "type": "array", "items": { "$ref": "#/$defs/page" } },
+    "records": { "type": "array", "items": { "$ref": "#/$defs/record" } },
+    "review_items": { "type": "array", "items": { "$ref": "#/$defs/review_item" } },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["records", "observations", "by_status", "pages_by_status"],
+      "properties": {
+        "records": { "type": "integer", "minimum": 0 },
+        "observations": { "type": "integer", "minimum": 0 },
+        "by_status": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "pages_by_status": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
+      }
+    }
+  },
+  "$defs": {
+    "instant": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+    "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,63}$" },
+    "url": { "type": "string", "pattern": "^https?://" },
+    "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "nullable_string": { "type": ["string", "null"] },
+    "publisher": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["publisher_key", "display_name", "homepage_url", "role", "adapter", "adapter_version", "capture_mode", "enabled", "state", "hosts", "policy_review", "last_checked_at", "last_change_at"],
+      "properties": {
+        "publisher_key": { "$ref": "#/$defs/key" },
+        "display_name": { "type": "string", "minLength": 1 },
+        "homepage_url": { "$ref": "#/$defs/url" },
+        "role": { "const": "third_party_comparison_publisher" },
+        "adapter": { "type": "string", "minLength": 1 },
+        "adapter_version": { "type": "string", "minLength": 1 },
+        "capture_mode": { "enum": ["auto", "manual_only"] },
+        "enabled": { "type": "boolean" },
+        "state": { "type": "string", "minLength": 1 },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["host", "authorisation", "terms_decision", "terms_reviewed_at", "terms_url", "circuit_state"],
+            "properties": {
+              "host": { "type": "string", "minLength": 1 },
+              "authorisation": { "const": "operator_approved_publisher" },
+              "terms_decision": { "enum": ["allowed", "allowed_with_limits", "prohibited", "unclear", null] },
+              "terms_reviewed_at": { "anyOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] },
+              "terms_url": { "$ref": "#/$defs/nullable_string" },
+              "circuit_state": { "enum": ["closed", "rate_limited", "blocked_bot_protection", "access_denied"] }
+            }
+          }
+        },
+        "policy_review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reviewed_on", "suggested_decision", "summary", "robots_url", "terms_url"],
+          "properties": {
+            "reviewed_on": { "$ref": "#/$defs/nullable_string" },
+            "suggested_decision": { "$ref": "#/$defs/nullable_string" },
+            "summary": { "$ref": "#/$defs/nullable_string" },
+            "robots_url": { "$ref": "#/$defs/nullable_string" },
+            "terms_url": { "$ref": "#/$defs/nullable_string" }
+          }
+        },
+        "last_checked_at": { "anyOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] },
+        "last_change_at": { "anyOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] }
+      }
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["publisher_key", "url", "page_kind", "extraction_status", "page_state", "detail", "last_outcome", "last_attempt_at", "snapshot_id", "content_hash", "captured_at", "adapter_version", "record_count", "warnings"],
+      "properties": {
+        "publisher_key": { "$ref": "#/$defs/key" },
+        "url": { "$ref": "#/$defs/url" },
+        "page_kind": { "enum": ["listing", "comparison", "profile", "rules_guide", "unsupported", null] },
+        "extraction_status": { "enum": ["collected", "no_records", "js_unavailable", "structure_changed", "parse_error", "unsupported_page", "not_read"] },
+        "page_state": { "type": "string", "minLength": 1 },
+        "detail": { "$ref": "#/$defs/nullable_string" },
+        "last_outcome": { "$ref": "#/$defs/nullable_string" },
+        "last_attempt_at": { "anyOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] },
+        "snapshot_id": { "$ref": "#/$defs/nullable_string" },
+        "content_hash": { "anyOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }] },
+        "captured_at": { "anyOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] },
+        "adapter_version": { "$ref": "#/$defs/nullable_string" },
+        "record_count": { "type": "integer", "minimum": 0 },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "named": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "normalized"],
+      "properties": { "name": { "$ref": "#/$defs/nullable_string" }, "normalized": { "type": "string" } }
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_key", "publisher_key", "firm", "programme", "variant", "account_size", "phase", "market", "publisher_entry_id", "entry_url", "first_party_url", "fields"],
+      "properties": {
+        "record_key": { "type": "string", "pattern": "^rec_[0-9a-f]{32}$" },
+        "publisher_key": { "$ref": "#/$defs/key" },
+        "firm": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "normalized", "mapped_firm_key", "mapping"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "normalized": { "type": "string" },
+            "mapped_firm_key": { "anyOf": [{ "$ref": "#/$defs/key" }, { "type": "null" }] },
+            "mapping": { "enum": ["operator", "exact_name", "none"] }
+          }
+        },
+        "programme": { "$ref": "#/$defs/named" },
+        "variant": { "$ref": "#/$defs/named" },
+        "account_size": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["raw", "amount", "currency"],
+          "properties": {
+            "raw": { "$ref": "#/$defs/nullable_string" },
+            "amount": { "type": ["string", "null"], "pattern": "^[0-9]+(\\.[0-9]+)?$" },
+            "currency": { "$ref": "#/$defs/nullable_string" }
+          }
+        },
+        "phase": { "enum": ["evaluation", "evaluation_step_1", "evaluation_step_2", "evaluation_step_3", "simulated_funded", "instant_funded", "unspecified"] },
+        "market": { "enum": ["futures", "forex_cfd", "crypto", "stocks", "multiple", "unspecified"] },
+        "publisher_entry_id": { "$ref": "#/$defs/nullable_string" },
+        "entry_url": { "$ref": "#/$defs/nullable_string" },
+        "first_party_url": { "$ref": "#/$defs/nullable_string" },
+        "fields": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/field" } }
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observation_id", "field", "raw_label", "raw_value", "value_kind", "normalized", "confidence", "uncertain_reason", "publisher_qualifier", "status", "status_reasons", "verification_status", "provenance"],
+      "properties": {
+        "observation_id": { "type": "string", "pattern": "^obs_[0-9a-f]{32}$" },
+        "field": { "enum": ["profit_target", "max_drawdown", "daily_loss_limit", "drawdown_type", "consistency_rule", "min_trading_days", "time_limit", "payout_split", "payout_frequency", "payout_conditions", "evaluation_fee", "activation_fee", "max_allocation", "other_restriction"] },
+        "raw_label": { "type": "string" },
+        "raw_value": { "type": "string" },
+        "value_kind": { "enum": ["value", "unknown", "none", "not_applicable", "see_rules"] },
+        "normalized": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["type"],
+              "properties": {
+                "type": { "enum": ["percent", "money", "days", "text", "drawdown_type"] },
+                "value": { "type": "string" },
+                "amount": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$" },
+                "currency": { "type": ["string", "null"] },
+                "basis": { "enum": ["trailing", "trailing_eod", "trailing_intraday", "static", "end_of_day", "intraday"] },
+                "qualifier": { "enum": ["up_to", "at_least"] }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "confidence": { "enum": ["observed", "uncertain"] },
+        "uncertain_reason": { "$ref": "#/$defs/nullable_string" },
+        "publisher_qualifier": { "$ref": "#/$defs/nullable_string" },
+        "status": { "enum": ["observed", "uncertain", "conflicting", "stale", "superseded", "officially_verified"] },
+        "status_reasons": { "type": "array", "items": { "type": "string" } },
+        "verification_status": { "enum": ["unverified", "officially_verified"] },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["publisher_key", "page_url", "snapshot_id", "content_hash", "observed_at", "adapter_name", "adapter_version", "capture_channel", "location"],
+          "properties": {
+            "publisher_key": { "$ref": "#/$defs/key" },
+            "page_url": { "$ref": "#/$defs/url" },
+            "snapshot_id": { "type": "string", "pattern": "^snap_[0-9a-f]{32}$" },
+            "content_hash": { "$ref": "#/$defs/hash" },
+            "observed_at": { "$ref": "#/$defs/instant" },
+            "adapter_name": { "type": "string", "minLength": 1 },
+            "adapter_version": { "type": "string", "minLength": 1 },
+            "capture_channel": { "enum": ["http", "browser", "platform_api", "manual_capture", "fixture_replay"] },
+            "location": { "type": "string", "minLength": 1 }
+          }
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "value_kind": { "not": { "const": "value" } } } }, "then": { "properties": { "normalized": { "type": "null" } } } },
+        { "if": { "properties": { "status": { "const": "officially_verified" } } }, "then": { "properties": { "verification_status": { "const": "officially_verified" } } }, "else": { "properties": { "verification_status": { "const": "unverified" } } } }
+      ]
+    },
+    "review_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "kind", "title", "detail", "observation_ids", "publishers", "dismissed", "note"],
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["conflict", "duplicate", "uncertain_identity", "stale"] },
+        "title": { "type": "string" },
+        "detail": { "type": "string" },
+        "observation_ids": { "type": "array", "items": { "type": "string" } },
+        "publishers": { "type": "array", "items": { "$ref": "#/$defs/key" } },
+        "dismissed": { "type": "boolean" },
+        "note": { "$ref": "#/$defs/nullable_string" }
+      }
+    }
+  }
+}

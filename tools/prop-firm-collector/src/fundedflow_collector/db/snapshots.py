@@ -11,7 +11,7 @@ from typing import Any
 from fundedflow_collector import ids
 from fundedflow_collector.clock import format_instant
 from fundedflow_collector.db.connection import transaction
-from fundedflow_collector.db.registry import Firm, Source, get_source, update_source_state
+from fundedflow_collector.db.registry import Owner, Source, get_source, update_source_state
 from fundedflow_collector.db.runs import AttemptRecord, insert_attempt
 from fundedflow_collector.outcomes import FetchMethod, Outcome
 from fundedflow_collector.parse.document import ParsedDocument
@@ -56,9 +56,10 @@ def list_snapshots(
 ) -> list[sqlite3.Row]:
     sql = (
         "SELECT s.id, s.captured_at, s.title, s.content_hash, s.fetch_method, s.content_type, s.final_url,"
-        " s.warnings, c.canonical_url, f.firm_key, length(s.text) AS text_chars"
+        " s.warnings, c.canonical_url, COALESCE(f.firm_key, 'publisher:' || p.publisher_key) AS firm_key,"
+        " length(s.text) AS text_chars"
         " FROM source_snapshots s JOIN collector_sources c ON c.id = s.source_id"
-        " JOIN collector_firms f ON f.id = s.firm_id"
+        " LEFT JOIN collector_firms f ON f.id = s.firm_id LEFT JOIN directory_publishers p ON p.id = s.firm_id"
     )
     clauses: list[str] = []
     params: list[object] = []
@@ -78,7 +79,7 @@ def list_snapshots(
 def store_evidence(
     conn: sqlite3.Connection,
     *,
-    firm: Firm,
+    firm: Owner,
     source: Source,
     attempt: AttemptRecord,
     evidence: EvidenceInput,
@@ -101,7 +102,7 @@ def store_evidence(
             sid = str(existing["id"])
             outcome = Outcome.UNCHANGED if source.latest_snapshot_id == sid else Outcome.MATCHED_EARLIER_SNAPSHOT
         else:
-            sid = ids.snapshot_id(firm.firm_key, source.canonical_url, digest)
+            sid = ids.snapshot_id(firm.owner_key, source.canonical_url, digest)
             warnings = list(doc.warnings)
             if previous_raw is not None and evidence.raw_sha256 == previous_raw and source.latest_snapshot_id:
                 warnings.append("normalization_changed")

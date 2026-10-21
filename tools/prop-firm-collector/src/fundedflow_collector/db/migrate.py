@@ -12,6 +12,7 @@ from pathlib import Path
 from fundedflow_collector.clock import SystemClock, format_instant
 
 MIGRATION_NAME = re.compile(r"^(\d{4})_([a-z0-9_]+)\.sql$")
+REBUILD_MARKER = "-- migrate: rebuild-tables"
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,11 @@ class Migration:
     @property
     def sha256(self) -> str:
         return hashlib.sha256(self.sql.encode("utf-8")).hexdigest()
+
+    @property
+    def rebuilds_tables(self) -> bool:
+        """A migration whose first line is `-- migrate: rebuild-tables` runs with foreign keys off."""
+        return self.sql.lstrip().startswith(REBUILD_MARKER)
 
 
 class MigrationError(Exception):
@@ -72,18 +78,32 @@ def apply_migrations(conn: sqlite3.Connection, db_path: Path | None, migrations:
     if pending and applied and db_path is not None and db_path.exists():
         backup(conn, db_path.with_name(f"{db_path.name}.bak-{max(applied):04d}"))
     for migration in pending:
+        rebuilds = migration.rebuilds_tables
+        if rebuilds:
+            # SQLite's table-rebuild procedure: foreign keys off (only possible outside a transaction), rebuild,
+            # then prove every reference still resolves before committing.
+            conn.execute("PRAGMA foreign_keys = OFF")
         conn.execute("BEGIN IMMEDIATE")
         try:
             for statement in _split_statements(migration.sql):
                 conn.execute(statement)
+            if rebuilds:
+                broken = conn.execute("PRAGMA foreign_key_check").fetchall()
+                if broken:
+                    raise MigrationError(
+                        f"migration {migration.version:04d}_{migration.name} left {len(broken)} broken references"
+                    )
             conn.execute(
                 "INSERT INTO schema_migrations (version, name, sha256, applied_at) VALUES (?, ?, ?, ?)",
                 (migration.version, migration.name, migration.sha256, format_instant(SystemClock().now())),
             )
+            conn.execute("COMMIT")
         except BaseException:
             conn.execute("ROLLBACK")
             raise
-        conn.execute("COMMIT")
+        finally:
+            if rebuilds:
+                conn.execute("PRAGMA foreign_keys = ON")
     return len(pending)
 
 

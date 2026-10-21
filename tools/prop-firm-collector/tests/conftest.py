@@ -157,3 +157,57 @@ Handler = Callable[[httpx.Request], httpx.Response]
 
 def mock_fetcher(handler: Handler, clock: FakeClock, settings: Settings = TEST_SETTINGS) -> Fetcher:
     return Fetcher(make_client(settings, httpx.MockTransport(handler), UA), clock, settings)
+
+
+# ---------------------------------------------------------------- comparison publishers (Build 29.25)
+
+DIRECTORY_SITE = PROJECT / "examples" / "directory-site"
+DIRECTORY_CAPTURES = PROJECT / "examples" / "captures" / "directory"
+
+
+def install_publisher(
+    conn: sqlite3.Connection,
+    clock: FakeClock,
+    key: str,
+    *,
+    decision: TermsDecision | None = TermsDecision.UNCLEAR,
+    enable: bool = True,
+) -> registry.Publisher:
+    """Install a preset, record a terms review for its hosts (unclear terms acknowledged) and enable it."""
+    from fundedflow_collector.directory import presets
+
+    publisher = presets.install_preset(conn, key, clock.now())
+    if decision is not None:
+        for host in registry.list_hosts(conn, publisher.id):
+            registry.record_terms(
+                conn,
+                publisher,
+                host,
+                decision=decision,
+                terms_url=str(publisher.policy_review.get("terms_url", "https://example.invalid/terms")),
+                now=clock.now(),
+                accept_unclear=decision is TermsDecision.UNCLEAR,
+            )
+    if enable and publisher.capture_mode == "auto" and decision is not TermsDecision.PROHIBITED:
+        publisher = registry.set_publisher_enabled(conn, publisher, True, None, clock.now())
+    return publisher
+
+
+@pytest.fixture
+def directory_site(tmp_path: Path) -> Path:
+    import shutil
+
+    target = tmp_path / "directory-site"
+    shutil.copytree(DIRECTORY_SITE, target)
+    return target
+
+
+@pytest.fixture
+def dharness(conn: sqlite3.Connection, clock: FakeClock, directory_site: Path) -> Harness:
+    return Harness(conn=conn, clock=clock, site=FixtureSite(directory_site), settings=TEST_SETTINGS)
+
+
+def run_publisher(harness: Harness, key: str, **options: object) -> RunSummary:
+    publisher = registry.require_publisher(harness.conn, key)
+    opts = RunOptions(command=options.pop("command", "fetch"), **options)  # type: ignore[arg-type]
+    return FirmRunner(harness.env(), publisher, opts, "batch_test").run()

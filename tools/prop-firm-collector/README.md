@@ -1,14 +1,18 @@
-# FundedFlow prop-firm collector (Build 29)
+# FundedFlow prop-firm collector (Build 29, 29.25)
 
 A standalone Windows command-line tool that collects **public** prop-firm rule pages as **unverified evidence**:
 a source registry, a polite and fail-closed fetching pipeline, an immutable snapshot archive in its own SQLite
-file, and a versioned JSON export for Build 31.
+file, and a versioned JSON export for Build 31. Since Build 29.25 it can also read **comparison publishers**
+(third-party sites that compare many firms) into unverified, field-level observations, kept apart from the firms'
+own sources and exported in their own format.
 
 It does **not** interpret rules, log in, approve anything, use AI, or touch the FundedFlow app or its database.
 
 - Plain-language guide for operators: [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md)
 - Architecture and design decisions: [`../../docs/architecture/prop-firm-collector.md`](../../docs/architecture/prop-firm-collector.md)
 - Export contract (JSON Schema): [`../../docs/contracts/collector-snapshot-v1.schema.json`](../../docs/contracts/collector-snapshot-v1.schema.json)
+- Comparison publishers: adapter guide and source matrix [`docs/adapters.md`](docs/adapters.md); export contract
+  [`../../docs/contracts/collector-directory-observations-v1.schema.json`](../../docs/contracts/collector-directory-observations-v1.schema.json)
 - Asking a firm for permission: [`docs/permission-request.md`](docs/permission-request.md)
 
 ## Being a good citizen
@@ -94,6 +98,13 @@ Run as `uv run collector <command>`; every command has `--help`.
 | `prune-raw` | Delete expired raw bytes (only when `raw.retain = true`; snapshots are never deleted) |
 | `reset --yes` | Delete the collector's own database, logs and exports |
 | `gui` | Open the desktop window (same as `collector-gui`) |
+| `directory presets / add-preset / add / list / show / update / enable / disable` | Comparison publishers: the four presets (installed **disabled**), other permitted publishers, scope and limits |
+| `directory host-add / terms / seed-add` | A publisher's own hosts (never a firm's), terms reviews, starting pages |
+| `directory fetch` | Collect from publishers through the same pipeline (`--publisher KEY` repeatable or `--all`, `--dry-run`, `--fixture-site`) |
+| `directory capture` | Import a saved publisher page (also `import-capture --publisher`), no network |
+| `directory observations / show-observation` | Unverified values with status, provenance, history and the firm's own stored pages |
+| `directory review list / map / separate / note / verify / unverify` | Conflicts, duplicates, uncertain identities, stale pages; mappings and notes (never approvals) |
+| `directory export` | Write `collector-directory-observations-v1` (`validate` checks it) |
 
 `--fixture-site DIR` (on `discover` and `fetch`) replays a local folder instead of the network. The synthetic
 fixture in [`examples/fixture-site`](examples/fixture-site) is what the tests and the user guide use; anything
@@ -144,7 +155,8 @@ uv run pytest
 Tests never touch the network: `pytest-socket` blocks sockets, and HTTP goes through mock transports or the fixture
 site. Browser tests fulfil every request from the fixture site and point Chromium's resolver at nothing. After an
 intentional change to the export, regenerate the fixture with `$env:FFC_UPDATE_FIXTURES=1; uv run pytest
-tests/contract` and review the diff. `tests/make_fixtures.py` regenerates the synthetic sites.
+tests/contract` and review the diff. `tests/make_fixtures.py` regenerates the synthetic firm sites and
+`tests/make_directory_fixtures.py` the synthetic publisher pages (invented firms; never real publisher content).
 
 CI: [`.github/workflows/prop-firm-collector.yml`](../../.github/workflows/prop-firm-collector.yml) (Windows, Python 3.12,
 runs only when collector files change).
@@ -159,3 +171,11 @@ runs only when collector files change).
 - MHTML ("single file") captures are not supported; save as HTML, PDF or text.
 - `published_at`/`effective_at` are always null: Build 29 never infers business dates.
 - PDF memory limits are enforced by a watchdog that samples every 50 ms, not a hard OS limit.
+- Comparison publishers: the four adapters were written against the publishers' public page structure as reviewed on
+  2026-10-21 and tested on synthetic pages only. No live run against those sites has been made or verified; their
+  terms are unclear or prohibit automated access, and Prop Firm Match refuses automated requests, so it is manual
+  capture only. A redesign shows as `structure_changed` (nothing is guessed): see [`docs/adapters.md`](docs/adapters.md).
+- Publishers use their seed pages and their adapter's links only; sitemap discovery (and sitemap `lastmod`) is not
+  used for them. Conditional requests (ETag, Last-Modified) and content hashing work as for firms.
+- Values are read from visible tables only, never from scripts' embedded data or private APIs, so a list that a site
+  builds in the browser needs the `[browser]` extra or a manual capture.

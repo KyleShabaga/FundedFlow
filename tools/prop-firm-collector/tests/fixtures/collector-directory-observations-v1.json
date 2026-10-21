@@ -1,0 +1,4602 @@
+{
+  "export_id": "dexp_6a532cbd33413ee8f86efa85",
+  "generated_at": "2026-10-20T12:01:15.000Z",
+  "kind": "fundedflow.collector.directory_observations",
+  "notice": "Unverified third-party observations from prop-firm comparison publishers. They are not rules, not official firm data and not approved; publisher ratings, rankings and offers are excluded.",
+  "pages": [
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:00:05.000Z",
+      "content_hash": "sha256:49862a8a6cc4599eaedbfa0e4e95425625d6f93bb782bbd59a48fb9b1dde045e",
+      "detail": "the list is filled in by JavaScript; use the browser or capture it",
+      "extraction_status": "js_unavailable",
+      "last_attempt_at": "2026-10-20T12:00:05.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "comparison",
+      "page_state": "js_unavailable",
+      "publisher_key": "onlypropfirms",
+      "record_count": 0,
+      "snapshot_id": "snap_82e8e82225a50fba325c4b92d24cc51f",
+      "url": "https://onlypropfirms.com/largest-drawdown",
+      "warnings": []
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:00:10.000Z",
+      "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+      "detail": null,
+      "extraction_status": "collected",
+      "last_attempt_at": "2026-10-20T12:00:10.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "comparison",
+      "page_state": "collected",
+      "publisher_key": "onlypropfirms",
+      "record_count": 4,
+      "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd",
+      "url": "https://onlypropfirms.com/prop-firm-comparison",
+      "warnings": [
+        "table 0: not read: Deal (affiliate offer, coupon or checkout, not a rule), Rating (editorial rating or ranking, not a rule)"
+      ]
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:00:25.000Z",
+      "content_hash": "sha256:31d48728c506d599c29e6ceab7ea7a631dc4c3a55212b10767160267a00c464e",
+      "detail": null,
+      "extraction_status": "collected",
+      "last_attempt_at": "2026-10-20T12:00:25.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "comparison",
+      "page_state": "collected",
+      "publisher_key": "onlypropfirms",
+      "record_count": 1,
+      "snapshot_id": "snap_8e5469325615523fd5dc39fbffedc821",
+      "url": "https://onlypropfirms.com/prop-firm-comparison?page=2",
+      "warnings": [
+        "table 0: not read: Deal (affiliate offer, coupon or checkout, not a rule), Rating (editorial rating or ranking, not a rule)"
+      ]
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:00:15.000Z",
+      "content_hash": "sha256:230b70b994417e2911811cb5e551b74f1cd252c44a5e312c3d85bde65cf3498d",
+      "detail": null,
+      "extraction_status": "collected",
+      "last_attempt_at": "2026-10-20T12:00:15.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "comparison",
+      "page_state": "collected",
+      "publisher_key": "onlypropfirms",
+      "record_count": 1,
+      "snapshot_id": "snap_49bb1a199dcad07c256319e770517319",
+      "url": "https://onlypropfirms.com/prop-firm-starting-costs",
+      "warnings": [
+        "table 0: not read: Deal (affiliate offer, coupon or checkout, not a rule)"
+      ]
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:00:20.000Z",
+      "content_hash": "sha256:c1a276e99582585b3098179973f7543c0b3d995e0910e06d48bc57831b8d2700",
+      "detail": null,
+      "extraction_status": "collected",
+      "last_attempt_at": "2026-10-20T12:00:20.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "listing",
+      "page_state": "collected",
+      "publisher_key": "onlypropfirms",
+      "record_count": 2,
+      "snapshot_id": "snap_630bb50edfb3a63d1efeb5d71243ad9b",
+      "url": "https://onlypropfirms.com/prop-firms",
+      "warnings": [
+        "table 0: not read: Discount Code (affiliate offer, coupon or checkout, not a rule), True Cost to Funding (the publisher's own calculation, not a displayed rule)"
+      ]
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:00:35.000Z",
+      "content_hash": "sha256:af36c80967d4416cf38b7d43b95964f4ed35e03883abe13fef946e58469203e3",
+      "detail": "table 0: unexpected column 'Platform'",
+      "extraction_status": "structure_changed",
+      "last_attempt_at": "2026-10-20T12:00:35.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "profile",
+      "page_state": "structure_changed",
+      "publisher_key": "onlypropfirms",
+      "record_count": 0,
+      "snapshot_id": "snap_67ce9c0e2303a72f1b014033452a42a4",
+      "url": "https://onlypropfirms.com/prop-firms/contoso-funding",
+      "warnings": []
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:00:40.000Z",
+      "content_hash": "sha256:9ce65084b0b79fa4bc6cf4f3d653f87aed4435f7f77a7119b7f80cb139415dea",
+      "detail": null,
+      "extraction_status": "collected",
+      "last_attempt_at": "2026-10-20T12:00:40.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "profile",
+      "page_state": "collected",
+      "publisher_key": "onlypropfirms",
+      "record_count": 1,
+      "snapshot_id": "snap_3280d7b9197d54a646e90943532382f5",
+      "url": "https://onlypropfirms.com/prop-firms/fabrikam-traders",
+      "warnings": []
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:00:30.000Z",
+      "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+      "detail": null,
+      "extraction_status": "collected",
+      "last_attempt_at": "2026-10-20T12:00:30.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "profile",
+      "page_state": "collected",
+      "publisher_key": "onlypropfirms",
+      "record_count": 2,
+      "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd",
+      "url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+      "warnings": []
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:00:45.000Z",
+      "content_hash": "sha256:2d25b9f38c179ff4f3f70226bfb3682c65e55a87a8dc4050b9e2e1937946d02c",
+      "detail": null,
+      "extraction_status": "collected",
+      "last_attempt_at": "2026-10-20T12:00:45.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "profile",
+      "page_state": "collected",
+      "publisher_key": "onlypropfirms",
+      "record_count": 1,
+      "snapshot_id": "snap_0777392a11c8f8ca5ae4ed2bbfbaa0b2",
+      "url": "https://onlypropfirms.com/prop-firms/tailspin-capital",
+      "warnings": []
+    },
+    {
+      "adapter_version": null,
+      "captured_at": null,
+      "content_hash": null,
+      "detail": null,
+      "extraction_status": "not_read",
+      "last_attempt_at": null,
+      "last_outcome": null,
+      "page_kind": null,
+      "page_state": "never_collected",
+      "publisher_key": "propfirmmatch-futures",
+      "record_count": 0,
+      "snapshot_id": null,
+      "url": "https://propfirmmatch.com/futures",
+      "warnings": []
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-21T12:00:00.000Z",
+      "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+      "detail": null,
+      "extraction_status": "collected",
+      "last_attempt_at": "2026-10-21T12:00:00.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "comparison",
+      "page_state": "collected",
+      "publisher_key": "propfirmmatch-futures",
+      "record_count": 3,
+      "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21",
+      "url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+      "warnings": [
+        "table 0: not read: Discount (affiliate offer, coupon or checkout, not a rule), Rating (editorial rating or ranking, not a rule)"
+      ]
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:01:15.000Z",
+      "content_hash": "sha256:8b36bdaea667f38bbab58892ede857a8d2f836439adaada8966b54331c1cd795",
+      "detail": null,
+      "extraction_status": "collected",
+      "last_attempt_at": "2026-10-20T12:01:15.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "rules_guide",
+      "page_state": "collected",
+      "publisher_key": "traderssecondbrain",
+      "record_count": 1,
+      "snapshot_id": "snap_686a4ab184fb1f748b1bd3b15f9dc592",
+      "url": "https://traderssecondbrain.com/guides/northwind-futures-review",
+      "warnings": [
+        "guide labels not read: Rule, Trading platforms"
+      ]
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:01:05.000Z",
+      "content_hash": "sha256:2f6f7a078a8cbc0f93ac57ab93f2c0c9ceb5b30f2544435c2dfa75d6d63e6ebb",
+      "detail": "the expected table or section was not found",
+      "extraction_status": "structure_changed",
+      "last_attempt_at": "2026-10-20T12:01:05.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "profile",
+      "page_state": "structure_changed",
+      "publisher_key": "traderssecondbrain",
+      "record_count": 0,
+      "snapshot_id": "snap_c5c29ff0b4e22a0a56dcc7b92f712d62",
+      "url": "https://traderssecondbrain.com/prop-firm/contoso",
+      "warnings": []
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:01:10.000Z",
+      "content_hash": "sha256:78a4883d7fbb5416de344f713180140f53a398435688fd26e9c616e073bc3a30",
+      "detail": null,
+      "extraction_status": "collected",
+      "last_attempt_at": "2026-10-20T12:01:10.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "profile",
+      "page_state": "collected",
+      "publisher_key": "traderssecondbrain",
+      "record_count": 1,
+      "snapshot_id": "snap_2f02b5843f0a31705ee49e0f5196a1e0",
+      "url": "https://traderssecondbrain.com/prop-firm/fabrikam-traders-llc",
+      "warnings": []
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:01:00.000Z",
+      "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+      "detail": null,
+      "extraction_status": "collected",
+      "last_attempt_at": "2026-10-20T12:01:00.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "profile",
+      "page_state": "collected",
+      "publisher_key": "traderssecondbrain",
+      "record_count": 2,
+      "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34",
+      "url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+      "warnings": []
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:00:50.000Z",
+      "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+      "detail": null,
+      "extraction_status": "collected",
+      "last_attempt_at": "2026-10-20T12:00:50.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "listing",
+      "page_state": "collected",
+      "publisher_key": "traderssecondbrain",
+      "record_count": 3,
+      "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36",
+      "url": "https://traderssecondbrain.com/prop-firms",
+      "warnings": [
+        "table 0: not read: Action (affiliate offer, coupon or checkout, not a rule), Price / offer (affiliate offer, coupon or checkout, not a rule), Rank (editorial rating or ranking, not a rule), TSB Fit (editorial rating or ranking, not a rule)"
+      ]
+    },
+    {
+      "adapter_version": "1.0.0",
+      "captured_at": "2026-10-20T12:00:55.000Z",
+      "content_hash": "sha256:c47e1352a6aad81088760959cb950ac3d39a44a475c7717e2b00d4fb8e1b4223",
+      "detail": "the page says it lists nothing",
+      "extraction_status": "no_records",
+      "last_attempt_at": "2026-10-20T12:00:55.000Z",
+      "last_outcome": "new_snapshot",
+      "page_kind": "listing",
+      "page_state": "no_records",
+      "publisher_key": "traderssecondbrain",
+      "record_count": 0,
+      "snapshot_id": "snap_00ff6a8c383d1282fde092b8149c4000",
+      "url": "https://traderssecondbrain.com/prop-firms?page=2",
+      "warnings": []
+    }
+  ],
+  "producer": {
+    "hash_algorithm": "sha256",
+    "name": "fundedflow-collector",
+    "version": "0.1.0"
+  },
+  "publishers": [
+    {
+      "adapter": "onlypropfirms",
+      "adapter_version": "1.0.0",
+      "capture_mode": "auto",
+      "display_name": "OnlyPropFirms",
+      "enabled": true,
+      "homepage_url": "https://onlypropfirms.com/",
+      "hosts": [
+        {
+          "authorisation": "operator_approved_publisher",
+          "circuit_state": "closed",
+          "host": "onlypropfirms.com",
+          "terms_decision": "unclear",
+          "terms_reviewed_at": "2026-10-20T12:00:00.000Z",
+          "terms_url": "https://onlypropfirms.com/privacy-policy"
+        }
+      ],
+      "last_change_at": "2026-10-20T12:00:05.000Z",
+      "last_checked_at": "2026-10-20T12:00:45.000Z",
+      "policy_review": {
+        "reviewed_on": "2026-10-21",
+        "robots_url": "https://onlypropfirms.com/robots.txt",
+        "suggested_decision": "unclear",
+        "summary": "robots.txt allows these paths; terms silent on automation and reuse. Treat as unclear: ask for permission, or acknowledge unclear terms (slow 5 s pace) after your own review.",
+        "terms_url": "https://onlypropfirms.com/privacy-policy"
+      },
+      "publisher_key": "onlypropfirms",
+      "role": "third_party_comparison_publisher",
+      "state": "structure_changed"
+    },
+    {
+      "adapter": "propfirmmatch-futures",
+      "adapter_version": "1.0.0",
+      "capture_mode": "manual_only",
+      "display_name": "Prop Firm Match (Futures)",
+      "enabled": false,
+      "homepage_url": "https://propfirmmatch.com/futures",
+      "hosts": [
+        {
+          "authorisation": "operator_approved_publisher",
+          "circuit_state": "closed",
+          "host": "propfirmmatch.com",
+          "terms_decision": null,
+          "terms_reviewed_at": null,
+          "terms_url": null
+        }
+      ],
+      "last_change_at": "2026-10-21T12:00:00.000Z",
+      "last_checked_at": "2026-10-21T12:00:00.000Z",
+      "policy_review": {
+        "reviewed_on": "2026-10-21",
+        "robots_url": "https://propfirmmatch.com/robots.txt",
+        "suggested_decision": "prohibited",
+        "summary": "The site refuses automated requests (HTTP 403). Manual capture only: save pages from your browser and import them. Do not try to work around the block.",
+        "terms_url": "https://propfirmmatch.com/futures/terms-and-conditions"
+      },
+      "publisher_key": "propfirmmatch-futures",
+      "role": "third_party_comparison_publisher",
+      "state": "manual_capture"
+    },
+    {
+      "adapter": "traderssecondbrain",
+      "adapter_version": "1.0.0",
+      "capture_mode": "auto",
+      "display_name": "Trader's Second Brain",
+      "enabled": true,
+      "homepage_url": "https://traderssecondbrain.com/prop-firms",
+      "hosts": [
+        {
+          "authorisation": "operator_approved_publisher",
+          "circuit_state": "closed",
+          "host": "traderssecondbrain.com",
+          "terms_decision": "unclear",
+          "terms_reviewed_at": "2026-10-20T12:00:00.000Z",
+          "terms_url": "https://traderssecondbrain.com/terms"
+        }
+      ],
+      "last_change_at": "2026-10-20T12:00:50.000Z",
+      "last_checked_at": "2026-10-20T12:01:15.000Z",
+      "policy_review": {
+        "reviewed_on": "2026-10-21",
+        "robots_url": "https://traderssecondbrain.com/robots.txt",
+        "suggested_decision": "unclear",
+        "summary": "robots.txt allows the directory and firm pages; terms restrict reuse and are unclear on automated reading of public pages. Ask for permission before enabling.",
+        "terms_url": "https://traderssecondbrain.com/terms"
+      },
+      "publisher_key": "traderssecondbrain",
+      "role": "third_party_comparison_publisher",
+      "state": "structure_changed"
+    }
+  ],
+  "records": [
+    {
+      "account_size": {
+        "amount": "50000",
+        "currency": null,
+        "raw": "50K"
+      },
+      "entry_url": "https://onlypropfirms.com/prop-firms/contoso-funding",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "activation_fee",
+          "normalized": {
+            "amount": "140",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_11669a932a6032723502e52862783668",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:c1a276e99582585b3098179973f7543c0b3d995e0910e06d48bc57831b8d2700",
+            "location": "table 0 row 2 column 'Activation Fee'",
+            "observed_at": "2026-10-20T12:00:20.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_630bb50edfb3a63d1efeb5d71243ad9b"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Activation Fee",
+          "raw_value": "$140",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": {
+            "amount": "99",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_d0a50a4d6992970265a65519b1a84ebd",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:c1a276e99582585b3098179973f7543c0b3d995e0910e06d48bc57831b8d2700",
+            "location": "table 0 row 2 column 'Evaluation Cost'",
+            "observed_at": "2026-10-20T12:00:20.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_630bb50edfb3a63d1efeb5d71243ad9b"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Evaluation Cost",
+          "raw_value": "$99",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Contoso Funding",
+        "normalized": "contoso funding"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "50K Core",
+        "normalized": "core"
+      },
+      "publisher_entry_id": "contoso-funding",
+      "publisher_key": "onlypropfirms",
+      "record_key": "rec_6a6871b17429274473c613944118d0a2",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "50000",
+        "currency": "$",
+        "raw": "$50K"
+      },
+      "entry_url": "https://onlypropfirms.com/prop-firms/contoso-funding",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "consistency_rule",
+          "normalized": null,
+          "observation_id": "obs_1ebc9f14161290287ddbdf23c32ee9d1",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 3 column 'Consistency Rule'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Consistency Rule",
+          "raw_value": "No",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "none",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": {
+            "type": "percent",
+            "value": "2"
+          },
+          "observation_id": "obs_b7c75e13a0bbc59faac9b882f8c58c5c",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 3 column 'Daily Loss Limit'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily Loss Limit",
+          "raw_value": "2%",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "static"
+          },
+          "observation_id": "obs_b3b642d83d93389402ab831b57ebb471",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 3 column 'Drawdown Type'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown Type",
+          "raw_value": "Static",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": {
+            "amount": "99",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_87daaae3526c185b0ad3194f12aa8171",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 3 column 'Price'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Price",
+          "raw_value": "$99",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "type": "percent",
+            "value": "4"
+          },
+          "observation_id": "obs_0d8733d8171ae64c419496249fd01d44",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 3 column 'Max Drawdown'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Drawdown",
+          "raw_value": "4%",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "min_trading_days",
+          "normalized": null,
+          "observation_id": "obs_00b72fc29722856d4ac985ff083cb297",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 3 column 'Min. Trading Days'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Min. Trading Days",
+          "raw_value": "—",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "unknown",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "type": "percent",
+            "value": "6"
+          },
+          "observation_id": "obs_eba19d8983d87dc54f96c2fd18b2938b",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 3 column 'Profit Target'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit Target",
+          "raw_value": "6%",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Contoso Funding",
+        "normalized": "contoso funding"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "Core",
+        "normalized": "core"
+      },
+      "publisher_entry_id": "contoso-funding",
+      "publisher_key": "onlypropfirms",
+      "record_key": "rec_b0c88b869bae38c55e51ca8d9e04e379",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": null,
+        "currency": null,
+        "raw": "$25K–$150K"
+      },
+      "entry_url": "https://onlypropfirms.com/prop-firms/fabrikam-traders",
+      "fields": [
+        {
+          "confidence": "uncertain",
+          "field": "consistency_rule",
+          "normalized": null,
+          "observation_id": "obs_6431d36963c77cff76e57cb4d133aaf0",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 4 column 'Consistency Rule'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Consistency Rule",
+          "raw_value": "?",
+          "status": "uncertain",
+          "status_reasons": [
+            "account size shown as a range or in an unknown format"
+          ],
+          "uncertain_reason": "account size shown as a range or in an unknown format",
+          "value_kind": "unknown",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "uncertain",
+          "field": "daily_loss_limit",
+          "normalized": null,
+          "observation_id": "obs_2cb57c1309de86c73293f0b85d7952c4",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 4 column 'Daily Loss Limit'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily Loss Limit",
+          "raw_value": "N/A",
+          "status": "uncertain",
+          "status_reasons": [
+            "account size shown as a range or in an unknown format"
+          ],
+          "uncertain_reason": "account size shown as a range or in an unknown format",
+          "value_kind": "not_applicable",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "uncertain",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "trailing"
+          },
+          "observation_id": "obs_1cfcffca85e663f51eaac3d10b629cc2",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 4 column 'Drawdown Type'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown Type",
+          "raw_value": "Trailing",
+          "status": "uncertain",
+          "status_reasons": [
+            "account size shown as a range or in an unknown format"
+          ],
+          "uncertain_reason": "account size shown as a range or in an unknown format",
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "uncertain",
+          "field": "evaluation_fee",
+          "normalized": {
+            "amount": "49",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_cec8d792fbe9c63c73bbc1842aba75c1",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 4 column 'Price'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Price",
+          "raw_value": "$49",
+          "status": "uncertain",
+          "status_reasons": [
+            "account size shown as a range or in an unknown format"
+          ],
+          "uncertain_reason": "account size shown as a range or in an unknown format",
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "uncertain",
+          "field": "max_drawdown",
+          "normalized": null,
+          "observation_id": "obs_c4e60941c8b34073836c2a0609b34d76",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 4 column 'Max Drawdown'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Drawdown",
+          "raw_value": "See rules",
+          "status": "uncertain",
+          "status_reasons": [
+            "account size shown as a range or in an unknown format"
+          ],
+          "uncertain_reason": "account size shown as a range or in an unknown format",
+          "value_kind": "see_rules",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "uncertain",
+          "field": "min_trading_days",
+          "normalized": {
+            "type": "days",
+            "value": "3"
+          },
+          "observation_id": "obs_63b38a4ea6ee080ddc27125e6c58e3f5",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 4 column 'Min. Trading Days'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Min. Trading Days",
+          "raw_value": "3",
+          "status": "uncertain",
+          "status_reasons": [
+            "account size shown as a range or in an unknown format"
+          ],
+          "uncertain_reason": "account size shown as a range or in an unknown format",
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "uncertain",
+          "field": "profit_target",
+          "normalized": null,
+          "observation_id": "obs_1c06594fbde0f030f767cae69bf2c587",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 4 column 'Profit Target'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit Target",
+          "raw_value": "6%–8%",
+          "status": "uncertain",
+          "status_reasons": [
+            "a range of values, not one programme's value"
+          ],
+          "uncertain_reason": "a range of values, not one programme's value",
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Fabrikam Traders",
+        "normalized": "fabrikam traders"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "Flex",
+        "normalized": "flex"
+      },
+      "publisher_entry_id": "fabrikam-traders",
+      "publisher_key": "onlypropfirms",
+      "record_key": "rec_58c4e9f4b1afc8813344d15c0026a334",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "25000",
+        "currency": "$",
+        "raw": "$25K"
+      },
+      "entry_url": "https://onlypropfirms.com/prop-firms/fabrikam-traders",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "trailing"
+          },
+          "observation_id": "obs_849796ee3aa582bb2d50aa83d43a82e3",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:9ce65084b0b79fa4bc6cf4f3d653f87aed4435f7f77a7119b7f80cb139415dea",
+            "location": "table 0 row 1 column 'Max Drawdown' (type stated in the drawdown text)",
+            "observed_at": "2026-10-20T12:00:40.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/fabrikam-traders",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_3280d7b9197d54a646e90943532382f5"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Drawdown",
+          "raw_value": "$1,500 trailing",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "amount": "1500",
+            "basis": "trailing",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_1240db32cb4b571160e1210bcf76f5a4",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:9ce65084b0b79fa4bc6cf4f3d653f87aed4435f7f77a7119b7f80cb139415dea",
+            "location": "table 0 row 1 column 'Max Drawdown'",
+            "observed_at": "2026-10-20T12:00:40.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/fabrikam-traders",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_3280d7b9197d54a646e90943532382f5"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Drawdown",
+          "raw_value": "$1,500 trailing",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "type": "percent",
+            "value": "6"
+          },
+          "observation_id": "obs_f608697567611ea92c79db750a02e729",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:9ce65084b0b79fa4bc6cf4f3d653f87aed4435f7f77a7119b7f80cb139415dea",
+            "location": "table 0 row 1 column 'Profit Target'",
+            "observed_at": "2026-10-20T12:00:40.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/fabrikam-traders",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_3280d7b9197d54a646e90943532382f5"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit Target",
+          "raw_value": "6%",
+          "status": "conflicting",
+          "status_reasons": [
+            "disagrees with another observation of the same programme and field"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Fabrikam Traders",
+        "normalized": "fabrikam traders"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "Flex",
+        "normalized": "flex"
+      },
+      "publisher_entry_id": "fabrikam-traders",
+      "publisher_key": "onlypropfirms",
+      "record_key": "rec_7ced8b4662ca21dea18fc4eb43d5788a",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "25000",
+        "currency": null,
+        "raw": "25K"
+      },
+      "entry_url": null,
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": {
+            "amount": "49",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_fae3ee3a1ba8ca2c7c0503794b3e6469",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:230b70b994417e2911811cb5e551b74f1cd252c44a5e312c3d85bde65cf3498d",
+            "location": "table 0 row 1 column 'Starting Cost'",
+            "observed_at": "2026-10-20T12:00:15.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-starting-costs",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_49bb1a199dcad07c256319e770517319"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Starting Cost",
+          "raw_value": "$49",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Fabrikam Traders",
+        "normalized": "fabrikam traders"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "25K Flex",
+        "normalized": "flex"
+      },
+      "publisher_entry_id": null,
+      "publisher_key": "onlypropfirms",
+      "record_key": "rec_86c982b6b78b3bffbb3c78530057329b",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "100000",
+        "currency": "$",
+        "raw": "$100K"
+      },
+      "entry_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "consistency_rule",
+          "normalized": {
+            "type": "percent",
+            "value": "40"
+          },
+          "observation_id": "obs_dcc4c4f9d0a2622c027c36ec487fc780",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 2 column 'Consistency Rule'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Consistency Rule",
+          "raw_value": "40%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": null,
+          "observation_id": "obs_ac5cca5d8793efc7504188163eb46274",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 2 column 'Daily Loss Limit'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily Loss Limit",
+          "raw_value": "None",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "none",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "trailing_eod"
+          },
+          "observation_id": "obs_e7f95b739b30ecd2ea19af9aba51ab7c",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 2 column 'Drawdown Type'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown Type",
+          "raw_value": "EOD trailing",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": {
+            "amount": "265",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_5162da3e64c377524509db496b5b248a",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 2 column 'Price'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Price",
+          "raw_value": "$265",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "amount": "3000",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_de0a7b5bab88a3818f7bc854206c132b",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 2 column 'Max Drawdown'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Drawdown",
+          "raw_value": "$3,000",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "min_trading_days",
+          "normalized": {
+            "type": "days",
+            "value": "5"
+          },
+          "observation_id": "obs_2726f1c4a8fa4606eef94ef76e7445e5",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 2 column 'Min. Trading Days'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Min. Trading Days",
+          "raw_value": "5",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "amount": "6000",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_6dba85254cd496e443fc729c7f7f02bf",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 2 column 'Profit Target'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit Target",
+          "raw_value": "$6,000",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Northwind Futures",
+        "normalized": "northwind futures"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "Rally",
+        "normalized": "rally"
+      },
+      "publisher_entry_id": "northwind-futures",
+      "publisher_key": "onlypropfirms",
+      "record_key": "rec_14879f02777b940b073962b599af5373",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "50000",
+        "currency": null,
+        "raw": "50K"
+      },
+      "entry_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "activation_fee",
+          "normalized": {
+            "amount": "0",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_cfd75010ef290ffdaca66fb3658fa18e",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:c1a276e99582585b3098179973f7543c0b3d995e0910e06d48bc57831b8d2700",
+            "location": "table 0 row 1 column 'Activation Fee'",
+            "observed_at": "2026-10-20T12:00:20.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_630bb50edfb3a63d1efeb5d71243ad9b"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Activation Fee",
+          "raw_value": "$0",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": {
+            "amount": "165",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_4558e98991096f55d3e40430b143b030",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:c1a276e99582585b3098179973f7543c0b3d995e0910e06d48bc57831b8d2700",
+            "location": "table 0 row 1 column 'Evaluation Cost'",
+            "observed_at": "2026-10-20T12:00:20.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_630bb50edfb3a63d1efeb5d71243ad9b"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Evaluation Cost",
+          "raw_value": "$165",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Northwind Futures",
+        "normalized": "northwind futures"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "50K Rally",
+        "normalized": "rally"
+      },
+      "publisher_entry_id": "northwind-futures",
+      "publisher_key": "onlypropfirms",
+      "record_key": "rec_17fb62a6f1ffa52cf53e704b1488eee3",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "50000",
+        "currency": "$",
+        "raw": "$50K"
+      },
+      "entry_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "consistency_rule",
+          "normalized": {
+            "type": "percent",
+            "value": "40"
+          },
+          "observation_id": "obs_c99588dcaef9f8340e3b8c7bcc9f577a",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 1 column 'Consistency Rule'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Consistency Rule",
+          "raw_value": "40%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": {
+            "amount": "1100",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_58a19a1ce2ab310d9b8e5027d662bfc8",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 1 column 'Daily Loss Limit'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily Loss Limit",
+          "raw_value": "$1,100",
+          "status": "conflicting",
+          "status_reasons": [
+            "disagrees with another observation of the same programme and field"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "trailing_eod"
+          },
+          "observation_id": "obs_c13ec8e47d25bfe71fe26e3c0b9c7dfb",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 1 column 'Drawdown Type'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown Type",
+          "raw_value": "EOD trailing",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": {
+            "amount": "165",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_e817a6add599308b493224b9544a9f98",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 1 column 'Price'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Price",
+          "raw_value": "$165",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "amount": "2500",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_4d9de6b50f5e565228112cba3ec7d5c2",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 1 column 'Max Drawdown'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Drawdown",
+          "raw_value": "$2,500",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "min_trading_days",
+          "normalized": {
+            "type": "days",
+            "value": "5"
+          },
+          "observation_id": "obs_81a776705c4d1544076ce12ecdc8311c",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 1 column 'Min. Trading Days'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Min. Trading Days",
+          "raw_value": "5",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "payout_split",
+          "normalized": null,
+          "observation_id": "obs_fbaf31d33231560466cd14023374c166",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 1 column 'Payout Split'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Payout Split",
+          "raw_value": "—",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "unknown",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "amount": "3000",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_d93674888885b951af481c992674e1ee",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 1 column 'Profit Target'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit Target",
+          "raw_value": "$3,000",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Northwind Futures",
+        "normalized": "northwind futures"
+      },
+      "first_party_url": "https://www.northwind-futures.test/rules",
+      "market": "unspecified",
+      "phase": "evaluation",
+      "programme": {
+        "name": "Rally",
+        "normalized": "rally"
+      },
+      "publisher_entry_id": "northwind-futures",
+      "publisher_key": "onlypropfirms",
+      "record_key": "rec_36a8e1561c050ec3a80b3e4ba685bbe9",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "50000",
+        "currency": "$",
+        "raw": "$50K"
+      },
+      "entry_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "consistency_rule",
+          "normalized": {
+            "type": "percent",
+            "value": "40"
+          },
+          "observation_id": "obs_ff9366d24e5b810a733efaf04a5b16bb",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 2 column 'Consistency Rule'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Consistency Rule",
+          "raw_value": "40%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": {
+            "amount": "1100",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_eaa89fe58cb783ca545ed8b2cdaa90fc",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 2 column 'Daily Loss Limit'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily Loss Limit",
+          "raw_value": "$1,100",
+          "status": "conflicting",
+          "status_reasons": [
+            "disagrees with another observation of the same programme and field"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "trailing_eod"
+          },
+          "observation_id": "obs_40aee3b1316a7e1a44cb0fcced2ff877",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 2 column 'Drawdown Type'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown Type",
+          "raw_value": "EOD trailing",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": null,
+          "observation_id": "obs_2f4f4ae88184994e8d67cb1a3934aed8",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 2 column 'Price'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Price",
+          "raw_value": "—",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "unknown",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "amount": "2500",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_6a3bbb48f64f0006352eb34933e610f0",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 2 column 'Max Drawdown'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Drawdown",
+          "raw_value": "$2,500",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "min_trading_days",
+          "normalized": {
+            "type": "days",
+            "value": "8"
+          },
+          "observation_id": "obs_1a9ad5bc978e68c201834d534ac1d28c",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 2 column 'Min. Trading Days'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Min. Trading Days",
+          "raw_value": "8",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "payout_split",
+          "normalized": {
+            "type": "percent",
+            "value": "90"
+          },
+          "observation_id": "obs_3d5c250b41f680b15d91819e30650ded",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 2 column 'Payout Split'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Payout Split",
+          "raw_value": "90%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": null,
+          "observation_id": "obs_f30800b8597022c2512ef29f2d500d9d",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:689c2e8458d6148ac2031b1a3adc8abc70cb2e25da7be86be8ba3b545492c3b1",
+            "location": "table 0 row 2 column 'Profit Target'",
+            "observed_at": "2026-10-20T12:00:30.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_478380a55d2d3a96364efaf1794565dd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit Target",
+          "raw_value": "N/A",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "not_applicable",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Northwind Futures",
+        "normalized": "northwind futures"
+      },
+      "first_party_url": "https://www.northwind-futures.test/rules",
+      "market": "unspecified",
+      "phase": "simulated_funded",
+      "programme": {
+        "name": "Rally",
+        "normalized": "rally"
+      },
+      "publisher_entry_id": "northwind-futures",
+      "publisher_key": "onlypropfirms",
+      "record_key": "rec_5900f571caf445e629ececef213a8c23",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "50000",
+        "currency": "$",
+        "raw": "$50K"
+      },
+      "entry_url": "https://onlypropfirms.com/prop-firms/northwind-futures",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "consistency_rule",
+          "normalized": {
+            "type": "percent",
+            "value": "40"
+          },
+          "observation_id": "obs_7b062bf512bbda9c09da2c63eae64724",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 1 column 'Consistency Rule'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Consistency Rule",
+          "raw_value": "40%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": {
+            "amount": "1100",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_37bb19d48a86855f98ec37c102a541a8",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 1 column 'Daily Loss Limit'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily Loss Limit",
+          "raw_value": "$1,100",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "trailing_eod"
+          },
+          "observation_id": "obs_de6b92ebc5603860c2b5477692f964ce",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 1 column 'Drawdown Type'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown Type",
+          "raw_value": "EOD trailing",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": {
+            "amount": "165",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_54c2cd24b35ed9cbac9719ab6b3f5146",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 1 column 'Price'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Price",
+          "raw_value": "$165",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "amount": "2500",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_027d8831de96dbd07ffc66bb54c68be0",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 1 column 'Max Drawdown'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Drawdown",
+          "raw_value": "$2,500",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "min_trading_days",
+          "normalized": {
+            "type": "days",
+            "value": "5"
+          },
+          "observation_id": "obs_3eafc472d0b011e3e3bf793c232aec50",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 1 column 'Min. Trading Days'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Min. Trading Days",
+          "raw_value": "5",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "amount": "3000",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_9b1ba8d50682555cfd6afa27f3f1585b",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:7f1c86bd45f5d56da2eb2f1ac76dd649cd9ebb99196707a16efd8f12ba91631c",
+            "location": "table 0 row 1 column 'Profit Target'",
+            "observed_at": "2026-10-20T12:00:10.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_be58a2f1b6308eca5df1c51cee07f0bd"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit Target",
+          "raw_value": "$3,000",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Northwind Futures",
+        "normalized": "northwind futures"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "Rally",
+        "normalized": "rally"
+      },
+      "publisher_entry_id": "northwind-futures",
+      "publisher_key": "onlypropfirms",
+      "record_key": "rec_c8fffafdb96ee5fefe8d4daa914b854e",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "25000",
+        "currency": "$",
+        "raw": "$25K"
+      },
+      "entry_url": "https://onlypropfirms.com/prop-firms/tailspin-capital",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "trailing"
+          },
+          "observation_id": "obs_2ed781dfac5a59fba53c96a7a09ff5ee",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:2d25b9f38c179ff4f3f70226bfb3682c65e55a87a8dc4050b9e2e1937946d02c",
+            "location": "table 0 row 1 column 'Max Drawdown' (type stated in the drawdown text)",
+            "observed_at": "2026-10-20T12:00:45.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/tailspin-capital",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_0777392a11c8f8ca5ae4ed2bbfbaa0b2"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Drawdown",
+          "raw_value": "$1,500 trailing",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "amount": "1500",
+            "basis": "trailing",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_69b47ac452700a964ad4228bdb96e00b",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:2d25b9f38c179ff4f3f70226bfb3682c65e55a87a8dc4050b9e2e1937946d02c",
+            "location": "table 0 row 1 column 'Max Drawdown'",
+            "observed_at": "2026-10-20T12:00:45.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/tailspin-capital",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_0777392a11c8f8ca5ae4ed2bbfbaa0b2"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Drawdown",
+          "raw_value": "$1,500 trailing",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "type": "percent",
+            "value": "6"
+          },
+          "observation_id": "obs_e7d88bde87c2069d86324a15882de593",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:2d25b9f38c179ff4f3f70226bfb3682c65e55a87a8dc4050b9e2e1937946d02c",
+            "location": "table 0 row 1 column 'Profit Target'",
+            "observed_at": "2026-10-20T12:00:45.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firms/tailspin-capital",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_0777392a11c8f8ca5ae4ed2bbfbaa0b2"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit Target",
+          "raw_value": "6%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Tailspin Capital",
+        "normalized": "tailspin capital"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "Flex",
+        "normalized": "flex"
+      },
+      "publisher_entry_id": "tailspin-capital",
+      "publisher_key": "onlypropfirms",
+      "record_key": "rec_0a339f461e4afda9f3caca3f6912aae5",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "100000",
+        "currency": "EUR",
+        "raw": "€100k"
+      },
+      "entry_url": "https://onlypropfirms.com/prop-firms/tailspin-capital",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "consistency_rule",
+          "normalized": null,
+          "observation_id": "obs_33156b3f779fc826a351e1752a2c7807",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:31d48728c506d599c29e6ceab7ea7a631dc4c3a55212b10767160267a00c464e",
+            "location": "table 0 row 1 column 'Consistency Rule'",
+            "observed_at": "2026-10-20T12:00:25.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison?page=2",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_8e5469325615523fd5dc39fbffedc821"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Consistency Rule",
+          "raw_value": "No",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "none",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": {
+            "type": "percent",
+            "value": "5"
+          },
+          "observation_id": "obs_f3f648aad0f2f5442fb786126dbfc164",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:31d48728c506d599c29e6ceab7ea7a631dc4c3a55212b10767160267a00c464e",
+            "location": "table 0 row 1 column 'Daily Loss Limit'",
+            "observed_at": "2026-10-20T12:00:25.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison?page=2",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_8e5469325615523fd5dc39fbffedc821"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily Loss Limit",
+          "raw_value": "5%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "static"
+          },
+          "observation_id": "obs_5f32ba6acad970bdeded2a602b0a98eb",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:31d48728c506d599c29e6ceab7ea7a631dc4c3a55212b10767160267a00c464e",
+            "location": "table 0 row 1 column 'Drawdown Type'",
+            "observed_at": "2026-10-20T12:00:25.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison?page=2",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_8e5469325615523fd5dc39fbffedc821"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown Type",
+          "raw_value": "Static",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": {
+            "amount": "399",
+            "currency": "EUR",
+            "type": "money"
+          },
+          "observation_id": "obs_6d4d3d120bd68c09593a9f21b4035d07",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:31d48728c506d599c29e6ceab7ea7a631dc4c3a55212b10767160267a00c464e",
+            "location": "table 0 row 1 column 'Price'",
+            "observed_at": "2026-10-20T12:00:25.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison?page=2",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_8e5469325615523fd5dc39fbffedc821"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Price",
+          "raw_value": "€399",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "type": "percent",
+            "value": "10"
+          },
+          "observation_id": "obs_84d335582e395418b7ecc9d3e1e2793d",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:31d48728c506d599c29e6ceab7ea7a631dc4c3a55212b10767160267a00c464e",
+            "location": "table 0 row 1 column 'Max Drawdown'",
+            "observed_at": "2026-10-20T12:00:25.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison?page=2",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_8e5469325615523fd5dc39fbffedc821"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Drawdown",
+          "raw_value": "10%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "min_trading_days",
+          "normalized": {
+            "type": "days",
+            "value": "4"
+          },
+          "observation_id": "obs_f0ae63d872d6065839545950a4f72c82",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:31d48728c506d599c29e6ceab7ea7a631dc4c3a55212b10767160267a00c464e",
+            "location": "table 0 row 1 column 'Min. Trading Days'",
+            "observed_at": "2026-10-20T12:00:25.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison?page=2",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_8e5469325615523fd5dc39fbffedc821"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Min. Trading Days",
+          "raw_value": "4 days",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "type": "percent",
+            "value": "10"
+          },
+          "observation_id": "obs_be7711e9b777c803d53628e44bf12427",
+          "provenance": {
+            "adapter_name": "onlypropfirms",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:31d48728c506d599c29e6ceab7ea7a631dc4c3a55212b10767160267a00c464e",
+            "location": "table 0 row 1 column 'Profit Target'",
+            "observed_at": "2026-10-20T12:00:25.000Z",
+            "page_url": "https://onlypropfirms.com/prop-firm-comparison?page=2",
+            "publisher_key": "onlypropfirms",
+            "snapshot_id": "snap_8e5469325615523fd5dc39fbffedc821"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit Target",
+          "raw_value": "10%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Tailspin Capital",
+        "normalized": "tailspin capital"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "Step",
+        "normalized": "step"
+      },
+      "publisher_entry_id": "tailspin-capital",
+      "publisher_key": "onlypropfirms",
+      "record_key": "rec_6a8693f3cb465f1b890cea57b04ba974",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "50000",
+        "currency": "$",
+        "raw": "$50K"
+      },
+      "entry_url": "https://propfirmmatch.com/futures/prop-firms/northwind-futures",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": {
+            "amount": "1100",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_c1dead17a6ea637ece149ca663de228a",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 1 column 'Daily Loss'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily Loss",
+          "raw_value": "$1,100",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "trailing_eod"
+          },
+          "observation_id": "obs_d10a03631d88a0ebb3045c6bf612d73e",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 1 column 'Drawdown Type'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown Type",
+          "raw_value": "Trailing EOD",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": {
+            "amount": "165",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_e901d2d5e206211d2c9b6d339c33e09b",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 1 column 'Price'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Price",
+          "raw_value": "$165",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "amount": "2500",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_a0264653c2190c6de0f7080b51d99947",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 1 column 'Max Loss'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Loss",
+          "raw_value": "$2,500",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "min_trading_days",
+          "normalized": {
+            "type": "days",
+            "value": "5"
+          },
+          "observation_id": "obs_09c59a51982fa7aefd320a2c8551aa56",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 1 column 'Min. Trading Days'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Min. Trading Days",
+          "raw_value": "5",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "payout_split",
+          "normalized": {
+            "type": "percent",
+            "value": "90"
+          },
+          "observation_id": "obs_233eb882fe8016868607ac19c118a05d",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 1 column 'Payout Split'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Payout Split",
+          "raw_value": "90%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "amount": "3000",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_956feb182fc08fc9bed9a5b185896dd3",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 1 column 'Profit Target'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit Target",
+          "raw_value": "$3,000",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Northwind Futures",
+        "normalized": "northwind futures"
+      },
+      "first_party_url": null,
+      "market": "futures",
+      "phase": "evaluation_step_1",
+      "programme": {
+        "name": "Rally",
+        "normalized": "rally"
+      },
+      "publisher_entry_id": "northwind-futures",
+      "publisher_key": "propfirmmatch-futures",
+      "record_key": "rec_9e50ec390cd00e867c90b41802c1d85d",
+      "variant": {
+        "name": "1 Step",
+        "normalized": "1 step"
+      }
+    },
+    {
+      "account_size": {
+        "amount": "50000",
+        "currency": "$",
+        "raw": "$50K"
+      },
+      "entry_url": "https://propfirmmatch.com/futures/prop-firms/northwind-futures",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": {
+            "amount": "1100",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_23c714ca34d6a69b0e922104c06d64c0",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 2 column 'Daily Loss'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily Loss",
+          "raw_value": "$1,100",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "trailing_eod"
+          },
+          "observation_id": "obs_5154737034e3f8af05a798642f57e36d",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 2 column 'Drawdown Type'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown Type",
+          "raw_value": "Trailing EOD",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": null,
+          "observation_id": "obs_1dc6253a7c690db4432823ce26a3ba02",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 2 column 'Price'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Price",
+          "raw_value": "—",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "unknown",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "amount": "2500",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_26c52d0e4b0c2ef5dc85ca04f0e8823d",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 2 column 'Max Loss'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Loss",
+          "raw_value": "$2,500",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "min_trading_days",
+          "normalized": {
+            "type": "days",
+            "value": "8"
+          },
+          "observation_id": "obs_617d24d1c32193bf693a20d468204e49",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 2 column 'Min. Trading Days'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Min. Trading Days",
+          "raw_value": "8",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "payout_split",
+          "normalized": {
+            "type": "percent",
+            "value": "90"
+          },
+          "observation_id": "obs_4933138328a5c1f40bbd3328d6eb47c9",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 2 column 'Payout Split'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Payout Split",
+          "raw_value": "90%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": null,
+          "observation_id": "obs_6d8dd56a41e061f8111f02200e47312b",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 2 column 'Profit Target'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit Target",
+          "raw_value": "—",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "unknown",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Northwind Futures",
+        "normalized": "northwind futures"
+      },
+      "first_party_url": null,
+      "market": "futures",
+      "phase": "simulated_funded",
+      "programme": {
+        "name": "Rally",
+        "normalized": "rally"
+      },
+      "publisher_entry_id": "northwind-futures",
+      "publisher_key": "propfirmmatch-futures",
+      "record_key": "rec_da8909945b249982e3b83248a267100f",
+      "variant": {
+        "name": "1 Step",
+        "normalized": "1 step"
+      }
+    },
+    {
+      "account_size": {
+        "amount": "100000",
+        "currency": "EUR",
+        "raw": "€100k"
+      },
+      "entry_url": "https://propfirmmatch.com/futures/prop-firms/tailspin-capital",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": {
+            "type": "percent",
+            "value": "5"
+          },
+          "observation_id": "obs_5855cf6aa19d1a9fc9e863b97587d9e4",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 3 column 'Daily Loss'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily Loss",
+          "raw_value": "5%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "static"
+          },
+          "observation_id": "obs_a82ef1e135d27d49b5c1792333a14647",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 3 column 'Drawdown Type'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown Type",
+          "raw_value": "Static",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": {
+            "amount": "399",
+            "currency": "EUR",
+            "type": "money"
+          },
+          "observation_id": "obs_10987b7a583950dfe7629cf9b0e963dd",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 3 column 'Price'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Price",
+          "raw_value": "€399",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "type": "percent",
+            "value": "10"
+          },
+          "observation_id": "obs_7682b5fddec2570ca8ad701455340719",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 3 column 'Max Loss'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max Loss",
+          "raw_value": "10%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "min_trading_days",
+          "normalized": {
+            "type": "days",
+            "value": "4"
+          },
+          "observation_id": "obs_20058fa84c81da0ce252e9d10b4fdf37",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 3 column 'Min. Trading Days'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Min. Trading Days",
+          "raw_value": "4",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "payout_split",
+          "normalized": {
+            "type": "percent",
+            "value": "80"
+          },
+          "observation_id": "obs_c120cb04fbcde3f7161ea2e381e173fa",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 3 column 'Payout Split'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Payout Split",
+          "raw_value": "80%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "type": "percent",
+            "value": "5"
+          },
+          "observation_id": "obs_4cacb2be6362ad3621c9267c4fc3ed12",
+          "provenance": {
+            "adapter_name": "propfirmmatch-futures",
+            "adapter_version": "1.0.0",
+            "capture_channel": "manual_capture",
+            "content_hash": "sha256:a91459b3f3851ea8dad677ffe623ba42e8fdf244af83e994fd1984315de8e7bb",
+            "location": "table 0 row 3 column 'Profit Target'",
+            "observed_at": "2026-10-21T12:00:00.000Z",
+            "page_url": "https://propfirmmatch.com/futures/prop-firm-challenges",
+            "publisher_key": "propfirmmatch-futures",
+            "snapshot_id": "snap_9bcc167c8d76109368484cd966200b21"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit Target",
+          "raw_value": "5%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Tailspin Capital",
+        "normalized": "tailspin capital"
+      },
+      "first_party_url": null,
+      "market": "futures",
+      "phase": "evaluation_step_2",
+      "programme": {
+        "name": "Step",
+        "normalized": "step"
+      },
+      "publisher_entry_id": "tailspin-capital",
+      "publisher_key": "propfirmmatch-futures",
+      "record_key": "rec_f18ce570293d9d72f5859318dd96e090",
+      "variant": {
+        "name": "2 Steps",
+        "normalized": "2 steps"
+      }
+    },
+    {
+      "account_size": {
+        "amount": "50000",
+        "currency": null,
+        "raw": "50K"
+      },
+      "entry_url": "https://traderssecondbrain.com/prop-firm/contoso",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": {
+            "type": "percent",
+            "value": "2"
+          },
+          "observation_id": "obs_56cc1089d3e745531d4f648533452f8e",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 2 column 'Daily loss'",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily loss",
+          "raw_value": "2%",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "static"
+          },
+          "observation_id": "obs_9354ca969425c9e2b835356d3832c4cd",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 2 column 'Drawdown' (type stated in the drawdown text)",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown",
+          "raw_value": "4% static",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "basis": "static",
+            "type": "percent",
+            "value": "4"
+          },
+          "observation_id": "obs_813a66e250d32e436796c4e37124b61d",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 2 column 'Drawdown'",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown",
+          "raw_value": "4% static",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "payout_conditions",
+          "normalized": null,
+          "observation_id": "obs_0bd7b5e3ddb9c5ff008d796bd9d37580",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 2 column 'Payout'",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Payout",
+          "raw_value": "See programme rules",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "see_rules",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "type": "percent",
+            "value": "6"
+          },
+          "observation_id": "obs_e265caad0b20092521ad1e58e9e6c9d4",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 2 column 'Target'",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Target",
+          "raw_value": "6%",
+          "status": "uncertain",
+          "status_reasons": [
+            "firm name is similar to another firm's; confirm whether they are the same firm"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Contoso",
+        "normalized": "contoso"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "Core 50K",
+        "normalized": "core"
+      },
+      "publisher_entry_id": "contoso",
+      "publisher_key": "traderssecondbrain",
+      "record_key": "rec_6436eab3d193612289b3108f8278cf23",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "25000",
+        "currency": "$",
+        "raw": "$25K"
+      },
+      "entry_url": "https://traderssecondbrain.com/prop-firm/fabrikam-traders-llc",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": null,
+          "observation_id": "obs_502eef17c4d98968a5672f7bb1679e98",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:78a4883d7fbb5416de344f713180140f53a398435688fd26e9c616e073bc3a30",
+            "location": "table 0 row 1 column 'Daily loss'",
+            "observed_at": "2026-10-20T12:01:10.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/fabrikam-traders-llc",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_2f02b5843f0a31705ee49e0f5196a1e0"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily loss",
+          "raw_value": "—",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "unknown",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "type": "percent",
+            "value": "8"
+          },
+          "observation_id": "obs_f17bdfe8ae1d6427c23339ec94b0e8c1",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:78a4883d7fbb5416de344f713180140f53a398435688fd26e9c616e073bc3a30",
+            "location": "table 0 row 1 column 'Profit target'",
+            "observed_at": "2026-10-20T12:01:10.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/fabrikam-traders-llc",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_2f02b5843f0a31705ee49e0f5196a1e0"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit target",
+          "raw_value": "8%",
+          "status": "conflicting",
+          "status_reasons": [
+            "disagrees with another observation of the same programme and field"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Fabrikam Traders LLC",
+        "normalized": "fabrikam traders"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "Flex",
+        "normalized": "flex"
+      },
+      "publisher_entry_id": "fabrikam-traders-llc",
+      "publisher_key": "traderssecondbrain",
+      "record_key": "rec_6422c63272281f92c597da6c613eef24",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "25000",
+        "currency": null,
+        "raw": "25K"
+      },
+      "entry_url": "https://traderssecondbrain.com/prop-firm/fabrikam-traders-llc",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": null,
+          "observation_id": "obs_3a3b9306f5d4d97e0d4456cb700fedd4",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 3 column 'Daily loss'",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily loss",
+          "raw_value": "—",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "unknown",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "uncertain",
+          "field": "max_drawdown",
+          "normalized": null,
+          "observation_id": "obs_625b09ffd7156339e2b50ae43aff19bf",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 3 column 'Drawdown'",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown",
+          "raw_value": "5",
+          "status": "uncertain",
+          "status_reasons": [
+            "a number without a unit"
+          ],
+          "uncertain_reason": "a number without a unit",
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "payout_conditions",
+          "normalized": {
+            "type": "text",
+            "value": "Monthly"
+          },
+          "observation_id": "obs_f468ff5a4e49acbf651d43fd3f1ab3f1",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 3 column 'Payout'",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Payout",
+          "raw_value": "Monthly",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "type": "percent",
+            "value": "8"
+          },
+          "observation_id": "obs_622cd0d3ace6f164079b7fe889230607",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 3 column 'Target'",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Target",
+          "raw_value": "8%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Fabrikam Traders LLC",
+        "normalized": "fabrikam traders"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "Flex 25K",
+        "normalized": "flex"
+      },
+      "publisher_entry_id": "fabrikam-traders-llc",
+      "publisher_key": "traderssecondbrain",
+      "record_key": "rec_7355a79db5cf333e596c302b04e7c132",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "50000",
+        "currency": "$",
+        "raw": "$50K"
+      },
+      "entry_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "consistency_rule",
+          "normalized": {
+            "type": "percent",
+            "value": "40"
+          },
+          "observation_id": "obs_dd2e9d0cdc826c91169c3367702e1967",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 1 column 'Consistency'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Consistency",
+          "raw_value": "40%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": {
+            "amount": "1000",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_5e0b8e9404f0a64926be9099c423402e",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 1 column 'Daily loss'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily loss",
+          "raw_value": "$1,000",
+          "status": "conflicting",
+          "status_reasons": [
+            "disagrees with another observation of the same programme and field"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": {
+            "amount": "1000",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_e2de81e74081d6b9ccccf0fad32d7264",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8b36bdaea667f38bbab58892ede857a8d2f836439adaada8966b54331c1cd795",
+            "location": "guide table 0 label 'Daily loss limit'",
+            "observed_at": "2026-10-20T12:01:15.000Z",
+            "page_url": "https://traderssecondbrain.com/guides/northwind-futures-review",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_686a4ab184fb1f748b1bd3b15f9dc592"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily loss limit",
+          "raw_value": "$1,000",
+          "status": "conflicting",
+          "status_reasons": [
+            "disagrees with another observation of the same programme and field"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "trailing_eod"
+          },
+          "observation_id": "obs_eeba80532eb4cecf6b57e3bd74fe654f",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 1 column 'Drawdown type'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown type",
+          "raw_value": "Trailing (end of day)",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "trailing"
+          },
+          "observation_id": "obs_5e74fa0a30f730b7378b86d4893e5df2",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8b36bdaea667f38bbab58892ede857a8d2f836439adaada8966b54331c1cd795",
+            "location": "guide table 0 label 'Max drawdown' (type stated in the drawdown text)",
+            "observed_at": "2026-10-20T12:01:15.000Z",
+            "page_url": "https://traderssecondbrain.com/guides/northwind-futures-review",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_686a4ab184fb1f748b1bd3b15f9dc592"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max drawdown",
+          "raw_value": "$2,500 trailing",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": {
+            "amount": "165",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_124569299e2f3fbfdd76c1ad94744db6",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 1 column 'Price'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Price",
+          "raw_value": "$165",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "amount": "2500",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_2ab70942489f1ca0fcf9ba7a9f170a9d",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 1 column 'Max drawdown'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max drawdown",
+          "raw_value": "$2,500",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "amount": "2500",
+            "basis": "trailing",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_be4c7a209fbc2d2f5663849a70e38ce0",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8b36bdaea667f38bbab58892ede857a8d2f836439adaada8966b54331c1cd795",
+            "location": "guide table 0 label 'Max drawdown'",
+            "observed_at": "2026-10-20T12:01:15.000Z",
+            "page_url": "https://traderssecondbrain.com/guides/northwind-futures-review",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_686a4ab184fb1f748b1bd3b15f9dc592"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max drawdown",
+          "raw_value": "$2,500 trailing",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "min_trading_days",
+          "normalized": {
+            "type": "days",
+            "value": "5"
+          },
+          "observation_id": "obs_2b194dc92af0b37f6df6a60ad6179148",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 1 column 'Min. days'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Min. days",
+          "raw_value": "5",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "payout_frequency",
+          "normalized": null,
+          "observation_id": "obs_aafe17688a7d88ae28cc9998c569055b",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 1 column 'Payout frequency'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Payout frequency",
+          "raw_value": "—",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "unknown",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "payout_split",
+          "normalized": null,
+          "observation_id": "obs_9f224f0bc62ca6901f51671b2a7ef1fb",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 1 column 'Payout split'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Payout split",
+          "raw_value": "—",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "unknown",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "amount": "3000",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_75d5587a6844e03ef0c424d18ff79922",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 1 column 'Profit target'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit target",
+          "raw_value": "$3,000",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "amount": "3000",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_b12f0a2f651d0a58e30720869abcb162",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8b36bdaea667f38bbab58892ede857a8d2f836439adaada8966b54331c1cd795",
+            "location": "guide table 0 label 'Profit target'",
+            "observed_at": "2026-10-20T12:01:15.000Z",
+            "page_url": "https://traderssecondbrain.com/guides/northwind-futures-review",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_686a4ab184fb1f748b1bd3b15f9dc592"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit target",
+          "raw_value": "$3,000",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Northwind Futures",
+        "normalized": "northwind futures"
+      },
+      "first_party_url": "https://www.northwind-futures.test/rules",
+      "market": "futures",
+      "phase": "evaluation",
+      "programme": {
+        "name": "Rally",
+        "normalized": "rally"
+      },
+      "publisher_entry_id": "northwind-futures",
+      "publisher_key": "traderssecondbrain",
+      "record_key": "rec_a268e155ece8bc67a8ca206422344998",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "50000",
+        "currency": null,
+        "raw": "50K"
+      },
+      "entry_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": {
+            "amount": "1000",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_3fb445e3dcee3fd253bd6c05f472025f",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 1 column 'Daily loss'",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": "Verify the exact configuration before checkout",
+          "raw_label": "Daily loss",
+          "raw_value": "$1,000",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "trailing_eod"
+          },
+          "observation_id": "obs_38b5f88bfb4b61d1a30c36cc7cc52649",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 1 column 'Drawdown' (type stated in the drawdown text)",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown",
+          "raw_value": "$2,500 trailing (EOD)",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "amount": "2500",
+            "basis": "trailing_eod",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_b2b4825db5265d449e911c09428c7567",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 1 column 'Drawdown'",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown",
+          "raw_value": "$2,500 trailing (EOD)",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "payout_conditions",
+          "normalized": {
+            "type": "text",
+            "value": "Bi-weekly after 8 days"
+          },
+          "observation_id": "obs_5c30fd1b1642ff9dbf78993f94106696",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 1 column 'Payout'",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Payout",
+          "raw_value": "Bi-weekly after 8 days",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": {
+            "amount": "3000",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_5cc5f4bab59b57fed8c97120522194a2",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:8ec1552753c5f68c90cf0f2e1e10236f39110360ba0e51b0525a9791d0c01c36",
+            "location": "table 0 row 1 column 'Target'",
+            "observed_at": "2026-10-20T12:00:50.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firms",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_900503d01bca15b9c280b0fa91099e36"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Target",
+          "raw_value": "$3,000",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Northwind Futures",
+        "normalized": "northwind futures"
+      },
+      "first_party_url": null,
+      "market": "unspecified",
+      "phase": "unspecified",
+      "programme": {
+        "name": "Rally 50K",
+        "normalized": "rally"
+      },
+      "publisher_entry_id": "northwind-futures",
+      "publisher_key": "traderssecondbrain",
+      "record_key": "rec_af7a590ad001248562c0688574bb9fe8",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    },
+    {
+      "account_size": {
+        "amount": "50000",
+        "currency": "$",
+        "raw": "$50K"
+      },
+      "entry_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+      "fields": [
+        {
+          "confidence": "observed",
+          "field": "consistency_rule",
+          "normalized": {
+            "type": "percent",
+            "value": "40"
+          },
+          "observation_id": "obs_4ec0eb86b3392d5c22dd8a3b9d0706fc",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 2 column 'Consistency'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Consistency",
+          "raw_value": "40%",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "daily_loss_limit",
+          "normalized": {
+            "amount": "1000",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_545bfad341fde6a903df5e331910606e",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 2 column 'Daily loss'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Daily loss",
+          "raw_value": "$1,000",
+          "status": "conflicting",
+          "status_reasons": [
+            "disagrees with another observation of the same programme and field"
+          ],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "drawdown_type",
+          "normalized": {
+            "type": "drawdown_type",
+            "value": "trailing_eod"
+          },
+          "observation_id": "obs_fa3537f9c983d5ad378a720541697928",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 2 column 'Drawdown type'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Drawdown type",
+          "raw_value": "Trailing (end of day)",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "evaluation_fee",
+          "normalized": null,
+          "observation_id": "obs_98497603090f0ecb63c9d66d4a18ad45",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 2 column 'Price'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Price",
+          "raw_value": "—",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "unknown",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "max_drawdown",
+          "normalized": {
+            "amount": "2500",
+            "currency": "$",
+            "type": "money"
+          },
+          "observation_id": "obs_0fdbb8c432e0142b59c5f8f9d614522a",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 2 column 'Max drawdown'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Max drawdown",
+          "raw_value": "$2,500",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "min_trading_days",
+          "normalized": {
+            "type": "days",
+            "value": "8"
+          },
+          "observation_id": "obs_f42455a538f0dd954c6f7061e43499e5",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 2 column 'Min. days'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Min. days",
+          "raw_value": "8",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "payout_frequency",
+          "normalized": {
+            "type": "text",
+            "value": "Bi-weekly"
+          },
+          "observation_id": "obs_f4fc06fd0e0d1a6784d80c11c9198cb7",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 2 column 'Payout frequency'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Payout frequency",
+          "raw_value": "Bi-weekly",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "uncertain",
+          "field": "payout_split",
+          "normalized": null,
+          "observation_id": "obs_23318798b428d5eef61300b50dac2d79",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 2 column 'Payout split'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Payout split",
+          "raw_value": "90/10",
+          "status": "uncertain",
+          "status_reasons": [
+            "split shown without saying whose share is which"
+          ],
+          "uncertain_reason": "split shown without saying whose share is which",
+          "value_kind": "value",
+          "verification_status": "unverified"
+        },
+        {
+          "confidence": "observed",
+          "field": "profit_target",
+          "normalized": null,
+          "observation_id": "obs_449574faee03d44380c192a52a292bc2",
+          "provenance": {
+            "adapter_name": "traderssecondbrain",
+            "adapter_version": "1.0.0",
+            "capture_channel": "fixture_replay",
+            "content_hash": "sha256:5fe3f625a1d44c4ff1da8f87aba2a68218a447cb878a3b5b974777042b8747a2",
+            "location": "table 0 row 2 column 'Profit target'",
+            "observed_at": "2026-10-20T12:01:00.000Z",
+            "page_url": "https://traderssecondbrain.com/prop-firm/northwind-futures",
+            "publisher_key": "traderssecondbrain",
+            "snapshot_id": "snap_7ee475ddf647d3b461e71dce04d4bd34"
+          },
+          "publisher_qualifier": null,
+          "raw_label": "Profit target",
+          "raw_value": "n/a",
+          "status": "observed",
+          "status_reasons": [],
+          "uncertain_reason": null,
+          "value_kind": "not_applicable",
+          "verification_status": "unverified"
+        }
+      ],
+      "firm": {
+        "mapped_firm_key": null,
+        "mapping": "none",
+        "name": "Northwind Futures",
+        "normalized": "northwind futures"
+      },
+      "first_party_url": "https://www.northwind-futures.test/rules",
+      "market": "futures",
+      "phase": "simulated_funded",
+      "programme": {
+        "name": "Rally",
+        "normalized": "rally"
+      },
+      "publisher_entry_id": "northwind-futures",
+      "publisher_key": "traderssecondbrain",
+      "record_key": "rec_d1d30524de95f776d55cb8568f775ae2",
+      "variant": {
+        "name": null,
+        "normalized": ""
+      }
+    }
+  ],
+  "review_items": [
+    {
+      "detail": "onlypropfirms: $1,100; traderssecondbrain: $1,000",
+      "dismissed": false,
+      "key": "conflict|cmp_1509c03102e92fbb8c1272a4d51c8c35|daily_loss_limit",
+      "kind": "conflict",
+      "note": null,
+      "observation_ids": [
+        "obs_545bfad341fde6a903df5e331910606e",
+        "obs_eaa89fe58cb783ca545ed8b2cdaa90fc"
+      ],
+      "publishers": [
+        "onlypropfirms",
+        "traderssecondbrain"
+      ],
+      "title": "Conflicting daily loss limit: Northwind Futures / Rally / $50K / simulated funded"
+    },
+    {
+      "detail": "onlypropfirms: $1,100; traderssecondbrain: $1,000",
+      "dismissed": false,
+      "key": "conflict|cmp_476b2f0bbbca887e97a7da09af8521a8|daily_loss_limit",
+      "kind": "conflict",
+      "note": null,
+      "observation_ids": [
+        "obs_58a19a1ce2ab310d9b8e5027d662bfc8",
+        "obs_5e0b8e9404f0a64926be9099c423402e",
+        "obs_e2de81e74081d6b9ccccf0fad32d7264"
+      ],
+      "publishers": [
+        "onlypropfirms",
+        "traderssecondbrain"
+      ],
+      "title": "Conflicting daily loss limit: Northwind Futures / Rally / $50K / evaluation"
+    },
+    {
+      "detail": "onlypropfirms: 6%; traderssecondbrain: 8%",
+      "dismissed": false,
+      "key": "conflict|cmp_8aa7a064f7e46824c3e0215a76466796|profit_target",
+      "kind": "conflict",
+      "note": null,
+      "observation_ids": [
+        "obs_f17bdfe8ae1d6427c23339ec94b0e8c1",
+        "obs_f608697567611ea92c79db750a02e729"
+      ],
+      "publishers": [
+        "onlypropfirms",
+        "traderssecondbrain"
+      ],
+      "title": "Conflicting profit target: Fabrikam Traders / Flex / $25K"
+    },
+    {
+      "detail": "Same value on: https://traderssecondbrain.com/guides/northwind-futures-review, https://traderssecondbrain.com/prop-firm/northwind-futures",
+      "dismissed": false,
+      "key": "duplicate|traderssecondbrain|cmp_476b2f0bbbca887e97a7da09af8521a8|drawdown_type",
+      "kind": "duplicate",
+      "note": null,
+      "observation_ids": [
+        "obs_5e74fa0a30f730b7378b86d4893e5df2",
+        "obs_eeba80532eb4cecf6b57e3bd74fe654f"
+      ],
+      "publishers": [
+        "traderssecondbrain"
+      ],
+      "title": "Drawdown type (trailing/static) shown 2 times by traderssecondbrain: Northwind Futures / Rally / $50K / evaluation"
+    },
+    {
+      "detail": "Same value on: https://traderssecondbrain.com/guides/northwind-futures-review, https://traderssecondbrain.com/prop-firm/northwind-futures",
+      "dismissed": false,
+      "key": "duplicate|traderssecondbrain|cmp_476b2f0bbbca887e97a7da09af8521a8|max_drawdown",
+      "kind": "duplicate",
+      "note": null,
+      "observation_ids": [
+        "obs_2ab70942489f1ca0fcf9ba7a9f170a9d",
+        "obs_be4c7a209fbc2d2f5663849a70e38ce0"
+      ],
+      "publishers": [
+        "traderssecondbrain"
+      ],
+      "title": "Maximum drawdown shown 2 times by traderssecondbrain: Northwind Futures / Rally / $50K / evaluation"
+    },
+    {
+      "detail": "Same value on: https://traderssecondbrain.com/guides/northwind-futures-review, https://traderssecondbrain.com/prop-firm/northwind-futures",
+      "dismissed": false,
+      "key": "duplicate|traderssecondbrain|cmp_476b2f0bbbca887e97a7da09af8521a8|profit_target",
+      "kind": "duplicate",
+      "note": null,
+      "observation_ids": [
+        "obs_75d5587a6844e03ef0c424d18ff79922",
+        "obs_b12f0a2f651d0a58e30720869abcb162"
+      ],
+      "publishers": [
+        "traderssecondbrain"
+      ],
+      "title": "Profit target shown 2 times by traderssecondbrain: Northwind Futures / Rally / $50K / evaluation"
+    },
+    {
+      "detail": "Map each name to a registered firm, or mark them as separate firms.",
+      "dismissed": false,
+      "key": "pair|contoso|contoso funding",
+      "kind": "uncertain_identity",
+      "note": null,
+      "observation_ids": [
+        "obs_00b72fc29722856d4ac985ff083cb297",
+        "obs_0bd7b5e3ddb9c5ff008d796bd9d37580",
+        "obs_0d8733d8171ae64c419496249fd01d44",
+        "obs_11669a932a6032723502e52862783668",
+        "obs_1ebc9f14161290287ddbdf23c32ee9d1",
+        "obs_56cc1089d3e745531d4f648533452f8e",
+        "obs_813a66e250d32e436796c4e37124b61d",
+        "obs_87daaae3526c185b0ad3194f12aa8171",
+        "obs_9354ca969425c9e2b835356d3832c4cd",
+        "obs_b3b642d83d93389402ab831b57ebb471",
+        "obs_b7c75e13a0bbc59faac9b882f8c58c5c",
+        "obs_d0a50a4d6992970265a65519b1a84ebd",
+        "obs_e265caad0b20092521ad1e58e9e6c9d4",
+        "obs_eba19d8983d87dc54f96c2fd18b2938b"
+      ],
+      "publishers": [
+        "onlypropfirms",
+        "traderssecondbrain"
+      ],
+      "title": "Same firm? 'contoso' and 'contoso funding'"
+    }
+  ],
+  "schema_version": 1,
+  "scope": {
+    "include_superseded": false,
+    "publishers": [
+      "onlypropfirms",
+      "propfirmmatch-futures",
+      "traderssecondbrain"
+    ],
+    "stale_after_days": 30
+  },
+  "summary": {
+    "by_status": {
+      "conflicting": 7,
+      "observed": 91,
+      "uncertain": 23
+    },
+    "observations": 121,
+    "pages_by_status": {
+      "collected": 12,
+      "js_unavailable": 1,
+      "no_records": 1,
+      "not_read": 1,
+      "structure_changed": 2
+    },
+    "records": 21
+  }
+}

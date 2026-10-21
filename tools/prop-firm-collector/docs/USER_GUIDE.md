@@ -19,7 +19,9 @@ with the tool. The output is real but trimmed, and folder paths are shortened to
 - save each version of each page as a dated, unchangeable snapshot on your computer, and tell you when a page
   changed;
 - import pages you saved yourself from your browser;
-- export everything as a JSON file that a later FundedFlow feature (Build 31) can read.
+- export everything as a JSON file that a later FundedFlow feature (Build 31) can read;
+- read comparison sites that list many firms, keeping them apart from the firms' own sites, and show what each one
+  claims as unverified values you can compare (section 15).
 
 **It doesn't:**
 
@@ -703,6 +705,7 @@ The first time it opens, it creates the data folder, database and settings file 
 | **Manual capture** | Pick the firm, paste the page's original address, **Browse…** to the saved file, **Import** | `import-capture` |
 | **Results** | Click a run to see every request; click a request to see what its outcome means and what to do; click a snapshot to read its text | `runs`, `snapshots` |
 | **Export** | All firms or one, optional request log and CSV, **Export**; **Validate a file…** | `export`, `validate` |
+| **Research sources**, **Evidence** | Comparison sites and the values they show: see section 15.7 | `directory ...` |
 
 ![Setup tab](images/gui-setup.png)
 
@@ -719,3 +722,267 @@ and marks the run `aborted`.
 
 Only one fetch or import runs at a time, whether it was started from the window or from PowerShell. If a command
 says "another collector command is running", wait for the window's run to finish.
+
+## 15. Comparison sites (research sources)
+
+Some websites compare many prop firms in one table: OnlyPropFirms, Trader's Second Brain, Prop Firm Match and Prop
+Firm Gorilla. The collector calls them **comparison publishers**. They are useful for spotting what to check, but
+they are **third parties, not the firms**: their tables can be out of date, simplified or wrong, and their ratings
+and offers are their own. So the collector keeps them apart from firms:
+
+- a publisher is never a firm, and a firm's website can never be added to a publisher (or the other way round);
+- every value it reads from a publisher is an **unverified claim** with its source page, date and page hash;
+- ratings, rankings, "fit" scores, deals, coupons and checkout buttons are never read;
+- links from a publisher to firms' sites or "Get the deal" redirects are never followed;
+- nothing is approved, and neither your rules nor the FundedFlow app are changed.
+
+Every command in this section runs from the collector folder (section 2). The examples use the synthetic practice
+pages in `examples\directory-site` (invented firms such as "Northwind Futures"), never the real sites.
+
+### 15.1 Add the four presets
+
+```powershell
+uv run collector directory presets
+```
+
+```text
+PRESET                 NAME                       MODE         REVIEW SUGGESTS  STATUS
+---------------------  -------------------------  -----------  ---------------  ------
+onlypropfirms          OnlyPropFirms              auto         unclear          -
+traderssecondbrain     Trader's Second Brain      auto         unclear          -
+propfirmmatch-futures  Prop Firm Match (Futures)  manual_only  prohibited       -
+propfirmgorilla        Prop Firm Gorilla          auto         unclear          -
+Install one with `collector directory add-preset KEY`. Presets install disabled.
+```
+
+```powershell
+uv run collector directory add-preset --all
+```
+
+```text
+Installed onlypropfirms (OnlyPropFirms), disabled, auto.
+  Policy review 2026-10-21: robots.txt allows these paths; terms silent on automation and reuse. Treat as unclear: ask for permission, or acknowledge unclear terms (slow 5 s pace) after your own review.
+Installed traderssecondbrain (Trader's Second Brain), disabled, auto.
+  ...
+Installed propfirmmatch-futures (Prop Firm Match (Futures)), disabled, manual_only.
+  Policy review 2026-10-21: The site refuses automated requests (HTTP 403). Manual capture only: save pages from your browser and import them. Do not try to work around the block.
+...
+```
+
+Each preset comes **disabled**, with its host, a few starting pages and the policy review done for this build on
+2026-10-21. That review is a starting point, not your decision. **Prop Firm Match is manual capture only**: its site
+refused automated requests on the review date, so the collector will never fetch it.
+
+```powershell
+uv run collector directory list
+```
+
+```text
+PUBLISHER              STATE                 ENABLED  MODE         TERMS                                 ...
+onlypropfirms          Not reviewed          no       auto         onlypropfirms.com: not reviewed       ...
+propfirmgorilla        Not reviewed          no       auto         propfirmgorilla.com: not reviewed     ...
+propfirmmatch-futures  Needs manual capture  no       manual_only  propfirmmatch.com: not reviewed       ...
+traderssecondbrain     Not reviewed          no       auto         traderssecondbrain.com: not reviewed  ...
+```
+
+`uv run collector directory show onlypropfirms` shows the recorded review (robots.txt, terms, data licence), the
+allowed and excluded paths and the state of every page.
+
+### 15.2 Review the terms, then enable
+
+Read the publisher's robots.txt and terms page yourself (the URLs are in `directory show`). Then record your
+decision for each host, exactly as for a firm (section 4). If the terms prohibit automated access, record
+`prohibited` and use manual capture (15.4). If they are unclear, the safest choice is to ask for permission
+(`docs/permission-request.md` has a template); `--accept-unclear-terms` allows slow fetching at 5 s per request.
+
+```powershell
+uv run collector directory terms --publisher onlypropfirms --host onlypropfirms.com --decision unclear --terms-url https://onlypropfirms.com/privacy-policy --notes "No clause on automated access; reuse not addressed" --accept-unclear-terms
+```
+
+```text
+Recorded terms for onlypropfirms.com: unclear.
+Live fetching: allowed.
+```
+
+```powershell
+uv run collector directory enable onlypropfirms
+```
+
+```text
+Enabled onlypropfirms. Preview first: collector directory fetch --publisher onlypropfirms --dry-run
+```
+
+Enabling is refused until every host has a review, and always refused for a manual-only publisher:
+
+```text
+Error: propfirmmatch-futures is manual capture only; change its capture mode to auto first, and only if the publisher's policy now allows automated access
+```
+
+### 15.3 Preview and collect
+
+Preview works even while a publisher is disabled, and makes no network requests:
+
+```powershell
+uv run collector directory fetch --publisher onlypropfirms --dry-run
+```
+
+```text
+Dry run for publisher:onlypropfirms (no network, nothing saved):
+DECISION  URL                                                 WHY
+--------  --------------------------------------------------  -------------------------------------------
+allowed   https://onlypropfirms.com/largest-drawdown          robots.txt not cached: would fetch it first
+allowed   https://onlypropfirms.com/prop-firm-comparison      robots.txt not cached: would fetch it first
+...
+```
+
+A collection uses the same rules as a firm fetch: robots.txt first, your terms decision, at least 2 s between
+requests (5 s for unclear terms), a request budget (40 for the presets), and a full stop at the first sign of a
+block. It reads only the publisher's own pages that its adapter knows, follows at most a few list pages, and never
+tries sort or filter variations. Practise with the synthetic pages first:
+
+```powershell
+uv run collector directory fetch --publisher onlypropfirms --fixture-site examples\directory-site
+```
+
+```text
+Fixture replay from examples\directory-site (no network; recorded as fixture_replay).
+Fetching publisher:onlypropfirms (budget 40 requests)
+  onlypropfirms.com: robots.txt read (HTTP 200)
+  new_snapshot             https://onlypropfirms.com/largest-drawdown [comparison, js_unavailable: the list is filled in by JavaScript; use the browser or capture it]
+  new_snapshot             https://onlypropfirms.com/prop-firm-comparison [comparison, 4 records, 28 values]
+  ...
+  new_snapshot             https://onlypropfirms.com/prop-firms/contoso-funding [profile, structure_changed: table 0: unexpected column 'Platform']
+publisher:onlypropfirms: completed; 10 requests; new_snapshot 9
+  pages read: collected 7, js_unavailable 1, structure_changed 1
+  js_unavailable: https://onlypropfirms.com/largest-drawdown (...)
+  structure_changed: https://onlypropfirms.com/prop-firms/contoso-funding (profile, structure_changed: table 0: unexpected column 'Platform')
+```
+
+Drop `--fixture-site ...` for a real run, only after your review. To run every enabled publisher one after another,
+use `--all` instead of `--publisher`.
+
+What each page state means:
+
+| State | Meaning | What to do |
+|---|---|---|
+| Collected — unverified | The page was read into values. | Review them (15.5). |
+| Unchanged — unverified | Same content as last time; no new values. | Nothing. |
+| Not reviewed | A host has no terms review. | Record one (15.2). |
+| Disabled by terms | Your review says no, or it expired. | Manual capture. |
+| Blocked by robots | robots.txt disallows the page. | Manual capture, or leave it. |
+| Rate limited / Blocked by the site | The site asked the collector to slow down or refused it. | Wait; re-enable only with the site's agreement. |
+| Needs JavaScript (manual capture) | The page builds its list in the browser. | Install the `[browser]` extra, or capture it. |
+| Page structure changed | The adapter no longer recognises the table. Nothing was read from it, so no values are guessed. | Report it to whoever maintains the adapters (`docs/adapters.md`); capture the page meanwhile. |
+| No public records available | The page says it lists nothing. | Nothing. |
+| Needs manual capture | The publisher is manual capture only. | 15.4. |
+
+### 15.4 Manual capture of a comparison page
+
+Works for every publisher, including Prop Firm Match, and makes no network requests. Open the page in your
+browser, press **Ctrl+S** and choose **Webpage, HTML only**, then:
+
+```powershell
+uv run collector directory capture --publisher propfirmmatch-futures --url https://propfirmmatch.com/futures/prop-firm-challenges --file examples\captures\directory\propfirmmatch-futures-challenges.html
+```
+
+```text
+new_snapshot: snap_9bcc167c8d76109368484cd966200b21
+  title     Futures prop firm challenges (synthetic capture)
+  text      805 characters
+  captured  2026-10-21T14:38:18.087Z (manual_capture)
+  read as   comparison, 3 records, 21 values (unverified)
+```
+
+Use your own saved file and the page's real address. The address must be on the publisher's registered host and in
+its allowed paths. `uv run collector import-capture --publisher KEY ...` does the same.
+
+### 15.5 Read and review the values
+
+```powershell
+uv run collector directory observations --firm northwind --publisher onlypropfirms
+```
+
+```text
+PUBLISHER      FIRM               PROGRAMME  SIZE   PHASE             FIELD                            VALUE          STATUS    ...
+onlypropfirms  Northwind Futures  Rally      $50K   unspecified       Daily loss limit                 $1,100         observed  ...
+onlypropfirms  Northwind Futures  Rally      $100K  unspecified       Daily loss limit                 none           observed  ...
+onlypropfirms  Northwind Futures  Rally      $50K   simulated_funded  Profit target                    n/a            observed  ...
+onlypropfirms  Northwind Futures  Rally      $50K   evaluation        Payout split                     — (not shown)  observed  ...
+...
+All values are unverified third-party claims. Inspect one: collector directory show-observation ID
+```
+
+Account sizes, phases (evaluation, phase 1/2, simulated funded) and variants stay separate: a value shown for the
+$50K evaluation is never applied to the $100K account or the funded stage. "— (not shown)", "none", "n/a" and
+"see rules" are four different things, and none of them is zero. A `$` amount is kept as `$`, never assumed to be
+US dollars.
+
+`show-observation ID` prints everything about one value: the page, the stored snapshot and its hash, when it was
+seen, how the adapter read it, the publisher's own caveat (for example "Verify the exact configuration before
+checkout"), its history, and, if the firm is registered and its own pages are stored, dated excerpts from the
+firm's pages on the same topic.
+
+The **status** column says how much attention a value needs:
+
+| Status | Meaning |
+|---|---|
+| `observed` | Read as displayed. Still an unverified third-party claim. |
+| `uncertain` | The value or the firm's identity is unclear: a range, a bare number, an amount without a currency, or a firm name similar to another one. |
+| `conflicting` | Another publisher, or another page of the same publisher, shows a different value for the same firm, programme, size and phase. |
+| `stale` | The page has not been checked for 30 days (`[directory] stale_after_days`). |
+| `superseded` | The page has changed since; kept as history (`--history` shows these). |
+| `officially_verified` | You recorded that you checked it against the firm's own stored page (below). Publishers agreeing with each other never counts. |
+
+The review list collects what needs a decision:
+
+```powershell
+uv run collector directory review list
+```
+
+For each item: open the values, read the firm's **own** rules page, and record what you found. The collector never
+decides which value is right.
+
+| To | Command |
+|---|---|
+| Say which registered firm a publisher's name means | `directory review map --publisher KEY --firm-name "Name as shown" --to FIRM-KEY` |
+| Say two similar names are different firms | `directory review separate --name "contoso" --other "contoso funding"` |
+| Add a note (and take an item off the list) | `directory review note --item KEY --note "..." [--dismiss]` |
+| Record a check against the firm's own stored page | `directory review verify --observation ID --official-snapshot SNAP --note "..."` |
+| Withdraw that check | `directory review unverify --observation ID` |
+
+### 15.6 Export
+
+```powershell
+uv run collector directory export
+```
+
+```text
+Wrote C:\Users\<you>\AppData\Local\FundedFlow\Collector\exports\collector-directory-2026-10-21-16280846.json
+  export_id  dexp_16280846700db648c3ca299a
+  records 15, values 83, pages 13
+  statuses   {"observed": 76, "uncertain": 7}
+  schema     collector-directory-observations-v1: valid
+  status     unverified third-party observations (not rules)
+```
+
+This is a **separate file format** from the evidence export in section 10, which is unchanged and never contains
+publisher data. Pages that could not be read are listed in the file with their state, so a partial collection is
+visible. `uv run collector validate FILE` checks either kind of file.
+
+### 15.7 In the desktop window
+
+The window has the same workflow with no commands to type:
+
+| Tab | What you do there |
+|---|---|
+| **Research sources** | **Add preset…** (the four sites, added disabled), **Add publisher…** for another site you may read, **Edit settings…** (paths, limits, manual-only), **Record terms review…** per host, **Enable / disable**, **Preview requests**, **Add seed page…**. The right side shows the recorded policy review, the hosts and every page's state, last check and last change. |
+| **Fetch** | Choose **Research sources** and select one or more publishers (Ctrl+click), tick **Preview only** or **Practice mode**, **Start**. A live run asks first and names the hosts it will contact. The per-site table counts collected, unchanged, skipped, failed and blocked pages and says why. |
+| **Manual capture** | Choose **A comparison publisher**, pick it, paste the page's address and browse to the saved file. |
+| **Evidence** | Firms, their programmes and each size/phase record, grouped across publishers. Filter by publisher or status, search, sort by any column, and drag the divider to resize. Click a record to see its values; click a value for its source, snapshot, history and the firm's own pages. **Open source page** opens it in your browser. The review queue lists conflicts, duplicates, possible same-firm names and stale pages; **Map firm name…**, **Add note…**, **Dismiss with note…**, **Different firms…** and **Record official check…** record your decisions. |
+| **Export** | **Export observations** writes the directory file; **Validate a file…** checks either kind. |
+
+![Research sources tab](images/gui-research.png)
+
+![Fetch tab with two publishers](images/gui-fetch-publishers.png)
+
+![Evidence tab](images/gui-evidence.png)

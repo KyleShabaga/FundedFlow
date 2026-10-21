@@ -1,9 +1,16 @@
-"""One firm run: discovery, then the fail-closed policy pipeline for every URL, fetching, parsing and storage.
+"""One firm or publisher run: discovery, then the fail-closed policy pipeline for every URL, fetching, parsing
+and storage.
 
 Pipeline per URL (architecture doc §8.1): canonical URL -> allowlist and excluded paths -> firm/source enabled ->
 terms gate -> circuit breaker -> budget and deadline -> robots.txt -> sitemap lastmod skip -> pacing -> DNS-pinned
 GET (each redirect hop re-checked) -> response classification -> parse -> store. Firms run one after another,
 never in parallel, and only when the operator runs a command.
+
+A comparison publisher (Build 29.25) runs through exactly the same pipeline. Its adapter only narrows it: URLs must
+be pages the adapter reads, inside the publisher's allowed paths; there is no sitemap discovery; links are followed
+only to the page kinds the adapter names, with a cap on list pages; and each stored page version is read into
+directory observations. Links to firms' own sites or affiliate redirects are never followed (other hosts are not
+authorised for a publisher).
 """
 
 from __future__ import annotations
@@ -12,6 +19,7 @@ import heapq
 import itertools
 import sqlite3
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
@@ -21,9 +29,12 @@ from fundedflow_collector.clock import Clock, format_instant, parse_instant
 from fundedflow_collector.config import Settings
 from fundedflow_collector.db import registry, runs
 from fundedflow_collector.db.connection import transaction
-from fundedflow_collector.db.registry import Firm, Host, Source
+from fundedflow_collector.db.registry import Host, Owner, Publisher, Source
 from fundedflow_collector.db.runs import AttemptRecord
 from fundedflow_collector.db.snapshots import EvidenceInput, record_failure, record_unchanged, store_evidence
+from fundedflow_collector.directory.adapters import get_adapter
+from fundedflow_collector.directory.model import PageKind
+from fundedflow_collector.directory.store import extract_and_store
 from fundedflow_collector.discovery import relevance, sitemaps, zendesk
 from fundedflow_collector.logging_setup import log_event, redact_url
 from fundedflow_collector.net.client import (
@@ -99,6 +110,8 @@ class TargetResult:
     reason: str | None = None
     snapshot_id: str | None = None
     counted: bool = True
+    directory: str | None = None  # publisher runs: what the adapter made of the page (extraction status)
+    directory_detail: str | None = None
 
 
 @dataclass
@@ -111,10 +124,14 @@ class RunSummary:
     not_fetched: int = 0
     dry_run_lines: list[tuple[str, str, str]] = field(default_factory=list)
     message: str | None = None
+    budget: int = 0
 
     def counts(self) -> Counter[str]:
         """Outcome counts, leaving out uncounted probes such as a guessed /sitemap.xml that does not exist."""
         return Counter(r.outcome.value for r in self.results if r.counted)
+
+    def directory_counts(self) -> Counter[str]:
+        return Counter(r.directory for r in self.results if r.directory)
 
     def exit_code(self) -> int:
         categories = {OUTCOME_INFO[r.outcome].category for r in self.results if r.counted}
@@ -162,7 +179,7 @@ class _Target:
 
 
 class FirmRunner:
-    def __init__(self, env: Environment, firm: Firm, options: RunOptions, batch_id: str) -> None:
+    def __init__(self, env: Environment, firm: Owner, options: RunOptions, batch_id: str) -> None:
         self.env = env
         self.conn = env.conn
         self.settings = env.settings
@@ -196,15 +213,25 @@ class FirmRunner:
             if s.kind in (SourceKind.SITEMAP, SourceKind.ZENDESK)
         }
         self._counter = itertools.count()
+        self.adapter = get_adapter(firm.adapter) if isinstance(firm, Publisher) else None
+        self.list_pages: Counter[PageKind] = Counter()
+        self.page_kinds: dict[str, PageKind] = {}
         self.run_id: str | None = None
-        self.summary = RunSummary(firm_key=firm.firm_key, run_id=None, status="running")
+        self.summary = RunSummary(firm_key=firm.owner_key, run_id=None, status="running", budget=limit)
 
     # ------------------------------------------------------------------ entry point
 
     def run(self) -> RunSummary:
-        if not self.firm.enabled:
+        if isinstance(self.firm, Publisher) and self.firm.capture_mode == "manual_only":
+            self.summary.status = "skipped_manual_only"
+            self.summary.message = (
+                f"{self.firm.owner_key} is manual capture only: nothing is fetched. Save its pages in your browser "
+                "and import them (Manual capture)."
+            )
+            return self.summary
+        if not self.firm.enabled and not (isinstance(self.firm, Publisher) and self.options.dry_run):
             self.summary.status = "skipped_disabled"
-            self.summary.message = f"{self.firm.firm_key} is disabled: {self.firm.disabled_reason}"
+            self.summary.message = f"{self.firm.owner_key} is disabled: {self.firm.disabled_reason}"
             return self.summary
         if self.options.dry_run:
             return self._dry_run()
@@ -218,7 +245,7 @@ class FirmRunner:
             config_sha256=self.env.config_sha256,
         )
         self.summary.run_id = self.run_id
-        log_event("run_started", run_id=self.run_id, firm=self.firm.firm_key, command=self.options.command)
+        log_event("run_started", run_id=self.run_id, firm=self.firm.owner_key, command=self.options.command)
         try:
             if self.options.command == "fetch":
                 self._enqueue_known()
@@ -241,7 +268,7 @@ class FirmRunner:
         log_event(
             "run_finished",
             run_id=self.run_id,
-            firm=self.firm.firm_key,
+            firm=self.firm.owner_key,
             status=status,
             fetches=self.budget.used,
             outcomes=dict(self.summary.counts()),
@@ -254,7 +281,15 @@ class FirmRunner:
         if self.env.progress is not None:
             self.env.progress(text)
 
-    def check(self, url: str, *, source: Source | None = None, fetch_robots: bool = True) -> Block | None:
+    def check(
+        self,
+        url: str,
+        *,
+        source: Source | None = None,
+        fetch_robots: bool = True,
+        scope: bool = True,
+        ignore_disabled: bool = False,
+    ) -> Block | None:
         """The pre-request policy checks for one URL. Returns a Block, or None when the request may go ahead."""
         try:
             url = canonicalize(url)
@@ -263,14 +298,20 @@ class FirmRunner:
         host = host_of(url)
         host_row = self.doc_hosts.get(host)
         if host_row is None:
-            return Block(Outcome.NOT_ALLOWLISTED, f"{host} is not an authorised host for {self.firm.firm_key}")
+            return Block(Outcome.NOT_ALLOWLISTED, f"{host} is not an authorised host for {self.firm.owner_key}")
         pattern = matches_excluded(url, self.firm.excluded_paths)
         if pattern is not None:
             return Block(Outcome.EXCLUDED_PATH, f"matches excluded pattern {pattern}")
-        if not self.firm.enabled or (source is not None and not source.enabled):
+        if scope and isinstance(self.firm, Publisher):
+            reason = self._outside_scope(url)
+            if reason is not None:
+                return Block(Outcome.EXCLUDED_PATH, reason)
+        if not ignore_disabled and (not self.firm.enabled or (source is not None and not source.enabled)):
             return Block(Outcome.DISABLED, "firm or source is disabled")
         reason = terms_block_reason(host_row, self.clock.now())
         if reason is not None:
+            if isinstance(self.firm, Publisher):
+                reason = reason.replace("collector host terms", "collector directory terms")
             return Block(Outcome.TERMS_BLOCKED, reason)
         state = circuit.current(self.conn, host, self.clock.now(), persist=not self.options.dry_run)
         if state.open or host in self.tripped:
@@ -282,6 +323,16 @@ class FirmRunner:
             return Block(Outcome.ROBOTS_UNREACHABLE, rules.describe())
         if not rules.allows(url):
             return Block(Outcome.ROBOTS_BLOCKED, "robots.txt disallows this URL for FundedFlowCollector")
+        return None
+
+    def _outside_scope(self, url: str) -> str | None:
+        assert isinstance(self.firm, Publisher)
+        assert self.adapter is not None
+        reason = registry.path_outside_scope(self.firm, url)
+        if reason is not None:
+            return reason
+        if self.adapter.classify(url) is None:
+            return f"not a page the {self.adapter.name} adapter reads"
         return None
 
     def _robots_hop_check(self, url: str) -> Block | None:
@@ -366,7 +417,10 @@ class FirmRunner:
     # ------------------------------------------------------------------ discovery
 
     def _discover(self) -> None:
-        self._progress(f"Discovering {self.firm.firm_key}")
+        self._progress(f"Discovering {self.firm.owner_key}")
+        if isinstance(self.firm, Publisher):
+            self._progress("  publishers use their seed pages and the adapter's links (no sitemap discovery)")
+            return
         candidates: list[tuple[str, int, str]] = []
         for source in registry.list_sources(self.conn, self.firm.id):
             if source.kind is SourceKind.SITEMAP and source.enabled:
@@ -462,6 +516,7 @@ class FirmRunner:
         lastmod: str | None = None,
         anchor: str = "",
         from_attempt: str | None = None,
+        score: int | None = None,
     ) -> None:
         try:
             url = canonicalize(loc)
@@ -470,13 +525,15 @@ class FirmRunner:
         host = host_of(url)
         if host not in self.doc_hosts:
             decision = Outcome.NOT_ALLOWLISTED.value
-        elif matches_excluded(url, self.firm.excluded_paths):
+        elif matches_excluded(url, self.firm.excluded_paths) or (
+            isinstance(self.firm, Publisher) and self._outside_scope(url)
+        ):
             decision = Outcome.EXCLUDED_PATH.value
         elif (url in self.seen and url not in self.pending) or url in self.special_sources:
             return
         else:
             decision = "queued"
-        score = relevance.score(url, anchor)
+        score = relevance.score(url, anchor) if score is None else score
         assert self.run_id is not None
         with transaction(self.conn):
             runs.insert_discovered_link(
@@ -635,7 +692,7 @@ class FirmRunner:
                 )
 
     def _drain(self) -> None:
-        self._progress(f"Fetching {self.firm.firm_key} (budget {self.budget.limit} requests)")
+        self._progress(f"Fetching {self.firm.owner_key} (budget {self.budget.limit} requests)")
         while self.queue:
             target = heapq.heappop(self.queue)
             self.pending.pop(target.url, None)
@@ -666,7 +723,7 @@ class FirmRunner:
     # ------------------------------------------------------------------ one URL
 
     def _process(self, target: _Target) -> None:
-        source = target.source or registry.get_source(self.conn, ids.source_id(self.firm.firm_key, target.url))
+        source = target.source or registry.get_source(self.conn, ids.source_id(self.firm.owner_key, target.url))
         started = format_instant(self.clock.now())
         block = self.check(target.url, source=source)
         if block is not None:
@@ -719,7 +776,13 @@ class FirmRunner:
             attempt = self._attempt_from(result, source_id=source.id)
             record_unchanged(self.conn, source=source, attempt=attempt, now=self.clock.now())
             self.summary.results.append(
-                TargetResult(target.url, Outcome.UNCHANGED, "304 Not Modified", source.latest_snapshot_id)
+                TargetResult(
+                    target.url,
+                    Outcome.UNCHANGED,
+                    "304 Not Modified",
+                    source.latest_snapshot_id,
+                    directory="unchanged" if self.adapter is not None else None,
+                )
             )
             self._progress(f"  {'unchanged':<24} {redact_url(target.url)} (304)")
             return
@@ -810,10 +873,65 @@ class FirmRunner:
             retain_raw=self.settings.raw.retain,
             raw_retention_days=self.settings.raw.retention_days,
         )
-        self.summary.results.append(TargetResult(target.url, outcome, None, snapshot_id))
+        entry = TargetResult(target.url, outcome, None, snapshot_id)
+        self.summary.results.append(entry)
+        if isinstance(self.firm, Publisher):
+            self._read_directory_page(target, source, attempt.id, attempt.started_at, snapshot_id, body, method, entry)
+            return
         self._progress(f"  {outcome.value:<24} {redact_url(target.url)}")
         if target.depth < self.max_depth:
             self._follow_links(doc, base=result.final_url or target.url, depth=target.depth, attempt_id=attempt.id)
+
+    def _read_directory_page(
+        self,
+        target: _Target,
+        source: Source,
+        attempt_id: str,
+        observed_at: str,
+        snapshot_id: str,
+        body: bytes,
+        method: FetchMethod,
+        entry: TargetResult,
+    ) -> None:
+        """Read a stored publisher page into observations, then follow only the links its adapter allows."""
+        assert isinstance(self.firm, Publisher)
+        assert self.adapter is not None
+        stored = extract_and_store(
+            self.conn,
+            publisher=self.firm,
+            source=source,
+            snapshot_id=snapshot_id,
+            attempt_id=attempt_id,
+            html=body,
+            page_url=target.url,
+            capture_channel=method.value,
+            observed_at=observed_at,
+            now=self.clock.now(),
+        )
+        entry.directory, entry.directory_detail = stored.status, stored.describe()
+        self._progress(f"  {entry.outcome.value:<24} {redact_url(target.url)} [{stored.describe()}]")
+        kind = self.adapter.classify(target.url) or PageKind.UNSUPPORTED
+        for url, anchor in stored.links:
+            next_kind = self.adapter.follow(kind, url)
+            if next_kind is None or url in self.seen:
+                continue
+            pagination = next_kind is kind and self.adapter.page_number(url) > 1
+            depth = target.depth if pagination else target.depth + 1
+            if depth > self.max_depth:
+                continue
+            if pagination:
+                if self.list_pages[kind] + 1 >= self.adapter.max_pagination_pages:
+                    continue
+                self.list_pages[kind] += 1
+            self._discovered(
+                url,
+                via="link",
+                depth=depth,
+                channel=SourceChannel.LINK,
+                anchor=anchor,
+                from_attempt=attempt_id,
+                score=10 if pagination else 0,
+            )
 
     def _follow_links(self, doc: ParsedDocument, *, base: str, depth: int, attempt_id: str) -> None:
         for link in doc.links:
@@ -1112,6 +1230,12 @@ class FirmRunner:
     def _dry_run(self) -> RunSummary:
         """Evaluate known targets against policy with no network and no writes."""
         self.summary.status = "dry_run"
+        ignore_disabled = isinstance(self.firm, Publisher) and not self.firm.enabled
+        if ignore_disabled:
+            self.summary.message = (
+                f"{self.firm.owner_key} is disabled ({self.firm.disabled_reason}); this preview shows what each "
+                "request would meet after it is enabled."
+            )
         targets: list[str] = []
         for source in registry.list_sources(self.conn, self.firm.id):
             if source.source_channel is not SourceChannel.MANUAL_CAPTURE:
@@ -1124,7 +1248,7 @@ class FirmRunner:
                 targets.append(str(row["url"]))
         for url in targets:
             host = host_of(url)
-            block = self.check(url, fetch_robots=False)
+            block = self.check(url, fetch_robots=False, ignore_disabled=ignore_disabled)
             if block is not None:
                 self.summary.dry_run_lines.append((block.outcome.value, url, block.reason))
                 self.summary.results.append(TargetResult(url, block.outcome, block.reason))
@@ -1141,7 +1265,7 @@ def user_agent_suffix(info_url: str | None) -> str:
     return f"{USER_AGENT_PRODUCT} (+{info_url or 'https://example.invalid/fundedflow-collector'})"
 
 
-def run_firms(env: Environment, firms: list[Firm], options: RunOptions) -> list[RunSummary]:
+def run_firms(env: Environment, firms: Sequence[Owner], options: RunOptions) -> list[RunSummary]:
     """Run firms one after another (never in parallel)."""
     batch_id = ids.new_id("batch")
     summaries = []

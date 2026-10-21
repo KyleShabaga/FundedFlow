@@ -1,4 +1,9 @@
-"""Firm, host and source registry (D2). Operators add, list, update and disable; nothing is deleted."""
+"""Firm, publisher, host and source registry (D2). Operators add, list, update and disable; nothing is deleted.
+
+Two kinds of registry entry own hosts, sources, runs and snapshots (a "collection owner"): prop firms
+(`collector_firms`, first-party sources) and comparison publishers (`directory_publishers`, third-party directory
+sites, Build 29.25). A host belongs to one kind only, so a publisher can never be authorised under a firm.
+"""
 
 from __future__ import annotations
 
@@ -7,15 +12,17 @@ import re
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from fundedflow_collector import ids
 from fundedflow_collector.clock import format_instant
 from fundedflow_collector.db.connection import transaction
 from fundedflow_collector.db.policy_log import record_event
 from fundedflow_collector.outcomes import HostRole, SourceChannel, SourceKind, TermsDecision
-from fundedflow_collector.policy.urls import UrlRejected, canonicalize, host_of, normalise_host
+from fundedflow_collector.policy.urls import UrlRejected, canonicalize, host_of, matches_excluded, normalise_host
 
 FIRM_KEY = re.compile(r"^[a-z0-9][a-z0-9-]{1,63}$")
+CAPTURE_MODES = ("auto", "manual_only")
 
 
 class RegistryError(ValueError):
@@ -35,6 +42,50 @@ class Firm:
     excluded_paths: list[str]
     created_at: str
     updated_at: str
+
+    @property
+    def owner_key(self) -> str:
+        """The key that namespaces this owner's source and snapshot ids (unchanged from Build 29)."""
+        return self.firm_key
+
+    @property
+    def owner_kind(self) -> str:
+        return "firm"
+
+
+@dataclass(frozen=True)
+class Publisher:
+    """A third-party comparison/directory publisher. Never a prop firm, never a first-party rule source."""
+
+    id: str
+    publisher_key: str
+    display_name: str
+    homepage_url: str
+    adapter: str
+    capture_mode: str  # auto | manual_only
+    enabled: bool
+    disabled_reason: str | None
+    max_fetches: int | None
+    max_depth: int | None
+    allowed_paths: list[str]
+    excluded_paths: list[str]
+    notes: str | None
+    policy_review: dict[str, Any]
+    preset_version: str | None
+    created_at: str
+    updated_at: str
+
+    @property
+    def owner_key(self) -> str:
+        """Publisher ids live in their own namespace, so they can never collide with a firm's."""
+        return f"publisher:{self.publisher_key}"
+
+    @property
+    def owner_kind(self) -> str:
+        return "publisher"
+
+
+Owner = Firm | Publisher
 
 
 @dataclass(frozen=True)
@@ -262,16 +313,271 @@ def set_firm_enabled(conn: sqlite3.Connection, firm: Firm, enabled: bool, reason
     return require_firm(conn, firm.firm_key)
 
 
+# ---------------------------------------------------------------- comparison publishers (Build 29.25)
+
+PUBLISHER_HOST_ROLES = (HostRole.HOMEPAGE, HostRole.DOCS, HostRole.ASSET)
+
+
+def _publisher(row: sqlite3.Row) -> Publisher:
+    return Publisher(
+        id=row["id"],
+        publisher_key=row["publisher_key"],
+        display_name=row["display_name"],
+        homepage_url=row["homepage_url"],
+        adapter=row["adapter"],
+        capture_mode=row["capture_mode"],
+        enabled=bool(row["enabled"]),
+        disabled_reason=row["disabled_reason"],
+        max_fetches=row["max_fetches"],
+        max_depth=row["max_depth"],
+        allowed_paths=list(json.loads(row["allowed_paths"])),
+        excluded_paths=list(json.loads(row["excluded_paths"])),
+        notes=row["notes"],
+        policy_review=dict(json.loads(row["policy_review"])),
+        preset_version=row["preset_version"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+def base_domain(host: str) -> str:
+    """The publisher's own domain: its homepage host without a leading `www.`."""
+    return host[4:] if host.startswith("www.") else host
+
+
+def _check_publisher_host(publisher: Publisher, host: str, role: HostRole) -> None:
+    if role not in PUBLISHER_HOST_ROLES:
+        raise RegistryError("a publisher host's role is homepage, docs or asset")
+    domain = base_domain(host_of(publisher.homepage_url))
+    if role is not HostRole.ASSET and host != domain and not host.endswith("." + domain):
+        raise RegistryError(
+            f"{host} is not part of {publisher.display_name}'s own site ({domain}). Links to prop firms or affiliate "
+            "redirects are never authorised through a publisher; register a firm's own site as a firm instead"
+        )
+
+
+def path_outside_scope(publisher: Publisher, url: str) -> str | None:
+    """Why a URL is outside a publisher's configured paths, or None when it is inside them."""
+    pattern = matches_excluded(url, publisher.excluded_paths)
+    if pattern is not None:
+        return f"matches excluded pattern {pattern}"
+    if publisher.allowed_paths and matches_excluded(url, publisher.allowed_paths) is None:
+        return "outside the publisher's allowed paths"
+    return None
+
+
+def _check_publisher_path(publisher: Publisher, url: str) -> None:
+    reason = path_outside_scope(publisher, url)
+    if reason is not None:
+        raise RegistryError(f"{url} {reason}")
+
+
+def add_publisher(
+    conn: sqlite3.Connection,
+    *,
+    publisher_key: str,
+    display_name: str,
+    homepage_url: str,
+    adapter: str,
+    now: datetime,
+    capture_mode: str = "auto",
+    allowed_paths: list[str] | None = None,
+    excluded_paths: list[str] | None = None,
+    max_fetches: int | None = None,
+    max_depth: int | None = None,
+    notes: str | None = None,
+    policy_review: dict[str, Any] | None = None,
+    preset_version: str | None = None,
+) -> Publisher:
+    """Register a publisher. It starts disabled: live collection needs a terms review and an explicit enable."""
+    if not FIRM_KEY.match(publisher_key):
+        raise RegistryError("publisher key must be 2-64 characters: lowercase letters, digits and hyphens")
+    if not display_name.strip() or len(display_name) > 200:
+        raise RegistryError("display name must be 1-200 characters")
+    if capture_mode not in CAPTURE_MODES:
+        raise RegistryError("capture mode is auto or manual_only")
+    homepage = _check_url(homepage_url, "homepage")
+    _check_limits(max_fetches, max_depth)
+    if get_publisher(conn, publisher_key) is not None:
+        raise RegistryError(f"publisher {publisher_key!r} already exists")
+    if get_firm(conn, publisher_key) is not None:
+        raise RegistryError(f"{publisher_key!r} is already a firm key; publishers and firms use different keys")
+    stamp = format_instant(now)
+    pid = ids.new_id("pub")
+    reason = "manual capture only" if capture_mode == "manual_only" else "not reviewed yet"
+    with transaction(conn):
+        conn.execute("INSERT INTO collection_owners (id, kind, created_at) VALUES (?, 'publisher', ?)", (pid, stamp))
+        conn.execute(
+            "INSERT INTO directory_publishers (id, publisher_key, display_name, homepage_url, adapter, capture_mode,"
+            " enabled, disabled_reason, max_fetches, max_depth, allowed_paths, excluded_paths, notes, policy_review,"
+            " preset_version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                pid,
+                publisher_key,
+                display_name.strip(),
+                homepage,
+                adapter,
+                capture_mode,
+                reason,
+                max_fetches,
+                max_depth,
+                json.dumps(_check_patterns(allowed_paths or [])),
+                json.dumps(_check_patterns(excluded_paths or [])),
+                notes,
+                json.dumps(policy_review or {}, sort_keys=True, ensure_ascii=False),
+                preset_version,
+                stamp,
+                stamp,
+            ),
+        )
+        record_event(
+            conn,
+            now=now,
+            kind="publisher_added",
+            firm_id=pid,
+            detail={"publisher_key": publisher_key, "adapter": adapter, "capture_mode": capture_mode},
+        )
+    return require_publisher(conn, publisher_key)
+
+
+def get_publisher(conn: sqlite3.Connection, publisher_key: str) -> Publisher | None:
+    row = conn.execute("SELECT * FROM directory_publishers WHERE publisher_key = ?", (publisher_key,)).fetchone()
+    return _publisher(row) if row else None
+
+
+def get_publisher_by_id(conn: sqlite3.Connection, publisher_id: str) -> Publisher | None:
+    row = conn.execute("SELECT * FROM directory_publishers WHERE id = ?", (publisher_id,)).fetchone()
+    return _publisher(row) if row else None
+
+
+def require_publisher(conn: sqlite3.Connection, publisher_key: str) -> Publisher:
+    found = get_publisher(conn, publisher_key)
+    if found is None:
+        raise RegistryError(f"unknown publisher {publisher_key!r}; see `collector directory list`")
+    return found
+
+
+def list_publishers(conn: sqlite3.Connection) -> list[Publisher]:
+    return [_publisher(r) for r in conn.execute("SELECT * FROM directory_publishers ORDER BY publisher_key")]
+
+
+def update_publisher(
+    conn: sqlite3.Connection,
+    publisher: Publisher,
+    *,
+    now: datetime,
+    display_name: str | None = None,
+    allowed_paths: list[str] | None = None,
+    excluded_paths: list[str] | None = None,
+    max_fetches: int | None = None,
+    max_depth: int | None = None,
+    notes: str | None = None,
+    capture_mode: str | None = None,
+    policy_review: dict[str, Any] | None = None,
+) -> Publisher:
+    """Change a publisher's settings. Switching to manual_only also turns live collection off."""
+    _check_limits(max_fetches, max_depth)
+    name = display_name.strip() if display_name is not None else publisher.display_name
+    if not name or len(name) > 200:
+        raise RegistryError("display name must be 1-200 characters")
+    mode = capture_mode or publisher.capture_mode
+    if mode not in CAPTURE_MODES:
+        raise RegistryError("capture mode is auto or manual_only")
+    enabled = publisher.enabled and mode == "auto"
+    reason = None if enabled else (publisher.disabled_reason or "manual capture only")
+    if publisher.enabled and not enabled:
+        reason = "manual capture only"
+    allowed = _check_patterns(allowed_paths) if allowed_paths is not None else publisher.allowed_paths
+    excluded = _check_patterns(excluded_paths) if excluded_paths is not None else publisher.excluded_paths
+    review = policy_review if policy_review is not None else publisher.policy_review
+    values: dict[str, object] = {
+        "display_name": name,
+        "allowed_paths": json.dumps(allowed),
+        "excluded_paths": json.dumps(excluded),
+        "max_fetches": max_fetches if max_fetches is not None else publisher.max_fetches,
+        "max_depth": max_depth if max_depth is not None else publisher.max_depth,
+        "notes": notes if notes is not None else publisher.notes,
+        "capture_mode": mode,
+        "enabled": int(enabled),
+        "disabled_reason": reason,
+    }
+    with transaction(conn):
+        conn.execute(
+            "UPDATE directory_publishers SET display_name = :display_name, allowed_paths = :allowed_paths,"
+            " excluded_paths = :excluded_paths, max_fetches = :max_fetches, max_depth = :max_depth, notes = :notes,"
+            " capture_mode = :capture_mode, enabled = :enabled, disabled_reason = :disabled_reason,"
+            " policy_review = :policy_review, updated_at = :updated_at WHERE id = :id",
+            {
+                **values,
+                "policy_review": json.dumps(review, sort_keys=True, ensure_ascii=False),
+                "updated_at": format_instant(now),
+                "id": publisher.id,
+            },
+        )
+        record_event(conn, now=now, kind="publisher_updated", firm_id=publisher.id, detail=values)
+    return require_publisher(conn, publisher.publisher_key)
+
+
+def set_publisher_enabled(
+    conn: sqlite3.Connection, publisher: Publisher, enabled: bool, reason: str | None, now: datetime
+) -> Publisher:
+    """Enable or disable live collection. Enabling needs a recorded terms review for every document host."""
+    if enabled:
+        if publisher.capture_mode != "auto":
+            raise RegistryError(
+                f"{publisher.publisher_key} is manual capture only; change its capture mode to auto first, and only "
+                "if the publisher's policy now allows automated access"
+            )
+        hosts = [h for h in list_hosts(conn, publisher.id) if h.role is not HostRole.ASSET]
+        if not hosts:
+            raise RegistryError(f"{publisher.publisher_key} has no hosts yet")
+        missing = [h.host for h in hosts if h.terms_decision is None]
+        if missing:
+            raise RegistryError(f"record a terms review for {', '.join(missing)} before enabling")
+    elif not (reason and reason.strip()):
+        raise RegistryError("a reason is required to disable a publisher")
+    with transaction(conn):
+        conn.execute(
+            "UPDATE directory_publishers SET enabled = ?, disabled_reason = ?, updated_at = ? WHERE id = ?",
+            (int(enabled), None if enabled else reason, format_instant(now), publisher.id),
+        )
+        record_event(
+            conn,
+            now=now,
+            kind="publisher_enabled" if enabled else "publisher_disabled",
+            firm_id=publisher.id,
+            detail={"reason": reason},
+        )
+    return require_publisher(conn, publisher.publisher_key)
+
+
+def owner_by_id(conn: sqlite3.Connection, owner_id: str) -> Owner:
+    publisher = get_publisher_by_id(conn, owner_id)
+    return publisher if publisher is not None else get_firm_by_id(conn, owner_id)
+
+
 # ---------------------------------------------------------------- hosts
 
 
-def add_host(conn: sqlite3.Connection, firm: Firm, host: str, role: HostRole, now: datetime) -> Host:
+def add_host(conn: sqlite3.Connection, firm: Owner, host: str, role: HostRole, now: datetime) -> Host:
     try:
         name = normalise_host(host)
     except UrlRejected as exc:
         raise RegistryError(str(exc)) from exc
     if get_host(conn, firm.id, name) is not None:
-        raise RegistryError(f"host {name} is already registered for {firm.firm_key}")
+        raise RegistryError(f"host {name} is already registered for {firm.owner_key}")
+    other = conn.execute(
+        "SELECT o.kind FROM collector_hosts h JOIN collection_owners o ON o.id = h.firm_id WHERE h.host = ?"
+        " AND o.kind <> ?",
+        (name, firm.owner_kind),
+    ).fetchone()
+    if other is not None:
+        raise RegistryError(
+            f"{name} is already registered as a {other['kind']} host; a prop firm's own site and a comparison "
+            "publisher's site are kept apart, so one host cannot be both"
+        )
+    if isinstance(firm, Publisher):
+        _check_publisher_host(firm, name, role)
     stamp = format_instant(now)
     with transaction(conn):
         conn.execute(
@@ -289,14 +595,14 @@ def get_host(conn: sqlite3.Connection, firm_id: str, host: str) -> Host | None:
     return _host(row) if row else None
 
 
-def require_host(conn: sqlite3.Connection, firm: Firm, host: str) -> Host:
+def require_host(conn: sqlite3.Connection, firm: Owner, host: str) -> Host:
     try:
         name = normalise_host(host)
     except UrlRejected as exc:
         raise RegistryError(str(exc)) from exc
     found = get_host(conn, firm.id, name)
     if found is None:
-        raise RegistryError(f"host {name} is not registered for {firm.firm_key}; add it with `collector host add`")
+        raise RegistryError(f"host {name} is not registered for {firm.owner_key}; add it with `collector host add`")
     return found
 
 
@@ -312,7 +618,7 @@ def list_hosts(conn: sqlite3.Connection, firm_id: str | None = None) -> list[Hos
 
 def record_terms(
     conn: sqlite3.Connection,
-    firm: Firm,
+    firm: Owner,
     host: Host,
     *,
     decision: TermsDecision,
@@ -368,7 +674,7 @@ def record_terms(
 
 def add_source(
     conn: sqlite3.Connection,
-    firm: Firm,
+    firm: Owner,
     *,
     url: str,
     kind: SourceKind,
@@ -387,10 +693,16 @@ def add_source(
     host = host_of(canonical)
     registered = get_host(conn, firm.id, host)
     if registered is None or registered.role is HostRole.ASSET:
-        raise RegistryError(f"host {host} is not an authorised document host for {firm.firm_key}")
+        raise RegistryError(f"host {host} is not an authorised document host for {firm.owner_key}")
+    if isinstance(firm, Publisher):
+        _check_publisher_path(firm, canonical)
+        from fundedflow_collector.directory.adapters import get_adapter
+
+        if get_adapter(firm.adapter).classify(canonical) is None:
+            raise RegistryError(f"{canonical} is not a page the {firm.adapter} adapter reads")
     if kind is SourceKind.ZENDESK and "/hc/" not in canonical:
         raise RegistryError("a zendesk source URL looks like https://help.example.com/hc/en-us")
-    sid = ids.source_id(firm.firm_key, canonical)
+    sid = ids.source_id(firm.owner_key, canonical)
     if get_source(conn, sid) is not None:
         raise RegistryError(f"source {canonical} already exists ({sid})")
     stamp = format_instant(now)
@@ -419,14 +731,14 @@ def add_source(
 
 def ensure_source(
     conn: sqlite3.Connection,
-    firm: Firm,
+    firm: Owner,
     canonical_url: str,
     kind: SourceKind,
     channel: SourceChannel,
     now: datetime,
 ) -> Source:
     """Get or create a source row for a discovered URL. Must be called inside a transaction."""
-    sid = ids.source_id(firm.firm_key, canonical_url)
+    sid = ids.source_id(firm.owner_key, canonical_url)
     existing = get_source(conn, sid)
     if existing is not None:
         return existing

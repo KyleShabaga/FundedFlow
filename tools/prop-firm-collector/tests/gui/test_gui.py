@@ -222,3 +222,131 @@ def test_form_dialog_returns_values(root: tk.Toplevel) -> None:
     dialog = FormDialog(root, "Test", [Field("name", "Name", default="x"), Field("ok", "Tick", "check", default=True)])
     dialog._ok()
     assert dialog.result == {"name": "x", "ok": True}
+
+
+# ---------------------------------------------------------------- comparison publishers (Build 29.25)
+
+
+def review_publisher(app: CollectorApp, key: str, host: str) -> None:
+    app.research.publishers.selection_set(key)
+    app.research.refresh_detail()
+    message = app.research.record_terms(host, "unclear", "https://example.invalid/terms", accept_unclear=True)
+    assert message == "Live fetching: allowed."
+    app.research.set_enabled(True)
+
+
+def test_research_sources_presets_policy_gates_and_preview(ui: tuple[CollectorApp, Recorder]) -> None:
+    app, recorder = ui
+    app.research.refresh_detail()
+    assert "No publishers yet" in app.research.policy.get("1.0", "end")
+    app.research.install_preset("onlypropfirms")
+    assert tree_values(app.research.publishers) == ["onlypropfirms"]
+    assert tree_values(app.research.publishers, 1) == ["Not reviewed"]
+    policy = app.research.policy.get("1.0", "end")
+    assert "third-party comparison publisher" in policy and "Policy review recorded 2026-10-21" in policy
+    assert len(tree_values(app.research.pages)) == 4
+    app.guard(lambda: app.research.set_enabled(True))
+    assert any("record a terms review" in e for e in recorder.errors())
+    app.guard(lambda: app.research.add_host("www.northwind-futures.test"))
+    app.guard(lambda: app.research.add_seed("https://onlypropfirms.com/go/northwind"))
+    assert len(recorder.errors()) == 3
+    app.research.preview()  # works while disabled: shows what each request would meet
+    log = log_text(app)
+    assert "Preview for publisher:onlypropfirms" in log and "terms_blocked" in log and "Planned:" in log
+    review_publisher(app, "onlypropfirms", "onlypropfirms.com")
+    assert tree_values(app.research.publishers, 2) == ["yes"]
+    app.research.update_settings(mode="manual_only")
+    assert tree_values(app.research.publishers, 1) == ["Needs manual capture"]
+    assert tree_values(app.research.publishers, 2) == ["no"]
+
+
+def test_publisher_practice_fetch_counts_evidence_and_review(ui: tuple[CollectorApp, Recorder]) -> None:
+    from tests.conftest import DIRECTORY_SITE
+
+    app, recorder = ui
+    app.add_firm("northwind-futures", "Northwind Futures", "https://www.northwind-futures.test/")
+    app.evidence.refresh()
+    assert "No observations yet" in str(app.evidence.empty.cget("text"))
+    for key, host in (("onlypropfirms", "onlypropfirms.com"), ("traderssecondbrain", "traderssecondbrain.com")):
+        app.research.install_preset(key)
+        review_publisher(app, key, host)
+    app.research.install_preset("propfirmmatch-futures")
+    app.select_publishers_for_fetch(["onlypropfirms", "traderssecondbrain"])
+    assert app.selected_publishers() == ["onlypropfirms", "traderssecondbrain"]
+    app.dry_run.set(False)
+    app.practice.set(True)
+    app.practice_dir.set(str(DIRECTORY_SITE))
+    app.use_browser.set(False)
+    app.start_fetch()
+    assert recorder.errors() == []
+    assert not any(kind == "ask" for kind, _t, _m in recorder.messages)
+    log = log_text(app)
+    assert "publisher:onlypropfirms: completed" in log and "pages read:" in log
+    sites = {row[0]: row for row in (app.site_results.item(i, "values") for i in app.site_results.get_children())}
+    assert set(sites) == {"publisher:onlypropfirms", "publisher:traderssecondbrain"}
+    assert int(sites["publisher:onlypropfirms"][2]) >= 5  # collected
+    assert "structure_changed" in sites["publisher:onlypropfirms"][7]
+
+    evidence = app.evidence
+    evidence.refresh()
+    assert "unverified third-party claim" in evidence.banner.get() and "conflicting" in evidence.banner.get()
+    firms = [evidence.tree.item(i, "text") for i in evidence.node_ids()]
+    assert any("Northwind Futures" in f and "northwind-futures" in f for f in firms)  # exact-name mapping shown
+    evidence.set_filters(search="contoso")
+    assert all("Contoso" in str(evidence.tree.item(i, "text")) for i in evidence.node_ids())
+    evidence.set_filters(search="", status="conflicting")
+    assert evidence.node_ids() and all(evidence.tree.item(i, "values")[2] == "conflicting" for i in evidence.node_ids())
+    evidence.set_filters(status="All", publisher="onlypropfirms")
+    firm_node = next(i for i in evidence.node_ids() if "Northwind" in str(evidence.tree.item(i, "text")))
+    programme = evidence.node_ids(firm_node)[0]
+    record = evidence.node_ids(programme)[0]
+    evidence.select_node(record)
+    first = evidence.fields.get_children()[0]
+    details = evidence.show_observation(str(first))
+    assert "Unverified third-party claim." in details and "Snapshot" in details and "History of this value" in details
+    assert "northwind-futures's own stored pages" in details
+
+    items = {i.kind: i for i in evidence.items}
+    assert {"conflict", "duplicate", "uncertain_identity"} <= set(items)
+    evidence.mark_separate(items["uncertain_identity"].key, "different companies")
+    evidence.annotate(items["conflict"].key, "asked both publishers", dismiss=True)
+    dismissed = {i.key for i in evidence.items if i.dismissed}
+    assert {items["uncertain_identity"].key, items["conflict"].key} <= dismissed
+    app.guard(lambda: evidence.mark_separate(items["duplicate"].key))
+    app.guard(lambda: evidence.verify(str(first), "snap_nonexistent", "checked"))
+    assert len(recorder.errors()) == 2
+
+    app.select_publishers_for_fetch(["propfirmmatch-futures"])
+    app.practice.set(False)
+    app.start_fetch()  # manual-only: refused before any request
+    assert "not enabled for live collection" in recorder.errors()[-1]
+    app.select_publishers_for_fetch(["onlypropfirms"])
+    recorder.answer = False
+    app.start_fetch()
+    assert recorder.messages[-1][0] == "ask" and "onlypropfirms.com" in recorder.messages[-1][2]
+
+
+def test_publisher_manual_capture_and_directory_export(ui: tuple[CollectorApp, Recorder], tmp_path: Path) -> None:
+    from tests.conftest import DIRECTORY_CAPTURES
+
+    app, recorder = ui
+    app.research.install_preset("propfirmmatch-futures")
+    app.capture_target.set("publisher")
+    app.refresh_all()
+    assert list(app.capture_firm.cget("values")) == ["propfirmmatch-futures"]
+    app.capture_firm.set("propfirmmatch-futures")
+    app.capture_url.set("https://propfirmmatch.com/futures/prop-firm-challenges")
+    app.capture_file.set(str(DIRECTORY_CAPTURES / "propfirmmatch-futures-challenges.html"))
+    app.capture_time.set("2026-10-21T12:00:00Z")
+    app.guard(app.import_capture_now)
+    assert recorder.errors() == []
+    assert "read as   comparison, 3 records" in app.capture_result.get("1.0", "end")
+    assert app.evidence.node_ids()
+    out = tmp_path / "observations.json"
+    app.export_path.set(str(out))
+    app.guard(app.export_directory_now)
+    assert recorder.errors() == []
+    assert "collector-directory-observations-v1: valid" in app.export_result.get("1.0", "end")
+    assert app.validate_file(out) == []
+    document = json.loads(out.read_text(encoding="utf-8"))
+    assert {f["verification_status"] for r in document["records"] for f in r["fields"]} == {"unverified"}
