@@ -5,6 +5,7 @@
 // shapes are the IPC contract and must not change here.
 
 import { z } from "zod";
+import { createDataControls } from "./data-controls";
 
 import {
   accountRiskInputsSchema, riskInputsQuerySchema, observationInputSchema, observationSchema, observationCorrectionSchema,
@@ -115,6 +116,7 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
   const done = (command: string, args: Record<string, unknown>) => call(command, args, z.null()).then(() => undefined);
 
   return {
+    dataControls: createDataControls(invoke),
     evidence: {
       inputs: (query) => call("get_account_risk_inputs", { query: validate(riskInputsQuerySchema, query) }, accountRiskInputsSchema),
       create: (input) => call("create_financial_observation", { input: validate(observationInputSchema, input) }, observationSchema),

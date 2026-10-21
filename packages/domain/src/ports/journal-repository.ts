@@ -1,3 +1,6 @@
+import type { PermanentDeletionPreviewRequest, PermanentDeletionPreview, PermanentDeletionRequest, PermanentDeletionResult } from "../contracts/data-controls.js";
+import type { ArchiveInspectRequest, ArchiveRestorePreview, ArchiveRestoreRequest, ArchiveRestoreResult } from "../contracts/data-controls.js";
+import type { ArchiveExportRequest, CsvExportRequest, DataExportResult } from "../contracts/data-controls.js";
 import type { AccountRiskInputs, RiskInputsQuery, ObservationInput, ObservationCorrection, FinancialObservation, LedgerRevision, ReconciliationRequest, Reconciliation, ReconciliationResolutionInput, ReconciliationResolution } from "../risk/contracts.js";
 // The JournalRepository port: every read and write of the local journal goes
 // through this interface. It names only domain contracts, never a host type
@@ -337,7 +340,17 @@ export interface FinancialEvidenceRepository {
 }
 
 /** The local journal. */
+export interface DataControlsRepository {
+  previewDeletion(request: PermanentDeletionPreviewRequest): Promise<PermanentDeletionPreview>;
+  deletePermanently(request: PermanentDeletionRequest): Promise<PermanentDeletionResult>;
+  retryCleanup(): Promise<void>;
+  inspectArchive(request: ArchiveInspectRequest): Promise<ArchiveRestorePreview>;
+  restoreArchive(request: ArchiveRestoreRequest): Promise<ArchiveRestoreResult>;
+  exportArchive(request: ArchiveExportRequest): Promise<DataExportResult>;
+  exportCsv(request: CsvExportRequest): Promise<DataExportResult>;
+}
 export interface JournalRepository {
+  readonly dataControls: DataControlsRepository;
   readonly evidence: FinancialEvidenceRepository;
   readonly accounts: AccountRepository;
   readonly trades: TradeRepository;
@@ -354,7 +367,7 @@ export interface JournalRepository {
   readonly catalogue: CatalogueRepository;
 }
 
-/** The one error type a JournalRepository rejects with. */
+/** Ordinary journal CRUD errors. dataControls uses its exported stable error DTO and host wrapper. */
 export class RepositoryError extends Error {
   readonly error: AppError;
 

@@ -27,7 +27,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 |---|---|
 | `tokens.css` | Colour tokens per theme (with the role of each), spacing, radii, font stacks |
 | `tokens.test.ts` | Fails if any text/background pair drops below 4.5:1, or control borders below 3:1, in either theme |
-| `format.ts` | Money, compact money, percentage, trading-day and instant (`formatInstant`) formatting; exact money sums |
+| `format.ts` | Money, compact money, percentage, byte size (`formatBytes`), trading-day and instant (`formatInstant`) formatting; exact money sums |
 | `components/primitives.tsx` | `Button`, `Badge`, `Pnl`, `StatTile`, `Tabs` + `TabPanel` (Radix Tabs; `keepMounted` keeps a panel's form state while another tab shows, Build 19) |
 | `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots; Build 12 supplies navigation and routing |
 | `components/rules.tsx` | `RuleMeter`, `ruleState`, `AccountCard` |

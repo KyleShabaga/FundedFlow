@@ -537,8 +537,8 @@
             "accountId": "id-3",
             "accountName": "Eval 50K",
             "blockers": [
-              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24).",
-              "This account is part of an evaluation-reset chain; its links are append-only and deleting one attempt would orphan its neighbours."
+              "This account is part of an evaluation-reset chain; its links are append-only and deleting one attempt would orphan its neighbours.",
+              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
             ],
             "deletedTrades": 0,
             "importBatches": 2,
@@ -1024,8 +1024,8 @@
             "accountId": "id-2",
             "accountName": "Eval 50K attempt 2",
             "blockers": [
-              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24).",
-              "This account is part of an evaluation-reset chain; its links are append-only and deleting one attempt would orphan its neighbours."
+              "This account is part of an evaluation-reset chain; its links are append-only and deleting one attempt would orphan its neighbours.",
+              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
             ],
             "deletedTrades": 0,
             "importBatches": 0,
@@ -1125,7 +1125,7 @@
             "accountId": "id-1",
             "accountName": "Euro account",
             "blockers": [
-              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
+              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
             ],
             "deletedTrades": 0,
             "importBatches": 0,
@@ -1609,7 +1609,7 @@
             "accountId": "id-19",
             "accountName": "UTC calendar",
             "blockers": [
-              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
+              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
             ],
             "deletedTrades": 0,
             "importBatches": 0,
@@ -1730,7 +1730,7 @@
             "accountId": "id-18",
             "accountName": "NY 17:00 eval",
             "blockers": [
-              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
+              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
             ],
             "deletedTrades": 1,
             "importBatches": 1,
@@ -2140,7 +2140,7 @@
             "accountId": "id-20",
             "accountName": "Legacy 06:00",
             "blockers": [
-              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
+              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
             ],
             "deletedTrades": 0,
             "importBatches": 0,
@@ -2617,7 +2617,7 @@
             "accountId": "id-36",
             "accountName": "UTC calendar",
             "blockers": [
-              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
+              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
             ],
             "deletedTrades": 0,
             "importBatches": 0,
@@ -2738,7 +2738,7 @@
             "accountId": "id-35",
             "accountName": "NY 17:00 eval",
             "blockers": [
-              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
+              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
             ],
             "deletedTrades": 1,
             "importBatches": 1,
@@ -3148,7 +3148,7 @@
             "accountId": "id-34",
             "accountName": "Archived",
             "blockers": [
-              "Permanent deletion is not available until its confirmation and retention policy is approved (Build 24)."
+              "This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation."
             ],
             "deletedTrades": 0,
             "importBatches": 0,

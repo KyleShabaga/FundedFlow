@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
-import { Link, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { AppProviders } from "./app/AppProviders";
-import { AppShell, NotFound, RoutePlaceholder } from "./app/AppShell";
+import { AppShell, NotFound } from "./app/AppShell";
 import { RuntimeGate } from "./components/RuntimeGate";
 import { AccountDetailPage } from "./features/accounts/components/AccountDetailPage";
 import { AccountsPage } from "./features/accounts/components/AccountsPage";
@@ -12,6 +12,7 @@ import { ImportWizardPage } from "./features/imports/components/ImportWizardPage
 import { JournalPage } from "./features/journal/components/JournalPage";
 import { TradeDetailPage } from "./features/journal/components/TradeDetailPage";
 import { DailyReviewPage } from "./features/daily-reviews/components/DailyReviewPage";
+import { DataControlsPage } from "./features/data-controls/components/DataControlsPage";
 import { TodayPage } from "./features/today/components/TodayPage";
 import { InsightsPage } from "./features/insights/components/InsightsPage";
 import "./App.css";
@@ -36,10 +37,7 @@ export default function App() {
           <Route path="accounts/:accountId/rulebook/versions/:versionId" element={<RuntimeGate showStatus={false}><RulebookVersionPage /></RuntimeGate>} />
           <Route path="import" element={<RuntimeGate showStatus={false}><ImportWizardPage /></RuntimeGate>} />
           <Route path="import/history" element={<RuntimeGate showStatus={false}><ImportHistoryPage /></RuntimeGate>} />
-          <Route path="settings" element={<>
-            <RoutePlaceholder name="Settings" />
-            {DeveloperTools && <p><Link to="/settings/developer">Developer tools</Link></p>}
-          </>} />
+          <Route path="settings" element={<DataControlsPage />} />
           {DeveloperTools && (
             <Route path="/settings/developer" element={
               <Suspense fallback={<p role="status">Opening developer tools…</p>}>

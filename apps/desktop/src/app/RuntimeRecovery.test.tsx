@@ -13,6 +13,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("../features/accounts/components/AccountsPage", () => ({ AccountsPage: () => <h2>Accounts is not built yet</h2> }));
 vi.mock("../features/today/components/TodayPage", () => ({ TodayPage: () => <h2>Today is not built yet</h2> }));
 vi.mock("../features/accounts/components/AccountSwitcher", () => ({ AccountSwitcher: () => null }));
+vi.mock("../features/data-controls/components/DataControlsPage", () => ({ DataControlsPage: () => <h2>Settings is not built yet</h2> }));
 import App from "../App";
 import { RuntimeGate } from "../components/RuntimeGate";
 import { deferred, failed, ready } from "../test/runtime-fixtures";
