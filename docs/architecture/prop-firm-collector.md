@@ -1,7 +1,8 @@
 # Build 29: prop-firm source registry and safe page-fetching collector
 
 Card: https://app.notion.com/p/3fe1bd4b6bde81c791c5ccbfbbad4190 · branch `feat/build-29-prop-firm-collector`.
-Status: **architecture checkpoint, awaiting owner approval.** No collector code exists yet.
+Status: **implemented** (architecture approved 2026-10-20 with every default in §13). Section 14 lists where the
+build differs from this plan.
 
 The card's "Research addendum — safety and block-avoidance" (October 20, 2026, with the relaxed-defaults
 revision) is authoritative wherever it conflicts with the older sections below it. This document follows the
@@ -380,10 +381,10 @@ hosts of the same firm. No retry via another path, subdomain, method or channel.
 
 `new_snapshot`, `matched_earlier_snapshot`, `unchanged`, `skipped_lastmod`, `not_allowlisted`, `excluded_path`,
 `url_rejected`, `address_blocked` (non-global IP), `terms_blocked`, `robots_blocked`, `robots_unreachable`,
-`circuit_open`, `budget_exhausted`, `deadline_exceeded`, `access_denied`, `blocked_bot_protection`,
+`circuit_open`, `disabled`, `budget_exhausted`, `deadline_exceeded`, `access_denied`, `blocked_bot_protection`,
 `rate_limited`, `http_error`, `server_error`, `timeout`, `network_error`, `too_large`,
-`unsupported_content_type`, `parse_error`, `parse_timeout`, `thin_content` (too little text and no browser
-available), `render_unavailable`, `render_error`. One enum in `outcomes.py`; the user guide's outcome table is
+`unsupported_content_type`, `parse_error`, `parse_timeout`, `render_unavailable`, `render_error`. (`thin_content`
+became a snapshot warning; see §14.) One enum in `outcomes.py`; the user guide's outcome table is
 generated from it and checked by a test so they can't drift.
 
 ### 8.6 Logging and data handling
@@ -619,3 +620,39 @@ Defaults in **bold** are what I'll build unless you say otherwise.
    step (fully offline via `route.fulfill`). **Yes**; I'll mark it non-blocking only if it proves flaky.
 8. **Exit codes** as in §5.3 (blocked hosts give 4, not 0). **Yes.**
 9. **CLAUDE.md** gets one line listing the collector checks under "Checks". **Yes.**
+
+## 14. As built: differences from the plan and decisions made during implementation
+
+| Area | Plan | As built, and why |
+|---|---|---|
+| `thin_content` | Outcome code | A snapshot **warning**. A short page is still evidence; `render_unavailable` covers `requires_js` sources without a browser. |
+| `disabled` | Not listed | New policy outcome for a disabled firm or source. |
+| Browser fallback | Render when text < 300 chars | Also: if rendering adds no text, the plain HTTP version is stored (short static pages are not JS pages); the HTTP `ETag`/`Last-Modified` are kept on rendered snapshots so the next run can use a 304. |
+| `--force` | Ignore sitemap `lastmod` | Also skips conditional headers, so a JS page behind an unchanged HTML shell can be re-rendered on demand. |
+| Link following | Bounded by depth | Bounded by depth **and** relevance: only links scoring above zero (rules, evaluation, payout, FAQ, ...) are followed. |
+| Zendesk article pages | Not specified | Sources discovered through the API are refreshed only through the API, never by fetching the article HTML. |
+| Concurrency | Not specified | A `collector.lock` file lock lets one fetch/import run at a time. Crash recovery (`running` to `aborted`) happens only under that lock, so a read command in another window never aborts a live run. |
+| Cookies | No cookie jar | httpx copies an `httpx.Cookies` object into a default jar, so a plain `CookieJar` with a reject-all policy is passed directly, and a request hook strips any `Cookie` header. A loopback socket test proves `Set-Cookie` is never sent back. |
+| PDF memory watchdog | psutil on the worker | Sums memory over the worker's process tree, because a venv `python.exe` on Windows is a launcher with the interpreter as a child. |
+| Snapshot columns | Section 7 list | Added `requested_url`, `redirect_chain`, `http_status` and `source_channel` so a snapshot is self-describing in the export. |
+| `firm import` | Firm, hosts, sources | Can also carry terms decisions (the operator's file is the operator's decision); each is logged in `policy_events`. |
+| Robots ReDoS guard | Bound match time | Patterns over 1,024 characters or 30 wildcards are dropped with a warning, and a match slower than 2 s marks the host `robots_unreachable` for the run. |
+| CI | Windows job | `astral-sh/setup-uv@v6` pinned to uv 0.13.4; Chromium is installed so browser tests run; `pip-audit` audits the hash-locked export. |
+
+### Verification (2026-10-20, Windows 11, Python 3.12.15)
+
+- `pytest`: all tests pass (unit, security, integration, contract, CLI walkthrough, and browser tests with real
+  Chromium). Real network access is blocked by pytest-socket, except one loopback-only socket test. Exact counts
+  and output are in the pull request.
+- `ruff check`, `ruff format --check`, `mypy --strict src tests`: clean. `pip-audit`: no known vulnerabilities.
+  Banned-package check: none present in `uv.lock`.
+- Full PowerShell walkthrough of the user guide against the synthetic fixtures. The FundedFlow app data folder was
+  compared before and after and was unchanged.
+- One live request outside the tests (`GET https://example.com/`) confirmed the DNS-pinned transport: the socket went
+  to the validated IP while TLS SNI and certificate checks used the host name.
+
+### Follow-ups (not Build 29)
+
+- Platform adapters for Intercom, Help Scout and GitBook after their public API documentation is reviewed.
+- MHTML ("single file") manual captures.
+- Build 31 consumes `collector-snapshot-v1` and maps it to `sourceReferenceSchema` as the schema description sets out.

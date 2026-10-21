@@ -16,6 +16,7 @@ FundedFlow is a Windows-first, local-first trading journal built with Tauri 2, R
 |---|---|---|
 | `apps/desktop` | `@fundedflow/desktop` | React UI, Tauri host (`src-tauri`), typed command gateway |
 | `packages/domain` | `@fundedflow/domain` | Framework-free Zod contracts and money primitives shared by every host |
+| `tools/prop-firm-collector` | `fundedflow-collector` (Python) | Build 29 standalone collector: public prop-firm pages as unverified evidence ([README](tools/prop-firm-collector/README.md)) |
 
 The UI design system (tokens, bundled fonts, components, money formatting) is in `apps/desktop/src/design-system`; see [`docs/design-system.md`](docs/design-system.md). Screen designs, build order and per-screen specs are in [`docs/design/`](docs/design/README.md). In development, open `#/settings/developer` for the component gallery and data-model tooling. These tools are excluded from production builds.
 
