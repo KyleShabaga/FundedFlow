@@ -38,24 +38,44 @@ pub struct DevEnvironment {
     pub problem: Option<String>,
 }
 
-fn same_path(a: &Path, b: &Path) -> bool {
-    let canon = |p: &Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
-    let (a, b) = (canon(a), canon(b));
-    if cfg!(windows) {
-        a.to_string_lossy().to_lowercase() == b.to_string_lossy().to_lowercase()
-    } else {
-        a == b
+/// `p` with its deepest existing ancestor canonicalized and the rest re-appended, so a directory that exists
+/// and one that does not yet are spelled the same way (symlinks, Windows `\\?\` prefixes and 8.3 short names).
+fn resolved(p: &Path) -> PathBuf {
+    let mut rest = Vec::new();
+    let mut current = p;
+    loop {
+        if let Ok(mut found) = std::fs::canonicalize(current) {
+            found.extend(rest.iter().rev());
+            return found;
+        }
+        match (current.parent(), current.file_name()) {
+            (Some(parent), Some(name)) => {
+                rest.push(name.to_os_string());
+                current = parent;
+            }
+            _ => return p.to_path_buf(),
+        }
     }
 }
 
+/// Path components for comparison; Windows paths are case-insensitive.
+fn components(p: &Path) -> Vec<String> {
+    resolved(p)
+        .components()
+        .map(|c| {
+            let part = c.as_os_str().to_string_lossy();
+            if cfg!(windows) { part.to_lowercase() } else { part.into_owned() }
+        })
+        .collect()
+}
+
+fn same_path(a: &Path, b: &Path) -> bool {
+    components(a) == components(b)
+}
+
 fn inside(child: &Path, parent: &Path) -> bool {
-    let canon = |p: &Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
-    let (c, p) = (canon(child), canon(parent));
-    if cfg!(windows) {
-        c.to_string_lossy().to_lowercase().starts_with(&format!("{}\\", p.to_string_lossy().to_lowercase()))
-    } else {
-        c.starts_with(&p) && c != p
-    }
+    let (child, parent) = (components(child), components(parent));
+    child.len() > parent.len() && child.starts_with(&parent)
 }
 
 /// An isolated test journal directory: absolute, named like the app's own data directory (the

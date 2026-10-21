@@ -428,6 +428,22 @@ fn only_an_isolated_app_specific_directory_is_accepted() {
     }
 }
 
+/// The real journal exists and resolves to one spelling while a new test directory is written with another
+/// (a symlinked parent here; 8.3 short names or a `\\?\` prefix on Windows): it is still refused when inside.
+#[cfg(unix)]
+#[test]
+fn a_path_inside_the_real_journal_is_refused_whatever_its_spelling() {
+    let root = tempfile::tempdir().unwrap();
+    let real_parent = root.path().join("real");
+    let real = real_parent.join(ID);
+    std::fs::create_dir_all(&real).unwrap();
+    let alias = root.path().join("alias");
+    std::os::unix::fs::symlink(&real_parent, &alias).unwrap();
+    let nested = alias.join(ID).join("nested").join(ID);
+    assert!(validate_isolated(&nested, Some(&real), ID).unwrap_err().contains("inside"));
+    assert!(validate_isolated(&alias.join(ID), Some(&real), ID).unwrap_err().contains("real per-user journal"));
+}
+
 #[test]
 fn a_refused_test_directory_never_falls_back_to_the_real_journal() {
     let real = PathBuf::from(if cfg!(windows) { r"C:\Users\dev\AppData\Roaming\com.fundedflow.desktop" } else { "/home/dev/.local/share/com.fundedflow.desktop" });
