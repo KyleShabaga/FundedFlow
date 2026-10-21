@@ -347,7 +347,15 @@ function ReviewForm({ account, data, library, libraryFailed, onDirtyChange, relo
       {futureOnly && !readOnly && <InlineNotice tone="info">This trading day hasn't started. You can write its plan now; the checklist and reflection open once the day begins.</InlineNotice>}
       {libraryFailed && <InlineNotice tone="warning" title="Checklists couldn't be loaded">You can still write the plan and reflection; a checklist already on the review is kept.</InlineNotice>}
       <ValidationSummary issues={summary} />
-      {conflict ? (
+      {save.outcome === "uncertain-outcome" ? (
+        <InlineNotice tone="warning" title="It isn't certain the review was saved" live="assertive"
+          actions={<Button size="sm" onClick={() => {
+            keepEdits(account.id, day, { revision, values });
+            void save.acknowledgeUncertainOutcome({ recordsReviewed: true }).then(reload, () => {});
+          }}>Check the stored review</Button>}>
+          The save didn't confirm. Your text is still here and kept for this window. Check what is stored, then save again if needed.
+        </InlineNotice>
+      ) : conflict ? (
         <InlineNotice tone="warning" title="This review changed after you opened it" live="polite"
           actions={<Button size="sm" onClick={() => { keepEdits(account.id, day, { revision, values }); reload(); }}>Reload the review</Button>}>
           Nothing was saved. Reload to see the stored review; your edits stay available to restore.

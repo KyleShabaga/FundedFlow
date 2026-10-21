@@ -29,7 +29,7 @@ use serde_json::{from_value, json, Value};
 use crate::csv_import;
 use crate::db::open_file;
 use crate::store::tests::db;
-use crate::store::{accounts, attempts, journal, ledger, settings, snapshots, trades};
+use crate::store::{accounts, attempts, daily_reviews, journal, ledger, settings, snapshots, trades};
 
 const V3: &[u8] = include_bytes!("db/fixtures/fundedflow-v3.db");
 const V4: &[u8] = include_bytes!("db/fixtures/fundedflow-v4.db");
@@ -43,6 +43,10 @@ MNQZ6,-2,0,0.25,900000000007,900000000008,1,abc,29787.25,$26.00,10/19/2026 07:47
 ";
 
 const PLACEHOLDER_INSTANT: &str = "2026-01-01T00:00:00.000Z";
+/// "Now" for daily-review reads and writes, so the current trading day and plan timing are stable.
+fn review_now() -> chrono::DateTime<chrono::Utc> {
+    "2026-10-20T15:00:00Z".parse().unwrap()
+}
 
 fn fixture_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../src/test/fixtures/command-wire.json")
@@ -63,6 +67,12 @@ fn payloads(conn: &mut Connection) -> Value {
                 .iter()
                 .map(|b| json!({ "batchId": b.id, "rows": wire(csv_import::list_problem_rows(conn, &b.id).unwrap()) }))
                 .collect();
+            let reviews = daily_reviews::list_at(conn, &a.id, review_now()).unwrap();
+            let days: Vec<Value> = reviews
+                .reviews
+                .iter()
+                .map(|r| wire(daily_reviews::get_day_at(conn, &a.id, &r.trading_day, review_now()).unwrap()))
+                .collect();
             json!({
                 "accountId": a.id,
                 "history": wire(accounts::history(conn, &a.id).unwrap()),
@@ -76,6 +86,8 @@ fn payloads(conn: &mut Connection) -> Value {
                 "balanceAdjustment": wire(ledger::balance_adjustment(conn, &a.id).unwrap()),
                 "snapshots": wire(snapshots::list(conn, &a.id, None, None, false).unwrap()),
                 "latestSnapshot": wire(snapshots::latest(conn, &a.id).unwrap()),
+                "dailyReviews": wire(&reviews),
+                "dailyReviewDays": days,
             })
         })
         .collect();
@@ -111,6 +123,28 @@ fn fresh() -> Value {
             "title": "Review", "body": "Waited for the retest.", "tags": ["patience"]
         }))
         .unwrap(),
+    )
+    .unwrap();
+    // Daily reviews: a completed review of a traded day and a no-trade-day draft (Build 22).
+    daily_reviews::save_at(
+        &mut conn,
+        from_value(json!({
+            "accountId": usd.id, "tradingDay": "2026-10-19", "expectedRevision": null,
+            "plan": { "focus": "A+ only", "maxRisk": "250" }, "reflection": { "keyLesson": "Wait for the retest" },
+            "noTradeDay": false, "checklistId": null, "answers": [], "action": "complete"
+        }))
+        .unwrap(),
+        review_now(),
+    )
+    .unwrap();
+    daily_reviews::save_at(
+        &mut conn,
+        from_value(json!({
+            "accountId": usd.id, "tradingDay": "2026-10-16", "expectedRevision": null, "plan": {}, "reflection": {},
+            "noTradeDay": true, "checklistId": null, "answers": [], "action": "save"
+        }))
+        .unwrap(),
+        review_now(),
     )
     .unwrap();
     for content in [CSV, "not,a,known,format\n1,2,3,4\n"] {
