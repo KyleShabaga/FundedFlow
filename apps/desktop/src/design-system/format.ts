@@ -146,6 +146,23 @@ export function formatPercent(value: number | null | undefined, dp = 2): string 
 }
 
 /**
+ * A file or storage size: "512 B", "1.5 KB", "12.3 MB", "1.2 GB" (1 KB = 1024 B).
+ * Sizes are counts, not money, so a plain number is fine. Null is unknown ("—").
+ */
+export function formatBytes(bytes: number | null | undefined): string {
+  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return UNKNOWN;
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = bytes / 1024;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[unit]}`;
+}
+
+/**
  * A money value as a float, for drawing only (chart coordinates, bar
  * widths). Never feed the result back into money arithmetic or storage.
  */

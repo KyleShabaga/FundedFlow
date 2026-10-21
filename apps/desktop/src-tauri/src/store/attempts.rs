@@ -443,7 +443,7 @@ pub fn deletion_preview(conn: &Connection, account_id: &str) -> AppResult<Deleti
     if phase_events > 0 {
         blockers.push("Its phase history is append-only and cannot be removed.".to_string());
     }
-    blockers.push("Permanent deletion is not available until its confirmation and retention policy is approved (Build 24).".into());
+    blockers.push("This legacy preview does not authorize deletion; use Build 24 preview_permanent_deletion and explicit native confirmation.".into());
 
     Ok(DeletionPreview {
         account_id: account.id,
