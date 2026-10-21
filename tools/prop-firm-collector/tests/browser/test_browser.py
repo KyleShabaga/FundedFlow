@@ -114,3 +114,29 @@ def test_no_browser_flag_and_js_disabled_sources_skip_rendering(chromium: None, 
     harness.run(discover=False)
     row = harness.conn.execute("SELECT parser_name, warnings FROM source_snapshots").fetchone()
     assert row["parser_name"] == "trafilatura+bs4" and "thin_content" in row["warnings"]
+
+
+@pytest.mark.browser
+@pytest.mark.enable_socket
+def test_short_static_page_keeps_the_http_version_and_js_page_uses_304_next_time(
+    chromium: None, harness: Harness
+) -> None:
+    harness.renderer = renderer()
+    firm = add_firm(harness.conn, harness.clock)
+    add_seed(harness.conn, firm, harness.clock, DASHBOARD)
+    add_seed(harness.conn, firm, harness.clock, "https://www.example-firm.test/payout-policy")
+    harness.run(discover=False)
+    rows = {
+        r["requested_url"]: r
+        for r in harness.conn.execute("SELECT requested_url, parser_name, fetch_method FROM source_snapshots")
+    }
+    assert rows["https://www.example-firm.test/payout-policy"]["parser_name"] == "trafilatura+bs4"
+    assert rows[DASHBOARD]["parser_name"] == "playwright+trafilatura+bs4"
+    etags = dict(harness.conn.execute("SELECT canonical_url, etag FROM collector_sources").fetchall())
+    assert all(etags.values())
+    harness.advance_days(1)
+    again = harness.run(discover=False)
+    assert {r.reason for r in again.results} == {"304 Not Modified"}
+    forced = harness.run(discover=False, force=True)
+    assert {r.outcome.value for r in forced.results} == {"unchanged"}
+    assert {r.reason for r in forced.results} == {None}

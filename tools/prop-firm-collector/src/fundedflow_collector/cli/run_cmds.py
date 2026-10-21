@@ -193,7 +193,9 @@ def fetch(
     firm: FirmOpt = None,
     all_firms: AllOpt = False,
     dry_run: DryRunOpt = False,
-    force: Annotated[bool, typer.Option("--force", help="Fetch even if sitemap lastmod says unchanged.")] = False,
+    force: Annotated[
+        bool, typer.Option("--force", help="Fetch even if sitemap lastmod or a 304 would say unchanged.")
+    ] = False,
     no_discover: Annotated[bool, typer.Option("--no-discover", help="Skip discovery; use known URLs.")] = False,
     no_browser: Annotated[bool, typer.Option("--no-browser", help="Never use the browser fallback.")] = False,
     headed: Annotated[bool, typer.Option("--headed", help="Show the browser window (debugging).")] = False,

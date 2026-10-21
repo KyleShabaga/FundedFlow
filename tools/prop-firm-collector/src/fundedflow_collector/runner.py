@@ -677,7 +677,7 @@ class FirmRunner:
                 self.conn, self.firm, target.url, kind, target.channel, self.clock.now()
             )
         if source.requires_js:
-            self._render(target, source, http_result=None)
+            self._render(target, source, http_result=None, http_doc=None)
             return
         accept = ACCEPT_PDF if source.kind is SourceKind.PDF else ACCEPT_HTML
         max_bytes = (
@@ -688,7 +688,12 @@ class FirmRunner:
         result = self._do_fetch(
             target.url,
             FetchRequest(
-                url=target.url, accept=accept, max_bytes=max_bytes, etag=source.etag, last_modified=source.last_modified
+                url=target.url,
+                accept=accept,
+                max_bytes=max_bytes,
+                # --force re-downloads (and re-renders) even when the server would answer 304.
+                etag=None if self.options.force else source.etag,
+                last_modified=None if self.options.force else source.last_modified,
             ),
         )
         if not result.ok:
@@ -748,7 +753,7 @@ class FirmRunner:
             return
         assert doc is not None
         if ctype in HTML_TYPES and "thin_content" in doc.warnings and self._browser_allowed(source):
-            self._render(target, source, http_result=result)
+            self._render(target, source, http_result=result, http_doc=doc)
             return
         self._store(target, source, result, doc, self.env.fetch_method, body)
 
@@ -823,7 +828,9 @@ class FirmRunner:
             and self.settings.browser.enabled == "auto"
         )
 
-    def _render(self, target: _Target, source: Source, http_result: FetchResult | None) -> None:
+    def _render(
+        self, target: _Target, source: Source, http_result: FetchResult | None, http_doc: ParsedDocument | None
+    ) -> None:
         started = format_instant(self.clock.now())
         if not self._browser_allowed(source):
             attempt = AttemptRecord(
@@ -912,6 +919,15 @@ class FirmRunner:
         except ParseError as exc:
             self._fail(target, source, result, Outcome.PARSE_ERROR, str(exc))
             return
+        if http_result is not None and http_doc is not None:
+            if len(doc.text) <= len(http_doc.text):
+                # Rendering added nothing: keep the plain HTTP version (a short static page, not a JS page).
+                self._store(target, source, http_result, http_doc, self.env.fetch_method, http_result.body or b"")
+                return
+            # Keep the HTTP validators so the next run can ask "changed?" with a cheap conditional GET.
+            for name in ("etag", "last-modified"):
+                if name in http_result.headers:
+                    result.headers[name] = http_result.headers[name]
         doc.parser_name = "playwright+" + doc.parser_name
         if rendered.blocked_requests:
             doc.warnings = sorted({*doc.warnings, "browser_requests_blocked"})
