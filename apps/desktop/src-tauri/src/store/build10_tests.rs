@@ -255,7 +255,7 @@ fn snapshots_validate_scope_and_never_invent_figures() {
     let a = accounts::create(&mut conn, account_input("Eval")).unwrap();
     let fields = |conn: &mut Connection, input: SnapshotInput| match snapshots::save(conn, input) {
         Err(AppError::Validation { issues, .. }) => issues.into_iter().map(|i| i.field).collect::<Vec<_>>(),
-        other => panic!("expected validation error, got {other:?}"),
+        _ => panic!("expected a validation error"),
     };
     let bad = SnapshotInput {
         trading_day: "2026-02-30".into(),
