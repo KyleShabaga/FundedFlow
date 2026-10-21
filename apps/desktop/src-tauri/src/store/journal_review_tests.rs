@@ -540,12 +540,12 @@ fn migration_17_keeps_reserved_rows_and_fills_review_ownership() {
     )
     .unwrap();
     let before = trades::get(&conn, &t.id).unwrap();
-    assert_eq!(crate::db::migrate(&mut conn).unwrap(), 17);
+    assert_eq!(crate::db::migrate_with(&mut conn, &crate::db::MIGRATIONS[..17]).unwrap(), 17);
     assert_eq!(trades::get(&conn, &t.id).unwrap(), before, "trades are unchanged");
     let r = reviews::get(&conn, None, &a, &t.id).unwrap().unwrap();
     assert_eq!((r.id.as_str(), r.account_id.as_str(), r.revision), ("old-review", a.as_str(), 1));
     assert_eq!(r.reflection.as_deref(), Some("written before v17"));
-    assert_eq!(crate::db::migrate(&mut conn).unwrap(), 17, "reopening is a no-op");
+    assert_eq!(crate::db::migrate_with(&mut conn, &crate::db::MIGRATIONS[..17]).unwrap(), 17, "reopening is a no-op");
 }
 
 #[test]

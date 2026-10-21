@@ -279,7 +279,8 @@ fn items(conn: &Connection, checklist_id: &str) -> AppResult<Vec<ChecklistItem>>
 }
 
 const CHECKLIST: &str = "SELECT c.id, c.name, c.description_md, c.scope, c.strategy_id, c.is_archived,
-        (SELECT count(*) FROM trade_reviews r WHERE r.checklist_id = c.id AND r.deleted_at IS NULL),
+        (SELECT count(*) FROM trade_reviews r WHERE r.checklist_id = c.id AND r.deleted_at IS NULL)
+          + (SELECT count(*) FROM daily_reviews d WHERE d.checklist_id = c.id),
         c.created_at, c.updated_at
     FROM checklists c WHERE c.deleted_at IS NULL";
 
