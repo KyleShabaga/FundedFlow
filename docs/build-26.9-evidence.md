@@ -41,11 +41,11 @@ with long names.
 
 | Check | Result |
 | --- | --- |
-| `cargo test` (src-tauri) | All pass except 4 `db::legacy_rulebook_tests` that fail identically on untouched `main` in this sandbox ("disk I/O error" opening a read-only fixture); `dev_tools`: 23 tests |
+| `cargo test` (src-tauri) | 334 pass; 4 `db::legacy_rulebook_tests` that fail identically on untouched `main` in this sandbox ("disk I/O error" opening a read-only fixture); `dev_tools`: 23 tests |
 | `cargo clippy --all-targets -- -D warnings` | Clean |
 | `cargo check --release` | Clean, no warnings (no `dev_tools` code compiled) |
 | `npm run typecheck` | Pass |
-| `npm test` | Pass (see the PR for the run; `uncertain-writes-p0` journey timing under full-suite load is noted there) |
+| `npm test` | Domain 496/496. Desktop 789–790 of 791: the only failures are timing flakes. `AppShell` "keeps navigation and Settings available when runtime fails" also fails 2 of 3 runs on untouched `main` (heading lags the hash change); `uncertain-writes-p0` "a definite failure unlocks at once" fails only occasionally under full-suite load and passes alone (60/60). All new dev-tools tests pass |
 | `npm run build` | Pass, including `check-no-dev-tools.mjs` (a development bundle contains 8 markers; the production bundle none) |
 | `npm run test:dev-scripts` | 19 pass (existing reset tool + handoff helper + launcher) |
 
