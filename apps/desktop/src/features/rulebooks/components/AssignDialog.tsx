@@ -9,6 +9,7 @@ import { Button, Dialog, InlineNotice, MutationFeedback, Select, Textarea, TextF
 import { fieldErrors, toMutationState } from "../../shared/presentation";
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import { useAssignRulebookVersion } from "../hooks/rulebooks";
+import { RulebookWriteReview } from "./RulebookWriteReview";
 import { applicabilityText, catalogueNames, openAssignment, versionState } from "../view-models/versions";
 
 const NO_PHASE = "__account__";
@@ -65,6 +66,7 @@ export function AssignDialog({ open, onOpenChange, account, assignments, candida
         <Button onClick={() => onOpenChange(false)} disabled={assign.isPending}>Cancel</Button>
         <Button variant="primary" onClick={submit} loading={assign.isPending} disabled={!chosen || !assign.canSubmit}>{day ? `Assign from ${day}` : "Assign"}</Button>
       </>}>
+      {assign.outcome === "uncertain-outcome" && <RulebookWriteReview write={assign} accountId={account.id} timeZone={account.timezone} assignments />}
       {candidates.length === 0 ? (
         <InlineNotice tone="info" live="off" title="No version can be assigned yet">
           A catalogue version must be verified, and account rules must be published, before they can govern an account.
@@ -88,7 +90,7 @@ export function AssignDialog({ open, onOpenChange, account, assignments, candida
             </InlineNotice>
           )}
           {local && <InlineNotice tone="error" title="Check the assignment">{local}</InlineNotice>}
-          <MutationFeedback state={state} />
+          {assign.outcome !== "uncertain-outcome" && <MutationFeedback state={state} />}
           {conflict && <p className="ds-faint">Someone changed this account's rulebook in another window. Close this dialog to see the current assignments, then try again.</p>}
         </div>
       )}

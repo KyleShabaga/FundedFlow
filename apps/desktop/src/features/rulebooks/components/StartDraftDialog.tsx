@@ -10,6 +10,7 @@ import type { AccountViewModel } from "../../accounts/view-models/account";
 import { useRulebookVersions } from "../../references/hooks/references";
 import { fieldErrors, toMutationState } from "../../shared/presentation";
 import { useCreateRulebookDraft } from "../hooks/rulebooks";
+import { RulebookWriteReview } from "./RulebookWriteReview";
 
 type Target = "account" | "catalogue";
 
@@ -90,7 +91,10 @@ export function StartDraftDialog({ open, onOpenChange, account, source, privateR
           <InlineNotice tone="warning" live="off" title="Starting from a stale version">A source contradicts this version. Check the conflicting claims while you edit.</InlineNotice>
         )}
         {local && <InlineNotice tone="error" title="Check the draft">{local}</InlineNotice>}
-        <MutationFeedback state={toMutationState(create, { success: "Draft created." })} />
+        {create.outcome === "uncertain-outcome"
+          ? <RulebookWriteReview write={create} accountId={account.id} timeZone={account.timezone}
+            rulebookId={target === "catalogue" ? source!.rulebook.id : privateRulebook?.id ?? null} />
+          : <MutationFeedback state={toMutationState(create, { success: "Draft created." })} />}
       </div>
     </Dialog>
   );

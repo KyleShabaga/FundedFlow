@@ -70,7 +70,7 @@ export function RiskSection({ account, today, current }: {
       <p className="td-disclaimer"><Info size={14} aria-hidden="true" /> {DISCLAIMER} Not live: built from closed trades and checkpoints you recorded, not from your broker.</p>
       <Dialog open={calculating} onOpenChange={setCalculating} size="lg" title="Calculate estimate"
         description="Runs the rules engine on this account's records as of now and saves a new estimate. Earlier estimates are kept.">
-        <CalculateNow accountId={account.id} currency={account.currency} current={current} onSaved={() => setCalculating(false)} />
+        <CalculateNow accountId={account.id} currency={account.currency} current={current} timeZone={account.timezone} onSaved={() => setCalculating(false)} />
       </Dialog>
       {snapshot && <CalculationExplanationDrawer open={fullRecord} onOpenChange={setFullRecord} accountId={account.id} current={current} timeZone={account.timezone} />}
     </section>

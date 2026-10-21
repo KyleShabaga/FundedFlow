@@ -6,9 +6,10 @@ import { SCREENSHOT_MAX_BYTES, SCREENSHOTS_PER_TRADE, type AttachmentMeta, type 
 import { ImageOff, Trash2 } from "lucide-react";
 import { type ClipboardEvent, useState } from "react";
 
-import { Button, ConfirmDialog, Dialog, FileDropzone, formatFileSize, IconButton, InlineNotice, Skeleton, useToast } from "../../../design-system";
+import { Button, ConfirmDialog, Dialog, FileDropzone, formatFileSize, formatInstant, IconButton, InlineNotice, Skeleton, StatList, useToast } from "../../../design-system";
 import type { AccountViewModel } from "../../accounts/view-models/account";
-import { useAddScreenshot, useRemoveScreenshot, useScreenshot } from "../../reviews/hooks/reviews";
+import { useAddScreenshot, useRemoveScreenshot, useScreenshot, useTradeReview } from "../../reviews/hooks/reviews";
+import { UncertainOutcomeReview, type UncertainWrite } from "../../shared/UncertainOutcomeReview";
 import type { TradeViewModel } from "../../trades/view-models/trade";
 
 const ACCEPT = "image/png,image/jpeg,image/webp";
@@ -35,6 +36,25 @@ export function precheck(file: File): string | null {
   return null;
 }
 
+/**
+ * P0-03: what an uncertain screenshot upload or removal is checked against: the trade's screenshots as stored now
+ * (names, sizes and when each was attached; never a file location). Adding and removing share one lock per trade.
+ */
+function ScreenshotWriteReview({ write, account, trade }: { write: UncertainWrite; account: AccountViewModel; trade: TradeViewModel }) {
+  const review = useTradeReview(account.id, trade.id);
+  const stored = review.data?.attachments ?? [];
+  return (
+    <UncertainOutcomeReview write={write} what="this trade's screenshots" reviewReady={review.data !== undefined && !review.error} readReviewed={review.refresh}>
+      {stored.length
+        ? <StatList label="Screenshots saved on this trade" items={stored.map((a, i) => ({
+          label: `${i + 1}. ${a.fileName ?? "Screenshot"}`,
+          value: `${formatFileSize(a.byteSize)} · attached ${formatInstant(a.createdAt, { timeZone: account.timezone, year: true, zoneName: true })}`,
+        }))} />
+        : <p>No screenshot is saved on this trade.</p>}
+    </UncertainOutcomeReview>
+  );
+}
+
 export function Screenshots({ account, trade, review }: { account: AccountViewModel; trade: TradeViewModel; review: TradeReview | null }) {
   const add = useAddScreenshot(account.id, trade.id);
   const toast = useToast();
@@ -45,7 +65,8 @@ export function Screenshots({ account, trade, review }: { account: AccountViewMo
   const room = SCREENSHOTS_PER_TRADE - attachments.length;
 
   const upload = async (files: File[]) => {
-    if (readOnly || busy) return;
+    // Paste reaches here even while the dropzone is disabled; a locked scope sends nothing.
+    if (readOnly || busy || !add.canSubmit) return;
     const found: string[] = [];
     if (files.length > room) found.push(`Only ${Math.max(room, 0)} more ${room === 1 ? "screenshot fits" : "screenshots fit"} on this trade (${SCREENSHOTS_PER_TRADE} at most).`);
     setBusy(true);
@@ -60,7 +81,9 @@ export function Screenshots({ account, trade, review }: { account: AccountViewMo
         saved++;
       } catch (error) {
         const issue = (error as { issues?: { message: string }[]; category?: string }) ?? {};
-        const why = issue.issues?.[0]?.message ?? (issue.category === "conflict" ? "it is already attached to this trade." : "it couldn't be saved.");
+        const why = issue.issues?.[0]?.message ?? (issue.category === "conflict" ? "it is already attached to this trade."
+          : issue.category === "uncertain-outcome" ? "no answer came back, so it may have been attached. Check below; nothing is sent again."
+          : "it couldn't be saved.");
         found.push(`${name}: ${why.charAt(0).toUpperCase()}${why.slice(1)}`);
         if (issue.category === "uncertain-outcome") break;
       }
@@ -88,6 +111,7 @@ export function Screenshots({ account, trade, review }: { account: AccountViewMo
           <p>Your review's notes are not affected.</p>
         </InlineNotice>
       )}
+      {add.outcome === "uncertain-outcome" && <ScreenshotWriteReview write={add} account={account} trade={trade} />}
       {!readOnly && room > 0 && (
         <div tabIndex={0} className="jr-paste" aria-label="Screenshot area: drop, browse, or paste an image with Ctrl+V">
           <FileDropzone label="Add screenshots" multiple accept={ACCEPT} disabled={busy || !add.canSubmit} onFiles={files => void upload(files)}
@@ -136,6 +160,9 @@ function Thumb({ account, trade, attachment, readOnly }: { account: AccountViewM
         </Dialog>
       )}
       <ConfirmDialog open={confirm} onOpenChange={setConfirm} title="Remove this screenshot?" confirmLabel="Remove" busyLabel="Removing…"
+        describeError={e => (e as { category?: string })?.category === "uncertain-outcome"
+          ? "No answer came back, so it may have been removed. Close this and check the trade's screenshots; nothing is sent again."
+          : "It didn't finish. Check whether anything changed before trying again."}
         onConfirm={async () => { await remove.submit(attachment.id); setConfirm(false); }}>
         <p>{name} is taken off this trade. The review's notes are not changed.</p>
       </ConfirmDialog>
