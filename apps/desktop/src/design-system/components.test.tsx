@@ -4,10 +4,36 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AccountCard, AccountOverviewCard, meterFraction, Pnl, PnlBars, PnlCalendar, ProgressMeter, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
+import { AccountCard, AccountOverviewCard, BrandLogo, BrandMark, meterFraction, Pnl, PnlBars, PnlCalendar, ProgressMeter, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
 import { monthWeeks } from "./components/journal";
 
 afterEach(cleanup);
+
+describe("BrandLogo", () => {
+  it("reads FundedFlow, with Flow in the accent and a decorative mark", () => {
+    const { container } = render(<BrandLogo />);
+    expect(container.textContent).toBe("FundedFlow");
+    expect(screen.getByText("Flow").className).toBe("ds-brand-name-accent");
+    const mark = container.querySelector("svg.ds-brand-mark")!;
+    expect(mark.getAttribute("aria-hidden")).toBe("true");
+    expect(mark.getAttribute("width")).toBe("32");
+  });
+  it("shows the mark alone without the name", () => {
+    const { container } = render(<BrandLogo showName={false} />);
+    expect(container.textContent).toBe("");
+    expect(container.querySelector("svg.ds-brand-mark")).toBeTruthy();
+  });
+  it("gives each mark its own gradients, referenced by valid fragment ids", () => {
+    const { container } = render(<><BrandMark /><BrandMark size={20} /></>);
+    const ids = [...container.querySelectorAll("linearGradient")].map(g => g.id);
+    expect(new Set(ids).size).toBe(4);
+    for (const id of ids) expect(id).toMatch(/^[\w-]+$/);
+    for (const path of container.querySelectorAll("path")) {
+      const ref = path.getAttribute("fill")!.match(/^url\(#([\w-]+)\)$/)![1];
+      expect(ids).toContain(ref);
+    }
+  });
+});
 
 describe("Pnl", () => {
   it("signs and colours by value", () => {

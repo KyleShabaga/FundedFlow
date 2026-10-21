@@ -221,4 +221,12 @@
 .ds-app-sidebar-edge { position: absolute; top: var(--space-6); right: 0; transform: translateX(50%); display: grid; }
 .ds-app-column { min-width: 0; }
 
+/* FundedFlow mark and wordmark. The mark's gradient comes from the brand-mark tokens, so it follows the theme. */
+.ds-brand { display: inline-flex; align-items: center; gap: var(--space-3); min-width: 0; color: var(--ink); font: 600 20px/28px var(--font-display); }
+.ds-brand-mark { display: block; flex-shrink: 0; }
+.ds-brand-mark-start { stop-color: var(--brand-mark-start); }
+.ds-brand-mark-end { stop-color: var(--brand-mark-end); }
+.ds-brand-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.2px; }
+.ds-brand-name-accent { color: var(--flow); }
+
 .ds-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

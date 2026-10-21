@@ -20,6 +20,8 @@ panel and Design system gallery stay reachable from Settings › Developer in de
 - `HashRouter` (Build 12). Unknown routes show a not-found state with a way back.
 - Collapsible: 248 px expanded, 72 px icon rail (`aria-label` and tooltip per item), Ctrl+B. Collapses automatically
   on narrow windows. Active item: `flow-soft` ground, `aria-current="page"`.
+- Brand row (P0-D01): `BrandLogo`, the FundedFlow mark (32 px box, decorative) beside "Funded" in `ink` and "Flow" in
+  `flow`; the collapsed rail shows the mark alone. The row's text still reads "FundedFlow".
 - Toggle (Build 18.5): a 32 px round button immediately right of the FundedFlow logo, centred on the sidebar's right
   border (`AppFrame` `sidebarEdge`), level with the logo mark, in both widths. Its 44 px hit area overlaps neither the
   logo nor the header. `aria-label` and tooltip "Collapse sidebar" / "Expand sidebar" (tooltip adds "(Ctrl+B)"),

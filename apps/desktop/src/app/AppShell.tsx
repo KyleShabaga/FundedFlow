@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { RuntimeRecoveryNotice } from "../components/RuntimeGate";
-import { AppFrame, Button, DropdownMenu, Tooltip, useWindowFileDropGuard } from "../design-system";
+import { AppFrame, BrandLogo, Button, DropdownMenu, Tooltip, useWindowFileDropGuard } from "../design-system";
 import { AccountSwitcher } from "../features/accounts/components/AccountSwitcher";
 import "./shell.css";
 
@@ -89,8 +89,7 @@ export function SidebarNav({ collapsed }: { collapsed: boolean }) {
   return (
     <>
       <div className="shell-brand">
-        <span className="shell-mark" aria-hidden="true">F</span>
-        {!collapsed && <span className="shell-brand-name">FundedFlow</span>}
+        <BrandLogo showName={!collapsed} />
       </div>
       <nav id="primary-navigation" aria-label="Primary navigation" className="shell-nav">
         <div className="shell-nav-main">{routes.slice(0, 4).map(item)}</div>

@@ -21,6 +21,7 @@ export * from "./components/rules";
 export * from "./components/charts";
 export * from "./components/journal";
 export * from "./components/app-frame";
+export * from "./components/brand";
 export * from "./components/forms";
 export * from "./components/overlays";
 export * from "./components/feedback";

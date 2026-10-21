@@ -188,9 +188,16 @@ it("anchors the collapse toggle on the sidebar edge beside the logo, first in ke
   expect(edge.compareDocumentPosition(sidebar.querySelector(".shell-nav")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(toggle.getAttribute("aria-keyshortcuts")).toBe("Control+B");
   expect(toggle.getAttribute("aria-controls")).toBe("primary-navigation");
+  // Brand row: the decorative FundedFlow mark beside the name, which still reads "FundedFlow".
+  const brand = sidebar.querySelector(".shell-brand")!;
+  expect(brand.textContent).toBe("FundedFlow");
+  expect(brand.querySelector("svg.ds-brand-mark")?.getAttribute("aria-hidden")).toBe("true");
   await user.hover(toggle);
   expect((await screen.findAllByText("Collapse sidebar (Ctrl+B)")).length).toBeGreaterThan(0);
   await user.click(toggle);
+  // Collapsed: the mark alone.
+  expect(sidebar.querySelector(".shell-brand")!.textContent).toBe("");
+  expect(sidebar.querySelector(".shell-brand svg.ds-brand-mark")).toBeTruthy();
   const collapsed = within(sidebar.querySelector(".ds-app-sidebar-edge") as HTMLElement).getByRole("button", { name: "Expand sidebar" });
   expect(collapsed.getAttribute("aria-expanded")).toBe("false");
   // Navigation and the selected route survive collapsing.
