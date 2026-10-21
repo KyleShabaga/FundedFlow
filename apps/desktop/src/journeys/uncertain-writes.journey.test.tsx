@@ -79,7 +79,7 @@ describe("uncertain account create", () => {
     expect(store.accounts.size).toBe(1);
   });
 
-  it("keeps the lock across closing and reopening the form, and when the check itself fails", async () => {
+  it("keeps the lock across closing and reopening the form", async () => {
     const store = createAppStore();
     const { user } = renderApp("/accounts", store);
     let dialog = await startAdd(user);
@@ -93,6 +93,13 @@ describe("uncertain account create", () => {
     expect(within(dialog).getByText("Couldn't confirm it saved")).toBeTruthy();
     await user.click(saveButton(dialog));
     expect(first.calls).toHaveLength(1);
+  });
+
+  it("keeps the lock when the check itself fails, and lets the trader check again", async () => {
+    const store = createAppStore();
+    const { user } = renderApp("/accounts", store);
+    const dialog = await startAdd(user);
+    const first = await uncertainCreate(store, user, dialog, false);
     // The re-read fails (and so does the one automatic read retry): still locked, nothing resent.
     const reads = store.hold("accounts.list");
     await user.click(within(dialog).getByRole("button", { name: "Check result" }));

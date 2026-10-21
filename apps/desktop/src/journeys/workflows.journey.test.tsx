@@ -203,8 +203,10 @@ describe("attempt lineage", () => {
     await user.click(within(dialog).getByRole("button", { name: "Next" }));
     await user.click(await within(dialog).findByRole("radio", { name: "Failed" }));
     await user.click(within(dialog).getByRole("button", { name: "Next" }));
-    await user.type(within(dialog).getByRole("textbox", { name: /Account number/ }), "48213");
-    await user.type(within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
+    for (const [label, text] of [[/Account number/, "48213"], [/Starting balance/, "50000"]] as const) {
+      await user.click(within(dialog).getByRole("textbox", { name: label }));
+      await user.paste(text);
+    }
     await user.click(within(dialog).getByRole("button", { name: "Next" }));
     await user.click(await within(dialog).findByRole("radio", { name: /Decide later/ }));
     await user.click(within(dialog).getByRole("button", { name: "Next" }));

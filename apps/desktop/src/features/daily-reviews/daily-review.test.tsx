@@ -94,8 +94,10 @@ describe("daily review", () => {
     expect(await screen.findByText("Not started")).toBeTruthy();
     expect(screen.getByText("No review yet")).toBeTruthy();
 
+    // Note text is pasted into the focused field (Build 26.7: typing it key by key pushed this journey past 5 s
+    // under CPU contention); the keyboard actions this journey proves (Enter on Complete review) stay.
     await user.click(field(/Focus for the session/));
-    await user.keyboard("Only A+ setups");
+    await user.paste("Only A+ setups");
     expect(within(form()).getByText("Unsaved changes")).toBeTruthy();
     await user.click(within(form()).getByRole("button", { name: "Save draft" }));
     await waitFor(() => expect(screen.getByText("Draft")).toBeTruthy());
@@ -108,7 +110,7 @@ describe("daily review", () => {
     expect(await screen.findByDisplayValue("Only A+ setups")).toBeTruthy();
 
     await user.click(field(/Key lesson/));
-    await user.keyboard("Wait for the retest");
+    await user.paste("Wait for the retest");
     const complete = within(form()).getByRole("button", { name: "Complete review" });
     complete.focus();
     await user.keyboard("{Enter}");
