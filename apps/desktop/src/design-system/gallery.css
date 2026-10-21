@@ -14,3 +14,6 @@
 
 .dsg-frame-preview .ds-app-frame { min-height: 240px; }
 .dsg-frame-preview .ds-app-sidebar { position: static; height: auto; }
+.dsg-aoc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr)); gap: var(--space-4); }
+.dsg-edge-dot { width: 24px; height: 24px; border-radius: var(--radius-pill); border: 1px solid var(--line-200); background: var(--bg-100); }
+.dsg-frame-preview .ds-app-sidebar { height: auto; min-height: 120px; }

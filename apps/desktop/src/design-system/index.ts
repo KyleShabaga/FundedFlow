@@ -26,3 +26,4 @@ export * from "./components/overlays";
 export * from "./components/feedback";
 export * from "./components/async-states";
 export * from "./components/data";
+export * from "./components/account-overview";

@@ -100,7 +100,7 @@ Code: `apps/desktop/src/features/accounts/` (`components/`, `active-account.ts`,
 | Row selection, bulk Archive/Export, Columns menu | Not shown | Not in the card's scope; per-row actions cover archive |
 | Default sort: balance descending | Name ascending; starting balance sorts within each currency | Amounts in different currencies aren't comparable |
 | Size label ("$100K") | Not shown | `account_size_micros` isn't returned by any command (open question above) |
-| Cards view balance | AccountCard with "—" and "Current balance not available yet" | Same as Balance |
+| Cards view balance | Build 18.5 overview card: engine balance or checkpoint with provenance, else Not available | See below |
 
 ### Backend dependencies found (not built here)
 - `update_account` doesn't refuse archived accounts (domain says archived is read-only). The UI enforces it; Rust
@@ -114,3 +114,29 @@ Code: `apps/desktop/src/features/accounts/` (`components/`, `active-account.ts`,
   units and session they were recorded with, so later comparisons refuse mismatches instead of converting. The edit
   warning covers re-derived trades only; warning about recorded checkpoints needs an evidence hook (future Claude
   card, with the checkpoint-entry UI).
+
+## Build 18.5 account overview cards
+
+The Cards view uses `OverviewCard` (`features/accounts/components/OverviewCard.tsx`) on the design system's
+`AccountOverviewCard`; the mapping is `view-models/overview.ts` and is pure. Table stays the default dense view; both
+layouts share the search and status filter. Each card reads the same hooks as Today (latest snapshot, freshness check,
+canonical inputs as of now, checkpoints), so a card never shows another attempt's values.
+
+| Card field | Source |
+|---|---|
+| Firm / "Personal · no firm" / "No firm set" | `account.propFirm`, `accountType` |
+| Name, masked number (`••••1234`) | `account.name`, `account.externalRef` (last four kept); internal ids never shown |
+| Type · phase · attempt | `accountType`; latest effective phase event (`derivePhaseHistory` on the inputs' `phaseHistory`), else "Phase not recorded"; lineage `attemptNumber` of lineage length when there are resets |
+| Lifecycle, Archived, Needs setup, Active in FundedFlow | `status`; `archivedAt`; `setupItems`; active-account setting. Separate badges |
+| Drawdown headroom (primary), floor | `max_drawdown` outcome `metrics.drawdownHeadroom` / `drawdownFloor` of the latest saved engine result, only when Today's rules call it current; otherwise Not calculated / Needs setup / No rulebook / Not current (Stop stays "Stop · not current") / History only |
+| Balance | Current engine `balance` ("From your records", as-of, stated-incomplete coverage named), else the latest checkpoint ("Confirmed by you" / "Not confirmed", its source and time, trades since not included), else Not available. Starting balance is a muted "Started with" line, never the balance |
+| Max drawdown | Assigned version's `max_drawdown` amount (presence state) and method |
+| Profit target | Only when the assigned version has one and the engine doesn't call it not applicable; progress (`profit`, `profitTarget`, `remaining`) only from a current result; explicit none / off stay distinct words |
+| Consistency | Threshold from the version; result only from a current known outcome, else "result not calculated/unknown" |
+| Bars (≤ 2) | Drawdown headroom of the rule amount (`operands.amount`) and profit target progress, current results only |
+| Last traded | Newest trade (exit, else entry) for this attempt in the inputs, account zone with zone name; "No imported trades" |
+| View details | Button to `/accounts/:id` of that attempt; the menu adds Quick import into this attempt and the existing row actions |
+
+No figure is computed in the UI: every amount is passed through from the engine result, a checkpoint or the
+rulebook. Each card reads the canonical inputs for its attempt (one `get_account_risk_inputs` per card), which is
+fine for tens of accounts; a summary command would scale better (backend follow-up).

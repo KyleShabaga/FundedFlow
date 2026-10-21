@@ -18,8 +18,12 @@ panel and Design system gallery stay reachable from Settings › Developer in de
 | Settings | `/settings` | Local data controls |
 
 - `HashRouter` (Build 12). Unknown routes show a not-found state with a way back.
-- Collapsible: 248 px expanded, 72 px icon rail (`aria-label` and tooltip per item), toggle in the sidebar header,
-  Ctrl+B. Collapses automatically on narrow windows. Active item: `flow-soft` ground, `aria-current="page"`.
+- Collapsible: 248 px expanded, 72 px icon rail (`aria-label` and tooltip per item), Ctrl+B. Collapses automatically
+  on narrow windows. Active item: `flow-soft` ground, `aria-current="page"`.
+- Toggle (Build 18.5): a 32 px round button immediately right of the FundedFlow logo, centred on the sidebar's right
+  border (`AppFrame` `sidebarEdge`), level with the logo mark, in both widths. Its 44 px hit area overlaps neither the
+  logo nor the header. `aria-label` and tooltip "Collapse sidebar" / "Expand sidebar" (tooltip adds "(Ctrl+B)"),
+  `aria-expanded`, `aria-controls="primary-navigation"`, `aria-keyshortcuts`. First in the sidebar's tab order.
 - Below 760 px, the icon rail is enforced and the toggle is disabled with an explanatory accessible name.
   On wider windows, restore the user's locally saved collapse preference. Ctrl+B leaves editable fields alone.
 - Footer: Settings and a "Saved on this computer" status (local-first promise). No Import item in the sidebar.
@@ -27,7 +31,8 @@ panel and Design system gallery stay reachable from Settings › Developer in de
 ## Header
 - Left: page title; reserved space for the **AccountContextBar** (account selector and filters; behaviour owned
   by feature cards and Build 14).
-- Right: **Import CSV** (primary). Until Build 18 ships, it is visible but clearly marked not yet available.
+- Right: **Import CSV** (primary). It opens a menu (Build 18.5): Quick import (a file you've imported before) and
+  Full wizard (first-time or custom files).
 - Reserved, not in Build 12: GlobalFreshnessIndicator (Build 21 data), day-ending timer (Triage).
 
 ## Route lifecycle

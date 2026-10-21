@@ -4,12 +4,11 @@
 // known net P&L per attempt, and rulebook assignment. Current balance, drawdown and
 // target meters wait for Builds 15.5/16 and are marked unavailable, never computed here.
 import { accountFilterLabels, filterAccounts, type AccountFilter } from "@fundedflow/domain";
-import { Ellipsis, Plus, Upload } from "lucide-react";
+import { ChevronDown, Ellipsis, Plus, Upload, Workflow, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
-  AccountCard,
   Button,
   compareMoney,
   type DataColumn,
@@ -28,9 +27,11 @@ import {
 } from "../../../design-system";
 import { retryRead, toAsyncState } from "../../shared/presentation";
 import { useActiveAccount } from "../active-account";
+import { useCheckTime } from "../../today/hooks/today";
 import { useAccounts } from "../hooks/accounts";
 import type { AccountViewModel } from "../view-models/account";
 import { accountMenu, useAccountDialogs } from "./AccountActions";
+import { OverviewCard } from "./OverviewCard";
 import { ACCOUNT_TYPE_LABELS, AccountMark, AccountStatus, LastImport, RulebookSummary, SetupBadge, useAccountFacts } from "./presentation";
 import "./accounts.css";
 
@@ -103,6 +104,7 @@ export function AccountsPage() {
   const accounts = useAccounts("all");
   const active = useActiveAccount();
   const dialogs = useAccountDialogs();
+  const { checkedAt } = useCheckTime();
   const [filter, setFilter] = useState<AccountFilter>("live");
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"table" | "cards">("table");
@@ -168,6 +170,19 @@ export function AccountsPage() {
     },
   ];
 
+  // The same search and status filter for both layouts.
+  const filterBar = (
+    <>
+      <SearchField label="Search accounts" value={query} onValueChange={v => { setQuery(v); resetPage(); }} placeholder="Search name, firm, platform or number" />
+      <SegmentedControl<AccountFilter>
+        label="Show"
+        value={filter}
+        onValueChange={f => { setFilter(f); resetPage(); }}
+        options={FILTERS.map(f => ({ value: f, label: accountFilterLabels[f], count: counts[f] }))}
+      />
+    </>
+  );
+
   const addButton = (
     <Button variant="primary" icon={<Plus size={16} aria-hidden="true" />} onClick={() => dialogs.open({ kind: "create" })}>
       Add account
@@ -183,9 +198,10 @@ export function AccountsPage() {
             <SegmentedControl label="Layout" value={view} onValueChange={setView} options={[{ value: "table", label: "Table" }, { value: "cards", label: "Cards" }]} />
           )}
           {all.length > 0 && (
-            <Button icon={<Upload size={16} aria-hidden="true" />} onClick={() => navigate("/import", { state: { accountId: active.activeId } })}>
-              Import trades
-            </Button>
+            <DropdownMenu label="Import trades" trigger={<Button icon={<Upload size={16} aria-hidden="true" />}>Import trades<ChevronDown size={14} aria-hidden="true" /></Button>} items={[
+              { label: "Quick import: a file you've imported before", icon: <Zap size={16} aria-hidden="true" />, onSelect: () => navigate("/import/quick", { state: { accountId: active.activeId } }) },
+              { label: "Full wizard: first-time or custom files", icon: <Workflow size={16} aria-hidden="true" />, onSelect: () => navigate("/import", { state: { accountId: active.activeId } }) },
+            ]} />
           )}
           {addButton}
         </div>
@@ -216,7 +232,8 @@ export function AccountsPage() {
         }}
       >
         {() => (
-          <>
+          // Its own grid: StateBoundary's content doesn't take part in the page's gap, so the KPI row touched the list.
+          <div className="acct-body">
             <Kpis live={filterAccounts(all, "live")} />
             {view === "table" ? (
               <DataTable
@@ -231,51 +248,29 @@ export function AccountsPage() {
                 onRowClick={open}
                 activeRowId={active.activeId}
                 isRowMuted={a => a.archivedAt !== null}
-                toolbar={
-                  <>
-                    <SearchField label="Search accounts" value={query} onValueChange={v => { setQuery(v); resetPage(); }} placeholder="Search name, firm, platform or number" />
-                    <SegmentedControl<AccountFilter>
-                      label="Show"
-                      value={filter}
-                      onValueChange={f => { setFilter(f); resetPage(); }}
-                      options={FILTERS.map(f => ({ value: f, label: accountFilterLabels[f], count: counts[f] }))}
-                    />
-                  </>
-                }
+                toolbar={filterBar}
                 fallback={rows.length === 0 ? <EmptyState kind="no-matches" size="compact" description={filter === "archived" ? "No archived accounts." : "No accounts match this search and filter."} action={<Button size="sm" onClick={() => { setQuery(""); setFilter("live"); }}>Show live accounts</Button>} /> : undefined}
                 pagination={{ page, pageSize, total: rows.length, onPageChange: setPage, pageSizeOptions: [10, 25, 50], onPageSizeChange: n => { setPageSize(n); resetPage(); } }}
                 footer={filter !== "archived" && counts.archived > 0 ? <button type="button" className="acct-link" onClick={() => { setFilter("archived"); resetPage(); }}>{counts.archived} archived</button> : undefined}
               />
             ) : (
-              <div className="acct-cards">
-                {rows.map(a => (
-                  <article key={a.id} className="acct-card-wrap" aria-label={a.name}>
-                    <AccountCard
-                      name={a.name}
-                      firm={a.propFirm}
-                      phase={`${ACCOUNT_TYPE_LABELS[a.accountType]} · ${a.status[0].toUpperCase()}${a.status.slice(1)}${a.archivedAt ? " · Archived" : ""}`}
-                      phaseTone={a.status === "failed" ? "loss" : a.status === "passed" ? "profit" : a.status === "active" ? "flow" : "neutral"}
-                      breached={a.status === "failed"}
-                      balance={null}
-                      startingBalance={a.startingBalance}
-                      currency={a.currency}
-                      footer={
-                        <>
-                          <span>{active.activeId === a.id ? "Active account · " : ""}Current balance not available yet</span>
-                          <Button size="sm" variant="ghost" onClick={() => open(a)} aria-label={`Open ${a.name}`}>Open</Button>
-                        </>
-                      }
-                    />
-                  </article>
-                ))}
-                {rows.length === 0 && <EmptyState kind="no-matches" size="compact" />}
-              </div>
+              <>
+                <div className="acct-card-toolbar">{filterBar}</div>
+                <ul className="acct-cards" aria-label="Accounts">
+                  {rows.map(a => (
+                    <li key={a.id} className="acct-card-wrap">
+                      <OverviewCard account={a} activeId={active.activeId} checkedAt={checkedAt} dialogs={dialogs} />
+                    </li>
+                  ))}
+                </ul>
+                {rows.length === 0 && <EmptyState kind="no-matches" size="compact" description={filter === "archived" ? "No archived accounts." : "No accounts match this search and filter."} action={<Button size="sm" onClick={() => { setQuery(""); setFilter("live"); }}>Show live accounts</Button>} />}
+              </>
             )}
             <p className="ds-faint acct-footnote">
               Starting balance is what each attempt began with, not today's balance. Net P&amp;L is the sum of closed trades with a known result.
-              Drawdown and target meters appear once balance checkpoints and rule calculations are available; until then risk shows as Unknown, never Safe.
+              Cards show drawdown headroom, floor and progress only from the last saved estimate while it is current; otherwise they say why the figure is unknown, never Safe.
             </p>
-          </>
+          </div>
         )}
       </StateBoundary>
       {dialogs.element}

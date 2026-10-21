@@ -4,7 +4,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AccountCard, Pnl, PnlBars, PnlCalendar, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
+import { AccountCard, AccountOverviewCard, meterFraction, Pnl, PnlBars, PnlCalendar, ProgressMeter, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
 import { monthWeeks } from "./components/journal";
 
 afterEach(cleanup);
@@ -197,5 +197,53 @@ describe("TabPanel keepMounted", () => {
     expect(kept.closest(".ds-tab-panel-kept")).not.toBeNull();
     await user.click(screen.getByRole("tab", { name: "Edit" }));
     expect((screen.getByRole("textbox", { name: "Draft value" }) as HTMLInputElement).value).toBe("2500");
+  });
+});
+
+describe("ProgressMeter", () => {
+  it("sizes the bar from the two amounts it is given and reads them out", () => {
+    render(<ProgressMeter label="Drawdown headroom" value="1500" max="2000" valueText="$1,500.00 of $2,000.00 left" note="Floor $48,500.00" />);
+    const meter = screen.getByRole("meter", { name: "Drawdown headroom" });
+    expect(meter.getAttribute("aria-valuenow")).toBe("75");
+    expect(meter.getAttribute("aria-valuetext")).toBe("$1,500.00 of $2,000.00 left");
+    expect(screen.getByText("Floor $48,500.00")).toBeTruthy();
+  });
+  it("is empty for negative or unknown amounts and full past the maximum", () => {
+    expect(meterFraction("-10", "2000")).toBe(0);
+    expect(meterFraction("abc", "2000")).toBe(0);
+    expect(meterFraction("2500", "2000")).toBe(1);
+    expect(meterFraction("0.000001", "0")).toBe(0);
+  });
+});
+
+describe("AccountOverviewCard", () => {
+  const card = (over: Partial<Parameters<typeof AccountOverviewCard>[0]> = {}) => (
+    <AccountOverviewCard titleId="c1" mark="A" eyebrow="Apex" title="PA-48213" reference="••••8213" meta="Evaluation · Phase 1"
+      badges={<span>Active</span>}
+      primary={{ label: "Drawdown headroom", value: { kind: "unavailable", reason: "Nothing calculated yet" }, provenance: { label: "Not calculated", tone: "neutral" }, note: "Calculate on Today." }}
+      figures={[{ label: "Balance", value: { kind: "money", amount: "50210.25", signed: false } }]}
+      rules={[{ label: "Max drawdown", value: "$2,000.00 · Static" }, { label: "Started with", value: "$50,000.00", muted: true }]}
+      activity="No imported trades" actions={<button type="button">View details</button>} {...over} />
+  );
+  it("is an article named by its title, with the masked number read as such", () => {
+    render(card());
+    const article = screen.getByRole("article", { name: /PA-48213/ });
+    expect(within(article).getByRole("heading", { level: 3 }).textContent).toBe("PA-48213, account number ending ••••8213");
+    expect(within(article).getByText("Apex")).toBeTruthy();
+  });
+  it("shows unknown as unknown with its provenance in words, never zero", () => {
+    render(card());
+    expect(screen.getByText("Not calculated")).toBeTruthy();
+    expect(screen.getByTitle("Unavailable: Nothing calculated yet")).toBeTruthy();
+    expect(screen.queryByText("$0.00")).toBeNull();
+    expect(screen.getByText("$50,210.25")).toBeTruthy();
+  });
+  it("lists rule lines as terms and keeps the details action and activity in the footer", () => {
+    const { container } = render(card({ tint: "loss", selected: true }));
+    expect(screen.getByText("Max drawdown").tagName).toBe("DT");
+    expect(container.querySelector(".ds-aoc-rule.is-muted dd")?.textContent).toBe("$50,000.00");
+    expect(within(container.querySelector("footer")!).getByRole("button", { name: "View details" })).toBeTruthy();
+    expect(container.firstElementChild?.className).toContain("is-loss");
+    expect(container.firstElementChild?.className).toContain("is-selected");
   });
 });

@@ -1,6 +1,17 @@
-.shell-brand { display: flex; align-items: center; justify-content: center; gap: var(--space-3); padding: var(--space-6) var(--space-2) var(--space-3); font: 600 20px/28px var(--font-display); }
+/* Brand row: the mark is level with the edge toggle, which AppFrame centres on the sidebar border. The right
+   padding keeps the name clear of the half of the toggle that overlaps the sidebar. */
+.shell-brand { display: flex; align-items: center; gap: var(--space-3); min-height: 32px; padding: var(--space-6) var(--space-8) var(--space-6) var(--space-6); font: 600 20px/28px var(--font-display); }
+.shell-brand-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Collapsed: the mark sits left of centre so the edge toggle (and its focus ring) keeps clear of it. */
+.is-collapsed .shell-brand { justify-content: flex-start; padding-inline: var(--space-3); }
 .shell-mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-md); background: var(--flow-fill); color: var(--on-flow); }
-.shell-toggle { align-self: center; justify-content: center; margin-bottom: var(--space-4); }
+/* 32 px visible circle; ::before extends the hit area to 44 px without covering the logo. */
+.shell-toggle { position: relative; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border-radius: var(--radius-pill); border: 1px solid var(--line-200); background: var(--bg-100); color: var(--ink-muted); box-shadow: none; cursor: pointer; }
+.shell-toggle::before { content: ""; position: absolute; inset: -6px; border-radius: inherit; }
+.shell-toggle:hover:not(:disabled) { color: var(--ink); border-color: var(--flow); background: var(--bg-300); }
+.shell-toggle:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.shell-toggle:disabled { cursor: not-allowed; opacity: .55; }
+.shell-import-caret { margin-left: 2px; }
 .shell-nav { display: flex; flex-direction: column; flex: 1; padding: 0 var(--space-3) var(--space-4); }
 .shell-nav-main { display: grid; gap: var(--space-2); }
 .shell-nav-footer { margin-top: auto; padding-top: var(--space-8); }

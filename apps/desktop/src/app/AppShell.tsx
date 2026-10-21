@@ -1,9 +1,9 @@
-import { BookOpen, ChartNoAxesCombined, House, PanelLeftClose, PanelLeftOpen, Settings, Upload, Wallet } from "lucide-react";
+import { BookOpen, ChartNoAxesCombined, ChevronDown, House, PanelLeftClose, PanelLeftOpen, Settings, Upload, Wallet, Workflow, Zap } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { RuntimeRecoveryNotice } from "../components/RuntimeGate";
-import { AppFrame, Button } from "../design-system";
+import { AppFrame, Button, DropdownMenu, Tooltip, useWindowFileDropGuard } from "../design-system";
 import { AccountSwitcher } from "../features/accounts/components/AccountSwitcher";
 import "./shell.css";
 
@@ -58,9 +58,23 @@ function useSidebar() {
   return { collapsed: narrow || preferredCollapsed, narrow, toggle };
 }
 
-export function SidebarNav({ collapsed, narrow, toggle }: {
-  collapsed: boolean; narrow: boolean; toggle: () => void;
-}) {
+/**
+ * Collapse/expand control. AppFrame anchors it on the sidebar's right edge, level with the logo, outside the
+ * sidebar's scroll area so it is never clipped and stays reachable in both widths.
+ */
+export function SidebarToggle({ collapsed, narrow, toggle }: { collapsed: boolean; narrow: boolean; toggle: () => void }) {
+  const label = narrow ? "Sidebar collapsed for narrow window" : collapsed ? "Expand sidebar" : "Collapse sidebar";
+  const button = (
+    <button type="button" className="shell-toggle" onClick={toggle} disabled={narrow}
+      aria-controls="primary-navigation" aria-expanded={!collapsed} aria-label={label} aria-keyshortcuts={narrow ? undefined : "Control+B"}>
+      {collapsed ? <PanelLeftOpen size={16} aria-hidden="true" /> : <PanelLeftClose size={16} aria-hidden="true" />}
+    </button>
+  );
+  // A disabled button can't show a tooltip; the narrow label says why instead.
+  return narrow ? button : <Tooltip content={`${label} (Ctrl+B)`} side="right">{button}</Tooltip>;
+}
+
+export function SidebarNav({ collapsed }: { collapsed: boolean }) {
   const { pathname } = useLocation();
   const activePath = normalizePath(pathname);
   const developerRoute = import.meta.env.DEV && activePath === "/settings/developer";
@@ -76,14 +90,8 @@ export function SidebarNav({ collapsed, narrow, toggle }: {
     <>
       <div className="shell-brand">
         <span className="shell-mark" aria-hidden="true">F</span>
-        {!collapsed && <span>FundedFlow</span>}
+        {!collapsed && <span className="shell-brand-name">FundedFlow</span>}
       </div>
-      <Button variant="ghost" className="shell-toggle" onClick={toggle} disabled={narrow}
-        aria-controls="primary-navigation" aria-expanded={!collapsed}
-        aria-label={narrow ? "Sidebar collapsed for narrow window" : collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        title={narrow ? "Sidebar collapsed for narrow window" : "Toggle sidebar (Ctrl+B)"}>
-        {collapsed ? <PanelLeftOpen size={20} aria-hidden="true" /> : <PanelLeftClose size={20} aria-hidden="true" />}
-      </Button>
       <nav id="primary-navigation" aria-label="Primary navigation" className="shell-nav">
         <div className="shell-nav-main">{routes.slice(0, 4).map(item)}</div>
         <div className="shell-nav-footer">
@@ -115,9 +123,14 @@ export function PageHeader({ title }: { title: string }) {
         <div className="shell-account-context"><AccountSwitcher /></div>
       </div>
       <div className="shell-import">
-        {/* Opens the import wizard (Build 18); the wizard shows its own runtime and account states. */}
-        <Button variant="primary" aria-current={pathname === "/import" ? "page" : undefined} onClick={() => navigate("/import")}
-          icon={<Upload size={16} aria-hidden="true" />}>Import CSV</Button>
+        {/* Quick import (Build 18.5) or the full wizard (Build 18); each shows its own runtime and account states. */}
+        <DropdownMenu label="Import CSV" trigger={
+          <Button variant="primary" aria-current={pathname === "/import" || pathname === "/import/quick" ? "page" : undefined}
+            icon={<Upload size={16} aria-hidden="true" />}>Import CSV<ChevronDown size={14} aria-hidden="true" className="shell-import-caret" /></Button>
+        } items={[
+          { label: "Quick import: a file you've imported before", icon: <Zap size={16} aria-hidden="true" />, onSelect: () => navigate("/import/quick") },
+          { label: "Full wizard: first-time or custom files", icon: <Workflow size={16} aria-hidden="true" />, onSelect: () => navigate("/import") },
+        ]} />
       </div>
     </header>
   );
@@ -125,6 +138,8 @@ export function PageHeader({ title }: { title: string }) {
 
 export function AppShell() {
   const sidebar = useSidebar();
+  // A CSV dropped anywhere but an import drop zone must never open in the window.
+  useWindowFileDropGuard();
   const { pathname } = useLocation();
   const normalizedPath = normalizePath(pathname);
   // Accounts (account detail) and Journal (trade detail, daily review) have nested pages; other unknown sub-paths stay "Page not found".
@@ -132,6 +147,7 @@ export function AppShell() {
   const title = import.meta.env.DEV && normalizedPath === "/settings/developer"
     ? "Developer tools"
     : normalizedPath === "/import" ? "Import trades"
+    : normalizedPath === "/import/quick" ? "Quick import"
     : normalizedPath === "/import/history" ? "Import history"
     : isTradePath(normalizedPath) ? "Trade"
     : isDayReviewPath(normalizedPath) ? "Daily review"
@@ -142,7 +158,7 @@ export function AppShell() {
         event.preventDefault();
         document.getElementById("main-content")?.focus();
       }}>Skip to main content</a>
-      <AppFrame collapsed={sidebar.collapsed} sidebar={<SidebarNav {...sidebar} />}
+      <AppFrame collapsed={sidebar.collapsed} sidebar={<SidebarNav collapsed={sidebar.collapsed} />} sidebarEdge={<SidebarToggle {...sidebar} />}
         header={<PageHeader title={title} />}>
         <main id="main-content" tabIndex={-1} className="shell-content">
           <RuntimeRecoveryNotice />

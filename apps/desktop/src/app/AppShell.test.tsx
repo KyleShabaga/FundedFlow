@@ -150,8 +150,14 @@ it("keeps navigation and Settings available when runtime fails and never enables
   invoke.mockRejectedValue(new Error("bridge unavailable"));
   render(<App />);
   await screen.findByRole("alert");
-  // Import CSV (Build 18) only opens the wizard; the wizard stays behind the runtime gate, so nothing is read or sent.
-  await userEvent.setup().click(screen.getByRole("button", { name: "Import CSV" }));
+  // Import CSV offers Quick import and the full wizard; both stay behind the runtime gate, so nothing is read or sent.
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Import CSV" }));
+  await user.click(await screen.findByRole("menuitem", { name: /Quick import/ }));
+  await waitFor(() => expect(window.location.hash).toBe("#/import/quick"));
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Quick import");
+  await user.click(screen.getByRole("button", { name: "Import CSV" }));
+  await user.click(await screen.findByRole("menuitem", { name: /Full wizard/ }));
   await waitFor(() => expect(window.location.hash).toBe("#/import"));
   expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Import trades");
   expect(screen.queryByRole("link", { name: "Import CSV" })).toBeNull();
@@ -168,4 +174,25 @@ it("renders the shared frame without a router or runtime host", () => {
   view.rerender(<AppFrame collapsed sidebar={null} header={null}>Rail</AppFrame>);
   expect(document.querySelector(".ds-app-frame.is-collapsed")).toBeTruthy();
   expect(invoke).not.toHaveBeenCalled();
+});
+
+it("anchors the collapse toggle on the sidebar edge beside the logo, first in keyboard order, in both widths", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole("heading", { name: "Today is not built yet" });
+  const sidebar = screen.getByRole("complementary");
+  const edge = sidebar.querySelector(".ds-app-sidebar-edge")!;
+  const toggle = within(edge as HTMLElement).getByRole("button", { name: "Collapse sidebar" });
+  // Outside the scrolling area (never clipped), and before the links so Tab reaches it next to the logo.
+  expect(sidebar.querySelector(".ds-app-sidebar-scroll")!.contains(toggle)).toBe(false);
+  expect(edge.compareDocumentPosition(sidebar.querySelector(".shell-nav")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(toggle.getAttribute("aria-keyshortcuts")).toBe("Control+B");
+  expect(toggle.getAttribute("aria-controls")).toBe("primary-navigation");
+  await user.hover(toggle);
+  expect((await screen.findAllByText("Collapse sidebar (Ctrl+B)")).length).toBeGreaterThan(0);
+  await user.click(toggle);
+  const collapsed = within(sidebar.querySelector(".ds-app-sidebar-edge") as HTMLElement).getByRole("button", { name: "Expand sidebar" });
+  expect(collapsed.getAttribute("aria-expanded")).toBe("false");
+  // Navigation and the selected route survive collapsing.
+  expect(within(screen.getByRole("navigation", { name: "Primary navigation" })).getByRole("link", { name: "Today" }).getAttribute("aria-current")).toBe("page");
 });

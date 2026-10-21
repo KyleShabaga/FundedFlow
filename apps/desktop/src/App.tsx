@@ -9,6 +9,7 @@ import { RulebookPage } from "./features/rulebooks/components/RulebookPage";
 import { RulebookVersionPage } from "./features/rulebooks/components/RulebookVersionPage";
 import { ImportHistoryPage } from "./features/imports/components/ImportHistoryPage";
 import { ImportWizardPage } from "./features/imports/components/ImportWizardPage";
+import { QuickImportPage } from "./features/imports/components/QuickImportPage";
 import { JournalPage } from "./features/journal/components/JournalPage";
 import { TradeDetailPage } from "./features/journal/components/TradeDetailPage";
 import { DailyReviewPage } from "./features/daily-reviews/components/DailyReviewPage";
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="accounts/:accountId/rulebook" element={<RuntimeGate showStatus={false}><RulebookPage /></RuntimeGate>} />
           <Route path="accounts/:accountId/rulebook/versions/:versionId" element={<RuntimeGate showStatus={false}><RulebookVersionPage /></RuntimeGate>} />
           <Route path="import" element={<RuntimeGate showStatus={false}><ImportWizardPage /></RuntimeGate>} />
+          <Route path="import/quick" element={<RuntimeGate showStatus={false}><QuickImportPage /></RuntimeGate>} />
           <Route path="import/history" element={<RuntimeGate showStatus={false}><ImportHistoryPage /></RuntimeGate>} />
           <Route path="settings" element={<DataControlsPage />} />
           {DeveloperTools && (

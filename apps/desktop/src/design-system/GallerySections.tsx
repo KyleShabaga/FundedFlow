@@ -23,7 +23,9 @@ import {
   EquityCurve,
   ErrorState,
   FieldGroup,
+  AccountOverviewCard,
   FileDropzone,
+  ProgressMeter,
   focusFirstInvalid,
   FormSection,
   IconButton,
@@ -146,7 +148,7 @@ export function FormsSection() {
             accept=".csv,text/csv"
             onFiles={(files) => setFile({ name: files[0].name, size: files[0].size })}
             selected={file}
-            selectedActions={file && <Button size="sm" variant="ghost" onClick={() => setFile(null)}>Choose another</Button>}
+            selectedActions={file && <Button size="sm" variant="ghost" onClick={() => setFile(null)}>Remove</Button>}
           />
         </div>
       </div>
@@ -347,6 +349,47 @@ const ACCOUNTS: AcctRow[] = [
   { id: "a3", name: "Personal · Example", status: "Paused", balance: null, pnl: null, ddUsed: "0", ddLimit: "0", trades: 0 },
   { id: "a4", name: "MFF $25K · Example", status: "Evaluation", balance: "23910", pnl: "-1090", ddUsed: "1090", ddLimit: "1250", trades: 22 },
 ];
+
+/* ---------- Account overview (Build 18.5) ---------- */
+
+export function AccountOverviewSection() {
+  const sample = (over: Partial<Parameters<typeof AccountOverviewCard>[0]>) => (
+    <AccountOverviewCard
+      titleId={`dsg-aoc-${over.title}`}
+      mark="E"
+      eyebrow="Example firm"
+      title="Example account"
+      reference="••••1234"
+      meta="Evaluation · Phase 1"
+      badges={<Badge tone="flow">Active</Badge>}
+      primary={{ label: "Drawdown headroom", value: { kind: "money", amount: "1500", signed: false }, provenance: { label: "Current estimate", tone: "flow" }, note: "As of 21 Oct 2026, 13:00 EDT" }}
+      figures={[
+        { label: "Estimated balance", value: { kind: "money", amount: "50000", signed: false }, provenance: { label: "From your records", tone: "flow" } },
+        { label: "Drawdown floor", value: { kind: "money", amount: "48500", signed: false }, note: "Minimum balance the rule allows" },
+      ]}
+      meters={<ProgressMeter label="Drawdown headroom" value="1500" max="2000" valueText="$1,500.00 of $2,000.00 left" note="Floor $48,500.00" />}
+      rules={[{ label: "Max drawdown", value: "$2,000.00 · End-of-day trailing" }, { label: "Started with", value: "$50,000.00", muted: true }]}
+      activity="Last traded 21 Oct 2026, 11:15 EDT"
+      actions={<Button size="sm">View details</Button>}
+      {...over}
+    />
+  );
+  return (
+    <Section title="AccountOverviewCard and ProgressMeter (Build 18.5)" note="Identity and status, then the figure to act on with its provenance, at most two bars, rule lines and an explicit details action. Narrow cards fold to identity, status, primary figure and actions. Example values only.">
+      <div className="dsg-aoc-grid">
+        {sample({ title: "Known estimate" })}
+        {sample({
+          title: "Nothing calculated", meters: undefined,
+          primary: { label: "Drawdown headroom", value: { kind: "unavailable", reason: "Nothing calculated yet" }, provenance: { label: "Not calculated", tone: "neutral" }, note: "Nothing has been calculated for this attempt yet." },
+          figures: [{ label: "Balance", value: { kind: "unavailable", reason: "No checkpoint" }, provenance: { label: "Not available", tone: "neutral" } }],
+          activity: "No imported trades",
+        })}
+        {sample({ title: "Failed attempt", tint: "loss", badges: <><Badge tone="loss">Failed</Badge><Badge>Archived</Badge></>, meters: undefined,
+          primary: { label: "Drawdown headroom", value: { kind: "unavailable", reason: "History only" }, provenance: { label: "History only", tone: "neutral" } } })}
+      </div>
+    </Section>
+  );
+}
 
 export function DataSection() {
   const [sort, setSort] = useState<SortState | null>({ columnId: "balance", direction: "descending" });
