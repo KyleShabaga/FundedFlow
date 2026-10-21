@@ -672,7 +672,7 @@ fn a_source_write_cannot_land_between_the_comparison_and_the_commit() {
             let r = trades::create(&mut o.borrow_mut(), trade_input(&account));
             assert!(
                 matches!(r, Err(AppError::Database { .. })),
-                "another connection's write must wait for the promotion: {r:?}"
+                "another connection's write must wait for the promotion"
             );
             done.set(true);
         }))
