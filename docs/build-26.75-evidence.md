@@ -82,7 +82,7 @@ dev commands are registered only under `cfg(debug_assertions)`, which a release 
 
 Later commits on this branch change only this document, so they don't re-run the installer build; the artifact
 above is the one to test. The same config was also built locally on Windows 11 before pushing. That local installer
-has a different hash (the build is not bit-for-bit reproducible) and is not the one to test.
+came from an earlier commit on a different machine, has a different hash, and is not the one to test.
 
 ## Clean-machine smoke checklist (owner; not yet run)
 
