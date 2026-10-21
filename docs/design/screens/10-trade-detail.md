@@ -7,18 +7,21 @@ Mockup: `TradeDetail.dc.html`. References: `ts-trade-detail.png`, `tw-trade-hist
 
 ## Layout
 - Breadcrumb (Journal / day / trade n), symbol, side and result badges, net P&L; previous/next within the day.
-- Left: price chart with entry and exit markers; Review card: Mark as reviewed, execution rating (1–5 radio group),
-  mindset chips, setup chips, mistake chips, notes.
+- Left: Review card: process (checklist adherence), outcome (net P&L) and R-multiple shown apart; Reviewed; execution
+  rating (1–5 radio group); strategy and checklist with per-item Followed/Missed/Not applicable; setup, mistake,
+  mindset and other tag chips (`ChipGroup`); planned entry, stop, target and risk; plan/thesis and notes/reflection;
+  then Screenshots. No price chart in V1 (see Decisions).
 - Right: Summary `StatList` (account, trading day, quantity, entry → exit, hold, gross, fees, net, P&L source),
-  Source fills (round-trip IDs, timestamps exactly as exported, which fill opened the trade, tick size; read only),
-  Screenshot drop zone.
+  Import source (file, line, original CSV row), Source fills (round-trip IDs, timestamps exactly as exported, which
+  fill opened the trade, tick size; read only), Correction history.
+- Actions: previous/next trade (the account's trades in entry order), Correct trade, Delete (Undo; kept with its review).
 
 ## Data
-- Trade: `list_trades` / a `get_trade` command; `roundTrip` for the source fills.
-- Review fields need storage: `trade_reviews`, `trade_review_tags` and `attachments` are reserved tables in
-  migration 1. Add commands for them (a migration only if the reserved shape does not fit).
-- Notes can start as a journal entry with `tradeId` until reviews exist.
+- Trade: `get_trade_detail(accountId, id)` (provenance, original CSV cells, corrections, neighbours).
+- Review: `get_trade_review` / `save_trade_review`; screenshots: `add_trade_screenshot`, `read_trade_screenshot`,
+  `remove_trade_screenshot` (Build 20, migration 17).
 
 ## Decisions
-- No candles in V1 (no market data). Draw entry and exit from the fills on a price axis; label the limitation.
+- No candles in V1 (no market data). Build 20 draws no chart at all: entry and exit prices and times are listed, and a
+  round trip is not an execution record, so nothing is reconstructed or drawn from invented prices.
 - Source values are immutable and shown as exported.

@@ -11,24 +11,27 @@ Review trading day by day, with notes, and browse every trade in one table.
 
 ## By day (default)
 - One collapsible card per trading day, newest first; the latest day expanded, others collapsed. "Collapse all".
-- Header: long date, account badge(s), plan adherence badge, Add note, Collapse/Expand (`aria-expanded`).
+- Header: long date, net P&L, "n trades · win rate", Collapse/Expand (`aria-expanded`). The plan adherence badge and
+  Add note belong to the daily review (Build 22) and are not shown until it exists.
 - Stats strip: net P&L (large `Pnl`), trades, win rate, gross P&L, contracts, fees, winners, losers, profit factor.
-- Expanded: cumulative P&L through the day (`EquityCurve`, `step={false}`), session notes (plan, review, tags),
-  and the day's trades in a `DataTable`: result, side, symbol, open, close, qty, entry, exit, hold, net P&L,
-  tags. First 8 rows, then "Show all n".
+- Expanded: cumulative P&L through the day (`EquityCurve`, `step={false}`) and the day's trades in a `DataTable`:
+  result, symbol, side, source (Imported/Manual), open, close, qty, entry, exit, hold, net P&L, tags, review. First 8
+  rows, then "Show all n". Session notes (plan, review) come with Build 22.
 - Collapsed: date, net P&L, "n trades · win rate · account", Expand.
 
 ## Trade log
 - KPI row (`StatTile`): net P&L, win rate, profit factor, average win / average loss.
-- `DataTable`: select, result, symbol, side, entry time, exit time, entry, exit, qty, net P&L, tags, account.
-  Toolbar: search (symbol, tag, note), filter chips (result, side, tags), time-zone note. Default sort entry time
-  descending; pager with rows per page 10/25/50/100.
+- `DataTable`: result, symbol, side, source, trading day, entry time, exit time, qty, entry, exit, net P&L, tags,
+  review. The Journal shows one account (the active one), so there is no account column, and no bulk action needs a
+  select column yet. Toolbar: search (symbol, tag, strategy, note), result filter with counts, a Filters popover (side,
+  source, review status, strategy, tag, day range), time-zone note. Default sort entry time descending; pager with rows
+  per page 10/25/50/100. Deleted trades are listed from the footer and can be restored.
 - Row click opens Trade detail ([10](10-trade-detail.md)).
 
 ## Data
 - `list_trades(accountId)` per selected account, grouped by `tradingDay` (never by local date).
-- Notes: `list_journal_entries(accountId)`; a day's plan and review are entries without `tradeId` whose `entryAt`
-  falls in that trading day. Tags come from entry tags.
+- Review status, strategy and tags per trade: `list_trade_review_summaries(accountId)` (Build 20).
+- Day notes (entries without `tradeId`) are Build 22; mapping an entry's time to a trading day needs Rust's derivation.
 - Day stats are display aggregations (exact sums with `sumMoney`); win rate and profit factor are ratios.
 - Hold time from `entryAt`/`exitAt`; for imported performance rows use `roundTrip.durationSeconds` when present.
 
@@ -40,7 +43,9 @@ Review trading day by day, with notes, and browse every trade in one table.
 
 ## Decisions
 - Times in the account's time zone; the day is the account's trading day.
-- Imported trades keep source values; edits go through `update_trade`.
+- Imported trades keep source values; corrections go through `update_trade` with the revision they started from and
+  are recorded in the trade's correction history.
+- Manual trade entry: Add trade on the Journal opens the trade form (account time zone; P&L computed on save).
 
 ## Open questions
 - Plan adherence ("Followed plan") is Build 22's daily review; keep it separate from P&L (Build 6).
