@@ -16,6 +16,7 @@ vi.mock("../features/accounts/components/AccountSwitcher", () => ({ AccountSwitc
 vi.mock("../features/data-controls/components/DataControlsPage", () => ({ DataControlsPage: () => <h2>Settings is not built yet</h2> }));
 import App from "../App";
 import { AppFrame } from "../design-system";
+import { primeAccepted } from "../test/legal";
 
 let narrow = false;
 let change: (() => void) | undefined;
@@ -23,6 +24,7 @@ const paths = [["Today", "/"], ["Journal", "/journal"], ["Insights", "/insights"
 const current = () => screen.getByRole("navigation", { name: "Primary navigation" }).querySelectorAll('[aria-current="page"]');
 
 beforeEach(() => {
+  primeAccepted();
   window.location.hash = "/";
   localStorage.clear();
   narrow = false;

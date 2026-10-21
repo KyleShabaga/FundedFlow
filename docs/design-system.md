@@ -33,6 +33,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `components/brand.tsx` | `BrandMark` (the swept-F mark, decorative) and `BrandLogo` (mark + "FundedFlow" wordmark; `showName={false}` for the icon rail) (P0-D01) |
 | `components/rules.tsx` | `RuleMeter`, `ruleState`, `AccountCard` |
 | `components/account-overview.tsx` | `AccountOverviewCard`, `ProgressMeter`, `meterFraction` (Build 18.5) |
+| `components/documents.tsx`, `documents.css` | `GatePage`, `DocumentView`, `Disclosure` (NA-3) |
 | `components/charts.tsx` | `WinGauge`, `Sparkline`, `EquityCurve` |
 | `components/journal.tsx` | `PnlCalendar`, `monthWeeks`, `DayCard`, `TradeTable`, `tradeResult` |
 | `components/forms.tsx` | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select` (Radix), `FieldGroup`, `FormSection`, `FieldError`, `ValidationSummary`, `focusFirstInvalid`, `focusFirstInvalidWhenShown` (Build 26), `FileDropzone`, `dragHasFiles`, `useWindowFileDropGuard`, `formatFileSize` |
@@ -192,6 +193,18 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
   hidden `h2` so a panel's `h3` sections don't skip a level. Dialog titles are `h2`; headings inside a dialog
   start at `h3`. The Build 26 axe suite (`apps/desktop/src/journeys/accessibility.test.tsx`) fails on a skipped
   level.
+
+## NA-3: full-page gate, documents and disclosure
+
+- `GatePage` is a whole-window step shown instead of the app frame (the first-run agreement). It renders the page's
+  only `main` and `h1`, focuses the title on mount, and keeps its `actions` in a sticky bar at the bottom of the card
+  (max 720 px, so it fits an 800 px window). `preview` renders it inside another page (a section with an `h2`, no
+  focus move), as in the gallery.
+- `DocumentView` shows bundled long-form text as an `article` named by its title: `headingLevel` (2 or 3) for the
+  title, one level lower for sections, an optional `badge` (Draft) and `meta` line. Text is rendered as text; no
+  markup is interpreted.
+- `Disclosure` is a native `details`/`summary` expander (keyboard behaviour is the browser's). `srSummary` adds
+  screen-reader context, such as "(draft, version 0.1.0-draft)", to a link-like summary.
 
 ## Build 23: selectable calendar and PnlBars
 

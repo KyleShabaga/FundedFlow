@@ -8,13 +8,13 @@ The Settings page (sidebar **Settings**) opens on this page. Mockups: [`mockups/
 
 ## Layout
 
-One column, max 960 px. It opens with the local-only notice ("FundedFlow keeps your journal only on this computer…",
-wording fixed), set apart on a `bg-200` surface with a hairline border and a `flow` left accent, left-aligned, body
-text size (P0-D04); reassurance, never warning styling. Then four `FormSection`s:
+One column, max 960 px. (NA-3 removed the static local-only notice that opened the
+page; its wording now lives once, in the **Privacy & legal** section.) Five `FormSection`s:
 
 1. **Your data on this computer**: a `StatList` saying the journal is stored in FundedFlow's app-data folder for the
-   Windows user, that there are **no automatic backups**, that backups are **not encrypted**, and the last
-   user-initiated export (kind, scope, local time, size). No path is shown.
+   Windows user; that the only automatic copy is the one FundedFlow saves in the same folder **before upgrading the
+   journal's format**, which is not a substitute for exporting a full backup; that backups are **not encrypted**; and
+   the last user-initiated export (kind, scope, local time, size). No path is shown.
 2. **Export**: `RadioGroup` Full backup (`.ffj.zip`, restorable) vs Trade CSV (not a backup); for CSV a `Select`
    of All accounts or one account (archived ones marked); the plaintext `Checkbox`; one primary button
    "Choose location and export…" that opens the native save dialog. Success shows the file name, size and SHA-256.
@@ -23,6 +23,9 @@ text size (P0-D04); reassurance, never warning styling. Then four `FormSection`s
 4. **Delete data permanently**: a bordered danger area with two rows, each with its own button:
    *Delete one trading account* (account `Select` with status and archived state) and *Erase the entire local
    journal*.
+5. **Privacy & legal** (NA-3, [16 First run](16-first-run.md)): the privacy summary, a draft notice while the documents
+   are drafts, a `StatList` of each document's version and date and when this install accepted them, each document
+   in a `Disclosure` (`DocumentView`), and the licence summary with third-party notices (not bundled yet).
 
 The Accounts row and detail menus also offer **Delete permanently…** after **Archive…** (and after **Restore from
 archive** for archived accounts). It opens the same deletion dialog.

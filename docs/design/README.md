@@ -37,6 +37,7 @@ specification). When a spec and a card disagree, the card wins; fix the spec in 
 | [13 Account rulebook](screens/13-rulebook.md) | 19 Rulebook version editor and calculation explanation | P0 | Mockups: `mockups/p0/` 1A–1F |
 | [14 Daily review](screens/14-daily-review.md) | 22 Daily review and plan adherence | P0 | A nested Journal page; mockups `mockups/p0/` 2A–2E |
 | [15 Settings: your data](screens/15-settings-data-controls.md) | 25 Data-control screens (backend 24) | P0 | Export, restore, permanent deletion; mockups `mockups/p0/` 3A–3E |
+| [16 First run](screens/16-first-run.md) | NA-3 First-run privacy notice and agreement (Final Push P0-12) | P0 | Draft documents until counsel signs off; Settings → Privacy & legal |
 
 Shared patterns ([components.md](components.md)) belong to **Build 13**; their visual specification to **Build 7**.
 

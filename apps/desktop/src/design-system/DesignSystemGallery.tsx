@@ -25,7 +25,7 @@ import {
   TradeTable,
   WinGauge,
 } from ".";
-import { AccountOverviewSection, AsyncSection, DataSection, FeedbackSection, FormsSection, OverlaysSection, Section } from "./GallerySections";
+import { AccountOverviewSection, AsyncSection, DataSection, DocumentsSection, FeedbackSection, FormsSection, OverlaysSection, Section } from "./GallerySections";
 import "./gallery.css";
 
 type Theme = "system" | "dark" | "light";
@@ -255,6 +255,7 @@ export function DesignSystemGallery() {
         <AsyncSection />
         <DataSection />
         <AccountOverviewSection />
+        <DocumentsSection />
       </div>
     </ToastProvider>
   );

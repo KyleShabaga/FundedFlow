@@ -14,6 +14,7 @@ import "./design-system.css";
 import "./controls.css";
 import "./states.css";
 import "./data.css";
+import "./documents.css";
 
 export * from "./format";
 export * from "./components/primitives";
@@ -28,3 +29,4 @@ export * from "./components/feedback";
 export * from "./components/async-states";
 export * from "./components/data";
 export * from "./components/account-overview";
+export * from "./components/documents";

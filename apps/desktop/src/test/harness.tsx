@@ -7,8 +7,9 @@
 //   vi.mock("@tauri-apps/plugin-dialog", async () => (await import("../test/boundaries")).dialogPluginMock);
 //
 // A fresh QueryClient comes with every <App /> mount; `resetHarness()` clears the rest of the shared state
-// (hash route, browser storage, module-level operation lock, boundary queues). No sleeps: tests wait for
-// visible results, and pending work is controlled with store holds and runtime answer queues.
+// (hash route, browser storage, module-level operation lock, boundary queues, the preloaded first-run
+// acceptance). No sleeps: tests wait for visible results, and pending work is controlled with store holds and
+// runtime answer queues.
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
@@ -18,6 +19,7 @@ import App from "../App";
 import { resetDataControlLock } from "../features/data-controls/hooks/data-controls";
 import { createAppStore, type AppStoreSeed } from "./app-store";
 import { boundary, resetBoundaries } from "./boundaries";
+import { primeAccepted } from "./legal";
 
 /** jsdom gaps Radix and the shell rely on. Idempotent; call from beforeAll. */
 export function installBrowserShims() {
@@ -31,10 +33,14 @@ export function installBrowserShims() {
   })) as unknown as typeof window.matchMedia;
 }
 
+// Suites reset after each test; the first test of a file starts here.
+primeAccepted();
+
 export function resetHarness() {
   cleanup();
   resetBoundaries();
   resetDataControlLock();
+  primeAccepted(); // Past the NA-3 first-run screen unless a test primes null (first launch).
   try { localStorage.clear(); } catch { /* storage may be unavailable */ }
   window.location.hash = "/";
   vi.useRealTimers();

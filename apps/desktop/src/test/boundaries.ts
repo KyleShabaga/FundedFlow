@@ -3,6 +3,7 @@
 // hooks, view models, components) is the real app. Test files wire these with vi.mock factories that import
 // this module, so it must not import application code (types only).
 import type { JournalRepository } from "@fundedflow/domain";
+import type { LegalAcceptance } from "../lib/data/legal";
 import type { RuntimeStatus } from "../lib/data/runtime";
 
 export const SCHEMA = 18;
@@ -20,6 +21,8 @@ export const boundary = {
   /** Runs when `retry_runtime` is invoked: what the native runtime does on retry (e.g. install a staged restore). */
   onRetry: null as (() => void) | null,
   invocations: [] as string[],
+  /** NA-3 per-install acceptance file: what `get_legal_acceptance` reads and `record_legal_acceptance` writes. */
+  legal: { record: null as LegalAcceptance | null, writeError: null as Error | null, now: "2026-10-21T18:30:00.000Z" },
   /** Native save/open dialog answers: a path, null for Cancel, or an Error when the chooser can't open. */
   dialog: {
     save: [] as (string | null | Error)[],
@@ -33,6 +36,7 @@ export function resetBoundaries() {
   boundary.retryAnswers = [];
   boundary.onRetry = null;
   boundary.invocations = [];
+  boundary.legal = { record: null, writeError: null, now: "2026-10-21T18:30:00.000Z" };
   boundary.dialog = { save: [], open: [], calls: [] };
 }
 
@@ -43,10 +47,16 @@ async function answer(value: Answer | undefined): Promise<RuntimeStatus> {
   return structuredClone(await value);
 }
 
-/** `@tauri-apps/api/core`: only the runtime commands go through invoke in these tests. */
+/** `@tauri-apps/api/core`: only the runtime and first-run acceptance commands go through invoke in these tests. */
 export const tauriCoreMock = {
-  invoke: async (command: string) => {
+  invoke: async (command: string, args?: Record<string, unknown>) => {
     boundary.invocations.push(command);
+    if (command === "get_legal_acceptance") return structuredClone(boundary.legal.record);
+    if (command === "record_legal_acceptance") {
+      if (boundary.legal.writeError) throw boundary.legal.writeError;
+      boundary.legal.record = { documents: structuredClone(args?.documents) as LegalAcceptance["documents"], acceptedAt: boundary.legal.now };
+      return structuredClone(boundary.legal.record);
+    }
     if (command === "runtime_status") return answer(take(boundary.statusAnswers));
     if (command === "retry_runtime") {
       boundary.onRetry?.();

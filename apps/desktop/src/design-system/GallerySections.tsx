@@ -7,6 +7,9 @@ import { Columns3, Ellipsis, Plus } from "lucide-react";
 import { type FormEvent, type ReactNode, useMemo, useRef, useState } from "react";
 
 import {
+  Disclosure,
+  DocumentView,
+  GatePage,
   type AsyncState,
   Badge,
   Button,
@@ -507,6 +510,29 @@ export function DataSection() {
       >
         {(points) => <EquityCurve points={points} floor="97000" label="Example balance curve" />}
       </ChartPanel>
+    </Section>
+  );
+}
+
+/* ---------- Documents (NA-3) ---------- */
+
+const SAMPLE_DOCUMENT = [
+  { heading: "What is stored", paragraphs: ["Example text: the records you enter, saved on this computer."] },
+  { heading: "What leaves this computer", paragraphs: ["Example text: nothing."] },
+];
+
+export function DocumentsSection() {
+  const [answer, setAnswer] = useState<string | null>(null);
+  return (
+    <Section title="GatePage, DocumentView and Disclosure (NA-3)" note="GatePage is a whole-window step shown instead of the app frame: it owns the h1 and main landmark, focuses its title on mount and keeps its actions in view. Here it is a preview (a section with an h2). DocumentView shows bundled long-form text; Disclosure is a native expander with optional screen-reader context.">
+      <GatePage preview eyebrow="Example step" title="Before you start"
+        actions={<><Button variant="secondary" onClick={() => setAnswer("Declined")}>Decline</Button><Button variant="primary" onClick={() => setAnswer("Accepted")}>Accept</Button></>}>
+        <p>A short plain-language summary goes first.</p>
+        <Disclosure summary="Read the example document" srSummary="(example, version 1.0.0)">
+          <DocumentView headingLevel={3} title="Example document" badge={<Badge tone="warn">Draft</Badge>} meta="Version 1.0.0 · 21 October 2026" sections={SAMPLE_DOCUMENT} />
+        </Disclosure>
+        <p role="status" className="ds-faint">{answer ? `Example answer: ${answer}` : ""}</p>
+      </GatePage>
     </Section>
   );
 }

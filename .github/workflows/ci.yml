@@ -28,6 +28,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Production dependencies only (what ships in the app); fails on high or critical advisories.
+      - name: npm audit (production dependencies)
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Domain boundaries (no React, Tauri, Node I/O or apps/desktop in packages/domain)
         run: npm run check:boundaries -w @fundedflow/domain
 
@@ -64,3 +68,13 @@ jobs:
       - name: cargo clippy
         working-directory: apps/desktop/src-tauri
         run: cargo clippy --all-targets -- -D warnings
+
+      # RustSec advisories for Cargo.lock. Vulnerabilities and unsound advisories fail; the one ignored advisory
+      # (Linux-only glib) is documented in apps/desktop/src-tauri/.cargo/audit.toml.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: cargo audit
+        working-directory: apps/desktop/src-tauri
+        run: cargo audit --deny unsound

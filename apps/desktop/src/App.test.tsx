@@ -17,6 +17,7 @@ import App from "./App";
 import { AppProviders } from "./app/AppProviders";
 import { useRuntime } from "./app/RuntimeProvider";
 import { RuntimeGate } from "./components/RuntimeGate";
+import { primeAccepted } from "./test/legal";
 
 const ready = {
   state: "ready", stage: "ready", schemaVersion: 13,
@@ -24,6 +25,7 @@ const ready = {
 };
 
 beforeEach(() => {
+  primeAccepted();
   localStorage.clear();
   window.location.hash = "/";
   invoke.mockReset().mockResolvedValue(ready);
