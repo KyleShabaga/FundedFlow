@@ -3,6 +3,7 @@
 Card: https://app.notion.com/p/3fe1bd4b6bde81c791c5ccbfbbad4190 · branch `feat/build-29-prop-firm-collector`.
 Status: **implemented** (architecture approved 2026-10-20 with every default in §13). Section 14 lists where the
 build differs from this plan.
+Build 29.25 (comparison publishers, directory observations and the GUI additions) is section 15.
 
 The card's "Research addendum — safety and block-avoidance" (October 20, 2026, with the relaxed-defaults
 revision) is authoritative wherever it conflicts with the older sections below it. This document follows the
@@ -656,3 +657,103 @@ Defaults in **bold** are what I'll build unless you say otherwise.
 - Platform adapters for Intercom, Help Scout and GitBook after their public API documentation is reviewed.
 - MHTML ("single file") manual captures.
 - Build 31 consumes `collector-snapshot-v1` and maps it to `sourceReferenceSchema` as the schema description sets out.
+
+## 15. Build 29.25: comparison publishers
+
+Card: [Build 29.25: third-party comparison sources and collector GUI improvements](https://app.notion.com/p/4001bd4b6bde81e6bb91e6e16b09d760).
+Operator guide: `tools/prop-firm-collector/docs/USER_GUIDE.md` section 15. Adapter maintenance and the
+source-by-source matrix: `tools/prop-firm-collector/docs/adapters.md`.
+
+### 15.1 Audit of the merged code: extension seams
+
+| Seam (Build 29 / GUI) | Used for publishers as |
+|---|---|
+| `FirmRunner` (`runner.py`): the policy pipeline, pacing, budget, robots, terms gate, circuit breaker, redirect checks, browser fallback, conditional GETs | Unchanged pipeline. The runner takes a collection *owner* (a firm or a publisher). For a publisher it adds three narrowing checks and one hook: URL inside the publisher's allowed paths and a page kind the adapter reads; no sitemap discovery; adapter-limited link following; after each stored page, `directory.store.extract_and_store`. |
+| `registry` hosts, sources, terms (`db/registry.py`) | The same functions, keyed by owner id. `add_host` refuses a host already registered to the other kind of owner, and refuses a publisher host outside the publisher's own domain. |
+| Snapshots (`db/snapshots.py`), attempts and runs (`db/runs.py`) | Unchanged tables and code; ids are namespaced `publisher:<key>` so they never collide with a firm's. |
+| `capture.import_capture` | Takes `publisher_key=` as an alternative to `firm_key=`, then reads the page with the publisher's adapter; still zero network. |
+| `services.py` (shared by CLI and GUI) | Adds owner selection, outcome buckets, the run summary text and the directory export. |
+| GUI `CollectorApp` worker, lock, Stop and own connection | Reused as is; Fetch passes publishers to the same `_fetch_work`. New tabs live in `gui/research.py` and `gui/evidence.py`. |
+| Export envelope v1 | Untouched. It iterates `collector_firms`, so publisher data can never enter `collector-snapshot-v1`. |
+
+### 15.2 Data model (migration 0002)
+
+A publisher is its own registry concept, **not a `collector_firms` row**. Hosts, sources, runs, attempts, discovered
+links, snapshots and policy events need an owner that is either kind, so migration 0002 adds `collection_owners`
+(`id`, `kind` = `firm` | `publisher`) and re-points those tables' `firm_id` foreign key to it. The column keeps its
+Build 29 name (a firm id stays a firm id; a publisher id is now also allowed); renaming it would have touched every
+Build 29 query for no gain.
+
+Re-pointing a foreign key in SQLite needs the documented table-rebuild procedure. `migrate.py` gained one rule: a
+migration whose first line is `-- migrate: rebuild-tables` runs with `PRAGMA foreign_keys = OFF` (only possible
+outside a transaction), copies each table, drops and renames, recreates its indexes and immutability triggers, runs
+`PRAGMA foreign_key_check` inside the same transaction, and commits only if nothing is broken. Foreign keys are
+switched back on afterwards in every case. The existing backup (`collector.db.bak-0001`) is written first. A test
+loads a Build 29 database with rows in every table, migrates it and checks that every row, the triggers and the v1
+export are byte-for-byte unchanged.
+
+New tables:
+
+| Table | Purpose |
+|---|---|
+| `directory_publishers` | Key, name, homepage, adapter, `capture_mode` (`auto` / `manual_only`), enabled (default **0**), disabled reason, allowed/excluded paths, limits, notes, the recorded policy review (JSON), preset version. `manual_only` cannot be enabled (CHECK). |
+| `directory_extractions` (append-only) | One row per (snapshot, adapter, adapter version): page kind, status (`collected`, `no_records`, `js_unavailable`, `structure_changed`, `parse_error`, `unsupported_page`), detail, warnings. |
+| `directory_observations` (immutable) | One field value as displayed on one page version: record key, publisher entry id and URL, firm/programme/variant names (raw and normalised), account size (raw, amount, currency), phase, market, first-party URL as linked, field, raw label, raw value, value kind, normalised value, confidence and reason, publisher qualifier, location in the page, page URL, observed time, content hash, adapter name/version, capture channel. |
+| `directory_review_actions` (append-only) | Operator decisions: `map_firm`, `unmap_firm`, `keep_separate`, `annotate`, `dismiss`, `verify_official` (must point at a snapshot of a *firm's* own page), `unverify`. The latest action per subject wins. |
+
+### 15.3 Statuses and review
+
+Statuses are derived when read, never stored, from immutable observations plus the actions above
+(`directory/review.py`): `superseded` (newer page version or adapter version), `officially_verified` (an operator
+`verify_official` against a firm snapshot), `conflicting`, `uncertain` (value or identity), `stale`
+(`[directory] stale_after_days`, default 30), `observed`. "Current" means the observations of each source's latest
+snapshot, as read by the newest adapter version, so a page that changes back to an earlier version restores that
+version's values. Conflict groups use the mapped firm (operator or exact normalised name) or the normalised name,
+plus programme, variant, account size, currency and phase; unknown values and uncertain raw values claim nothing
+comparable, and a plain "trailing" drawdown type is treated as less specific than "trailing (end of day)". History
+per field lists every page version that showed it, marking changes. `official_evidence` returns dated excerpts from
+the firm's own stored pages next to a claim; the collector never decides which is right.
+
+### 15.4 Contract `collector-directory-observations-v1`
+
+`docs/contracts/collector-directory-observations-v1.schema.json` (packaged copy checked byte-for-byte). Separate
+`kind` (`fundedflow.collector.directory_observations`) so `collector validate` picks the right schema; v1 evidence
+files validate exactly as before. Deterministic (sorted, content-hash `export_id`), validated before writing, with
+`pages` listing every page's extraction state so partial success is explicit. Every field value carries
+`verification_status` (`unverified` unless `officially_verified`) and a `provenance` object. Ratings, rankings,
+scores, offers and coupons have no field in the schema. A synthetic fixture is pinned in
+`tests/fixtures/collector-directory-observations-v1.json`, and a test validates it in an isolated interpreter that
+never imports the collector. Build 31 does not consume this format.
+
+### 15.5 Decisions and deviations
+
+| Area | Decision |
+|---|---|
+| Presets | The four sites ship as presets that install **disabled**, with the 2026-10-21 policy review stored as information. Prop Firm Match is `manual_only` because it answered HTTP 403 to automated requests (pages and terms). |
+| Sitemaps | Not used for publishers: their sitemaps mostly list blogs and every profile, which conflicts with bounded collection. Seeds plus adapter-limited links instead. ETag/Last-Modified and content hashing still apply, so unchanged pages cost a 304 and add no observations. |
+| Pagination | Only `?page=N` with N up to the adapter's `max_pagination_pages` (5); any other query string is out of scope, so sort and filter permutations are never fetched (Prop Firm Match's robots.txt disallows them too). List pages do not consume link depth; profile pages do. |
+| JavaScript | The existing allowlisted Playwright fallback is reused unchanged. Embedded framework data (`__NEXT_DATA__`, `/_next/data/`) and unlicensed data files (`/prop-firms/data.json`) are never read, to avoid treating private data channels as public pages. |
+| Table reading | By visible header text; unknown columns, missing required columns and width mismatches fail the table closed. Key-value tables skip unknown labels with a warning. Rows are capped at 500 per table. |
+| Values | Normalised only when explicit. `$` stays `$` (never assumed USD); a size without a currency is not compared with one that has it. Blank, none, n/a and see-rules are distinct value kinds and never zero. |
+| Identity | Normalisation removes spelling noise only. Similar names become review items. Mapping to a registered firm is exact-name or operator-made. |
+| GUI | Extends the tkinter window: Research sources and Evidence tabs, publisher multi-select and per-site counts on Fetch, publisher captures and the directory export. No second application, no new dependency. |
+| Generic adapter | An operator can register another permitted publisher with the `generic` adapter: snapshots only, no values, no link following, until a real adapter is written. |
+
+### 15.6 Verification (2026-10-21, Windows 11, Python 3.12)
+
+- `uv run python scripts/check_lockfile.py`, `ruff check`, `ruff format --check`, `mypy src tests` (strict): clean.
+  `pytest`: every test passes, including the browser tests with real Chromium; exact counts are in the pull request.
+  `pip-audit`: no known vulnerabilities. No dependency was added (`pyproject.toml` dependencies and `uv.lock` are
+  unchanged).
+- PowerShell walkthrough of user guide section 15 against the synthetic practice site, and the desktop window
+  driven by hand (screenshots in the guide).
+- **No live run against the four publishers** was made by this build. The only automated access was the one-off
+  policy review on 2026-10-21 (robots.txt, terms page and a visible page per site, through a fetch tool, not the
+  collector). Live collection is an operator decision after their own terms review.
+
+### 15.7 Follow-ups (not Build 29.25)
+
+- Mapping `collector-directory-observations-v1` into Build 31's evidence interpretation (a separate, tested
+  hand-off card).
+- Sitemap `lastmod` support for publishers, if a publisher's sitemap turns out to be small and well-scoped.
+- Live selector verification for each enabled publisher after the operator's terms review (or permission).

@@ -23,6 +23,7 @@ SECTIONS = [
     "## 12. Troubleshooting and reset",
     "## 13. Suggested routine",
     "## 14. The desktop window",
+    "## 15. Comparison sites (research sources)",
 ]
 
 
@@ -52,3 +53,15 @@ def test_readme_has_good_citizen_section_and_links_the_guide() -> None:
 def test_example_config_is_valid() -> None:
     settings, _ = load_settings(PROJECT / "config" / "collector.example.toml")
     assert settings.user_agent.info_url == "https://github.com/KyleShabaga/FundedFlow"
+
+
+def test_adapter_guide_lists_every_preset_and_adapter() -> None:
+    from fundedflow_collector.directory.adapters import ADAPTERS
+    from fundedflow_collector.directory.presets import PRESETS
+
+    text = (PROJECT / "docs" / "adapters.md").read_text(encoding="utf-8")
+    for key in PRESETS:
+        assert f"`{key}`" in text
+    for name, adapter in ADAPTERS.items():
+        if name != "generic":
+            assert f"`{name}` {adapter.version}" in text
