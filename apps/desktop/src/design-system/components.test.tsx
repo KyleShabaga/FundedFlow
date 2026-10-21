@@ -4,7 +4,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AccountCard, Pnl, PnlCalendar, RuleMeter, ruleState, TradeTable, tradeResult } from "./index";
+import { AccountCard, Pnl, PnlCalendar, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
 import { monthWeeks } from "./components/journal";
 
 afterEach(cleanup);
@@ -113,5 +113,24 @@ describe("currency on Build 7 components", () => {
     expect(screen.getByText("£100,100.00")).toBeTruthy();
     expect(container.querySelector(".ds-rule-amt")?.textContent).toBe("£100 / £1,000");
     expect(container.textContent).not.toContain("$");
+  });
+});
+
+describe("TabPanel keepMounted", () => {
+  it("keeps a form's unsaved input across tab switches, hidden while inactive", async () => {
+    const user = userEvent.setup();
+    render(
+      <Tabs label="Sections" items={[{ value: "a", label: "Edit" }, { value: "b", label: "Other" }]}>
+        <TabPanel value="a" keepMounted><input aria-label="Draft value" /></TabPanel>
+        <TabPanel value="b"><p>Other panel</p></TabPanel>
+      </Tabs>,
+    );
+    await user.type(screen.getByRole("textbox", { name: "Draft value" }), "2500");
+    await user.click(screen.getByRole("tab", { name: "Other" }));
+    const kept = screen.getByDisplayValue("2500");
+    expect(kept.closest('[role="tabpanel"]')?.getAttribute("data-state")).toBe("inactive");
+    expect(kept.closest(".ds-tab-panel-kept")).not.toBeNull();
+    await user.click(screen.getByRole("tab", { name: "Edit" }));
+    expect((screen.getByRole("textbox", { name: "Draft value" }) as HTMLInputElement).value).toBe("2500");
   });
 });

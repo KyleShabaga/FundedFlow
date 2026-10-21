@@ -444,3 +444,25 @@ fn account_rulebook(conn: &Connection, account_id: &str, at: &str) -> rusqlite::
     )?;
     Ok(id)
 }
+
+/// Migration 16: the rulebook audit log (Build 19).
+///
+/// Builds 16 and 19 were developed in parallel, and each numbered its migration 15. The
+/// integrated order is 15 = nullable engine snapshots, 16 = rulebook events. Neither branch
+/// shipped, but a journal opened by a Build 19 branch build could already be at version 15 with
+/// `rulebook_events` and without the nullable snapshot columns; migration 15 would then never
+/// run on it. This step detects that journal explicitly (account_snapshots.balance_micros still
+/// NOT NULL at version 15) and applies the nullable snapshot rebuild first, keeping every row.
+/// A journal from the Build 16 branch, or from main at 14, needs nothing extra. The audit log
+/// statements are idempotent, so an existing `rulebook_events` table and its rows are kept.
+pub(crate) fn rulebook_events(conn: &Connection) -> rusqlite::Result<()> {
+    let balance_not_null: bool = conn.query_row(
+        "SELECT \"notnull\" FROM pragma_table_info('account_snapshots') WHERE name = 'balance_micros'",
+        [],
+        |r| r.get::<_, i64>(0).map(|n| n == 1),
+    )?;
+    if balance_not_null {
+        conn.execute_batch(include_str!("../../migrations/0015_nullable_engine_snapshots.sql"))?;
+    }
+    conn.execute_batch(include_str!("../../migrations/0016_rulebook_events.sql"))
+}

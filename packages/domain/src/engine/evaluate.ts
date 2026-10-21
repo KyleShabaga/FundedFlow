@@ -776,9 +776,18 @@ export function evaluateAccountRisk(
   raw: AccountRiskInputs,
   rawPolicy: EnginePolicy = defaultEnginePolicy,
 ): EngineResult {
+  return evaluate(raw, rawPolicy, false);
+}
+
+/** Shared by evaluateAccountRisk and simulateRulebookVersion; `simulation` is never set for active results. */
+function evaluate(
+  raw: AccountRiskInputs,
+  rawPolicy: EnginePolicy,
+  simulation: boolean,
+): EngineResult {
   const input = accountRiskInputsSchema.parse(raw),
     policy = enginePolicySchema.parse(rawPolicy);
-  const applicability = resolveEngineApplicability(input),
+  const applicability = resolveEngineApplicability(input, { simulation }),
     { assignment, detail } = applicability;
   const reasons = [...applicability.reasons];
   const references = unique([
@@ -907,8 +916,13 @@ export function evaluateAccountRisk(
         detail!.rulebook.ownerAccountId !== null &&
         detail!.version.userConfirmedAt === null
       ) {
-        out.reasonCode = "unconfirmed_private_rulebook";
-        return out;
+        if (!simulation) {
+          out.reasonCode = "unconfirmed_private_rulebook";
+          return out;
+        }
+        out.assumptions.push(
+          "Simulated as if you had confirmed these account rules; they are not confirmed or in use",
+        );
       }
       const monetary =
         [
@@ -1088,4 +1102,70 @@ export function isEngineResultCurrent(
   } catch {
     return false;
   }
+}
+
+/** A proposed version evaluated against an account's real evidence. Never an active result. */
+export interface RulebookSimulation {
+  kind: "simulation";
+  /** The version simulated (usually an unpublished draft, possibly with unsaved edits). */
+  proposedVersionId: string;
+  /** The assignment in force at the cutoff that the proposal would replace, if any. */
+  replacesAssignmentId: string | null;
+  result: EngineResult;
+}
+
+export const SIMULATION_ASSIGNMENT_PREFIX = "simulation:";
+
+/**
+ * Evaluates `proposed` as if it governed the account from the cutoff's trading day, against the
+ * account's real canonical inputs. Pure and read-only: nothing is assigned, published or saved, and
+ * the result can't be mistaken for an active one:
+ * - the synthetic assignment id starts with `simulation:`, so the inputs hash differs from any real
+ *   calculation and `isEngineResultCurrent` never matches a stored snapshot;
+ * - it is never provider-verified (assurance `unverified`, or `user_defined_estimate` for the
+ *   account's own rules), whatever the proposal's status;
+ * - the phase and path are those of the assignment in force; without one, a catalogue proposal stays
+ *   Unknown (`phase_path_context_unresolved`) rather than borrowing a phase.
+ * `canAssign` is not weakened: active evaluation still requires a published, assignable version.
+ */
+export function simulateRulebookVersion(
+  raw: AccountRiskInputs,
+  proposed: AccountRiskInputs["rulebookVersions"][number],
+  policy: EnginePolicy = defaultEnginePolicy,
+): RulebookSimulation {
+  const input = accountRiskInputsSchema.parse(raw);
+  const day = input.effectiveTradingDay;
+  const covers = (a: AccountRiskInputs["assignments"][number]) =>
+    a.effectiveFrom <= day && (a.effectiveTo === null || a.effectiveTo > day);
+  const current = input.assignments.filter(covers);
+  const replaced = current.length === 1 ? current[0]! : null;
+  const synthetic = {
+    id: `${SIMULATION_ASSIGNMENT_PREFIX}${proposed.version.id}`,
+    accountId: input.account.id,
+    rulebookVersionId: proposed.version.id,
+    programmePhaseId: replaced?.programmePhaseId ?? null,
+    phasePathId: replaced?.phasePathId ?? null,
+    accountPhaseEventId: replaced?.accountPhaseEventId ?? null,
+    effectiveFrom: day,
+    effectiveTo: null,
+    assignedAt: input.asOf,
+    assignmentSource: "user" as const,
+  };
+  const others = input.assignments.filter((a) => !covers(a));
+  const keep = new Set(others.map((a) => a.rulebookVersionId));
+  const simulated: AccountRiskInputs = {
+    ...input,
+    assignments: [...others, synthetic],
+    rulebookVersions: [
+      ...input.rulebookVersions.filter((v) => keep.has(v.version.id) && v.version.id !== proposed.version.id),
+      proposed,
+    ],
+    applicableAssignment: synthetic,
+  };
+  return {
+    kind: "simulation",
+    proposedVersionId: proposed.version.id,
+    replacesAssignmentId: replaced?.id ?? null,
+    result: evaluate(simulated, policy, true),
+  };
 }

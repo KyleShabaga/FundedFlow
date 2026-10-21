@@ -89,7 +89,7 @@ function Overview({ account, onEdit }: { account: AccountViewModel; onEdit?: () 
                   <b>{item.label}</b>
                   <span className="ds-faint">{item.detail}</span>
                   {item.key === "firm" && onEdit && <Button size="sm" variant="ghost" onClick={onEdit}>Add firm</Button>}
-                  {item.key === "rulebook" && <span className="ds-faint">Rulebooks are assigned in the rulebook editor (coming soon).</span>}
+                  {item.key === "rulebook" && <Link className="acct-link" to={`/accounts/${encodeURIComponent(account.id)}/rulebook`}>Set up the rulebook</Link>}
                 </li>
               ))}
             </ul>
@@ -97,6 +97,7 @@ function Overview({ account, onEdit }: { account: AccountViewModel; onEdit?: () 
           <div className="acct-rulebook-line">
             <span className="ds-label">Rulebook</span>
             <RulebookSummary facts={facts} />
+            <Link className="acct-link" to={`/accounts/${encodeURIComponent(account.id)}/rulebook`}>{account.archivedAt === null ? "Review or change" : "View"}</Link>
           </div>
         </section>
 

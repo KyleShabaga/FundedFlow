@@ -2,8 +2,14 @@ import { canAssign, checkRuleDefinitions } from "../rulebook/integrity.js";
 import { derivePhaseHistory } from "../catalogue/lifecycle.js";
 import type { AccountRiskInputs } from "../risk/contracts.js";
 
-/** Immutable explicit assignment only; never selects the newest published version. */
-export function resolveEngineApplicability(input: AccountRiskInputs) {
+/**
+ * Immutable explicit assignment only; never selects the newest published version.
+ *
+ * `simulation` is only for `simulateRulebookVersion`: the assignment is a synthetic one for an
+ * unpublished or unassigned version, so `canAssign` (published, verified or the account's own) is
+ * replaced by the narrower checks a proposal can meet, and the result is never provider-verified.
+ */
+export function resolveEngineApplicability(input: AccountRiskInputs, options: { simulation?: boolean } = {}) {
   const candidates = input.assignments.filter(
     (a) =>
       a.accountId === input.account.id &&
@@ -23,7 +29,17 @@ export function resolveEngineApplicability(input: AccountRiskInputs) {
   if (!detail) reasons.push("missing_or_ambiguous_version");
   if (assignment && input.applicableAssignment?.id !== assignment.id)
     reasons.push("assignment_context_mismatch");
-  if (detail && !canAssign(detail.rulebook, detail.version, input.account.id))
+  if (options.simulation) {
+    if (
+      detail &&
+      (detail.version.recordStatus !== "active" ||
+        detail.rulebook.recordStatus !== "active" ||
+        detail.version.verificationStatus === "rejected" ||
+        (detail.rulebook.ownerAccountId !== null &&
+          detail.rulebook.ownerAccountId !== input.account.id))
+    )
+      reasons.push("unsimulatable_rulebook_version");
+  } else if (detail && !canAssign(detail.rulebook, detail.version, input.account.id))
     reasons.push("unverified_or_archived_rulebook");
   if (detail && checkRuleDefinitions(detail.rules).length)
     reasons.push("invalid_rule_definitions");
@@ -86,6 +102,7 @@ export function resolveEngineApplicability(input: AccountRiskInputs) {
     phaseKey: phases.currentPhase,
     reasons,
     providerVerified:
+      !options.simulation &&
       detail?.rulebook.ownerAccountId === null &&
       detail.version.verificationStatus === "verified",
   };

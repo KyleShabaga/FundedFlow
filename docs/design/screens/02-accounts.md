@@ -109,7 +109,7 @@ Code: `apps/desktop/src/features/accounts/` (`components/`, `active-account.ts`,
   account. Fine for tens of accounts; a summary command would scale better. Owner: backend.
 - Restore conflicts carry the conflicting account's name in the Rust message, but Build 14 maps all conflicts to a
   generic message; the UI explains the likely cause instead.
-- Rulebook assignment from the Accounts page waits for the Build 19 editor.
+- Rulebook assignment and editing: Build 19, [13 Account rulebook](13-rulebook.md), opened from the Setup panel and the row menu.
 - Account edits may change currency, time zone or day start after Build 15.5 observations exist. Observations keep the
   units and session they were recorded with, so later comparisons refuse mismatches instead of converting. The edit
   warning covers re-derived trades only; warning about recorded checkpoints needs an evidence hook (future Claude

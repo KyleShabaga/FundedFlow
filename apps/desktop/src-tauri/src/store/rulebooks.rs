@@ -10,9 +10,10 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 use crate::domain::{new_id, now, parse_instant};
 use crate::error::{AppError, AppResult, FieldIssue, Issues};
 use crate::rulebook::{
-    check_rule_definitions, AccountRulebookAssignment, ApplicableRulebook, ApplicableRulebookQuery, AssignmentInput,
-    RuleApplicability, RuleClaim, RuleDefinition, RuleDefinitionInput, Rulebook, RulebookDraftInput,
-    RulebookVersion, RulebookVersionDetail, SourceConflictInput, RULE_PARAMETER_SCHEMA_VERSION,
+    check_rule_definitions, AccountRulebookAssignment, ApplicabilityInput, ApplicableRulebook, ApplicableRulebookQuery,
+    AssignmentGuard, AssignmentInput, ChangeContext, RuleApplicability, RuleClaim, RuleDefinition, RuleDefinitionInput,
+    Rulebook, RulebookDraftInput, RulebookDraftUpdate, RulebookEvent, RulebookEventQuery, RulebookVersion,
+    RulebookVersionDetail, SourceConflictInput, RULE_PARAMETER_SCHEMA_VERSION,
 };
 use crate::store::opt_text;
 
@@ -246,22 +247,129 @@ fn stored(value: &str) -> String {
 
 /// Create a draft version: of an existing rulebook, or of a new one. A
 /// private rulebook's draft never has catalogue applicability.
+///
+/// Test convenience: the same with the default `local_user` audit context.
+#[cfg(test)]
 pub fn create_draft(conn: &mut Connection, input: RulebookDraftInput) -> AppResult<RulebookVersionDetail> {
-    let mut issues = Issues::default();
-    check_instant(&mut issues, "capturedAt", Some(&input.captured_at));
-    check_instant(&mut issues, "effectiveFrom", input.effective_from.as_deref());
-    check_instant(&mut issues, "effectiveTo", input.effective_to.as_deref());
-    if input.rulebook_id.is_some() == input.new_rulebook.is_some() {
-        issues.add("rulebookId", "Give either an existing rulebook or a new one");
-    }
-    let window = (input.effective_from.as_deref().and_then(parse_instant), input.effective_to.as_deref().and_then(parse_instant));
+    create_draft_with(conn, input, ChangeContext::local())
+}
+
+/// Checks shared by a new draft and a saved one.
+fn check_draft_content(
+    issues: &mut Issues,
+    captured_at: &str,
+    effective_from: Option<&str>,
+    effective_to: Option<&str>,
+    rules: &[RuleDefinitionInput],
+) {
+    check_instant(issues, "capturedAt", Some(captured_at));
+    check_instant(issues, "effectiveFrom", effective_from);
+    check_instant(issues, "effectiveTo", effective_to);
+    let window = (effective_from.and_then(parse_instant), effective_to.and_then(parse_instant));
     if let (Some(from), Some(to)) = window
         && to <= from
     {
         issues.add("effectiveTo", "Must be after effectiveFrom");
     }
-    issues.0.extend(check_rule_definitions(&input.rules));
+    issues.0.extend(check_rule_definitions(rules));
+}
+
+fn check_context(context: &ChangeContext) -> AppResult<()> {
+    let actor = context.actor.trim();
+    if actor.is_empty() || actor.chars().count() > 200 {
+        return Err(AppError::invalid("actor", "Name who is making the change (at most 200 characters)"));
+    }
+    if context.reason.as_ref().is_some_and(|r| r.chars().count() > 2_000) {
+        return Err(AppError::invalid("reason", "Use at most 2,000 characters"));
+    }
+    Ok(())
+}
+
+/// One append-only audit row, written in the caller's transaction.
+pub(crate) fn record_event(
+    conn: &Connection,
+    version_id: &str,
+    action: &str,
+    context: &ChangeContext,
+    account: Option<(&str, Option<&str>)>,
+) -> AppResult<()> {
+    conn.execute(
+        "INSERT INTO rulebook_events (id, rulebook_id, rulebook_version_id, account_id, assignment_id, action, actor,
+                                      reason, occurred_at)
+         SELECT ?1, rulebook_id, id, ?3, ?4, ?5, ?6, ?7, ?8 FROM rulebook_versions WHERE id = ?2",
+        params![
+            new_id(),
+            version_id,
+            account.map(|a| a.0),
+            account.and_then(|a| a.1),
+            action,
+            context.actor.trim(),
+            opt_text(context.reason.clone()),
+            now()
+        ],
+    )?;
+    Ok(())
+}
+
+fn insert_content(
+    tx: &Connection,
+    version_id: &str,
+    rules: &[RuleDefinitionInput],
+    applicability: &[ApplicabilityInput],
+    at: &str,
+) -> AppResult<()> {
+    for rule in rules {
+        tx.execute(
+            "INSERT INTO rule_definitions (id, rulebook_version_id, rule_key, rule_type, parameter_schema_version,
+                                           parameters_json, provider_label, display_label, source_text, support_status,
+                                           override_kind, display_order, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13)",
+            params![
+                new_id(),
+                version_id,
+                rule.rule_key,
+                rule.rule_type,
+                rule.parameter_schema_version,
+                rule.parameters.to_string(),
+                rule.provider_label,
+                opt_text(rule.display_label.clone()),
+                rule.source_text,
+                rule.support_status,
+                rule.override_kind,
+                rule.display_order,
+                at
+            ],
+        )?;
+    }
+    for a in applicability {
+        tx.execute(
+            "INSERT INTO rule_applicability (id, rulebook_version_id, catalogue_version_id, programme_phase_id, phase_path_id)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![new_id(), version_id, a.catalogue_version_id, a.programme_phase_id, a.phase_path_id],
+        )?;
+    }
+    Ok(())
+}
+
+/// `create_draft`, recording who created it and why.
+pub fn create_draft_with(
+    conn: &mut Connection,
+    input: RulebookDraftInput,
+    context: ChangeContext,
+) -> AppResult<RulebookVersionDetail> {
+    let mut issues = Issues::default();
+    if input.rulebook_id.is_some() == input.new_rulebook.is_some() {
+        issues.add("rulebookId", "Give either an existing rulebook or a new one");
+    }
+    check_draft_content(
+        &mut issues,
+        &input.captured_at,
+        input.effective_from.as_deref(),
+        input.effective_to.as_deref(),
+        &input.rules,
+    );
     issues.into_result()?;
+    check_context(&context)?;
 
     let at = now();
     let tx = conn.transaction()?;
@@ -327,41 +435,13 @@ pub fn create_draft(conn: &mut Connection, input: RulebookDraftInput) -> AppResu
             stored(&input.captured_at),
             input.effective_from.as_deref().map(stored),
             input.effective_to.as_deref().map(stored),
-            opt_text(input.change_reason),
+            opt_text(input.change_reason.clone()),
             input.supersedes_version_id,
             at
         ],
     )?;
-    for rule in &input.rules {
-        tx.execute(
-            "INSERT INTO rule_definitions (id, rulebook_version_id, rule_key, rule_type, parameter_schema_version,
-                                           parameters_json, provider_label, display_label, source_text, support_status,
-                                           override_kind, display_order, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13)",
-            params![
-                new_id(),
-                id,
-                rule.rule_key,
-                rule.rule_type,
-                rule.parameter_schema_version,
-                rule.parameters.to_string(),
-                rule.provider_label,
-                opt_text(rule.display_label.clone()),
-                rule.source_text,
-                rule.support_status,
-                rule.override_kind,
-                rule.display_order,
-                at
-            ],
-        )?;
-    }
-    for a in &input.applicability {
-        tx.execute(
-            "INSERT INTO rule_applicability (id, rulebook_version_id, catalogue_version_id, programme_phase_id, phase_path_id)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![new_id(), id, a.catalogue_version_id, a.programme_phase_id, a.phase_path_id],
-        )?;
-    }
+    insert_content(&tx, &id, &input.rules, &input.applicability, &at)?;
+    record_event(&tx, &id, "draft_created", &ChangeContext { reason: context.reason.clone().or(input.change_reason.clone()), ..context }, None)?;
     tx.commit()?;
     get_version(conn, &id)
 }
@@ -408,21 +488,91 @@ fn publish_issues(d: &RulebookVersionDetail, reviewer: Option<&str>) -> Vec<Fiel
 }
 
 /// Publish one step: a draft becomes `needs_review` (for a private rulebook
-/// that puts it in use); a catalogue version in review becomes `verified`
+/// that puts it in use and records the user's confirmation, `user_confirmed_at`); a catalogue version in review becomes `verified`
 /// with the named reviewer, and the version it supersedes is marked superseded.
+///
+/// Test convenience: the same with the default `local_user` audit context.
+#[cfg(test)]
 pub fn publish(conn: &mut Connection, id: &str, reviewer: Option<String>) -> AppResult<RulebookVersionDetail> {
-    let detail = get_version(conn, id)?;
+    publish_with(conn, id, reviewer, None, ChangeContext::local())
+}
+
+/// The version as last read by the caller. A different `updated_at` means
+/// someone else changed it since: a conflict, never a silent overwrite.
+fn check_revision(detail: &RulebookVersionDetail, expected_updated_at: Option<&str>) -> AppResult<()> {
+    match expected_updated_at {
+        Some(expected) if parse_instant(expected) != parse_instant(&detail.version.updated_at) => Err(AppError::Conflict {
+            message: format!(
+                "rulebook version {} changed since it was opened; reload it before saving",
+                detail.version.version_number
+            ),
+        }),
+        _ => Ok(()),
+    }
+}
+
+/// A draft that supersedes `S` is stale once another version newer than `S`
+/// has been published: publishing it would hide those terms.
+fn check_base_current(conn: &Connection, detail: &RulebookVersionDetail) -> AppResult<()> {
+    let Some(base) = &detail.version.supersedes_version_id else { return Ok(()) };
+    let newer: Option<i64> = conn
+        .query_row(
+            "SELECT v.version_number FROM rulebook_versions v JOIN rulebook_versions b ON b.id = ?2
+             WHERE v.rulebook_id = b.rulebook_id AND v.id <> ?1 AND v.version_number > b.version_number
+               AND v.verification_status NOT IN ('draft', 'rejected')
+             ORDER BY v.version_number DESC LIMIT 1",
+            params![detail.version.id, base],
+            |r| r.get(0),
+        )
+        .optional()?;
+    match newer {
+        Some(n) => Err(AppError::Conflict {
+            message: format!("version {n} was published after this draft was started; start a new draft from it"),
+        }),
+        None => Ok(()),
+    }
+}
+
+/// `updated_at` for a write: now, but always later than the previous value,
+/// so two saves within one millisecond still change the revision.
+fn next_revision(previous: &str) -> String {
+    let at = chrono::Utc::now();
+    match parse_instant(previous) {
+        Some(prev) if prev >= at => crate::domain::format_instant(prev + chrono::Duration::milliseconds(1)),
+        _ => crate::domain::format_instant(at),
+    }
+}
+
+/// `publish`, refusing a version changed since `expected_updated_at` or a
+/// draft whose base was superseded meanwhile, and recording who and why.
+pub fn publish_with(
+    conn: &mut Connection,
+    id: &str,
+    reviewer: Option<String>,
+    expected_updated_at: Option<&str>,
+    context: ChangeContext,
+) -> AppResult<RulebookVersionDetail> {
+    check_context(&context)?;
+    let tx = conn.transaction()?;
+    let detail = get_version(&tx, id)?;
+    check_revision(&detail, expected_updated_at)?;
     let issues = publish_issues(&detail, reviewer.as_deref());
     if !issues.is_empty() {
         return Err(AppError::validation(issues));
     }
-    let at = now();
-    let tx = conn.transaction()?;
+    let at = next_revision(&detail.version.updated_at);
     if detail.version.verification_status == "draft" {
+        check_base_current(&tx, &detail)?;
+        // Publishing the account's own rules is the user's confirmation of them (the engine needs
+        // it); it can only be recorded now, while the version is still a draft.
+        let private = detail.rulebook.owner_account_id.is_some();
         tx.execute(
-            "UPDATE rulebook_versions SET verification_status = 'needs_review', updated_at = ?2 WHERE id = ?1",
-            params![id, at],
+            "UPDATE rulebook_versions SET verification_status = 'needs_review', updated_at = ?2,
+                                          user_confirmed_at = CASE WHEN ?3 THEN ?2 ELSE user_confirmed_at END
+             WHERE id = ?1",
+            params![id, at, private],
         )?;
+        record_event(&tx, id, "published", &context, None)?;
     } else {
         tx.execute(
             "UPDATE rulebook_versions SET verification_status = 'verified', verified_by = ?2, verified_at = ?3, updated_at = ?3
@@ -436,9 +586,142 @@ pub fn publish(conn: &mut Connection, id: &str, reviewer: Option<String>) -> App
                 params![prev, at],
             )?;
         }
+        record_event(&tx, id, "verified", &context, None)?;
     }
     tx.commit()?;
     get_version(conn, id)
+}
+
+/// Replace a never-published draft's rules, applicability, dates and reason.
+/// `expected_updated_at` is the draft as the caller last read it; any later
+/// change (another window, a publish, a discard) is a conflict.
+pub fn update_draft(
+    conn: &mut Connection,
+    id: &str,
+    expected_updated_at: &str,
+    input: RulebookDraftUpdate,
+    context: ChangeContext,
+) -> AppResult<RulebookVersionDetail> {
+    let mut issues = Issues::default();
+    check_draft_content(
+        &mut issues,
+        &input.captured_at,
+        input.effective_from.as_deref(),
+        input.effective_to.as_deref(),
+        &input.rules,
+    );
+    issues.into_result()?;
+    check_context(&context)?;
+    let tx = conn.transaction()?;
+    let detail = get_version(&tx, id)?;
+    if detail.version.verification_status != "draft" || detail.version.verified_at.is_some() {
+        return Err(AppError::Conflict {
+            message: format!(
+                "version {} is {} and can no longer be edited; start a new draft from it",
+                detail.version.version_number, detail.version.verification_status
+            ),
+        });
+    }
+    check_revision(&detail, Some(expected_updated_at))?;
+    if detail.rulebook.owner_account_id.is_some() && !input.applicability.is_empty() {
+        return Err(AppError::invalid("applicability", "An account-private rulebook does not apply to catalogue phases"));
+    }
+    if detail.version.supersedes_version_id.is_some() && opt_text(input.change_reason.clone()).is_none() {
+        return Err(AppError::invalid("changeReason", "A superseding version needs a reason"));
+    }
+    let at = next_revision(&detail.version.updated_at);
+    tx.execute(
+        "DELETE FROM rule_claims WHERE rule_definition_id IN (SELECT id FROM rule_definitions WHERE rulebook_version_id = ?1)",
+        [id],
+    )?;
+    tx.execute("DELETE FROM rule_definitions WHERE rulebook_version_id = ?1", [id])?;
+    tx.execute("DELETE FROM rule_applicability WHERE rulebook_version_id = ?1", [id])?;
+    tx.execute(
+        "UPDATE rulebook_versions SET captured_at = ?2, effective_from = ?3, effective_to = ?4, change_reason = ?5,
+                                      updated_at = ?6
+         WHERE id = ?1",
+        params![
+            id,
+            stored(&input.captured_at),
+            input.effective_from.as_deref().map(stored),
+            input.effective_to.as_deref().map(stored),
+            opt_text(input.change_reason.clone()),
+            at
+        ],
+    )?;
+    insert_content(&tx, id, &input.rules, &input.applicability, &at)?;
+    record_event(&tx, id, "draft_saved", &context, None)?;
+    tx.commit()?;
+    get_version(conn, id)
+}
+
+/// Set a draft aside: it becomes `rejected` and is kept, with the reason, so
+/// the history still shows it. Published versions are never discarded.
+pub fn discard_draft(
+    conn: &mut Connection,
+    id: &str,
+    expected_updated_at: &str,
+    context: ChangeContext,
+) -> AppResult<RulebookVersionDetail> {
+    check_context(&context)?;
+    if opt_text(context.reason.clone()).is_none() {
+        return Err(AppError::invalid("reason", "Say why the draft is discarded"));
+    }
+    let tx = conn.transaction()?;
+    let detail = get_version(&tx, id)?;
+    if detail.version.verification_status != "draft" {
+        return Err(AppError::Conflict {
+            message: format!(
+                "version {} is {}, not a draft",
+                detail.version.version_number, detail.version.verification_status
+            ),
+        });
+    }
+    check_revision(&detail, Some(expected_updated_at))?;
+    tx.execute(
+        "UPDATE rulebook_versions SET verification_status = 'rejected', updated_at = ?2 WHERE id = ?1",
+        params![id, next_revision(&detail.version.updated_at)],
+    )?;
+    record_event(&tx, id, "draft_discarded", &context, None)?;
+    tx.commit()?;
+    get_version(conn, id)
+}
+
+const EVENT: &str = "SELECT id, rulebook_id, rulebook_version_id, account_id, assignment_id, action, actor, reason, occurred_at
+                     FROM rulebook_events";
+
+fn event_row(r: &Row) -> rusqlite::Result<RulebookEvent> {
+    Ok(RulebookEvent {
+        id: r.get(0)?,
+        rulebook_id: r.get(1)?,
+        rulebook_version_id: r.get(2)?,
+        account_id: r.get(3)?,
+        assignment_id: r.get(4)?,
+        action: r.get(5)?,
+        actor: r.get(6)?,
+        reason: r.get(7)?,
+        occurred_at: r.get(8)?,
+    })
+}
+
+/// Audit events, oldest first: of one rulebook, or about one account (its
+/// assignments and its private rulebooks). Exactly one of the two is given.
+pub fn list_events(conn: &Connection, query: &RulebookEventQuery) -> AppResult<Vec<RulebookEvent>> {
+    match (&query.rulebook_id, &query.account_id) {
+        (Some(rulebook), None) => {
+            all(conn, &format!("{EVENT} WHERE rulebook_id = ?1 ORDER BY occurred_at, rowid"), [rulebook], event_row)
+        }
+        (None, Some(account)) => all(
+            conn,
+            &format!(
+                "{EVENT} WHERE account_id = ?1 OR rulebook_id IN (SELECT id FROM rulebooks WHERE owner_account_id = ?1)
+                 ORDER BY occurred_at, rowid"
+            ),
+            [account],
+            event_row,
+        ),
+        _ => Err(AppError::invalid("rulebookId", "Give either a rulebook or an account")),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -469,6 +752,8 @@ pub fn flag_conflict(conn: &mut Connection, input: SourceConflictInput) -> AppRe
          WHERE id = ?1 AND verification_status = 'verified'",
         params![version_id, at],
     )?;
+    let context = ChangeContext { actor: "local_user".into(), reason: Some(input.note.trim().to_string()) };
+    record_event(&tx, &version_id, "conflict_flagged", &context, None)?;
     tx.commit()?;
     let detail = get_version(conn, &version_id)?;
     Ok(detail.claims.into_iter().find(|c| c.id == id).expect("claim just written"))
@@ -481,9 +766,42 @@ fn is_trading_day(s: &str) -> bool {
 /// Assign a version to an account from a trading day. The account's current
 /// open assignment, if any, ends that day; an assignment is never moved,
 /// rewritten or switched to a newer version automatically.
+///
+/// Test convenience: the same with the default `local_user` audit context.
+#[cfg(test)]
 pub fn assign(conn: &mut Connection, input: AssignmentInput) -> AppResult<AccountRulebookAssignment> {
+    assign_with(conn, input, None)
+}
+
+/// `assign`, refusing when the account's open assignment is not the one the
+/// caller saw (another window assigned meanwhile), and recording who and why.
+pub fn assign_with(
+    conn: &mut Connection,
+    input: AssignmentInput,
+    guard: Option<AssignmentGuard>,
+) -> AppResult<AccountRulebookAssignment> {
+    let context = match &guard {
+        Some(g) => ChangeContext { actor: g.actor.clone(), reason: g.reason.clone() },
+        None => ChangeContext::local(),
+    };
+    check_context(&context)?;
     let tx = conn.transaction()?;
+    if let Some(g) = &guard {
+        let open: Option<String> = tx
+            .query_row(
+                "SELECT id FROM account_rulebook_assignments WHERE account_id = ?1 AND effective_to IS NULL",
+                [&input.account_id],
+                |r| r.get(0),
+            )
+            .optional()?;
+        if open != g.expected_open_assignment_id {
+            return Err(AppError::Conflict {
+                message: "the account's rulebook assignment changed since this page was opened; reload and review it".into(),
+            });
+        }
+    }
     let assignment = assign_in(&tx, input)?;
+    record_event(&tx, &assignment.rulebook_version_id, "assigned", &context, Some((&assignment.account_id, Some(&assignment.id))))?;
     tx.commit()?;
     Ok(assignment)
 }

@@ -261,9 +261,13 @@ export function Tabs({ items, value, defaultValue, onValueChange, label, childre
   );
 }
 
-export function TabPanel({ value, children, className }: { value: string; children: ReactNode; className?: string }) {
+/**
+ * One tab's content. `keepMounted` keeps it in the page (hidden) while another tab is shown, so a
+ * form inside keeps its unsaved state across tab switches.
+ */
+export function TabPanel({ value, children, className, keepMounted }: { value: string; children: ReactNode; className?: string; keepMounted?: boolean }) {
   return (
-    <RadixTabs.Content value={value} className={cx("ds-tab-panel", className)}>
+    <RadixTabs.Content value={value} forceMount={keepMounted ? true : undefined} className={cx("ds-tab-panel", keepMounted && "ds-tab-panel-kept", className)}>
       {children}
     </RadixTabs.Content>
   );

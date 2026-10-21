@@ -43,6 +43,7 @@ describe("JournalRepository", () => {
       rulebooks: {
         list: none, listVersions: none, getVersion: fail, getApplicable: fail, createDraft: fail,
         validateDraft: none, publish: fail, assign: fail, listAssignments: none, flagSourceConflict: fail,
+        updateDraft: fail, discardDraft: fail, listEvents: none,
       },
     };
     expect(await repo.accounts.list()).toEqual([]);

@@ -70,17 +70,20 @@ export function useAccountDialogs() {
 /** Row-menu entries for one account, in the order the account page shows them. */
 export function accountMenu(
   account: AccountViewModel,
-  { open, activate, activeId, onOpen, tradeCount, attemptNumber }: {
+  { open, activate, activeId, onOpen, onRulebook, tradeCount, attemptNumber }: {
     open: (d: AccountDialog) => void;
     activate: (a: AccountViewModel) => void;
     activeId: string | null;
     onOpen: () => void;
+    /** Opens the account's rulebook page (Build 19). */
+    onRulebook?: () => void;
     tradeCount: number | null;
     attemptNumber?: number;
   },
 ): MenuEntry[] {
   const archived = account.archivedAt !== null;
   const entries: MenuEntry[] = [{ label: "Open", onSelect: onOpen }];
+  if (onRulebook) entries.push({ label: archived ? "View rulebook" : "Rulebook and assignment", onSelect: onRulebook });
   if (archived) {
     entries.push({ type: "separator" }, { label: "Restore from archive", onSelect: () => open({ kind: "restore", account }) });
     return entries;

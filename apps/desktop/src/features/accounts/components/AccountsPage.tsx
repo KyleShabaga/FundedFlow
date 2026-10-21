@@ -162,7 +162,7 @@ export function AccountsPage() {
         <DropdownMenu
           label={`Actions for ${a.name}`}
           trigger={<IconButton size="sm" variant="ghost" label={`Actions for ${a.name}`} icon={<Ellipsis size={16} aria-hidden="true" />} />}
-          items={accountMenu(a, { open: dialogs.open, activate: dialogs.activate, activeId: dialogs.activeId, onOpen: () => open(a), tradeCount: null })}
+          items={accountMenu(a, { open: dialogs.open, activate: dialogs.activate, activeId: dialogs.activeId, onOpen: () => open(a), onRulebook: () => navigate(`/accounts/${encodeURIComponent(a.id)}/rulebook`), tradeCount: null })}
         />
       ),
     },
