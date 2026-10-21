@@ -219,6 +219,17 @@ impl Runtime {
         rt
     }
 
+    /// The same connection lock and native boundary as ordinary journal commands.
+    pub fn with_controls<T>(&self, f: impl FnOnce(&mut Connection, &Path) -> crate::data_controls::Result<T>) -> crate::data_controls::Result<T> {
+        if self.status().state != RuntimeState::Ready { return Err(crate::data_controls::fail(crate::data_controls::Code::Busy)); }
+        let path = self.path.as_ref().map_err(|_| crate::data_controls::fail(crate::data_controls::Code::Io))?;
+        let root = path.parent().ok_or_else(|| crate::data_controls::fail(crate::data_controls::Code::UnsafePath))?;
+        match lock(&self.conn).as_mut() {
+            Some(c) => f(c, root),
+            None => Err(crate::data_controls::fail(crate::data_controls::Code::Busy)),
+        }
+    }
+
     pub fn status(&self) -> RuntimeStatus {
         lock(&self.status).clone()
     }

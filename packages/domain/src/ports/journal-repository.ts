@@ -1,3 +1,4 @@
+import type { ArchiveExportRequest, CsvExportRequest, DataExportResult } from "../contracts/data-controls.js";
 import type { AccountRiskInputs, RiskInputsQuery, ObservationInput, ObservationCorrection, FinancialObservation, LedgerRevision, ReconciliationRequest, Reconciliation, ReconciliationResolutionInput, ReconciliationResolution } from "../risk/contracts.js";
 // The JournalRepository port: every read and write of the local journal goes
 // through this interface. It names only domain contracts, never a host type
@@ -233,7 +234,12 @@ export interface FinancialEvidenceRepository {
 }
 
 /** The local journal. */
+export interface DataControlsRepository {
+  exportArchive(request: ArchiveExportRequest): Promise<DataExportResult>;
+  exportCsv(request: CsvExportRequest): Promise<DataExportResult>;
+}
 export interface JournalRepository {
+  readonly dataControls: DataControlsRepository;
   readonly evidence: FinancialEvidenceRepository;
   readonly accounts: AccountRepository;
   readonly trades: TradeRepository;

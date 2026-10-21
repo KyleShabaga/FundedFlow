@@ -2,6 +2,7 @@
 // Proprietary and source-available, not open source. See LICENSE in the repository root.
 
 mod catalogue;
+mod data_controls;
 mod commands;
 mod csv_import;
 mod db;
@@ -49,6 +50,8 @@ pub fn run() {
             commands::list_financial_reconciliations,
             commands::resolve_financial_reconciliation,
             commands::list_reconciliation_resolutions,
+            commands::export_journal_archive,
+            commands::export_trade_csv,
             commands::runtime_status,
             commands::retry_runtime,
             commands::list_accounts,

@@ -458,3 +458,12 @@ pub async fn list_reconciliation_resolutions(
 ) -> AppResult<Vec<reconciliation::Resolution>> {
     db.with(|c| reconciliation::resolutions(c, &id))
 }
+
+#[tauri::command]
+pub async fn export_journal_archive(db: State<'_, Runtime>, request: crate::data_controls::ExportRequest) -> crate::data_controls::Result<crate::data_controls::ExportResult> {
+    db.with_controls(|c, root| crate::data_controls::export_journal(c, root, request))
+}
+#[tauri::command]
+pub async fn export_trade_csv(db: State<'_, Runtime>, request: crate::data_controls::CsvExportRequest) -> crate::data_controls::Result<crate::data_controls::ExportResult> {
+    db.with_controls(|c, _| crate::data_controls::export_trades(c, request))
+}

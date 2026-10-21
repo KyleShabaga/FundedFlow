@@ -24,6 +24,7 @@ describe("JournalRepository", () => {
     const none = () => Promise.resolve([]);
     const fail = () => Promise.reject(new RepositoryError({ kind: "unavailable", message: "offline" }));
     const repo: JournalRepository = {
+      dataControls: { exportArchive: fail, exportCsv: fail },
       evidence: { inputs: fail, create: fail, get: fail, list: none, correct: fail, ledgerHistory: none, correctLedger: fail, removeLedger: fail, reconcile: fail, reconciliations: none, resolve: fail, resolutions: none },
       accounts: {
         list: none, get: fail, listActive: none, create: fail, update: fail, archive: fail, restore: fail,

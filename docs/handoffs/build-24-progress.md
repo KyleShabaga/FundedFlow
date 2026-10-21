@@ -2,7 +2,7 @@
 
 Spec: https://app.notion.com/p/3fe1bd4b6bde81aaa955ded001bcf18d
 Branch: `feat/build-24-data-controls-backend`
-PR: pending initial draft creation (update immediately after creation).
+PR: https://github.com/KyleShabaga/FundedFlow/pull/43
 Base: accepted main `9d49d71`; schema 14. Build 16 PR #42 is unmerged and is not a dependency.
 
 ## Audit and dependencies
@@ -37,3 +37,9 @@ Last completed block: repository/spec/dependency audit; this document is the ini
 2. Implement and test Block A. Continue B–D with independent test/commit/push checkpoints; update this file and PR each time.
 3. Run full npm checks, native tests/Clippy and migration regressions. Audit changed paths for backend-only scope.
 4. Publish final evidence and explicit outstanding Build 20/25/Windows acceptance; do not merge or mark Notion Done.
+
+## Block A checkpoint
+
+Implemented native archive/CSV commands, portable DTOs and existing repository adapter methods. ZIP uses Stored entries only (no compression/encryption). SQLite online backup API preserves implicit rowids and WAL content; every table is also represented as typed lossless JSON, including rowids for ordered history. Table schemas, values/counts/IDs and attachment bytes are reconciled on validation. Destinations publish without overwriting an existing file; plaintext acknowledgement is mandatory. CSV includes all selected-account trades including deleted_at, known decimal values and blank unknowns; spreadsheet formulas are escaped only in the human export.
+
+Tests before this checkpoint: native WAL/table round-trip, attachment missing/corruption, Windows-safe paths/acknowledgement and CSV exact/account isolation. Remaining: restore/recovery, authoritative deletion, adversarial/legacy/wire tests and final full checks. Compile warnings for future block codes are temporary; final Clippy still pending.

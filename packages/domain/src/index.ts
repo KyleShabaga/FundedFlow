@@ -26,3 +26,4 @@ export * from "./ports/journal-repository.js";
 export * from "./risk/contracts.js";
 export * from "./risk/reconciliation.js";
 export * from "./risk/sufficiency.js";
+export * from "./contracts/data-controls.js";
