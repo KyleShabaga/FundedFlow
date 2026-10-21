@@ -800,7 +800,7 @@ fn evidence_command_wire_fixture() {
     .unwrap();
     assert_eq!(stored, payloads);
 }
-fn normalize_wire(
+pub(super) fn normalize_wire(
     v: &mut Value,
     key: Option<&str>,
     ids: &mut std::collections::BTreeMap<String, String>,

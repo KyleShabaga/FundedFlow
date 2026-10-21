@@ -226,10 +226,17 @@ pub struct RiskInputsQuery {
 /// callers freeze this payload when computing historical results.
 pub fn risk_inputs(
     conn: &mut Connection,
-    mut query: RiskInputsQuery,
+    query: RiskInputsQuery,
 ) -> AppResult<serde_json::Value> {
     let tx = conn.transaction()?;
-    let account = super::accounts::get_any(&tx, &query.account_id)?;
+    let out = risk_inputs_in(&tx, query)?;
+    tx.commit()?;
+    Ok(out)
+}
+
+/// `risk_inputs` inside the caller's transaction, so several reads share one database state.
+pub(crate) fn risk_inputs_in(tx: &Connection, mut query: RiskInputsQuery) -> AppResult<serde_json::Value> {
+    let account = super::accounts::get_any(tx, &query.account_id)?;
     let at = parse_payload_time(&query.as_of).map_err(|e| AppError::invalid("asOf", e))?;
     let tz = crate::domain::parse_tz(&account.timezone)
         .ok_or_else(|| AppError::invalid("timezone", "invalid stored zone"))?;
@@ -237,7 +244,7 @@ pub fn risk_inputs(
         .ok_or_else(|| AppError::invalid("tradingDayResetTime", "invalid stored reset"))?;
     query.coverage.validate()?;
     let day = trading_day(at, tz, reset).to_string();
-    let assignments = super::rulebooks::list_assignments(&tx, &query.account_id)?;
+    let assignments = super::rulebooks::list_assignments(tx, &query.account_id)?;
     let active: Vec<_> = assignments
         .iter()
         .filter(|a| a.effective_from <= day && a.effective_to.as_ref().is_none_or(|end| end > &day))
@@ -253,10 +260,10 @@ pub fn risk_inputs(
             .iter()
             .any(|v: &crate::rulebook::RulebookVersionDetail| v.version.id == a.rulebook_version_id)
         {
-            versions.push(super::rulebooks::get_version(&tx, &a.rulebook_version_id)?);
+            versions.push(super::rulebooks::get_version(tx, &a.rulebook_version_id)?);
         }
     }
-    let observations = list(&tx, &query.account_id)?;
+    let observations = list(tx, &query.account_id)?;
     if !observations.iter().any(|o| {
         o.input.kind == "opening_balance"
             && o.input.value.is_some()
@@ -304,10 +311,9 @@ pub fn risk_inputs(
         missing.push("rulebook_assignment");
     }
     let out = serde_json::json!({"schemaVersion":1,"account":account,"asOf":format_instant(at),"effectiveTradingDay":trading_day(at,tz,reset).to_string(),
-        "observations":observations,"trades":super::trades::list(&tx,&query.account_id)?,"ledger":super::ledger::list(&tx,&query.account_id)?,
-        "ledgerHistory":super::ledger::history(&tx,&query.account_id)?,"phaseHistory":super::catalogue::list_phase_events(&tx,&query.account_id)?,
-        "catalogueLink":super::catalogue::get_link(&tx,&query.account_id)?,"assignments":assignments,"rulebookVersions":versions,
+        "observations":observations,"trades":super::trades::list(tx,&query.account_id)?,"ledger":super::ledger::list(tx,&query.account_id)?,
+        "ledgerHistory":super::ledger::history(tx,&query.account_id)?,"phaseHistory":super::catalogue::list_phase_events(tx,&query.account_id)?,
+        "catalogueLink":super::catalogue::get_link(tx,&query.account_id)?,"assignments":assignments,"rulebookVersions":versions,
         "applicableAssignment":applicable_assignment,"applicableRulebook":null,"coverage":query.coverage,"missingInputs":missing});
-    tx.commit()?;
     Ok(out)
 }
