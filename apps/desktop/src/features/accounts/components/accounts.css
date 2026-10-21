@@ -69,7 +69,7 @@
 .acct-lineage-node b { overflow-wrap: anywhere; }
 
 /* Header account switcher */
-.acct-switch-wrap { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); min-width: 0; }
+.acct-switch-wrap { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .acct-switch-caption { font-size: 12px; color: var(--ink-muted); }
 .acct-switch { display: inline-flex; align-items: center; gap: var(--space-2); height: 34px; max-width: min(420px, 100%); padding: 0 var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--line-100); background: var(--bg-100); color: var(--ink); font: 500 13px/18px var(--font-sans); cursor: pointer; box-shadow: none; text-decoration: none; }
 .acct-switch:hover { border-color: var(--line-200); }

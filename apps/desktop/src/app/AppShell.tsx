@@ -1,5 +1,5 @@
-import { BookOpen, ChartNoAxesCombined, ChevronDown, House, PanelLeftClose, PanelLeftOpen, Settings, Upload, Wallet, Workflow, Zap } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { BookOpen, ChartNoAxesCombined, ChevronDown, House, PanelLeftClose, PanelLeftOpen, Settings, Wallet, Workflow, Zap } from "lucide-react";
+import { type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { RuntimeRecoveryNotice } from "../components/RuntimeGate";
@@ -14,6 +14,15 @@ const routes = [
   { path: "/accounts", label: "Accounts", icon: Wallet },
   { path: "/settings", label: "Settings", icon: Settings },
 ];
+/**
+ * Sidebar submenus: only the views a section already serves at its own URL (Journal's ?view=, Insights' ?section=).
+ * The first child is the section's default view. Insights' Tags view only exists when the account has tags, so it
+ * stays a tab on the page rather than a sidebar entry.
+ */
+const subRoutes: Record<string, { param: string; items: { value: string; label: string }[] }> = {
+  "/journal": { param: "view", items: [{ value: "day", label: "By day" }, { value: "log", label: "Trade log" }, { value: "library", label: "Library" }] },
+  "/insights": { param: "section", items: [{ value: "overview", label: "Overview" }, { value: "calendar", label: "Calendar" }, { value: "breakdowns", label: "Breakdowns" }, { value: "attempts", label: "Attempts" }] },
+};
 const normalizePath = (pathname: string) => pathname.replace(/\/+$/, "").toLowerCase() || "/";
 /** The top-level section a path belongs to ("/accounts/abc" is in Accounts). */
 const sectionOf = (path: string) => routes.find(route => route.path !== "/" && path.startsWith(`${route.path}/`))?.path ?? path;
@@ -74,30 +83,106 @@ export function SidebarToggle({ collapsed, narrow, toggle }: { collapsed: boolea
   return narrow ? button : <Tooltip content={`${label} (Ctrl+B)`} side="right">{button}</Tooltip>;
 }
 
+/**
+ * The selected route's background and left accent, drawn once for the whole nav so a route change slides it from
+ * the old item to the new one. It follows the active route only (never hover). Its position is measured from the
+ * DOM on every route, width and submenu change, so fast navigation can't leave it on a stale item. It appears in
+ * place, without sliding, when the previous page had no sidebar item (Import, not found).
+ */
+function useActiveIndicator(nav: RefObject<HTMLElement | null>, layoutKey: string) {
+  const [box, setBox] = useState<{ top: number; height: number; slide: boolean } | null>(null);
+  const measure = useCallback(() => {
+    const root = nav.current;
+    const active = root?.querySelector<HTMLElement>('.shell-nav-link[aria-current="page"]');
+    if (!root || !active) { setBox(null); return; }
+    const top = active.getBoundingClientRect().top - root.getBoundingClientRect().top;
+    const height = active.offsetHeight;
+    setBox(previous => previous && previous.top === top && previous.height === height ? previous : { top, height, slide: previous !== null });
+  }, [nav]);
+  // layoutKey changes whenever the active item or the items above it may have moved.
+  useLayoutEffect(measure, [measure, layoutKey]);
+  useEffect(() => {
+    const root = nav.current;
+    if (!root || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [nav, measure]);
+  return box;
+}
+
 export function SidebarNav({ collapsed }: { collapsed: boolean }) {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const activePath = normalizePath(pathname);
   const developerRoute = import.meta.env.DEV && activePath === "/settings/developer";
-  const item = (route: typeof routes[number]) => (
-    <Link key={route.path} to={route.path}
-      aria-current={activePath === route.path || (route.path === "/accounts" && sectionOf(activePath) === "/accounts") || (route.path === "/journal" && (isTradePath(activePath) || isDayReviewPath(activePath))) || (developerRoute && route.path === "/settings") ? "page" : undefined}
+  const isActive = (path: string) => activePath === path || (path === "/accounts" && sectionOf(activePath) === "/accounts") || (path === "/journal" && (isTradePath(activePath) || isDayReviewPath(activePath))) || (developerRoute && path === "/settings");
+  // A section's submenu opens while you are in it; its chevron overrides that until you next enter the section.
+  const [openOverride, setOpenOverride] = useState<Record<string, boolean>>({});
+  const activeSection = routes.find(route => isActive(route.path))?.path;
+  useEffect(() => {
+    if (!activeSection) return;
+    setOpenOverride(value => {
+      if (!(activeSection in value)) return value;
+      const next = { ...value };
+      delete next[activeSection];
+      return next;
+    });
+  }, [activeSection]);
+  const isOpen = (path: string) => !collapsed && (openOverride[path] ?? path === activeSection);
+  const nav = useRef<HTMLElement>(null);
+  const indicator = useActiveIndicator(nav, `${pathname}|${collapsed}|${Object.keys(subRoutes).map(isOpen).join()}`);
+
+  const link = (route: typeof routes[number]) => (
+    <Link key={route.path} to={route.path} aria-current={isActive(route.path) ? "page" : undefined}
       className="shell-nav-link" aria-label={route.label} title={route.label}>
       <route.icon size={20} aria-hidden="true" />
-      <span className={collapsed ? "ds-sr-only" : undefined}>{route.label}</span>
+      <span className={collapsed ? "ds-sr-only" : "shell-nav-label"}>{route.label}</span>
     </Link>
   );
+  const item = (route: typeof routes[number]) => {
+    const sub = subRoutes[route.path];
+    if (!sub || collapsed) return link(route);
+    const open = isOpen(route.path);
+    const listId = `shell-subnav-${route.path.slice(1)}`;
+    const current = new URLSearchParams(search).get(sub.param);
+    const selected = activePath === route.path ? (sub.items.some(i => i.value === current) ? current : current === null ? sub.items[0].value : null) : null;
+    return (
+      <div key={route.path} className="shell-nav-group">
+        <div className="shell-nav-row">
+          {link(route)}
+          <button type="button" className="shell-nav-expand" aria-expanded={open} aria-controls={listId} aria-label={`${route.label} views`}
+            onClick={() => setOpenOverride(value => ({ ...value, [route.path]: !open }))}>
+            <ChevronDown size={14} aria-hidden="true" />
+          </button>
+        </div>
+        {open && (
+          <ul id={listId} className="shell-subnav" aria-label={`${route.label} views`}>
+            {sub.items.map((child, index) => (
+              <li key={child.value}>
+                {/* "true", not "page": the section link above stays the page-level current item. */}
+                <Link to={index === 0 ? route.path : `${route.path}?${sub.param}=${child.value}`} className="shell-subnav-link"
+                  aria-current={selected === child.value ? "true" : undefined}>{child.label}</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
   return (
     <>
       <div className="shell-brand">
         <BrandLogo showName={!collapsed} />
       </div>
-      <nav id="primary-navigation" aria-label="Primary navigation" className="shell-nav">
+      <nav ref={nav} id="primary-navigation" aria-label="Primary navigation" className={`shell-nav${indicator ? " has-indicator" : ""}`}>
+        {indicator && <span aria-hidden="true" className={`shell-nav-indicator${indicator.slide ? " is-sliding" : ""}`}
+          style={{ transform: `translateY(${indicator.top}px)`, height: indicator.height }} />}
         <div className="shell-nav-main">{routes.slice(0, 4).map(item)}</div>
         <div className="shell-nav-footer">
-          {item(routes[4])}
+          {link(routes[4])}
           <p className="shell-local" title="Saved on this computer">
             <span aria-hidden="true">•</span>
-            <span className={collapsed ? "ds-sr-only" : undefined}>Saved on this computer</span>
+            <span className={collapsed ? "ds-sr-only" : "shell-nav-label"}>Saved on this computer</span>
           </p>
         </div>
       </nav>
@@ -123,9 +208,8 @@ export function PageHeader({ title }: { title: string }) {
       </div>
       <div className="shell-import">
         {/* Quick import (Build 18.5) or the full wizard (Build 18); each shows its own runtime and account states. */}
-        <DropdownMenu label="Import CSV" trigger={
-          <Button variant="primary" aria-current={pathname === "/import" || pathname === "/import/quick" ? "page" : undefined}
-            icon={<Upload size={16} aria-hidden="true" />}>Import CSV<ChevronDown size={14} aria-hidden="true" className="shell-import-caret" /></Button>
+        <DropdownMenu label="Import" trigger={
+          <Button variant="ghost" aria-current={pathname === "/import" || pathname === "/import/quick" ? "page" : undefined}>Import</Button>
         } items={[
           { label: "Quick import: a file you've imported before", icon: <Zap size={16} aria-hidden="true" />, onSelect: () => navigate("/import/quick") },
           { label: "Full wizard: first-time or custom files", icon: <Workflow size={16} aria-hidden="true" />, onSelect: () => navigate("/import") },
@@ -142,7 +226,7 @@ export function AppShell() {
   const { pathname } = useLocation();
   const normalizedPath = normalizePath(pathname);
   // Accounts (account detail) and Journal (trade detail, daily review) have nested pages; other unknown sub-paths stay "Page not found".
-  // Import has no sidebar item: it opens from the header's Import CSV action.
+  // Import has no sidebar item: it opens from the header's Import menu.
   const title = import.meta.env.DEV && normalizedPath === "/settings/developer"
     ? "Developer tools"
     : normalizedPath === "/import" ? "Import trades"

@@ -46,7 +46,7 @@ describe("import to every view", () => {
     const store = createAppStore({ accounts: [makeAccount({ id: "acct-a", name: "Eval A" })], activeId: "acct-a" });
     const { user } = renderApp("/journal", store);
     expect(await screen.findByText(/No trades in this account yet/)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Import CSV" }));
+    await user.click(screen.getByRole("button", { name: "Import" }));
     await user.click(await screen.findByRole("menuitem", { name: /Quick import/ }));
     await waitFor(() => expect(currentPath()).toBe("/import/quick"));
     await screen.findByRole("group", { name: "Choose a CSV file" });
@@ -70,8 +70,8 @@ describe("import to every view", () => {
     await go(user, "Insights");
     expect(await screen.findByText(/No closed trades in these attempts/)).toBeTruthy();
 
-    // Import CSV offers Quick import and the full wizard (Build 18.5); a generic CSV belongs in the wizard.
-    await user.click(screen.getByRole("button", { name: "Import CSV" }));
+    // The header Import menu offers Quick import and the full wizard (Build 18.5); a generic CSV belongs in the wizard.
+    await user.click(screen.getByRole("button", { name: "Import" }));
     await user.click(await screen.findByRole("menuitem", { name: /Full wizard/ }));
     await waitFor(() => expect(currentPath()).toBe("/import"));
     await screen.findByRole("group", { name: "Choose a CSV file" });

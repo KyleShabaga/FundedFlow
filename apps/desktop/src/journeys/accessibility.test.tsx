@@ -146,8 +146,9 @@ describe("keyboard: shell", () => {
     const toggle = screen.getByRole("button", { name: "Collapse sidebar" });
     expect(document.activeElement).toBe(toggle);
     const order: string[] = [];
-    for (let i = 0; i < 5; i++) { await user.tab(); order.push(document.activeElement?.getAttribute("aria-label") ?? ""); }
-    expect(order).toEqual(["Today", "Journal", "Insights", "Accounts", "Settings"]);
+    for (let i = 0; i < 7; i++) { await user.tab(); order.push(document.activeElement?.getAttribute("aria-label") ?? ""); }
+    // Each submenu's chevron follows its section link.
+    expect(order).toEqual(["Today", "Journal", "Journal views", "Insights", "Insights views", "Accounts", "Settings"]);
     await user.tab({ shift: true });
     expect(document.activeElement?.getAttribute("aria-label")).toBe("Accounts");
     await user.keyboard("{Control>}b{/Control}");

@@ -102,7 +102,7 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
 
   return (
     <div className="dc-page">
-      <p className="dc-sub">
+      <p className="dc-local-notice">
         FundedFlow keeps your journal only on this computer. Nothing is uploaded and nothing needs an account or internet connection.
       </p>
       {!op.ready && (
