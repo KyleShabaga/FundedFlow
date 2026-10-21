@@ -516,3 +516,231 @@ fn deletion_stale_preview_and_missing_confirmation_cannot_erase_new_data() {
     );
     assert_eq!(archive::dump(&c).unwrap(), before);
 }
+#[test]
+fn interrupted_restore_recovers_conflicting_attachment_bytes_with_the_original_database() {
+    let source = tempfile::tempdir().unwrap();
+    let mut from = journal(&source.path().join("source.db"));
+    let a = account(&mut from, "incoming");
+    let j = journal_note(&mut from, &a);
+    image(&from, source.path(), &j, "new-image", "same.png");
+    let out = source.path().join("with-images.zip");
+    archive::export(&from, &source.path().join("attachments"), &out, true).unwrap();
+    for success in [false, true] {
+        let target = tempfile::tempdir().unwrap();
+        let path = target.path().join(db::DB_FILE_NAME);
+        let mut c = journal(&path);
+        let old = account(&mut c, "old");
+        let j = journal_note(&mut c, &old);
+        image(&c, target.path(), &j, "old-image", "same.png");
+        let old_bytes = b"different original image";
+        fs::write(target.path().join("attachments/same.png"), old_bytes).unwrap();
+        c.execute(
+            "UPDATE attachments SET sha256=?1,byte_size=?2 WHERE id='old-image'",
+            rusqlite::params![filesystem::digest(old_bytes), old_bytes.len() as i64],
+        )
+        .unwrap();
+        let before = archive::dump(&c).unwrap();
+        let p = restore::inspect(
+            &c,
+            target.path(),
+            restore::InspectRequest {
+                source: out.to_string_lossy().into(),
+            },
+        )
+        .unwrap();
+        restore::prepare(
+            &c,
+            target.path(),
+            restore::RestoreRequest {
+                source: out.to_string_lossy().into(),
+                preview_token: p.preview_token,
+                confirmation: "REPLACE ENTIRE JOURNAL".into(),
+            },
+        )
+        .unwrap();
+        drop(c);
+        if success {
+            restore::recover(target.path(), &path).unwrap();
+            assert_eq!(
+                fs::read(target.path().join("attachments/same.png")).unwrap(),
+                b"private screenshot"
+            );
+        } else {
+            assert!(restore::recover_failing(target.path(), &path).is_err());
+            let c = journal(&path);
+            assert_eq!(archive::dump(&c).unwrap(), before);
+            assert_eq!(
+                fs::read(target.path().join("attachments/same.png")).unwrap(),
+                old_bytes
+            );
+        }
+    }
+}
+#[test]
+fn committed_delete_reports_cleanup_pending_and_retry_is_safe() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut c = journal(&dir.path().join("live.db"));
+    let a = account(&mut c, "A");
+    let j = journal_note(&mut c, &a);
+    image(&c, dir.path(), &j, "image", "image.png");
+    let p = deletion::preview(
+        &c,
+        dir.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Account { account_id: a },
+        },
+    )
+    .unwrap();
+    let file = dir.path().join("attachments/image.png");
+    fs::remove_file(&file).unwrap();
+    fs::create_dir(&file).unwrap();
+    assert_eq!(
+        deletion::execute(&mut c, dir.path(), approved(&p))
+            .unwrap()
+            .state,
+        "cleanup_pending"
+    );
+    assert!(archive::account_ids(&c).unwrap().is_empty());
+    fs::remove_dir(&file).unwrap();
+    fs::write(&file, b"pending bytes").unwrap();
+    deletion::recover_cleanup(&c, dir.path()).unwrap();
+    assert!(!file.exists());
+    deletion::recover_cleanup(&c, dir.path()).unwrap();
+}
+#[test]
+fn whole_journal_sqlite_write_failure_preserves_all_rows_and_bytes() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("live.db");
+    let mut c = journal(&path);
+    let a = account(&mut c, "A");
+    let j = journal_note(&mut c, &a);
+    image(&c, dir.path(), &j, "image", "image.png");
+    let before = archive::dump(&c).unwrap();
+    drop(c);
+    let mut read_only = archive::readonly(&path).unwrap();
+    let p = deletion::preview(
+        &read_only,
+        dir.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Journal,
+        },
+    )
+    .unwrap();
+    assert!(deletion::execute(&mut read_only, dir.path(), approved(&p)).is_err());
+    assert_eq!(archive::dump(&read_only).unwrap(), before);
+    deletion::recover_cleanup(&read_only, dir.path()).unwrap();
+    assert!(dir.path().join("attachments/image.png").exists());
+}
+#[test]
+fn financial_evidence_corrections_reconciliation_and_ledger_provenance_roundtrip_losslessly() {
+    use crate::store::{evidence, ledger, reconciliation};
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("live.db");
+    let mut c = journal(&path);
+    let a = account(&mut c, "financial");
+    let input = |kind: &str, value: &str, at: &str| evidence::ObservationInput {
+        account_id: a.clone(),
+        kind: kind.into(),
+        value: Some(value.into()),
+        currency: "USD".into(),
+        basis: "balance".into(),
+        observed_at: at.into(),
+        source_category: "firm_dashboard".into(),
+        source_reference: "synthetic dashboard".into(),
+        confirmation: "user_confirmed".into(),
+        confidence: "user_reported".into(),
+        valid_until: None,
+        actor: "tester".into(),
+        note: None,
+    };
+    let baseline = evidence::create(
+        &mut c,
+        input("opening_balance", "50000", "2026-10-19T00:00:00Z"),
+    )
+    .unwrap();
+    let observed = evidence::create(
+        &mut c,
+        input("balance", "49999.999999", "2026-10-20T00:00:00Z"),
+    )
+    .unwrap();
+    let corrected = evidence::correct(
+        &mut c,
+        &observed.id,
+        evidence::ObservationCorrection {
+            replacement: input("balance", "49999.999998", "2026-10-20T00:00:00Z"),
+            reason: "source correction".into(),
+        },
+    )
+    .unwrap();
+    ledger::create(
+        &mut c,
+        ledger::LedgerEntryInput {
+            account_id: a.clone(),
+            kind: "payout".into(),
+            amount: "-0.000002".into(),
+            affects_balance: None,
+            effective_at: "2026-10-19T14:00:00Z".into(),
+            note: None,
+        },
+    )
+    .unwrap();
+    let result = reconciliation::create(
+        &mut c,
+        reconciliation::ReconciliationRequest {
+            account_id: a.clone(),
+            observation_id: corrected.id,
+            baseline_observation_id: baseline.id,
+            as_of: "2026-10-20T00:00:00.000Z".into(),
+            evaluated_at: "2026-10-20T00:00:00.000Z".into(),
+            coverage: reconciliation::Coverage {
+                baseline: "available".into(),
+                closed_trades: "available".into(),
+                fees: "available".into(),
+                ledger: "available".into(),
+                open_positions: "missing".into(),
+                eod_history: "missing".into(),
+                intraday_history: "unsupported".into(),
+                source_reference: "synthetic checked interval".into(),
+            },
+        },
+    )
+    .unwrap();
+    reconciliation::resolve(
+        &mut c,
+        &result.id,
+        reconciliation::ResolutionInput {
+            status: "reviewed".into(),
+            actor: "tester".into(),
+            reason: "checked".into(),
+        },
+    )
+    .unwrap();
+    let before = archive::dump(&c).unwrap();
+    let out = dir.path().join("financial.zip");
+    archive::export(&c, &dir.path().join("attachments"), &out, true).unwrap();
+    let imported = archive::inspect_to(&out, dir.path()).unwrap();
+    let restored = archive::readonly(&imported.directory.path().join("journal.sqlite")).unwrap();
+    assert_eq!(archive::dump(&restored).unwrap(), before);
+    let trigger: String = c
+        .query_row(
+            "SELECT sql FROM sqlite_schema WHERE name='observation_no_update'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    c.execute_batch("DROP TRIGGER observation_no_update")
+        .unwrap();
+    c.execute("UPDATE financial_observations SET payload_json=json_set(payload_json,'$.accountId','another-attempt') WHERE id=?1",[observed.id]).unwrap();
+    c.execute_batch(&trigger).unwrap();
+    assert_eq!(
+        archive::export(
+            &c,
+            &dir.path().join("attachments"),
+            &dir.path().join("bad.zip"),
+            true
+        )
+        .unwrap_err()
+        .code,
+        Code::Integrity
+    );
+}

@@ -232,7 +232,9 @@ impl Runtime {
         // The safety image already contains the committed WAL. Closing prevents stale writes after confirmation.
         *conn=None;
         let mut status=lock(&self.status); status.state=RuntimeState::Failed; status.stage=RuntimeStage::Open;
-        status.failure=Some(failure(FailureCategory::OpenFailed, "Confirmed restore staged. Restart FundedFlow or retry runtime initialization to install it; data commands are paused.".into()));
+        let mut f=failure(FailureCategory::OpenFailed,"Confirmed restore staged".into());
+        f.message="A confirmed restore is staged. Restart FundedFlow or retry runtime initialization to install it; data commands are paused.".into();
+        status.failure=Some(f);
         Ok(result)
     }
 
@@ -331,7 +333,11 @@ impl Runtime {
                 .map_err(|_| (failure(FailureCategory::OpenFailed, "Journal is already owned or its directory is unsafe".into()), None))?;
         }
         drop(ownership);
-        crate::data_controls::recover(root, path).map_err(|e| (failure(FailureCategory::OpenFailed, e.message), None))?;
+        crate::data_controls::recover(root, path).map_err(|e| {
+            let mut f=failure(FailureCategory::OpenFailed,e.message);
+            f.message="A pending restore could not finish recovery. Journal access is blocked. Preserve the operation directory, resolve filesystem or disk-space problems, then retry.".into();
+            (f,None)
+        })?;
         // Read the version first, without writing, so a failed attempt still
         // reports it and the stage shows whether an upgrade is about to run.
         if path.exists()
@@ -343,7 +349,11 @@ impl Runtime {
             }
         }
         let conn = db::open_file(path).map_err(|e| classify(&e, path))?;
-        crate::data_controls::recover_cleanup(&conn, root).map_err(|e| (failure(FailureCategory::OpenFailed, e.message), None))?;
+        crate::data_controls::recover_cleanup(&conn, root).map_err(|e| {
+            let mut f=failure(FailureCategory::OpenFailed,e.message);
+            f.message="Pending deletion cleanup could not finish. Logical deletion may already be committed. Resolve filesystem or disk-space problems, then retry.".into();
+            (f,None)
+        })?;
         let version = conn
             .pragma_query_value(None, "user_version", |r| r.get(0))
             .map_err(|e| (failure(FailureCategory::OpenFailed, e.to_string()), None))?;

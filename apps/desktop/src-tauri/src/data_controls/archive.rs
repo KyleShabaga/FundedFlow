@@ -69,6 +69,11 @@ fn quote(name: &str) -> String {
     format!("\"{}\"", name.replace('"', "\"\""))
 }
 pub fn dump(conn: &Connection) -> Result<Data> {
+    let pages: i64 = conn.pragma_query_value(None, "page_count", |r| r.get(0))?;
+    let page_size: i64 = conn.pragma_query_value(None, "page_size", |r| r.get(0))?;
+    if pages.saturating_mul(page_size) > MAX_ENTRY as i64 {
+        return Err(fail(Code::LimitExceeded));
+    }
     let mut stmt = conn.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")?;
     let tables = stmt
         .query_map([], |r| r.get::<_, String>(0))?
@@ -178,6 +183,11 @@ pub fn snapshot(conn: &Connection, destination: &Path) -> Result<()> {
     drop(backup);
     target.pragma_update(None, "journal_mode", "DELETE")?;
     drop(target);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(destination, fs::Permissions::from_mode(0o600))?;
+    }
     File::open(destination)?.sync_all()?;
     if fs::metadata(destination)?.len() > MAX_ENTRY {
         return Err(fail(Code::LimitExceeded));
@@ -227,10 +237,13 @@ pub fn export(
     }
     let data_path = temp.path().join("data.json");
     write_new(&data_path, &bytes)?;
+    let csv_path = temp.path().join("trades.csv");
+    export_csv(&c, &csv_path, None, true)?;
     let attached = inventory(&c, root)?;
     let mut files = vec![
         ("journal.sqlite".to_string(), image),
         ("data.json".to_string(), data_path),
+        ("trades.csv".to_string(), csv_path),
     ];
     for a in &attached {
         files.push((
@@ -313,12 +326,21 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
     regular(source)?;
     no_symlink_components(source)?;
     let source_hash = hash_file(source)?;
-    let input = File::open(source)?;
+    let mut input = File::open(source)?;
+    let mut magic = [0u8; 4];
+    input
+        .read_exact(&mut magic)
+        .map_err(|_| fail(Code::InvalidArchive))?;
+    if magic != *b"PK\x03\x04" {
+        return Err(fail(Code::InvalidArchive));
+    }
+    use std::io::Seek;
+    input.rewind()?;
     if input.metadata()?.len() > MAX_TOTAL + 2 * 1024 * 1024 {
         return Err(fail(Code::LimitExceeded));
     }
     let mut zip = ZipArchive::new(input)?;
-    if zip.len() > MAX_ENTRIES || zip.len() < 3 {
+    if zip.len() > MAX_ENTRIES || zip.len() < 4 {
         return Err(fail(Code::LimitExceeded));
     }
     let dir = tempfile::tempdir_in(workspace)?;
@@ -336,6 +358,7 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
                 .is_some_and(|m| m & 0o170000 != 0 && m & 0o170000 != 0o100000)
             || entry.compression() != zip::CompressionMethod::Stored
             || entry.encrypted()
+            || entry.extra_data().is_some_and(|bytes| !bytes.is_empty())
         {
             return Err(fail(Code::UnsafePath));
         }
@@ -404,15 +427,25 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
     {
         return Err(fail(Code::Integrity));
     }
-    let expected_payload: BTreeSet<String> = ["journal.sqlite".into(), "data.json".into()]
-        .into_iter()
-        .chain(
-            manifest
-                .attachments
-                .iter()
-                .map(|a| format!("attachments/{}", a.storage_key)),
-        )
-        .collect();
+    let expected_payload: BTreeSet<String> = [
+        "journal.sqlite".into(),
+        "data.json".into(),
+        "trades.csv".into(),
+    ]
+    .into_iter()
+    .chain(
+        manifest
+            .attachments
+            .iter()
+            .map(|a| format!("attachments/{}", a.storage_key)),
+    )
+    .collect();
+    let comparison = dir.path().join("csv-comparison");
+    fs::create_dir(&comparison)?;
+    let csv = export_csv(&c, &comparison.join("trades.csv"), None, true)?;
+    if hash_file(&dir.path().join("trades.csv"))? != csv.sha256 {
+        return Err(fail(Code::Integrity));
+    }
     if expected_payload != manifest.entries.iter().map(|e| e.path.clone()).collect() {
         return Err(fail(Code::Integrity));
     }
@@ -427,8 +460,14 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
 }
 fn schema(conn: &Connection) -> Result<Vec<(String, String, String)>> {
     let mut s = conn.prepare("SELECT type,name,sql FROM sqlite_schema WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY type,name")?;
-    Ok(s.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
-        .collect::<rusqlite::Result<_>>()?)
+    Ok(s.query_map([], |r| {
+        Ok((
+            r.get(0)?,
+            r.get(1)?,
+            r.get::<_, String>(2)?.replace("\r\n", "\n"),
+        ))
+    })?
+    .collect::<rusqlite::Result<_>>()?)
 }
 pub fn validate_database(path: &Path, version: u32) -> Result<()> {
     let c = readonly(path)?;
@@ -445,6 +484,30 @@ pub fn validate_database(path: &Path, version: u32) -> Result<()> {
     let integrity: String = c.query_row("PRAGMA integrity_check", [], |r| r.get(0))?;
     if integrity != "ok" || c.prepare("PRAGMA foreign_key_check")?.exists([])? {
         return Err(fail(Code::Integrity));
+    }
+    if version >= 9 {
+        for sql in [
+            "SELECT 1 FROM account_rulebook_assignments a JOIN rulebook_versions v ON v.id=a.rulebook_version_id JOIN rulebooks b ON b.id=v.rulebook_id WHERE b.owner_account_id IS NOT NULL AND b.owner_account_id<>a.account_id LIMIT 1",
+            "SELECT 1 FROM account_rulebook_assignments a JOIN account_phase_events e ON e.id=a.account_phase_event_id WHERE a.account_id<>e.account_id LIMIT 1",
+        ] {
+            if c.prepare(sql)?.exists([])? {
+                return Err(fail(Code::Integrity));
+            }
+        }
+    }
+    if version >= 14 {
+        for sql in [
+            "SELECT 1 FROM financial_observations WHERE json_extract(payload_json,'$.id') IS NOT id OR json_extract(payload_json,'$.accountId') IS NOT account_id OR json_extract(payload_json,'$.supersedesId') IS NOT supersedes_id LIMIT 1",
+            "SELECT 1 FROM financial_observations a JOIN financial_observations b ON b.id=a.supersedes_id WHERE a.account_id<>b.account_id LIMIT 1",
+            "SELECT 1 FROM ledger_revisions r JOIN account_ledger_entries e ON e.id=r.entry_id WHERE r.account_id<>e.account_id OR json_extract(r.entry_json,'$.id') IS NOT r.entry_id OR json_extract(r.entry_json,'$.accountId') IS NOT r.account_id LIMIT 1",
+            "SELECT 1 FROM ledger_revisions a JOIN ledger_revisions b ON b.id=a.supersedes_id WHERE a.account_id<>b.account_id OR a.entry_id<>b.entry_id LIMIT 1",
+            "SELECT 1 FROM financial_reconciliations WHERE json_extract(payload_json,'$.id') IS NOT id OR json_extract(payload_json,'$.accountId') IS NOT account_id OR json_extract(payload_json,'$.request.accountId') IS NOT account_id OR json_extract(payload_json,'$.observation.accountId') IS NOT account_id OR json_extract(payload_json,'$.baseline.accountId') IS NOT account_id LIMIT 1",
+            "SELECT 1 FROM reconciliation_resolutions WHERE json_extract(payload_json,'$.id') IS NOT id OR json_extract(payload_json,'$.reconciliationId') IS NOT reconciliation_id LIMIT 1",
+        ] {
+            if c.prepare(sql)?.exists([])? {
+                return Err(fail(Code::Integrity));
+            }
+        }
     }
     // Cross-account provenance which FK checks alone cannot establish.
     for sql in [
@@ -495,13 +558,16 @@ pub fn export_csv(
             "import_row_id",
             "notes",
             "deleted_at_utc",
+            "account_currency",
+            "account_name",
+            "account_timezone",
         ])
         .map_err(|_| fail(Code::Io))?;
-    let mut s = conn.prepare("SELECT account_id,id,symbol,side,quantity,entry_at,exit_at,trading_day,entry_price,exit_price,fees_micros,net_pnl_micros,pnl_status,source,import_batch_id,import_row_id,notes_md,deleted_at FROM trades WHERE (?1 IS NULL OR account_id=?1) ORDER BY account_id,entry_at,id")?;
+    let mut s = conn.prepare("SELECT t.account_id,t.id,t.symbol,t.side,t.quantity,t.entry_at,t.exit_at,t.trading_day,t.entry_price,t.exit_price,t.fees_micros,t.net_pnl_micros,t.pnl_status,t.source,t.import_batch_id,t.import_row_id,t.notes_md,t.deleted_at,a.currency,a.name,a.timezone FROM trades t JOIN accounts a ON a.id=t.account_id WHERE (?1 IS NULL OR t.account_id=?1) ORDER BY t.account_id,t.entry_at,t.id")?;
     let mut rows = s.query([account_id])?;
     while let Some(row) = rows.next()? {
         let mut cells = Vec::new();
-        for i in 0..18 {
+        for i in 0..21 {
             let value = if i == 10 || i == 11 {
                 row.get::<_, Option<i64>>(i)?
                     .map(crate::domain::micros_to_string)

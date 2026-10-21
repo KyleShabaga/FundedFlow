@@ -8,6 +8,8 @@ mod restore;
 pub use restore::{InspectRequest, RestorePreview, RestoreRequest, RestoreResult};
 pub use restore::{inspect as inspect_restore, prepare as prepare_restore, recover};
 #[cfg(test)]
+mod security_tests;
+#[cfg(test)]
 mod tests;
 
 pub use archive::ExportResult;
@@ -132,14 +134,14 @@ pub fn export_journal(
     )
 }
 pub fn export_trades(c: &rusqlite::Connection, request: CsvExportRequest) -> Result<ExportResult> {
-    if let Some(id) = &request.account_id {
-        if !c.query_row(
+    if let Some(id) = &request.account_id
+        && !c.query_row(
             "SELECT EXISTS(SELECT 1 FROM accounts WHERE id=?1)",
             [id],
             |r| r.get::<_, bool>(0),
-        )? {
-            return Err(fail(Code::Integrity));
-        }
+        )?
+    {
+        return Err(fail(Code::Integrity));
     }
     archive::export_csv(
         c,
@@ -163,3 +165,5 @@ pub fn filesystem_ownership(root: &std::path::Path) -> Result<std::fs::File> {
     fs2::FileExt::try_lock_exclusive(&file).map_err(|_| fail(Code::Busy))?;
     Ok(file)
 }
+#[cfg(test)]
+mod wire_tests;

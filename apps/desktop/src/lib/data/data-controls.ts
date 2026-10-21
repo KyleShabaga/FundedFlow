@@ -43,7 +43,7 @@ export function createDataControls(invoke: Invoke) {
   ): Promise<z.output<S>> {
     let raw: unknown;
     try {
-      raw = await invoke(command, { request });
+      raw = await invoke(command, request === undefined ? {} : { request });
     } catch (error) {
       const parsed = dataControlErrorSchema.safeParse(error);
       throw new DataControlFailure(

@@ -14,7 +14,7 @@ pub fn digest(bytes: &[u8]) -> String {
 }
 pub fn hash_file(path: &Path) -> Result<String> {
     let f = File::open(path)?;
-    if f.metadata()?.len() > MAX_TOTAL {
+    if f.metadata()?.len() > MAX_TOTAL + 2 * 1024 * 1024 {
         return Err(fail(Code::LimitExceeded));
     }
     let mut reader = std::io::BufReader::new(f);
@@ -31,7 +31,8 @@ pub fn hash_file(path: &Path) -> Result<String> {
 }
 /// Portable Windows-safe components, even when inspection runs on another OS.
 pub fn relative(key: &str) -> Result<()> {
-    if key.is_empty()
+    if !key.is_ascii()
+        || key.is_empty()
         || key.len() > 240
         || key.contains('\\')
         || key.contains(':')
@@ -66,6 +67,13 @@ pub fn relative(key: &str) -> Result<()> {
 }
 pub fn regular(path: &Path) -> Result<()> {
     let meta = fs::symlink_metadata(path).map_err(|_| fail(Code::MissingAttachment))?;
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        if meta.file_attributes() & 0x400 != 0 {
+            return Err(fail(Code::UnsafePath));
+        }
+    }
     if !meta.is_file() || meta.file_type().is_symlink() {
         return Err(fail(Code::UnsafePath));
     }
@@ -83,6 +91,13 @@ pub fn no_symlink_components(path: &Path) -> Result<()> {
     for part in path.components() {
         current.push(part);
         if let Ok(meta) = fs::symlink_metadata(&current) {
+            #[cfg(windows)]
+            {
+                use std::os::windows::fs::MetadataExt;
+                if meta.file_attributes() & 0x400 != 0 {
+                    return Err(fail(Code::UnsafePath));
+                }
+            }
             if meta.file_type().is_symlink() {
                 return Err(fail(Code::UnsafePath));
             }
@@ -132,4 +147,15 @@ pub fn publish(temp: tempfile::NamedTempFile, destination: &Path) -> Result<()> 
     temp.persist_noclobber(destination)
         .map_err(|_| fail(Code::Io))?;
     sync_dir(destination.parent().ok_or_else(|| fail(Code::UnsafePath))?)
+}
+
+pub fn private_dir(path: &Path) -> Result<()> {
+    no_symlink_components(path)?;
+    fs::create_dir_all(path)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o700))?;
+    }
+    Ok(())
 }

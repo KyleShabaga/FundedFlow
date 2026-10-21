@@ -227,6 +227,19 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
             "Whole-journal erasure also removes app-managed recovery copies; account deletion leaves them intact.".into()] })
 }
 pub fn execute(c: &mut Connection, root: &Path, request: DeleteRequest) -> Result<DeleteResult> {
+    // Files may be removed only after the SQLite commit is durable, even when the app normally uses NORMAL.
+    let previous: i64 = c.pragma_query_value(None, "synchronous", |r| r.get(0))?;
+    c.pragma_update(None, "synchronous", "FULL")?;
+    let result = execute_durable(c, root, request);
+    // Keeping FULL after a failed setting restore is safe; only the performance setting differs.
+    let _ = c.pragma_update(None, "synchronous", previous);
+    result
+}
+fn execute_durable(
+    c: &mut Connection,
+    root: &Path,
+    request: DeleteRequest,
+) -> Result<DeleteResult> {
     recover_cleanup(c, root)?;
     if root.join("data-controls-pending.json").exists() {
         return Err(fail(Code::RecoveryRequired));
@@ -264,7 +277,7 @@ pub fn execute(c: &mut Connection, root: &Path, request: DeleteRequest) -> Resul
     };
     let queue = root.join("data-controls-cleanup");
     no_symlink_components(&queue)?;
-    fs::create_dir_all(&queue)?;
+    private_dir(&queue)?;
     let marker = queue.join(format!("{operation_id}.json"));
     write_new(&marker, &serde_json::to_vec(&cleanup)?)?;
     sync_dir(&queue)?;
@@ -320,6 +333,9 @@ pub fn recover_cleanup(c: &Connection, root: &Path) -> Result<()> {
                 if path.exists() {
                     regular(&path)?;
                     fs::remove_file(&path)?;
+                    if let Some(parent) = path.parent() {
+                        sync_dir(parent)?;
+                    }
                 }
             }
         }
@@ -341,9 +357,15 @@ pub fn recover_cleanup(c: &Connection, root: &Path) -> Result<()> {
                 let path = root.join(key);
                 no_symlink_components(&path)?;
                 if path.is_dir() {
-                    fs::remove_dir_all(path)?;
+                    fs::remove_dir_all(&path)?;
+                    if let Some(parent) = path.parent() {
+                        sync_dir(parent)?;
+                    }
                 } else if path.exists() {
-                    fs::remove_file(path)?;
+                    fs::remove_file(&path)?;
+                    if let Some(parent) = path.parent() {
+                        sync_dir(parent)?;
+                    }
                 }
             }
         }

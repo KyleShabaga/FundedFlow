@@ -107,7 +107,8 @@ pub fn prepare(c: &Connection, root: &Path, request: RestoreRequest) -> Result<R
     }
     let id = crate::domain::new_id();
     let op = operation(root, &id)?;
-    fs::create_dir_all(&op)?;
+    private_dir(op.parent().ok_or_else(|| fail(Code::UnsafePath))?)?;
+    private_dir(&op)?;
     // No persistent intent exists yet: any failure here leaves only an inert operation directory.
     let candidate = op.join("candidate.db");
     fs::copy(staged.directory.path().join("journal.sqlite"), &candidate)?;

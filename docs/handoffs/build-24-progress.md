@@ -61,3 +61,13 @@ Verification: 13 native tests pass; typecheck passes. New tests cover actual led
 Known dependency: schema 14 unconditionally restricts phase-history deletion. Such account deletes remain blocked pending a reviewed policy/forward-only migration; no speculative migration 15 conflicts with unmerged Build 16 #42. Unknown audit/sync ownership also blocks account deletion. Exact current behavior is documented in build-24-data-controls.md.
 
 Next: Block D expand corrupt/malicious/resource/legacy/native-wire coverage, test cleanup failures and attachment rollback, run full npm/native/Clippy checks, record final matrix and Windows/Build 20/25 gates. All previous checkpoints are pushed to PR #43.
+
+## Block D verification checkpoint
+
+Prior completed commit: `9cd7d71` (C). Expanded to 23 native data-control tests: malicious paths/case aliases/link metadata, CRC/truncation/magic/resource/space limits, schema-code rejection, cross-account import/evidence integrity, populated v3 staging upgrades, attachment conflict rollback, cleanup_pending/retry, failed whole-journal writes and native wire fixtures. Archives include a reconciled trade CSV as well as exact table JSON/SQLite. Windows CRLF SQL definitions are normalized for cross-platform validation; other schema changes are refused. Deletion commits use FULL synchronization before file cleanup. Recovery failure messages no longer imply unchanged data after partial operations.
+
+Actual verification: full native suite 208 passed / 4 pre-existing Linux legacy-rulebook temporary-journal failures / 2 ignored. All 23 new tests pass without fixture-update mode. Strict all-targets Clippy passes. Full Vitest: 379 domain + 381 desktop; typecheck/build/package checks pass. Existing legacy command fixture changed only for the intentional preview handoff wording, and its 12 focused adapter/fixture tests pass. Native wire fixture normalizes volatile metadata only; real integrity is separately tested.
+
+Policy follow-up: https://app.notion.com/p/4001bd4b6bde81d09774d36d727b77be. Phase/link restrictions stay blocked. Packaged Windows, installer/cross-profile acceptance and Build 20/25 remain pending.
+
+Final hardening still in progress: contain interrupted restore inspection workspaces under a recognizable app-managed directory and include them in whole-journal cleanup; verify with focused tests. Then final changed-path/base audit, acceptance matrix, PR/Notion evidence. Do not mark Done.
