@@ -12,7 +12,8 @@ Node built-ins (`fs`, `net`, `process`, …), browser globals, network calls, cl
 depend only on the inputs. `npm run check:boundaries -w @fundedflow/domain`
 (`packages/domain/scripts/check-boundaries.mjs`) enforces this in CI:
 
-- `src/` may import only files inside `src/` and the allow-listed packages (`zod`). Build 16 adds `decimal.js`.
+- `src/` may import only files inside `src/` and the allow-listed packages (`zod`). The Build 16 engine uses
+  exact bigint/rational arithmetic and adds no decimal dependency.
 - Runtime dependencies in its `package.json` must also be on the allow-list.
 - `apps/desktop/src` must import `@fundedflow/domain` and not paths inside `packages/domain`.
 
@@ -32,8 +33,8 @@ type-check in the package.
   `apps/desktop/vite.config.ts` keeps `tsc --watch` running on the package. An edit under `packages/domain/src`
   is recompiled into `dist`, and Vite hot-reloads it.
 
-Later builds add modules beside the existing ones (engine: Build 16, CSV import: Build 17) and export them from
-`src/index.ts`. There are no deep imports.
+The Build 16 engine is in `src/engine`, exported from `src/index.ts`. CSV parsing remains authoritative in
+Rust (Build 17 regression coverage). There are no deep imports.
 
 ## Rulebook module (Build 9.5)
 
@@ -64,7 +65,8 @@ conversion test, pins the two sides together. See `docs/data-model.md#rulebooks`
 
 Rules for this module:
 
-- Catalogue DTOs are **new** wire shapes. No Tauri command sends them yet, and no existing IPC payload changed.
+- Catalogue DTOs are production wire shapes returned by `get_catalogue`, account-link and phase-event
+  commands through `JournalRepository.catalogue` and the Tauri adapter (Builds 9/10, PRs #27–28).
   They use `z.strictObject`, so an unknown field is rejected. For example, a drawdown term on an offer fails to parse.
 - Catalogue money is canonical decimal text that must already be exact in micro-units (`"105.2"`, not
   `"105.20"`), checked with `canonicalDecimal`/`toMicros`. Storage is `*_micros` like all other money. Minor
@@ -104,8 +106,8 @@ Money rules, all matching `apps/desktop/src-tauri/src/domain.rs`:
   trailing zeros are removed, and a mantissa below 2^96.
   - **Documented difference:** Rust rounds longer input while parsing. The domain package rejects it instead.
     These cases carry `tsDivergence` in the fixture.
-- Money arithmetic uses `bigint` micro-units, never `number`. Exact price/quantity arithmetic (Build 16) will use
-  `decimal.js` with explicit rounding, never its default settings.
+- Money arithmetic uses `bigint` micro-units, never `number`. Build 16 uses exact rational arithmetic for
+  ratios and thresholds; canonical rule shares are checked without floating-point conversion.
 - Some legacy account/trade input schemas still use `Number(v)` for sign/positive feedback. Build 15.5 removes that check from ledger amounts in favor of the existing exact money primitives. New financial evidence requires canonical exact micro-units; Rust re-validates every write.
 
 Time rules: instants cross boundaries as UTC ISO 8601 strings with an offset. A trading day comes from three

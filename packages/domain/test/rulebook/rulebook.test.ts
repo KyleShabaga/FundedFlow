@@ -15,6 +15,7 @@ import {
   rulebookDraftInputSchema,
   rulebookSchema,
   rulebookVersionSchema,
+  shareOfOne,
   type RuleDefinition,
   type RuleDefinitionInput,
   type RulebookVersionDetail,
@@ -72,6 +73,15 @@ describe("rulebook fixture", () => {
 });
 
 describe("rule values", () => {
+  it("compares consistency shares exactly at one without floating-point rounding", () => {
+    for (const value of ["1", "0.5", "0.9999999999999999999999999999", "0.0000000000000000000000000001"]) {
+      expect(shareOfOne.safeParse(value).success, value).toBe(true);
+    }
+    for (const value of ["1.0000000000000000000000000001", "0", "-0.5", "1.1", "1.0", "01", "1e-1"]) {
+      expect(shareOfOne.safeParse(value).success, value).toBe(false);
+    }
+  });
+
   it("keeps evaluation and funded terms apart", () => {
     expect(rule(0xa1, "daily_loss_limit").parameters).toMatchObject({ limit: { state: "disabled" }, condition: "always" });
     expect(rule(0xa2, "daily_loss_limit").parameters).toMatchObject({

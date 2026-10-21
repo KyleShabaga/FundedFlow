@@ -127,7 +127,9 @@ UI wiring belongs to Claude/Builds 19 and 21. Fetch fresh canonical data before 
 
 - Build 9.5 lacks explicit currency/boundary and several provider session/payout/execution semantics. The policy binds known units/boundaries to existing reviewed claims; it never defaults them. Firm-specific interpretation remains reviewable and must be sourced before integration.
 - Full intraday equity, concurrent positions, execution counts, qualifying payout evidence, waiting-day anchors/calendars and provider holiday/session rules remain unavailable. No extension to live broker feeds or competing normalization was introduced.
-- Build 9.5's shareOfOne validator still uses Number for bounds. A value just above one can round down in that validator; Build 16 independently checks the exact rational operands and fails closed. The publisher-schema fix belongs in a coordinated Build 9.5 follow-up.
+- Historical Build 9.5 follow-up, resolved by Build 10.5: `shareOfOne` now checks canonical text exactly,
+  rejecting `1.0000000000000000000000000001`. Rust and TypeScript boundary tests pin parity. Build 16's
+  independent exact operand checks remain in place.
 - Corrections change input identity. Existing immutable history is preserved; pre-Build-15.5 overwritten ledger history and historical fake-zero intent cannot be recovered.
 - Financial source completeness, manual observations, actor labels and prior-breach assertions are not independently authenticated. No official compliance certificate is produced.
 - Snapshot fields became nullable as documented; consumers must handle unknown values. No Claude UI or hooks were modified to demonstrate the engine.

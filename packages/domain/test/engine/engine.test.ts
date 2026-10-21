@@ -626,21 +626,23 @@ it("malformed stored times cannot be dropped and replaced by a zero daily P&L", 
   expect(r.realizedDayPnl).toBeNull();
 });
 
-it("exact share bounds cannot round an invalid ratio down to one", () => {
-  const i = inputs([
-    rule("consistency", {
+it("exact share bounds reject an invalid stored ratio before evaluation", () => {
+  const consistency = rule("consistency", {
       maxBestDayShare: {
         state: "value",
-        value: "1.0000000000000000000000000001",
+        value: "1",
       },
       denominator: "total_profit",
       appliesTo: "evaluation",
-    }),
-  ]);
+    });
+  if (consistency.ruleType !== "consistency") throw Error();
+  const i = inputs([consistency]);
+  // Simulate malformed historical input. The canonical input parser must reject this ratio
+  // before it can reach any calculation; floating-point rounding must not validate it as one.
+  consistency.parameters.maxBestDayShare = { state: "value", value: "1.0000000000000000000000000001" };
+  i.rulebookVersions[0]!.rules[0] = consistency;
   i.trades = [trade("150")];
-  const r = evaluateAccountRisk(i, policy(i));
-  expect(r.status).toBe("Unknown");
-  expect(r.rules[0]!.reasonCode).toBe("consistency_share_out_of_range");
+  expect(() => evaluateAccountRisk(i, policy(i))).toThrow(/canonical decimal greater than 0 and at most 1/);
 });
 it("a sourced soft daily threshold still stops current-day trading without failing the account", () => {
   const i = inputs([

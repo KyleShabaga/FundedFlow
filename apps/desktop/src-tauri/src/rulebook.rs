@@ -715,6 +715,10 @@ mod tests {
         assert!(check_parameters("consistency", &share("0.5")).is_ok());
         assert!(check_parameters("consistency", &share("1.5")).is_err());
         assert!(check_parameters("consistency", &share("0")).is_err());
+        for valid in ["1", "0.9999999999999999999999999999", "0.0000000000000000000000000001"] {
+            assert!(check_parameters("consistency", &share(valid)).is_ok(), "{valid}");
+        }
+        assert!(check_parameters("consistency", &share("1.0000000000000000000000000001")).is_err());
     }
 
     #[test]

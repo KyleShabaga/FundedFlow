@@ -75,6 +75,37 @@ fn count(conn: &Connection, table: &str) -> i64 {
 }
 
 #[test]
+fn archived_private_rulebooks_reject_all_authoring_without_changing_history() {
+    let mut conn = seeded();
+    let owner = account(&mut conn, "Owner");
+    let base = verified_100k(&mut conn);
+    let draft = private_copy(&mut conn, &owner, &base);
+    crate::store::accounts::archive(&mut conn, &owner).unwrap();
+    let before = super::upgrade_tests::dump(&conn, &[]);
+    let id = &draft.version.id;
+    assert!(store::update_draft(&mut conn, id, &draft.version.updated_at, content(&draft), me("Edit")).is_err());
+    assert!(store::publish_with(&mut conn, id, None, None, me("Publish")).is_err());
+    assert!(store::discard_draft(&mut conn, id, &draft.version.updated_at, me("Discard")).is_err());
+    assert!(store::create_draft_with(&mut conn, RulebookDraftInput {
+        rulebook_id: Some(draft.rulebook.id.clone()), new_rulebook: None,
+        applicability: vec![], ..super::rulebook_tests::draft(fixture_rules(0xa1), 0x43, 0x32)
+    }, me("Another version")).is_err());
+    assert!(store::create_draft_with(&mut conn, RulebookDraftInput {
+        rulebook_id: None, new_rulebook: Some(NewRulebook {
+            provider_id: None, owner_account_id: Some(owner.clone()), slug: "another-private".into(),
+            display_name: "Another private book".into(), description: None,
+        }), applicability: vec![], ..super::rulebook_tests::draft(fixture_rules(0xa1), 0x43, 0x32)
+    }, me("New book")).is_err());
+    assert!(store::flag_conflict(&mut conn, crate::rulebook::SourceConflictInput {
+        rule_definition_id: draft.rules[0].id.clone(), source_id: super::catalogue_tests::id(0x91),
+        field: None, provider_text: None, note: "Conflict".into(),
+    }).is_err());
+    assert_eq!(super::upgrade_tests::dump(&conn, &[]), before);
+    crate::store::accounts::restore(&mut conn, &owner).unwrap();
+    store::publish_with(&mut conn, id, None, None, me("Publish after restore")).unwrap();
+}
+
+#[test]
 fn a_draft_is_saved_only_against_the_revision_it_was_read_at() {
     let mut conn = seeded();
     let base = verified_100k(&mut conn);

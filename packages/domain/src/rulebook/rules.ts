@@ -25,8 +25,7 @@ const positiveCount = z.int().min(1);
 /** A share in (0, 1] as canonical decimal text ("0.5" = 50%). */
 export const shareOfOne = z.string().refine((v) => {
   if (canonicalDecimal(v) !== v) return false;
-  const n = Number(v);
-  return n > 0 && n <= 1;
+  return v === "1" || /^0\.\d*[1-9]\d*$/.test(v);
 }, "Use a canonical decimal greater than 0 and at most 1");
 
 /** Root symbol such as "ES" or "MES". */

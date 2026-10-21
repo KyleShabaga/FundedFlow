@@ -366,6 +366,45 @@ fn a_failure_during_the_rederive_leaves_the_journal_at_the_previous_version() {
 }
 
 #[test]
+fn retrying_a_partial_upgrade_preserves_the_original_pre_upgrade_backup() {
+    let db = Journal::copy_of(V3);
+    {
+        let conn = Connection::open(&db.0).unwrap();
+        conn.execute_batch("CREATE TRIGGER boom BEFORE UPDATE OF trading_day ON trades
+            BEGIN SELECT RAISE(ABORT, 'simulated failure'); END;").unwrap();
+    }
+    let original = dump(&read_only(&db.0), &[]);
+    assert!(matches!(open_file(&db.0), Err(MigrateError::Migration { from: 3, reached: 4, .. })));
+    let backup_bytes = std::fs::read(db.backup()).unwrap();
+    assert_eq!(version(&read_only(&db.backup())), 3);
+    {
+        let conn = Connection::open(&db.0).unwrap();
+        conn.execute_batch("DROP TRIGGER boom").unwrap();
+    }
+    let conn = open_file(&db.0).unwrap();
+    assert_eq!(version(&conn), latest_version());
+    assert_eq!(version(&read_only(&db.backup())), 4, "latest retry backup still has a stable path");
+    let retained: Vec<_> = std::fs::read_dir(db.0.parent().unwrap()).unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.file_name().unwrap().to_string_lossy().contains(".previous-")).collect();
+    assert_eq!(retained.len(), 1, "the original v3 recovery point must survive the retry");
+    assert_eq!(std::fs::read(&retained[0]).unwrap(), backup_bytes);
+    assert_eq!(dump(&read_only(&retained[0]), &[]), original);
+    assert_healthy(&conn);
+}
+
+#[test]
+fn failure_to_preserve_an_existing_backup_prevents_any_migration() {
+    let db = Journal::copy_of(V3);
+    let before = dump(&read_only(&db.0), &[]);
+    std::fs::create_dir(db.backup()).unwrap();
+    assert!(matches!(open_file(&db.0), Err(MigrateError::Backup { current: 3, .. })));
+    let conn = read_only(&db.0);
+    assert_eq!(version(&conn), 3);
+    assert_eq!(dump(&conn, &[]), before);
+}
+
+#[test]
 fn the_rederive_skips_rows_it_cannot_parse() {
     let mut conn = Connection::open_in_memory().unwrap();
     migrate(&mut conn).unwrap();

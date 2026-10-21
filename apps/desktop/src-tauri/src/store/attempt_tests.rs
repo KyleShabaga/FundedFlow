@@ -244,6 +244,33 @@ fn an_attempt_resets_once_and_an_archived_one_must_be_restored_first() {
 }
 
 #[test]
+fn same_day_resets_across_the_dst_overlap_keep_distinct_instants_and_attempts() {
+    let mut conn = db();
+    let a = accounts::create(&mut conn, with_ref("Before", "dst-number")).unwrap();
+    let first = attempts::reset(&mut conn, ResetInput {
+        effective_at: "2026-11-01T01:30:00-04:00".into(), external_ref: Some("dst-number".into()),
+        ..reset_input(&a.id, "First 01:30")
+    }).unwrap();
+    let second = attempts::reset(&mut conn, ResetInput {
+        effective_at: "2026-11-01T01:30:00-05:00".into(), external_ref: Some("dst-number".into()),
+        ..reset_input(&first.successor.id, "Second 01:30")
+    }).unwrap();
+    assert_eq!(first.link.effective_at, "2026-11-01T05:30:00.000Z");
+    assert_eq!(second.link.effective_at, "2026-11-01T06:30:00.000Z");
+    let chain = attempts::lineage(&conn, &second.successor.id).unwrap();
+    assert_eq!(chain.len(), 3);
+    assert!(chain.iter().all(|a| a.trade_count == 0 && a.net_pnl.is_none()));
+    assert_ne!(first.successor.id, second.successor.id);
+    let before = count(&conn, "SELECT COUNT(*) FROM account_status_events");
+    assert!(attempts::reset(&mut conn, ResetInput {
+        effective_at: "2026-11-01T01:30:00".into(), ..reset_input(&second.successor.id, "Missing offset")
+    }).is_err());
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM account_status_events"), before);
+    assert_eq!(accounts::get(&conn, &second.successor.id).unwrap().status, "active");
+    assert_eq!(attempts::lineage(&conn, &a.id).unwrap().len(), 3);
+}
+
+#[test]
 fn lineage_lists_attempts_in_order_from_any_member_with_per_attempt_figures() {
     let mut conn = db();
     let a1 = accounts::create(&mut conn, account_input("A1")).unwrap();
@@ -326,6 +353,60 @@ fn archived_accounts_are_browsable_read_only_and_restorable() {
     assert!(matches!(accounts::restore(&mut conn, &a.id), Err(AppError::Validation { .. })));
     let actions: Vec<String> = accounts::history(&conn, &a.id).unwrap().archive_events.into_iter().map(|e| e.action).collect();
     assert_eq!(actions, ["archived", "restored"]);
+}
+
+#[test]
+fn archived_account_edits_leave_identity_status_and_history_unchanged() {
+    let mut conn = db();
+    let a = accounts::create(&mut conn, account_input("Archived")).unwrap();
+    let t = trades::create(&mut conn, trade(&a.id)).unwrap();
+    accounts::archive(&mut conn, &a.id).unwrap();
+    let before = accounts::get_any(&conn, &a.id).unwrap();
+    let history = accounts::history(&conn, &a.id).unwrap();
+    let result = accounts::update(&mut conn, &a.id, AccountInput {
+        status: "closed".into(), prop_firm: Some("Must not be created".into()),
+        ..account_input("Edited")
+    });
+    assert!(result.is_err());
+    assert_eq!(accounts::get_any(&conn, &a.id).unwrap(), before);
+    assert_eq!(accounts::history(&conn, &a.id).unwrap(), history);
+    assert_eq!(trades::get(&conn, &t.id).unwrap(), t);
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM firms WHERE name = 'Must not be created'"), 0);
+}
+
+#[test]
+fn archived_trade_deletion_preserves_the_trade_journal_link_and_correction_history() {
+    let mut conn = db();
+    let a = accounts::create(&mut conn, account_input("Archived")).unwrap();
+    let t = trades::create(&mut conn, trade(&a.id)).unwrap();
+    let entry = super::journal::create(&mut conn, super::journal::JournalEntryInput {
+        account_id: a.id.clone(), trade_id: Some(t.id.clone()), entry_at: t.entry_at.clone(),
+        title: "History".into(), body: "Keep this".into(), tags: vec!["original".into()],
+    }).unwrap();
+    accounts::archive(&mut conn, &a.id).unwrap();
+    let corrections = trades::corrections(&conn, &t.id).unwrap();
+    assert!(trades::delete(&mut conn, &t.id).is_err());
+    assert_eq!(trades::get(&conn, &t.id).unwrap(), t);
+    assert_eq!(super::journal::get(&conn, &entry.id).unwrap(), entry);
+    assert_eq!(trades::corrections(&conn, &t.id).unwrap().len(), corrections.len());
+    accounts::restore(&mut conn, &a.id).unwrap();
+    trades::delete(&mut conn, &t.id).unwrap();
+}
+
+#[test]
+fn archived_journal_deletion_preserves_the_entry_and_tags_until_restore() {
+    let mut conn = db();
+    let a = accounts::create(&mut conn, account_input("Archived")).unwrap();
+    let entry = super::journal::create(&mut conn, super::journal::JournalEntryInput {
+        account_id: a.id.clone(), trade_id: None, entry_at: "2026-10-19T13:30:00Z".into(),
+        title: "History".into(), body: "Keep this".into(), tags: vec!["original".into()],
+    }).unwrap();
+    accounts::archive(&mut conn, &a.id).unwrap();
+    assert!(super::journal::delete(&conn, &entry.id).is_err());
+    assert_eq!(super::journal::get(&conn, &entry.id).unwrap(), entry);
+    accounts::restore(&mut conn, &a.id).unwrap();
+    super::journal::delete(&conn, &entry.id).unwrap();
+    assert!(super::journal::get(&conn, &entry.id).is_err());
 }
 
 #[test]
