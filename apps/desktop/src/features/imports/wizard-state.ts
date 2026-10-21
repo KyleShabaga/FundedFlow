@@ -22,7 +22,9 @@ export type FileProblem =
   | { kind: "not-csv"; name: string }
   | { kind: "too-large"; name: string; size: number }
   | { kind: "empty"; name: string }
-  | { kind: "unreadable"; name: string };
+  | { kind: "unreadable"; name: string }
+  /** Several files dropped at once: one CSV per import. */
+  | { kind: "several"; count: number };
 
 export interface WizardState {
   step: 0 | 1 | 2 | 3;
@@ -136,6 +138,8 @@ export function fileProblemText(problem: FileProblem): string {
       return `${problem.name} is empty. Choose the exported file with your trades.`;
     case "unreadable":
       return `${problem.name} couldn't be read as text (UTF-8). Export it again as CSV (UTF-8) and choose it again.`;
+    case "several":
+      return `${problem.count} files were dropped. Import one CSV at a time: drop or choose a single file.`;
   }
 }
 

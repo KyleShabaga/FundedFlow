@@ -11,6 +11,7 @@ import {
   FieldGroup,
   FileDropzone,
   focusFirstInvalid,
+  useWindowFileDropGuard,
   formatFileSize,
   IconButton,
   RadioGroup,
@@ -306,14 +307,107 @@ describe("Validation", () => {
 });
 
 describe("FileDropzone", () => {
+  // What WebView2 and Chromium hand a drop target for files from the operating system.
+  const files = (...list: File[]) => ({ dataTransfer: { files: list, types: ["Files"], dropEffect: "none" } });
+  const csv = (name = "Performance.csv") => new File(["a,b"], name, { type: "text/csv" });
+  const zone = () => screen.getByRole("group", { name: "Choose a CSV file" });
+
   it("hands dropped and browsed files to the caller", async () => {
     const onFiles = vi.fn();
     const { container } = render(<FileDropzone label="Choose a CSV file" hint="CSV up to 10 MB" accept=".csv" onFiles={onFiles} />);
-    const file = new File(["a,b"], "Performance.csv", { type: "text/csv" });
-    fireEvent.drop(screen.getByRole("group", { name: "Choose a CSV file" }), { dataTransfer: { files: [file] } });
+    const file = csv();
+    fireEvent.drop(zone(), files(file));
     expect(onFiles).toHaveBeenLastCalledWith([file]);
     await userEvent.upload(container.querySelector('input[type="file"]') as HTMLInputElement, file);
     expect(onFiles).toHaveBeenCalledTimes(2);
+    expect(onFiles).toHaveBeenLastCalledWith([file]);
+  });
+  it("accepts the drop, highlights while a file is over it and clears when the drag leaves", () => {
+    render(<FileDropzone label="Choose a CSV file" onFiles={() => {}} />);
+    const over = files(csv());
+    expect(fireEvent.dragEnter(zone(), over)).toBe(false); // cancelled = this zone accepts the drop
+    expect(over.dataTransfer.dropEffect).toBe("copy");
+    expect(zone().className).toContain("is-dragging");
+    expect(screen.getByText("Release to use this file")).toBeTruthy();
+    // Moving onto a child of the zone is not leaving it; leaving the zone clears the highlight.
+    // (jsdom's DragEvent drops relatedTarget, so the leave is built as a MouseEvent carrying dataTransfer.)
+    const leave = (to: Element) => {
+      const e = new MouseEvent("dragleave", { bubbles: true, relatedTarget: to });
+      Object.defineProperty(e, "dataTransfer", { value: { types: ["Files"], files: [] } });
+      act(() => { zone().dispatchEvent(e); });
+    };
+    leave(screen.getByText("Choose a CSV file"));
+    expect(zone().className).toContain("is-dragging");
+    leave(document.body);
+    expect(zone().className).not.toContain("is-dragging");
+  });
+  it("clears the highlight when the drag is cancelled elsewhere", () => {
+    render(<FileDropzone label="Choose a CSV file" onFiles={() => {}} />);
+    fireEvent.dragEnter(zone(), files(csv()));
+    act(() => { window.dispatchEvent(new Event("dragend")); });
+    expect(zone().className).not.toContain("is-dragging");
+  });
+  it("clears the highlight when dragover stops without a dragleave (a cancelled OS drag)", () => {
+    vi.useFakeTimers();
+    try {
+      render(<FileDropzone label="Choose a CSV file" onFiles={() => {}} />);
+      fireEvent.dragEnter(zone(), files(csv()));
+      act(() => { vi.advanceTimersByTime(300); });
+      fireEvent.dragOver(zone(), files(csv()));
+      act(() => { vi.advanceTimersByTime(300); });
+      expect(zone().className).toContain("is-dragging");
+      act(() => { vi.advanceTimersByTime(200); });
+      expect(zone().className).not.toContain("is-dragging");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it("ignores drags that carry no files", () => {
+    const onFiles = vi.fn();
+    render(<FileDropzone label="Choose a CSV file" onFiles={onFiles} />);
+    expect(fireEvent.dragOver(zone(), { dataTransfer: { types: ["text/plain"], files: [] } })).toBe(true);
+    fireEvent.drop(zone(), { dataTransfer: { types: ["text/plain"], files: [] } });
+    expect(onFiles).not.toHaveBeenCalled();
+    expect(zone().className).not.toContain("is-dragging");
+  });
+  it("reports several files on a single-file zone instead of keeping the first", () => {
+    const onFiles = vi.fn();
+    const onTooMany = vi.fn();
+    render(<FileDropzone label="Choose a CSV file" onFiles={onFiles} onTooMany={onTooMany} />);
+    fireEvent.drop(zone(), files(csv("a.csv"), csv("b.csv")));
+    expect(onTooMany).toHaveBeenCalledWith(2);
+    expect(onFiles).not.toHaveBeenCalled();
+  });
+  it("refuses drops while disabled", () => {
+    const onFiles = vi.fn();
+    render(<FileDropzone label="Choose a CSV file" disabled onFiles={onFiles} />);
+    const over = files(csv());
+    fireEvent.dragOver(zone(), over);
+    expect(over.dataTransfer.dropEffect).toBe("none");
+    fireEvent.drop(zone(), files(csv()));
+    expect(onFiles).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Browse…" })).toHaveProperty("disabled", true);
+  });
+  it("replaces the chosen file by drop or picker, and the same file can be chosen again", async () => {
+    const onFiles = vi.fn();
+    const { container } = render(<FileDropzone label="Choose a CSV file" onFiles={onFiles} selected={{ name: "Performance.csv", size: 3 }} />);
+    fireEvent.dragEnter(container.querySelector(".ds-dropzone")!, files(csv()));
+    expect(screen.getByText("Release to replace this file")).toBeTruthy();
+    fireEvent.drop(container.querySelector(".ds-dropzone")!, files(csv("Next.csv")));
+    expect(onFiles).toHaveBeenLastCalledWith([expect.objectContaining({ name: "Next.csv" })]);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const click = vi.spyOn(input, "click");
+    await userEvent.click(screen.getByRole("button", { name: "Choose another…" }));
+    expect(click).toHaveBeenCalled();
+    const same = csv();
+    await userEvent.upload(input, same);
+    await userEvent.upload(input, same);
+    expect(onFiles).toHaveBeenCalledTimes(3);
+    expect(input.value).toBe("");
+  });
+  it("keeps a unicode file name intact", () => {
+    render(<FileDropzone label="Choose a CSV file" onFiles={() => {}} selected={{ name: "Trades — Zürich 東京 📈.csv", size: 10 }} />);
+    expect(screen.getByText("Trades — Zürich 東京 📈.csv").getAttribute("title")).toBe("Trades — Zürich 東京 📈.csv");
   });
   it("lets the host replace the browser picker", async () => {
     const onBrowse = vi.fn();
@@ -331,5 +425,37 @@ describe("FileDropzone", () => {
     expect(formatFileSize(512)).toBe("512 B");
     expect(formatFileSize(10 * 1024 * 1024)).toBe("10 MB");
     expect(formatFileSize(null)).toBe("—");
+  });
+});
+
+describe("useWindowFileDropGuard", () => {
+  function Host({ zone }: { zone: boolean }) {
+    useWindowFileDropGuard();
+    return zone ? <FileDropzone label="Choose a CSV file" onFiles={() => {}} /> : <p>Elsewhere</p>;
+  }
+  const fileDrag = (type: "dragover" | "drop") => {
+    const event = new Event(type, { bubbles: true, cancelable: true }) as Event & { dataTransfer: unknown };
+    event.dataTransfer = { types: ["Files"], files: [], dropEffect: "copy" };
+    return event as Event & { dataTransfer: { dropEffect: string } };
+  };
+  it("stops a stray file drop from opening the file in the window", () => {
+    render(<Host zone={false} />);
+    const over = fileDrag("dragover");
+    screen.getByText("Elsewhere").dispatchEvent(over);
+    expect(over.defaultPrevented).toBe(true);
+    expect(over.dataTransfer.dropEffect).toBe("none");
+    const drop = fileDrag("drop");
+    screen.getByText("Elsewhere").dispatchEvent(drop);
+    expect(drop.defaultPrevented).toBe(true);
+  });
+  it("leaves text drags and drop zones alone", () => {
+    render(<Host zone />);
+    const text = new Event("dragover", { bubbles: true, cancelable: true }) as Event & { dataTransfer: unknown };
+    text.dataTransfer = { types: ["text/plain"], files: [] };
+    document.body.dispatchEvent(text);
+    expect(text.defaultPrevented).toBe(false);
+    const over = fileDrag("dragover");
+    screen.getByRole("group", { name: "Choose a CSV file" }).dispatchEvent(over);
+    expect(over.dataTransfer.dropEffect).toBe("copy");
   });
 });

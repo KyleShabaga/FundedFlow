@@ -29,11 +29,12 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `tokens.test.ts` | Fails if any text/background pair drops below 4.5:1, or control borders below 3:1, in either theme |
 | `format.ts` | Money, compact money, percentage, byte size (`formatBytes`), trading-day and instant (`formatInstant`) formatting; exact money sums |
 | `components/primitives.tsx` | `Button`, `Badge`, `Pnl`, `StatTile`, `Tabs` + `TabPanel` (Radix Tabs; `keepMounted` keeps a panel's form state while another tab shows, Build 19) |
-| `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots; Build 12 supplies navigation and routing |
+| `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots and a `sidebarEdge` slot centred on the sidebar border (Build 18.5); Build 12 supplies navigation and routing |
 | `components/rules.tsx` | `RuleMeter`, `ruleState`, `AccountCard` |
+| `components/account-overview.tsx` | `AccountOverviewCard`, `ProgressMeter`, `meterFraction` (Build 18.5) |
 | `components/charts.tsx` | `WinGauge`, `Sparkline`, `EquityCurve` |
 | `components/journal.tsx` | `PnlCalendar`, `monthWeeks`, `DayCard`, `TradeTable`, `tradeResult` |
-| `components/forms.tsx` | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select` (Radix), `FieldGroup`, `FormSection`, `FieldError`, `ValidationSummary`, `focusFirstInvalid`, `FileDropzone`, `formatFileSize` |
+| `components/forms.tsx` | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select` (Radix), `FieldGroup`, `FormSection`, `FieldError`, `ValidationSummary`, `focusFirstInvalid`, `FileDropzone`, `dragHasFiles`, `useWindowFileDropGuard`, `formatFileSize` |
 | `components/overlays.tsx` | `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `OverlayClose`, `DropdownMenu`, `Tooltip` (Radix Dialog, Dropdown Menu, Tooltip) |
 | `components/feedback.tsx` | `InlineNotice`, `ToastProvider` + `useToast`, `StatusIndicator` |
 | `components/async-states.tsx` | `AsyncState`, `StateBoundary`, `Skeleton`, `LoadingState`, `EmptyState`, `ErrorState`, `UnavailableState`, `StaleDataNotice`, `RefreshingIndicator`, `MutationState`, `MutationFeedback`, `isMutationBusy`, `hasData` |
@@ -181,3 +182,26 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
 - `PnlBars` draws diverging bars around zero, one row per item with its exact signed amount and an optional detail line.
   The rows are the chart's text alternative (a list of labelled groups, or buttons with `onSelect`). `null` draws no bar
   and reads "P&L unknown". Bar lengths use `moneyToNumberForDisplay` for drawing only.
+
+## Build 18.5: drop zone, sidebar edge and account overview card
+
+- `FileDropzone` reacts only to drags that carry files (`dataTransfer.types` includes `Files`); text and link drags are
+  ignored. It cancels `dragenter`/`dragover` with `dropEffect = "copy"` (`"none"` while disabled), counts nested
+  enter/leave so the highlight doesn't flicker over children, and clears on `dragend` or a drop elsewhere. A
+  single-file zone given `onTooMany` reports several dropped files instead of silently keeping the first. With a file
+  chosen it always offers a replace button (`replaceLabel`, default "Choose another…") that opens the picker; the
+  input is cleared after each pick so the same file can be chosen again, and a cancelled picker changes nothing.
+  `selectedActions` holds extra actions such as Remove.
+- `useWindowFileDropGuard()` (mounted once by the app shell) stops a file dropped outside every drop zone from
+  navigating the window to that file, which is the WebView2 default once Tauri's native drop handler is off
+  (`dragDropEnabled: false`). Zones handle their own events first, so it only catches stray drops.
+- `AppFrame` `sidebarEdge`: a control centred on the sidebar's right border, level with the brand row, rendered
+  before the scrolling sidebar content (keyboard order matches what is seen) and outside it (never clipped). The
+  sidebar no longer scrolls itself; `.ds-app-sidebar-scroll` does.
+- `AccountOverviewCard` lays out one account attempt: identity (mark, eyebrow, title, masked reference, meta) and
+  badges; a primary figure and secondary figures, each a `MetricValue` with an optional provenance badge and note;
+  up to two meters; rule lines as a `dl` (`muted` for non-values); an activity line and actions in the footer. It
+  is an `article` named by its title. A container query folds it: under 460 px badges move under the name; under
+  300 px only identity, status, the primary figure and the actions remain. It computes nothing.
+- `ProgressMeter` draws a bar for two amounts the caller already has (engine figures), with a required `valueText`
+  for screen readers. Only `value ÷ max` (bigint micro-units, `meterFraction`) sets the width; it states no verdict.

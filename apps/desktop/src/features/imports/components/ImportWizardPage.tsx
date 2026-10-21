@@ -3,25 +3,20 @@
 // format, mapping, row classification, duplicates and P&L; the commit re-checks
 // everything natively and its returned batch is what the trader sees. A preview is
 // only used for the exact request it was made for, and a commit is never retried.
-import { MAX_CSV_ROWS, type ColumnMapping, type RowReport } from "@fundedflow/domain";
-import { useQueryClient } from "@tanstack/react-query";
-import { FileText, History, ShieldCheck } from "lucide-react";
+import { MAX_CSV_ROWS, type ColumnMapping } from "@fundedflow/domain";
+import { FileText, History, ShieldCheck, Zap } from "lucide-react";
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
   Button,
   ConfirmDialog,
-  type DataColumn,
-  DataTable,
   EmptyState,
   FileDropzone,
   formatInstant,
   InlineNotice,
   LoadingState,
   MetricCard,
-  MoneyCell,
-  SegmentedControl,
   Select,
   StatList,
   Stepper,
@@ -30,11 +25,12 @@ import {
   useToast,
 } from "../../../design-system";
 import { useActiveAccount } from "../../accounts/active-account";
-import { useAccount, useAccountLineage, useAccounts } from "../../accounts/hooks/accounts";
+import { useAccountLineage, useAccounts } from "../../accounts/hooks/accounts";
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import { useRuntime } from "../../../app/RuntimeProvider";
-import { featureKeys } from "../../shared/query-keys";
+import { dropHandoff, peekHandoff } from "../handoff";
 import { useCommitCsvImport, useCsvPreview } from "../hooks/imports";
+import { useCsvFileChoice } from "../hooks/use-csv-file";
 import {
   buildRequest,
   checkMapping,
@@ -42,18 +38,17 @@ import {
   GENERIC_FIELDS,
   initialWizardState,
   mappingFromPreview,
-  readCsvFile,
   requestKey,
   wizardReducer,
   type CsvFormatChoice,
   type DateFormatChoice,
 } from "../wizard-state";
-import { assessTarget, ImportTargetPicker } from "./ImportTarget";
-import { DATE_ORDER_LABELS, FORMAT_LABELS, fileSize, RowBadge, rowDetails, rowKind, willImport } from "./presentation";
+import { assessTarget, ImportTargetPicker, useDestinationRecheck } from "./ImportTarget";
+import { RowsTable } from "./RowsTable";
+import { DATE_ORDER_LABELS, FORMAT_LABELS, fileSize } from "./presentation";
 import "./imports.css";
 
 const STEPS = [{ label: "Choose file" }, { label: "Match columns" }, { label: "Review rows" }, { label: "Import" }];
-type RowFilter = "all" | "import" | "restore" | "duplicate" | "invalid" | "warning";
 type Preview = NonNullable<ReturnType<typeof useCsvPreview>["data"]>;
 
 function localZone() {
@@ -62,76 +57,6 @@ function localZone() {
   } catch {
     return "UTC";
   }
-}
-
-/* ---------- Review table ---------- */
-
-function RowsTable({ preview, timeZone }: { preview: Preview; timeZone: string }) {
-  const p = preview.preview;
-  const [filter, setFilter] = useState<RowFilter>("all");
-  const [page, setPage] = useState(1);
-  const pageSize = 50;
-  const listed = p.rows.filter(r => r.status !== "blank");
-  const matches = (r: RowReport): boolean => {
-    const kind = rowKind(r);
-    switch (filter) {
-      case "all": return true;
-      case "import": return willImport(r);
-      case "restore": return kind === "restore";
-      case "duplicate": return r.status === "duplicate";
-      case "invalid": return r.status === "invalid";
-      case "warning": return r.warnings.length > 0;
-    }
-  };
-  const rows = listed.filter(matches);
-  const columns: DataColumn<RowReport>[] = [
-    { id: "line", header: "Line", align: "end", cell: r => r.lineNumber },
-    { id: "status", header: "Status", cell: r => <RowBadge kind={rowKind(r)} /> },
-    { id: "symbol", header: "Symbol", rowHeader: true, cell: r => <span className="ds-sym">{r.trade?.symbol ?? "—"}</span> },
-    { id: "side", header: "Side", cell: r => (r.trade ? (r.trade.side === "long" ? "Long" : "Short") : "—") },
-    { id: "qty", header: "Qty", align: "end", cell: r => r.trade?.quantity ?? "—" },
-    { id: "opened", header: "Opened", cell: r => (r.trade ? formatInstant(r.trade.entryAt, { timeZone }) : "—") },
-    { id: "entry", header: "Entry", align: "end", cell: r => r.trade?.entryPrice ?? "—" },
-    { id: "exit", header: "Exit", align: "end", cell: r => r.trade?.exitPrice ?? "—" },
-    { id: "file", header: "File P&L", align: "end", cell: r => <MoneyCell value={r.trade?.reportedPnl ?? null} currency={preview.currency} /> },
-    { id: "net", header: "Net P&L", align: "end", cell: r => <MoneyCell value={r.trade?.realizedPnl ?? null} currency={preview.currency} /> },
-    { id: "fees", header: "Fees", align: "end", cell: r => <MoneyCell value={r.trade?.fees ?? null} signed={false} currency={preview.currency} /> },
-    { id: "fills", header: "Fill IDs", cell: r => (r.trade && (r.trade.buyFillId || r.trade.sellFillId) ? <span className="imp-fills">{r.trade.buyFillId ?? "—"} / {r.trade.sellFillId ?? "—"}</span> : "—") },
-    {
-      id: "details", header: "Details",
-      cell: r => {
-        const details = rowDetails(r);
-        return (
-          <div className="imp-details">
-            {details.map((d, i) => <span key={i}>{d}</span>)}
-            {!r.trade && r.raw.length > 0 && <span className="ds-faint">From the file: {r.raw.join(" | ")}</span>}
-          </div>
-        );
-      },
-    },
-  ];
-  const options: { value: RowFilter; label: string; count: number }[] = [
-    { value: "all", label: "All", count: p.rowCount - p.blankCount },
-    { value: "import", label: "Will import", count: p.newCount },
-    { value: "restore", label: "Restores", count: p.restoreCount },
-    { value: "duplicate", label: "Duplicates", count: p.duplicateCount },
-    { value: "invalid", label: "Errors", count: p.invalidCount },
-    { value: "warning", label: "Warnings", count: p.warningCount },
-  ];
-  return (
-    <DataTable
-      label="Rows in the file"
-      columns={columns}
-      rows={rows.slice((page - 1) * pageSize, page * pageSize)}
-      getRowId={r => String(r.lineNumber)}
-      isRowMuted={r => !willImport(r)}
-      toolbar={<SegmentedControl<RowFilter> label="Show rows" value={filter} onValueChange={f => { setFilter(f); setPage(1); }} options={options} />}
-      actions={<span className="ds-faint">Original cells are kept with each imported trade</span>}
-      fallback={rows.length === 0 ? <EmptyState kind="no-matches" size="compact" description="No listed rows of this kind." /> : undefined}
-      pagination={{ page, pageSize, total: rows.length, onPageChange: setPage }}
-      footer={p.rowsOmitted > 0 ? `${p.rowsOmitted.toLocaleString("en-US")} more new rows aren't listed; they're counted above and will be imported` : undefined}
-    />
-  );
 }
 
 function Summary({ preview }: { preview: Preview }) {
@@ -153,20 +78,25 @@ export function ImportWizardPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const client = useQueryClient();
   const { state: runtime } = useRuntime();
   const accounts = useAccounts("all");
   const active = useActiveAccount();
-  const requested = (location.state as { accountId?: string } | null)?.accountId ?? null;
-  const [state, dispatch] = useReducer(wizardReducer, null, () => initialWizardState(requested, localZone()));
-  const [zoneTouched, setZoneTouched] = useState(false);
+  const navState = location.state as { accountId?: string; handoff?: string } | null;
+  const requested = navState?.accountId ?? null;
+  // Choices carried over from Quick Import: the file and safe selections, never a confirmation.
+  const [handoff] = useState(() => peekHandoff(navState?.handoff));
+  useEffect(() => dropHandoff(navState?.handoff), [navState?.handoff]);
+  const [state, dispatch] = useReducer(wizardReducer, null, () => {
+    const initial = initialWizardState(handoff?.accountId ?? requested, handoff?.timezone ?? localZone());
+    return handoff ? { ...initial, file: handoff.file, format: handoff.format, dateFormat: handoff.dateFormat } : initial;
+  });
+  const [zoneTouched, setZoneTouched] = useState(handoff?.timezoneChosen ?? false);
   const [previewFor, setPreviewFor] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const fileVersion = useRef(0);
   const preview = useCsvPreview();
   const commit = useCommitCsvImport(state.accountId ?? "");
   const lineage = useAccountLineage(state.accountId);
-  const accountQuery = useAccount(state.accountId);
+  const recheck = useDestinationRecheck(state.accountId);
 
   const all = accounts.data ?? [];
   const account: AccountViewModel | undefined = all.find(a => a.id === state.accountId);
@@ -181,6 +111,9 @@ export function ImportWizardPage() {
   }, [account, zoneTouched]);
 
   const key = requestKey(state);
+  // The request the page shows now; a preview that returns for an earlier one never moves the wizard on.
+  const latestKey = useRef(key);
+  latestKey.current = key;
   const fresh = preview.data !== undefined && previewFor !== null && previewFor === key;
   const current = fresh ? preview.data : undefined;
   const p = current?.preview;
@@ -203,23 +136,24 @@ export function ImportWizardPage() {
     preview
       .preview(request)
       .then(() => {
+        if (latestKey.current !== k) return;
         setPreviewFor(k);
         then?.();
       })
       .catch(() => {});
   };
 
-  const pickFile = async (files: File[]) => {
-    const file = files[0];
-    if (!file) return;
-    fileVersion.current += 1;
-    const read = await readCsvFile(file, fileVersion.current);
+  // Dropped and browsed files take the same path. A new file drops the old preview, mapping, date order and
+  // confirmation, and stops a check still running for the old one.
+  const fileChoice = useCsvFileChoice(read => {
+    preview.reset();
+    setPreviewFor(null);
     if ("content" in read) dispatch({ type: "file", file: read });
     else dispatch({ type: "file-problem", problem: read });
-    setPreviewFor(null);
-  };
+  });
 
   const startOver = () => {
+    fileChoice.cancel();
     dispatch({ type: "reset", keep: { accountId: state.accountId, timezone: account?.timezone ?? state.timezone } });
     setPreviewFor(null);
     preview.reset();
@@ -230,17 +164,10 @@ export function ImportWizardPage() {
     const request = buildRequest(state);
     if (!request || !fresh || !account) return;
     // Check the destination again: it may have been archived or changed since the preview.
-    try {
-      await accountQuery.refresh();
-    } catch {
-      toast.show({ tone: "error", title: "Couldn't check the account", description: "Nothing was imported. Try again when local data is available." });
-      return;
-    }
-    const latest = client.getQueryData<{ value: AccountViewModel }>(featureKeys.detail(account.id))?.value;
-    const recheck = assessTarget(latest, lineage.data, tradingDays);
-    if (!latest || recheck.blocked || latest.status !== account.status) {
-      toast.show({ tone: "error", title: "The account changed", description: "Nothing was imported. Check the destination and review again." });
-      dispatch({ type: "step", step: 0 });
+    const problem = await recheck(account, lineage.data, tradingDays);
+    if (problem) {
+      toast.show({ tone: "error", title: problem.title, description: problem.description });
+      if (problem.changed) dispatch({ type: "step", step: 0 });
       return;
     }
     commit
@@ -280,9 +207,11 @@ export function ImportWizardPage() {
           label="Choose a CSV file"
           hint="CSV up to 10 MB and 50,000 rows. It's read on this computer and never uploaded."
           accept=".csv,text/csv"
-          onFiles={files => void pickFile(files)}
+          onFiles={files => void fileChoice.pick(files)}
+          onTooMany={fileChoice.tooMany}
+          disabled={committing}
           selected={state.file ? { name: state.file.name, size: state.file.size, detail: "read on this computer" } : null}
-          selectedActions={state.file ? <Button size="sm" variant="ghost" onClick={() => dispatch({ type: "clear-file" })}>Choose another file</Button> : undefined}
+          selectedActions={state.file ? <Button size="sm" variant="ghost" onClick={() => { fileChoice.cancel(); preview.reset(); setPreviewFor(null); dispatch({ type: "clear-file" }); }}>Remove</Button> : undefined}
           error={state.fileProblem ? fileProblemText(state.fileProblem) : null}
         />
         <div className="imp-options">
@@ -310,7 +239,7 @@ export function ImportWizardPage() {
       </div>
       <StatList bordered label="Detected" items={[
         { label: "Format", value: `${FORMAT_LABELS[p.format]} — ${p.formatReason}` },
-        { label: "Date order", value: p.dateFormat ? `${DATE_ORDER_LABELS[p.dateFormat]} — ${p.dateFormatReason}` : p.dateFormatReason || "Not needed" },
+        { label: "Date order", value: p.dateFormat ? `${DATE_ORDER_LABELS[p.dateFormat]} — ${p.dateFormatReason}` : p.fileIssues.some(i => i.field === "dateFormat") ? "Needs your choice: more than one order fits" : p.dateFormatReason || "Not needed" },
       ]} />
       {dateAmbiguous && (
         <InlineNotice tone="warning" live="polite" title="Choose the date order">
@@ -454,9 +383,20 @@ export function ImportWizardPage() {
   return (
     <div className="imp-page">
       <div className="imp-head">
-        <p className="imp-sub">Check every row before anything is saved. The file stays on this computer.</p>
-        {!showResult && <Button variant="ghost" icon={<History size={16} aria-hidden="true" />} onClick={() => navigate("/import/history", { state: { accountId: state.accountId } })}>Import history</Button>}
+        <p className="imp-sub">Full wizard: match columns, date order and time zone yourself, then check every row before anything is saved. The file stays on this computer.</p>
+        {!showResult && (
+          <div className="imp-actions">
+            <Button variant="ghost" icon={<Zap size={16} aria-hidden="true" />} onClick={() => navigate("/import/quick", { state: { accountId: state.accountId } })} disabled={committing}>Quick import</Button>
+            <Button variant="ghost" icon={<History size={16} aria-hidden="true" />} onClick={() => navigate("/import/history", { state: { accountId: state.accountId } })}>Import history</Button>
+          </div>
+        )}
       </div>
+      {handoff && !showResult && state.step === 0 && (
+        <InlineNotice tone="info" live="polite" title="Continued from Quick import">
+          {handoff.reasons.length > 0 && <ul className="imp-list">{handoff.reasons.map(r => <li key={r}>{r}</li>)}</ul>}
+          The file, account and choices you made are kept. Check the file again here; nothing has been imported.
+        </InlineNotice>
+      )}
       <Stepper label="Import steps" steps={STEPS} current={showResult ? 4 : step} />
 
       {preview.error && !preview.isPending && (
@@ -496,7 +436,7 @@ export function ImportWizardPage() {
             <span className="imp-bar-note"><ShieldCheck size={18} aria-hidden="true" />
               {step < 2 || !p
                 ? "Checking a file never saves anything."
-                : `Nothing is saved until you import. ${importable === 1 ? "The trade is" : `All ${importable.toLocaleString("en-US")} trades are`} written together, or none are.`}
+                : `Nothing is saved until you import.${importable === 1 ? "" : ` All ${importable.toLocaleString("en-US")} trades are written together, or none are.`}`}
             </span>
             <div className="imp-actions">
               <Button onClick={() => (state.file || step > 0 ? setConfirmCancel(true) : navigate("/accounts"))} disabled={committing}>Cancel</Button>

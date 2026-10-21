@@ -657,16 +657,50 @@ export interface FileDropzoneProps {
   /** Files dropped or picked. The feature card reads and validates them; this component never opens them. */
   onFiles: (files: File[]) => void;
   /**
+   * Called instead of `onFiles` when several files are dropped on a single-file zone, so the feature can say
+   * "one file at a time" rather than silently keeping the first. Without it the first file is used.
+   */
+  onTooMany?: (count: number) => void;
+  /**
    * Replaces the browser file picker (a desktop host can open its own dialog).
    * When set, Browse calls this instead of the hidden input.
    */
   onBrowse?: () => void;
   /** The chosen file, shown as a summary row. Size is bytes. */
   selected?: { name: string; size?: number | null; detail?: ReactNode } | null;
-  /** Shown under the summary: "Remove", "Choose another". */
+  /** Shown beside the summary ("Remove"). A replace button that opens the picker is always offered. */
   selectedActions?: ReactNode;
+  /** Text of the replace button shown with a chosen file. */
+  replaceLabel?: string;
   error?: string | null;
   className?: string;
+}
+
+/** True when a drag carries files from the operating system (not text or a link). */
+export function dragHasFiles(e: { dataTransfer: DataTransfer | null }): boolean {
+  const types = e.dataTransfer?.types;
+  return types ? Array.from(types).includes("Files") : false;
+}
+
+/**
+ * Stops a file dropped outside every drop zone from navigating the window to that file (the browser and
+ * WebView2 default once Tauri's native drop handler is off). Zones mark their own events handled first, so
+ * this only catches stray drops. Mount once at the app root.
+ */
+export function useWindowFileDropGuard() {
+  useEffect(() => {
+    const guard = (e: globalThis.DragEvent) => {
+      if (e.defaultPrevented || !dragHasFiles(e)) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
+    };
+    window.addEventListener("dragover", guard);
+    window.addEventListener("drop", guard);
+    return () => {
+      window.removeEventListener("dragover", guard);
+      window.removeEventListener("drop", guard);
+    };
+  }, []);
 }
 
 /** Bytes as "9.8 KB" for file summaries. */
@@ -688,31 +722,73 @@ export function formatFileSize(bytes: number | null | undefined): string {
  * Browse request) to the caller. Parsing, size limits and staging belong to
  * the CSV import and attachment cards.
  */
-export function FileDropzone({ label, hint, accept, multiple, disabled, onFiles, onBrowse, selected, selectedActions, error, className }: FileDropzoneProps) {
+export function FileDropzone({ label, hint, accept, multiple, disabled, onFiles, onTooMany, onBrowse, selected, selectedActions, replaceLabel = "Choose another…", error, className }: FileDropzoneProps) {
   const ids = useFieldIds(undefined);
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const browse = () => (onBrowse ? onBrowse() : input.current?.click());
-  const drop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
+  // While a file hovers, dragover repeats every few dozen milliseconds. A cancelled drag (Escape, or the pointer
+  // leaving the window) doesn't always send dragleave, so the highlight also clears once dragover stops.
+  const idle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopWatch = () => {
+    if (idle.current) clearTimeout(idle.current);
+    idle.current = null;
+  };
+  const endDrag = () => {
+    stopWatch();
     setDragging(false);
+  };
+  useEffect(() => stopWatch, []);
+  const browse = () => (onBrowse ? onBrowse() : input.current?.click());
+  // A drag that ends elsewhere (Escape, a drop outside the zone) never sends this zone a dragleave.
+  useEffect(() => {
+    if (!dragging) return;
+    window.addEventListener("dragend", endDrag);
+    window.addEventListener("drop", endDrag);
+    return () => {
+      window.removeEventListener("dragend", endDrag);
+      window.removeEventListener("drop", endDrag);
+    };
+  }, [dragging]);
+  const over = (e: DragEvent<HTMLDivElement>) => {
+    if (!dragHasFiles(e)) return false;
+    // Handled here, so the window guard leaves it alone and the drop reaches this zone.
+    e.preventDefault();
+    e.dataTransfer.dropEffect = disabled ? "none" : "copy";
+    if (!disabled) {
+      setDragging(true);
+      stopWatch();
+      idle.current = setTimeout(endDrag, 400);
+    }
+    return true;
+  };
+  const drop = (e: DragEvent<HTMLDivElement>) => {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+    endDrag();
     if (disabled) return;
-    const files = Array.from(e.dataTransfer?.files ?? []);
-    if (files.length) onFiles(multiple ? files : files.slice(0, 1));
+    const files = Array.from(e.dataTransfer.files ?? []);
+    if (!files.length) return;
+    if (!multiple && files.length > 1 && onTooMany) onTooMany(files.length);
+    else onFiles(multiple ? files : files.slice(0, 1));
   };
   return (
     <div className={cx("ds-field", className)}>
       <div
         className={cx("ds-dropzone", dragging && "is-dragging", error && "is-invalid", disabled && "is-disabled", selected && "has-file")}
-        onDragOver={(e) => {
-          e.preventDefault();
-          if (!disabled) setDragging(true);
+        onDragEnter={over}
+        onDragOver={over}
+        onDragLeave={(e) => {
+          if (!dragHasFiles(e)) return;
+          // Moving onto a child of the zone is not leaving it.
+          const to = e.relatedTarget;
+          if (to instanceof Node && e.currentTarget.contains(to)) return;
+          endDrag();
         }}
-        onDragLeave={() => setDragging(false)}
         onDrop={drop}
         role="group"
         aria-labelledby={`${ids.control}-title`}
         aria-describedby={describedBy(ids, selected ? null : hint, error)}
+        aria-disabled={disabled || undefined}
       >
         {selected ? (
           <div className="ds-dropzone-file">
@@ -720,16 +796,27 @@ export function FileDropzone({ label, hint, accept, multiple, disabled, onFiles,
               <FileText size={18} />
             </span>
             <div className="ds-dropzone-text">
-              <span id={`${ids.control}-title`} className="ds-dropzone-name">
+              <span id={`${ids.control}-title`} className="ds-dropzone-name" title={selected.name}>
                 {selected.name}
               </span>
               <span className="ds-faint">
-                {selected.size != null ? formatFileSize(selected.size) : null}
-                {selected.size != null && selected.detail != null ? " · " : null}
-                {selected.detail}
+                {dragging ? (
+                  "Release to replace this file"
+                ) : (
+                  <>
+                    {selected.size != null ? formatFileSize(selected.size) : null}
+                    {selected.size != null && selected.detail != null ? " · " : null}
+                    {selected.detail}
+                  </>
+                )}
               </span>
             </div>
-            {selectedActions != null && <div className="ds-row">{selectedActions}</div>}
+            <div className="ds-row ds-dropzone-actions">
+              <button type="button" className="ds-btn ds-btn-secondary ds-btn-sm" onClick={browse} disabled={disabled}>
+                {replaceLabel}
+              </button>
+              {selectedActions}
+            </div>
           </div>
         ) : (
           <>
@@ -745,7 +832,7 @@ export function FileDropzone({ label, hint, accept, multiple, disabled, onFiles,
               </span>
             )}
             <span className="ds-faint" aria-hidden="true">
-              Drop a file here or
+              {dragging ? (multiple ? "Release to add the files" : "Release to use this file") : multiple ? "Drop files here or" : "Drop a file here or"}
             </span>
             <button type="button" className="ds-btn ds-btn-secondary ds-btn-sm" onClick={browse} disabled={disabled}>
               Browse…
@@ -762,8 +849,9 @@ export function FileDropzone({ label, hint, accept, multiple, disabled, onFiles,
           aria-hidden="true"
           onChange={(e) => {
             const files = Array.from(e.target.files ?? []);
-            if (files.length) onFiles(files);
+            // Cleared so the same file can be chosen again; a cancelled picker sends no files and changes nothing.
             e.target.value = "";
+            if (files.length) onFiles(files);
           }}
         />
       </div>

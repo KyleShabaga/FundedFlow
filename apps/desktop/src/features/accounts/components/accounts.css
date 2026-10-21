@@ -8,6 +8,7 @@
 .acct-sub { margin: 0; color: var(--ink-muted); max-width: 70ch; }
 .acct-head-actions { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 
+.acct-body { display: grid; gap: var(--space-4); min-width: 0; grid-template-columns: minmax(0, 1fr); }
 .acct-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); }
 
 /* Table cells */
@@ -26,9 +27,9 @@
 .acct-link:hover { text-decoration: underline; }
 .acct-link:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; border-radius: var(--radius-sm); }
 
-.acct-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); gap: var(--space-4); }
+.acct-card-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-width: 0; }
+.acct-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr)); gap: var(--space-4); align-items: stretch; }
 .acct-card-wrap { display: grid; min-width: 0; }
-.acct-card-wrap .ds-acct-foot { align-items: center; }
 .acct-footnote { margin: 0; max-width: 100ch; }
 
 /* Detail page */

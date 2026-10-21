@@ -23,7 +23,7 @@ import {
   TradeTable,
   WinGauge,
 } from ".";
-import { AsyncSection, DataSection, FeedbackSection, FormsSection, OverlaysSection, Section } from "./GallerySections";
+import { AccountOverviewSection, AsyncSection, DataSection, FeedbackSection, FormsSection, OverlaysSection, Section } from "./GallerySections";
 import "./gallery.css";
 
 type Theme = "system" | "dark" | "light";
@@ -102,9 +102,9 @@ export function DesignSystemGallery() {
           />
         </header>
 
-        <Section title="Application frame" note="Host-independent 248 px sidebar and 72 px icon rail. The desktop host supplies routing and runtime state.">
+        <Section title="Application frame" note="Host-independent 248 px sidebar and 72 px icon rail. The desktop host supplies routing and runtime state; sidebarEdge holds a control centred on the sidebar's right border (the collapse toggle).">
           <div className="dsg-frame-preview">
-            <AppFrame collapsed={false} sidebar={<p>Navigation slot</p>} header={<h3>Header slot</h3>}>
+            <AppFrame collapsed={false} sidebar={<p>Navigation slot</p>} sidebarEdge={<span className="dsg-edge-dot" aria-hidden="true" />} header={<h3>Header slot</h3>}>
               <p>Route content slot</p>
             </AppFrame>
           </div>
@@ -244,6 +244,7 @@ export function DesignSystemGallery() {
         <FeedbackSection />
         <AsyncSection />
         <DataSection />
+        <AccountOverviewSection />
       </div>
     </ToastProvider>
   );

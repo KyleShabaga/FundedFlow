@@ -13,7 +13,7 @@
 | `StatTile` | Dashboard, Journal, Reports, Accounts KPI rows |
 | `Tabs` + `TabPanel` | Journal views, Library sections, Reports basis |
 | `RuleMeter` | Dashboard rules, Accounts mini meters (via `ruleState`) |
-| `AccountCard` | Accounts, Cards view |
+| `AccountOverviewCard`, `ProgressMeter` | Accounts, Cards view (Build 18.5; `AccountCard` stays in the gallery) |
 | `WinGauge` | Dashboard win-rate tile |
 | `EquityCurve` | Dashboard balance, Journal day, Trade detail |
 | `PnlCalendar` | Home (small); the Calendar screen extends it (see MonthYearPicker) |

@@ -3,9 +3,12 @@
 // attempts and trades outside an attempt's reset window need explicit confirmation
 // (assessImportTarget from the domain). Nothing is reassigned or split automatically.
 import { assessImportTarget, statusLabels, type AttemptSummary } from "@fundedflow/domain";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { Checkbox, formatInstant, InlineNotice, Select, StatList } from "../../../design-system";
 import { ACCOUNT_TYPE_LABELS } from "../../accounts/components/presentation";
+import { useAccount } from "../../accounts/hooks/accounts";
+import { featureKeys } from "../../shared/query-keys";
 import type { AccountViewModel } from "../../accounts/view-models/account";
 
 export interface TargetAssessment {
@@ -16,6 +19,34 @@ export interface TargetAssessment {
 export function assessTarget(account: AccountViewModel | undefined, lineage: readonly AttemptSummary[] | undefined, tradingDays: readonly string[]): TargetAssessment {
   if (!account) return { blocked: "Choose the account these trades belong to.", confirmations: [] };
   return assessImportTarget(account, lineage ?? [], tradingDays);
+}
+
+export interface RecheckProblem {
+  title: string;
+  description: string;
+  /** The account itself changed (archived, status, gone): the destination must be chosen again. */
+  changed: boolean;
+}
+
+/**
+ * Re-reads the destination just before a commit and checks it again: it may have been archived or changed since
+ * the preview. Shared by the wizard and Quick Import so both refuse the same things.
+ */
+export function useDestinationRecheck(accountId: string | null) {
+  const client = useQueryClient();
+  const accountQuery = useAccount(accountId);
+  return async (account: AccountViewModel, lineage: readonly AttemptSummary[] | undefined, tradingDays: readonly string[]): Promise<RecheckProblem | null> => {
+    try {
+      await accountQuery.refresh();
+    } catch {
+      return { title: "Couldn't check the account", description: "Nothing was imported. Try again when local data is available.", changed: false };
+    }
+    const latest = client.getQueryData<{ value: AccountViewModel }>(featureKeys.detail(account.id))?.value;
+    const recheck = assessTarget(latest, lineage, tradingDays);
+    if (!latest || recheck.blocked || latest.status !== account.status)
+      return { title: "The account changed", description: "Nothing was imported. Check the destination and review again.", changed: true };
+    return null;
+  };
 }
 
 /** Other unarchived accounts using the same broker account number: easy to confuse with this attempt. */

@@ -2,7 +2,7 @@
 // Rust preview (status, restores, duplicate, warnings); nothing is re-derived here.
 import type { RowReport } from "@fundedflow/domain";
 
-import { Badge, type Tone } from "../../../design-system";
+import { Badge, formatFileSize, type Tone } from "../../../design-system";
 
 export type RowKind = "new" | "restore" | "warning" | "duplicate" | "invalid" | "blank";
 
@@ -61,6 +61,5 @@ export const DATE_ORDER_LABELS: Record<"auto" | "ymd" | "mdy" | "dmy", string> =
 };
 
 /** Bytes as KB or MB with one decimal, for file summaries. */
-export function fileSize(bytes: number): string {
-  return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${(bytes / 1024).toFixed(1)} KB`;
-}
+/** The same size wording as the drop zone (formatFileSize), so a file never shows two different sizes. */
+export const fileSize = (bytes: number): string => formatFileSize(bytes);

@@ -188,7 +188,7 @@ describe("mapping and review", () => {
     await user.click(screen.getByRole("button", { name: "Review rows" }));
     const table = await screen.findByRole("table", { name: "Rows in the file" });
     expect(within(table).getByText(/Same trade as line 2; skipped/)).toBeTruthy();
-    expect(screen.getByText("Nothing is saved until you import. The trade is written together, or none are.")).toBeTruthy();
+    expect(screen.getByText("Nothing is saved until you import.")).toBeTruthy();
     expect(imports.repository.commit).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Continue with 1 trade" }));
     expect(await screen.findByRole("heading", { name: "Import into PA-48213" })).toBeTruthy();
@@ -307,7 +307,7 @@ describe("mapping and review", () => {
     await checkFile(user);
     await screen.findByRole("heading", { name: "Match columns" });
     await user.click(screen.getByRole("button", { name: "Back" }));
-    await user.click(screen.getByRole("button", { name: "Choose another file" }));
+    // Replacing needs no extra step: the new file is read and the old mapping, preview and confirmation go.
     await choose(user, csvFile(byName("paired-short-warning")));
     await checkFile(user);
     expect(await screen.findByText(/Performance export/)).toBeTruthy();

@@ -29,6 +29,7 @@
 .imp-drawer h3 { margin: 0; }
 .imp-fail { margin: 0; color: var(--loss); }
 .imp-history-target { max-width: 720px; }
+.imp-quick-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: var(--space-4); align-items: start; }
 
 @media (max-width: 900px) {
   .imp-grid { grid-template-columns: minmax(0, 1fr); }
