@@ -139,3 +139,68 @@ UI wiring belongs to Claude/Builds 19 and 21. Fetch fresh canonical data before 
 - Plain Node and actual Chromium produce identical JSON for nine scenarios; UTF-8 SHA-256 matches Node crypto. Rust reference arithmetic and native frozen-input hashes pass. These fixtures are synthetic evidence, not verification of any firm's actual published terms.
 - Packaged Windows/Tauri execution and human acceptance are not verified here. This remains a draft for review, not release acceptance.
 - Canonical publisher exact-share bounds follow-up: https://app.notion.com/p/4001bd4b6bde819cba99c6c154f9a620 (Unprioritized — Triage).
+
+## Integration review (Build 19 lead, 2026-10-21)
+
+Reviewed against the Notion card, this handoff and the code, while integrating Build 19 (PR #44).
+
+### Requirement-to-code assessment
+
+| Card requirement | State | Where |
+|---|---|---|
+| A: consume Build 9.5 schemas and Build 15.5 `AccountRiskInputs` unchanged | Pass | `engine/evaluate.ts` parses `accountRiskInputsSchema`; rule unions imported, not redefined |
+| A: per-rule prerequisites and sufficiency states | Pass | `assessRuleEvidence` per rule; `block()` maps missing/stale/conflicting/unsupported/manual |
+| A: precedence Stop > Unknown > Caution > Safe | Pass | aggregate at the end of `evaluate` |
+| A: attempt/reset/phase distinctions | Pass | attempt UUID scope; prior breaches not inherited by a new attempt |
+| B: framework-free, no I/O, explicit time | Pass | domain boundary check; `asOf` input only |
+| B: static/EOD/locked drawdown, daily loss, target, days, consistency | Pass (fixed defect below) | `calculate()` |
+| B: intraday trailing, position size, trades per day | Partial by design | Unsupported: V1 has no live equity, positions or executions |
+| B: payout eligibility / transitions / scaling | Partial by design | Manual; subconditions reported |
+| B: exact micros, i64 bounds, Rust economics | Pass | BigInt micro-units; consumes Rust net P&L; `engine-math.json` |
+| B: typed result with operands, formulas, sources, hash | Pass | `engineResultSchema`, `ruleOutcomeSchema` |
+| C: nullable snapshot storage, immutable rows | Pass | migration 15, `store/snapshots.rs` |
+| C: dataAsOf vs calculatedAt | Pass | result `dataAsOf`; native `calculated_at` |
+| C: identity and invalidation | Partial | Hash identity and `isEngineResultCurrent` pass; UI invalidation now wired in Build 19; read → evaluate → save is still not one transaction (gate below) |
+| D: scenario matrix, Node/browser determinism, Rust parity | Pass | `test/engine`, `check:engine-runtimes` (run on Windows with Edge), Rust reference math |
+| Gate: no competing schemas or persistence | Pass | no new repository, table or rule schema |
+| Gate: no false Safe from insufficient data | Pass after fix | see finding 1 |
+
+### Findings, most severe first
+
+1. **Fixed (`2b4ce21`).** With no phase history (normal for an account-private rulebook), `phaseKey` is
+   `"unknown"`, and an evaluation-only consistency rule took the "outside the evaluation" branch and became
+   `not_applicable`, which counts as passed: a book could reach Safe without that rule being evaluated. It is
+   now Unknown (`unknown_account_phase`), with a regression test.
+2. **Fixed (`557d0cc`).** `calculateAndSaveRisk` added reconciliation gaps and review ids before hashing, so no
+   caller could rebuild the same inputs for `isEngineResultCurrent`. `loadRiskCalculation` (reads only, review
+   ids merged without duplicates) and `evaluateRisk` (no write) now share that path; a test shows a stored
+   result is current with its frozen policy and stops being current after a new review.
+3. **Fixed (`615f0d7`).** `check:engine-runtimes` failed on Windows after a passing comparison: Edge kept its
+   temporary profile open (EPERM on cleanup). Cleanup now retries, then warns.
+4. **Integration, fixed in #44.** Nothing could ever set `user_confirmed_at`, which the engine requires for
+   account-private rules, so they were Unknown forever. Publishing your own rules now records the confirmation.
+5. **Integration, fixed in #44.** The desktop Insights snapshot view model still required a non-null balance and
+   day P&L, so reading any Build 16 snapshot with Unknown values would fail.
+6. **Integration, resolved in #44.** Migration number collision with Build 19 (see the data model: 15 is this
+   branch's nullable snapshots, 16 is the rulebook audit log, with an explicit repair for a journal that reached
+   15 on the Build 19 branch).
+7. **Noted.** `store/snapshots.rs` was reformatted with default rustfmt (100 columns) while the rest of the
+   repository uses about 120: review noise only.
+8. **Noted (fail-closed by design).** For a provider-verified catalogue version, every parameter needs a
+   reviewed provider-stated claim, and currency/boundary need claim ids. Catalogue data without those claims
+   evaluates to Unknown. That is correct, but it means real catalogue rulebooks need claims authored before
+   they can produce figures.
+
+### The four reported Linux test failures
+
+On Windows (this branch, `cargo test`, 2026-10-21): **195 passed, 0 failed, 2 ignored**, including the four
+legacy-rulebook tests listed above; GitHub CI (windows-latest) is green. They could not be run on Linux here,
+so the "pre-existing on Linux" classification rests on the original author's reproduction on `e947dfb` and the
+existing Triage card; it was not re-verified.
+
+### Remaining gates
+
+- Read, evaluate and save are separate operations; a source edit between them can save a result for inputs
+  that are no longer current. `isEngineResultCurrent` detects it afterwards (the UI re-checks); a native
+  revision token or current-result promotion would close it.
+- Packaged Windows/Tauri runs, visual review and human acceptance are not done.
