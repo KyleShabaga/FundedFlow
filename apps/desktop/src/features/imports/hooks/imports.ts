@@ -34,5 +34,5 @@ export const useCommitCsvImport = (id: string) => useFeatureMutation({ scope: JS
     return api.commitImport(input);
   }, confirmedFailure: batch => batch.status === "failed",
   invalidate: batch => batch?.status === "failed" ? [keys.imports(id), keys.deletion(id)]
-    : [keys.imports(id), keys.tradesRoot(id), keys.snapshotsRoot(id), keys.deletion(id), keys.lineageRoot],
+    : [keys.imports(id), keys.tradesRoot(id), keys.dailyReviewsRoot(id), keys.snapshotsRoot(id), keys.deletion(id), keys.lineageRoot],
 });
