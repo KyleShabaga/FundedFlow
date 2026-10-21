@@ -74,14 +74,15 @@ dev commands are registered only under `cfg(debug_assertions)`, which a release 
 
 | Item | Value |
 |---|---|
-| Run | _filled in after the green run_ |
-| Source SHA | _filled in after the green run_ |
-| Artifact | _filled in after the green run_ |
-| Installer file | _filled in after the green run_ |
-| SHA-256 | _filled in after the green run_ |
+| Run | [Release installer #39691474111](https://github.com/KyleShabaga/FundedFlow/actions/runs/39691474111) (success); CI run [39691474015](https://github.com/KyleShabaga/FundedFlow/actions/runs/39691474015) also green |
+| Source SHA | `7679edc1ac117944ae31d81b6c6a29142b61a0fe` (PR head when built) |
+| Artifact | `fundedflow-0.1.0-7679edc-windows-nsis` (5.0 MB zip; expires 2026-11-20) |
+| Installer file | `FundedFlow_0.1.0_x64-setup.exe` |
+| SHA-256 | `041983f565c7f6b41dba2388c2f21bc8c4c7402c94e442ed0f75d00938e0787f` |
 
-The same config was also built locally on Windows 11 before pushing (see the PR); the CI artifact above is the one to
-test.
+Later commits on this branch change only this document, so they don't re-run the installer build; the artifact
+above is the one to test. The same config was also built locally on Windows 11 before pushing. That local installer
+has a different hash (the build is not bit-for-bit reproducible) and is not the one to test.
 
 ## Clean-machine smoke checklist (owner; not yet run)
 
