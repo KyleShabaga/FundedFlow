@@ -1,4 +1,4 @@
-//! Build 24 integration against accepted Builds 16/19/20/22 (schema 18).
+//! Build 24 integration against the current journal schema.
 use super::{
     tests::{account, journal},
     *,
@@ -138,7 +138,7 @@ fn approved(p: &deletion::DeletionPreview) -> deletion::DeleteRequest {
     }
 }
 #[test]
-fn schema18_archive_restores_reviews_daily_history_corrections_screenshots_and_null_snapshots() {
+fn current_schema_archive_restores_reviews_daily_history_corrections_screenshots_and_null_snapshots() {
     let source = tempfile::tempdir().unwrap();
     let p = populate(source.path());
     let before = archive::dump(&p.c).unwrap();
@@ -158,7 +158,7 @@ fn schema18_archive_restores_reviews_daily_history_corrections_screenshots_and_n
     let out = source.path().join("complete.zip");
     archive::export(&p.c, &source.path().join("attachments"), &out, true).unwrap();
     let inspected = archive::inspect_to(&out, source.path()).unwrap();
-    assert_eq!(inspected.manifest.schema_version, 18);
+    assert_eq!(inspected.manifest.schema_version, crate::db::latest_version());
     let target = tempfile::tempdir().unwrap();
     let live = target.path().join(crate::db::DB_FILE_NAME);
     let c = journal(&live);
@@ -184,6 +184,13 @@ fn schema18_archive_restores_reviews_daily_history_corrections_screenshots_and_n
     restore::recover(target.path(), &live).unwrap();
     let c = journal(&live);
     assert_eq!(archive::dump(&c).unwrap(), before);
+    // The row dump can't see schema objects: the restored image keeps the current version and its triggers.
+    let version: u32 = c.query_row("PRAGMA user_version", [], |r| r.get(0)).unwrap();
+    assert_eq!(version, crate::db::latest_version());
+    for trigger in ["trg_programme_phases_rulebook_provider_insert", "trg_phase_paths_rulebook_provider_update", "trg_catalogue_source_facts_immutable"] {
+        let found: i64 = c.query_row("SELECT count(*) FROM sqlite_master WHERE type = 'trigger' AND name = ?1", [trigger], |r| r.get(0)).unwrap();
+        assert_eq!(found, 1, "{trigger}");
+    }
     assert!(
         reviews::get(&c, Some(target.path()), &p.account, &p.trade)
             .unwrap()

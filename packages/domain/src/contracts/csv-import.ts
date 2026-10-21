@@ -39,6 +39,11 @@ export const csvImportRequestSchema = z.strictObject({
   dateFormat: z.enum(dateFormats).optional(),
   /** Explicit generic mapping; omit to match headers by name. */
   columns: columnMappingSchema.nullish(),
+  /** Native preview digest; required at commit. Confirmation applies only to this digest. */
+  targetAcknowledgement: z.strictObject({
+    previewToken: z.string().min(1),
+    historicalConfirmed: z.boolean(),
+  }).optional(),
 });
 export type CsvImportRequest = z.input<typeof csvImportRequestSchema>;
 
@@ -98,6 +103,14 @@ export const rowReportSchema = z.object({
 export type RowReport = z.infer<typeof rowReportSchema>;
 
 export const csvPreviewSchema = z.object({
+  targetAssessment: z.object({
+    previewToken: z.string().min(1),
+    blocked: z.string().nullable(),
+    confirmations: z.array(z.string()),
+    startInclusive: z.string().nullable(),
+    endExclusive: z.string().nullable(),
+    candidateCount: z.number().int().nonnegative(),
+  }),
   format: z.enum(["performance", "generic"]),
   formatReason: z.string(),
   dateFormat: z.enum(["ymd", "mdy", "dmy"]).nullable(),

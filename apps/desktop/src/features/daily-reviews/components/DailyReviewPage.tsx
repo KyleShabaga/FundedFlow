@@ -22,6 +22,7 @@ import {
   EmptyState,
   ErrorState,
   focusFirstInvalid,
+  focusFirstInvalidWhenShown,
   FormSection,
   formatInstant,
   formatMoney,
@@ -305,7 +306,7 @@ function ReviewForm({ account, data, library, libraryFailed, onDirtyChange, relo
         focusStatus.current = true;
         toast.show({ tone: "success", title: action === "complete" ? "Review completed" : "Review saved" });
       },
-      () => queueMicrotask(() => focusFirstInvalid(form.current)),
+      () => focusFirstInvalidWhenShown(form.current),
     );
   };
   const doReopen = () => {

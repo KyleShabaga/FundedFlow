@@ -11,6 +11,7 @@ import {
   ConfirmDialog,
   Dialog,
   focusFirstInvalid,
+  focusFirstInvalidWhenShown,
   FormSection,
   InlineNotice,
   MutationFeedback,
@@ -26,6 +27,8 @@ import {
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import { fieldErrors, toMutationState } from "../../shared/presentation";
 import { useCorrectTrade, useCreateTrade } from "../../trades/hooks/trades";
+import { RuntimeInlineRecovery } from "../../../components/RuntimeGate";
+import { TradeWriteReview } from "./TradeWriteReview";
 import type { TradeViewModel } from "../../trades/view-models/trade";
 
 export interface TradeFormValues {
@@ -188,7 +191,7 @@ function TradeFormBody({ account, trade, open, onOpenChange, onSaved }: TradeFor
         onOpenChange(false);
         onSaved?.(saved);
       })
-      .catch(() => queueMicrotask(() => focusFirstInvalid(form.current)));
+      .catch(() => focusFirstInvalidWhenShown(form.current));
   };
 
   const feedback = toMutationState(mutation, {
@@ -225,15 +228,16 @@ function TradeFormBody({ account, trade, open, onOpenChange, onSaved }: TradeFor
         }
       >
         <form id={fieldId(base, "form")} ref={form} onSubmit={submit} noValidate className="jr-form" aria-label={mode === "create" ? "New manual trade" : "Correct trade"}>
+          <RuntimeInlineRecovery />
           <ValidationSummary issues={summary} />
           {conflict && (
             <InlineNotice tone="warning" title="This trade changed after you opened it" live="polite">
               Close this form and open the trade again to see the stored values, then apply your correction. Nothing was saved.
             </InlineNotice>
           )}
-          {!conflict && feedback.status !== "idle" && feedback.status !== "submitting" && feedback.status !== "success" && (
-            <MutationFeedback state={feedback} onCheck={() => onOpenChange(false)} />
-          )}
+          {!conflict && (mutation.outcome === "uncertain-outcome"
+            ? <TradeWriteReview write={mutation} account={account} {...(trade ? { tradeId: trade.id } : { symbol: values.symbol })} />
+            : feedback.status !== "idle" && feedback.status !== "submitting" && feedback.status !== "success" && <MutationFeedback state={feedback} />)}
           {imported && (
             <InlineNotice tone="info" live="off">
               This trade was imported. Correcting it changes the journal's values only: the original CSV row and source fills stay exactly as

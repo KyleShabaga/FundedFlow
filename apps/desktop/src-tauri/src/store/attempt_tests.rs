@@ -307,8 +307,9 @@ fn csv_duplicate_detection_is_scoped_to_the_attempt() {
         format: FormatChoice::Auto,
         date_format: DateFormatChoice::Auto,
         columns: None,
+        target_acknowledgement: None,
     };
-    csv_import::commit(&mut conn, &req(&a1.id)).unwrap();
+    csv_import::commit_reviewed(&mut conn, &req(&a1.id)).unwrap();
     let imported = count(&conn, &format!("SELECT COUNT(*) FROM trades WHERE account_id = '{}'", a1.id));
     assert!(imported > 0);
 
@@ -316,11 +317,12 @@ fn csv_duplicate_detection_is_scoped_to_the_attempt() {
     // The same file into the new attempt is entirely new, not a duplicate of attempt 1.
     let p = csv_import::preview(&conn, &req(&r.successor.id)).unwrap();
     assert_eq!(p.duplicate_count, 0);
-    csv_import::commit(&mut conn, &req(&r.successor.id)).unwrap();
-    assert_eq!(count(&conn, &format!("SELECT COUNT(*) FROM trades WHERE account_id = '{}'", r.successor.id)), imported);
+    assert!(p.target_assessment.blocked.is_some(), "same broker number cannot make pre-reset trades belong to the successor");
+    assert!(csv_import::commit_reviewed(&mut conn, &req(&r.successor.id)).is_err());
+    assert_eq!(count(&conn, &format!("SELECT COUNT(*) FROM trades WHERE account_id = '{}'", r.successor.id)), 0);
     assert_eq!(count(&conn, &format!("SELECT COUNT(*) FROM trades WHERE account_id = '{}'", a1.id)), imported);
-    // And within attempt 2 it is a duplicate.
-    assert_eq!(csv_import::preview(&conn, &req(&r.successor.id)).unwrap().duplicate_count as i64, imported);
+    // The predecessor remains the sole owner; successor dedup still sees no saved rows.
+    assert_eq!(csv_import::preview(&conn, &req(&r.successor.id)).unwrap().duplicate_count, 0);
 }
 
 #[test]

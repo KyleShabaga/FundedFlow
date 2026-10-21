@@ -14,7 +14,7 @@ import { ToastProvider } from "../../design-system";
 import { DataControlFailure } from "../../lib/data/data-controls";
 import { createTestStore, makeAccount } from "../accounts/test-store";
 import { accountMenu } from "../accounts/components/AccountActions";
-import { LAST_EXPORT_SETTING, type FilePicker } from "./api/data-controls";
+import { DataControlProblem, LAST_EXPORT_SETTING, type FilePicker } from "./api/data-controls";
 import { DataControlsPage } from "./components/DataControlsPage";
 import { resetDataControlLock } from "./hooks/data-controls";
 
@@ -323,6 +323,47 @@ describe("permanent deletion", () => {
     await user.click(within(pending).getByRole("button", { name: "Retry file cleanup" }));
     await waitFor(() => expect(controls.retryCleanup).toHaveBeenCalledTimes(1));
     expect(await screen.findByText("File cleanup finished")).toBeTruthy();
+  });
+});
+
+describe("native file chooser and cleanup failures (Build 26)", () => {
+  it("does nothing when the restore chooser is cancelled", async () => {
+    const user = userEvent.setup();
+    picker.open.mockResolvedValue(null);
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Choose backup to restore…" }));
+    await waitFor(() => expect(picker.open).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(controls.inspectArchive).not.toHaveBeenCalled();
+    expect(screen.queryByText("No archive was opened")).toBeNull();
+  });
+
+  it("explains a restore chooser that can't open, without inspecting anything", async () => {
+    const user = userEvent.setup();
+    picker.open.mockRejectedValue(new DataControlProblem("dialog"));
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Choose backup to restore…" }));
+    expect(await screen.findByText("No archive was opened")).toBeTruthy();
+    expect(screen.getByText("The file chooser couldn't open.")).toBeTruthy();
+    expect(controls.inspectArchive).not.toHaveBeenCalled();
+  });
+
+  it("keeps cleanup pending visible when the cleanup retry fails, and never claims the files are gone", async () => {
+    const user = userEvent.setup();
+    controls.deletePermanently.mockResolvedValue({ operationId: "op", state: "cleanup_pending", affectedEntities: {} });
+    controls.retryCleanup.mockRejectedValue(new DataControlFailure({ code: "io", message: "C:\\Users\\me\\AppData\\locked.png" }));
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Erase entire journal…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Erase the entire local journal?" });
+    await within(dialog).findByText(/Archives or CSV files you exported yourself are not touched/);
+    await user.type(within(dialog).getByRole("textbox", { name: /Type the confirmation/ }), "ERASE ENTIRE JOURNAL");
+    await user.click(within(dialog).getByRole("button", { name: "Erase entire journal" }));
+    const pending = await screen.findByRole("dialog", { name: "Deleted, but some files are still on disk" });
+    await user.click(within(pending).getByRole("button", { name: "Retry file cleanup" }));
+    expect(await within(pending).findByText(/couldn't be read or written/)).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Deleted, but some files are still on disk" })).toBeTruthy();
+    expect(screen.queryByText("File cleanup finished")).toBeNull();
+    expect(document.body.textContent).not.toContain("locked.png");
   });
 });
 

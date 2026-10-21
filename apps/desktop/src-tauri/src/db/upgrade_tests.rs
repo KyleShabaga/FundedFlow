@@ -187,7 +187,7 @@ fn assert_store_works(conn: &mut Connection) {
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].tags, ["es", "patience"]);
 
-    let again = csv_import::commit(
+    let again = csv_import::commit_reviewed(
         conn,
         &serde_json::from_value(serde_json::json!({
             "accountId": ny, "fileName": "Performance.csv", "content": FIXTURE_CSV, "timezone": "America/New_York"

@@ -2,7 +2,7 @@
 // Build 18 wizard and history through the real pages, Build 13 components and Build 14 hooks. Accounts come
 // from the Build 15 in-memory test store; previews and batches replay the Rust-generated Build 17 golden
 // fixture (test_csvimport/build17/normalization-v1.json). Synthetic data only.
-import { RepositoryError, type CsvImportRequest, type CsvPreview, type ImportBatch } from "@fundedflow/domain";
+import { RepositoryError, type CsvPreview, type ImportBatch } from "@fundedflow/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -14,8 +14,10 @@ import type { RuntimeState } from "../../app/RuntimeProvider";
 import { ToastProvider } from "../../design-system";
 import { ACTIVE_ACCOUNT_SETTING } from "../accounts/active-account";
 import { createTestStore, makeAccount } from "../accounts/test-store";
+import { featureKeys } from "../shared/query-keys";
 import { ImportHistoryPage } from "./components/ImportHistoryPage";
 import { ImportWizardPage } from "./components/ImportWizardPage";
+import { createImports } from "./test-store";
 
 type Case = (typeof golden.cases)[number];
 const byName = (name: string) => golden.cases.find(c => c.name === name)! as Case;
@@ -31,42 +33,6 @@ beforeAll(() => {
   Element.prototype.releasePointerCapture ??= () => {};
   globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
 });
-
-/* ---------- Fake import backend replaying Rust outputs ---------- */
-
-function createImports() {
-  const batches: ImportBatch[] = [];
-  const problems = new Map<string, CsvPreview["rows"]>();
-  const previews: CsvImportRequest[] = [];
-  const overrides = new Map<string, (req: CsvImportRequest) => CsvPreview>();
-  let n = 0;
-  const caseFor = (req: CsvImportRequest) => golden.cases.find(c => c.request.content === req.content);
-  const preview = vi.fn(async (req: CsvImportRequest): Promise<CsvPreview> => {
-    previews.push(req);
-    const custom = overrides.get(req.fileName);
-    if (custom) return custom(req);
-    const c = caseFor(req);
-    if (!c) throw new RepositoryError({ kind: "validation", message: "no fixture", issues: [{ field: "content", message: "The file is empty." }] });
-    return structuredClone(c.expected.preview) as CsvPreview;
-  });
-  const commit = vi.fn(async (req: CsvImportRequest): Promise<ImportBatch> => {
-    const c = caseFor(req);
-    if (!c || !c.expected.batch) throw new RepositoryError({ kind: "validation", message: "x", issues: [{ field: "dateFormat", message: "Choose the date format." }] });
-    const batch = { ...(c.expected.batch as ImportBatch), id: `batch-${++n}`, accountId: req.accountId, fileName: req.fileName };
-    batches.push(batch);
-    problems.set(batch.id, (c.expected.preview as CsvPreview).rows.filter(r => r.status !== "new"));
-    return batch;
-  });
-  const repository = {
-    preview,
-    commit,
-    list: vi.fn(async (accountId: string) => batches.filter(b => b.accountId === accountId)),
-    problemRows: vi.fn(async (batchId: string) =>
-      (problems.get(batchId) ?? []).map(r => ({ rowNumber: r.rowNumber, lineNumber: r.lineNumber, status: r.status === "blank" ? "skipped" : r.status, errors: r.errors, warnings: r.warnings, raw: r.raw, duplicateOfTradeId: r.duplicate?.tradeId ?? null })),
-    ),
-  };
-  return { repository, batches, previews, overrides };
-}
 
 const last = <T,>(xs: T[]) => xs[xs.length - 1];
 let store: ReturnType<typeof createTestStore>;
@@ -330,6 +296,11 @@ describe("destination safety", () => {
       makeAccount({ id: "p", name: "Eval", broker: "Tradovate", externalRef: "999", status: "failed", successorAccountId: "s" }),
       makeAccount({ id: "s", name: "Eval attempt 2", broker: "Tradovate", externalRef: "999", predecessorAccountId: "p" }),
     ], "s");
+    imports.overrides.set("synthetic-generic-fees-and-duplicate.csv", () => {
+      const p = structuredClone(byName("generic-fees-and-duplicate").expected.preview) as CsvPreview;
+      p.targetAssessment.confirmations = ["Eval is a finished (failed) attempt. Confirm these historical trades belong to it."];
+      return p;
+    });
     const user = userEvent.setup();
     renderAt("/import", { accountId: "p" });
     expect(await screen.findByText("Another account uses the same account number")).toBeTruthy();
@@ -340,12 +311,61 @@ describe("destination safety", () => {
     await user.click(await screen.findByRole("button", { name: "Continue with 1 trade" }));
     const importButton = await screen.findByRole("button", { name: /Import 1 trade into Eval/ });
     expect(importButton.getAttribute("aria-disabled")).toBe("true");
-    expect(screen.getByText(/"Eval" is failed, not an active attempt/)).toBeTruthy();
+    expect(screen.getByText(/Eval is a finished \(failed\) attempt/)).toBeTruthy();
     await user.click(screen.getByRole("checkbox", { name: "These trades belong to this attempt" }));
     expect(screen.getByRole("button", { name: /Import 1 trade into Eval/ }).getAttribute("aria-disabled")).toBeNull();
     await user.click(screen.getByRole("button", { name: /Import 1 trade into Eval/ }));
     await waitFor(() => expect(imports.repository.commit).toHaveBeenCalledTimes(1));
+    expect(imports.repository.commit.mock.calls[0][0].targetAcknowledgement).toEqual({ previewToken: "<preview-token>", historicalConfirmed: true });
     expect(imports.batches[0].accountId).toBe("p");
+  });
+
+  it("uses a native boundary block even when the displayed rows have the same reset date", async () => {
+    const user = userEvent.setup();
+    const base = byName("generic-fees-and-duplicate");
+    imports.overrides.set("boundary.csv", () => {
+      const p = structuredClone(base.expected.preview) as CsvPreview;
+      p.targetAssessment.blocked = "One unlisted row spans this attempt's reset. Split the file.";
+      p.rowsOmitted = 1;
+      return p;
+    });
+    renderAt();
+    await screen.findByRole("combobox", { name: "Import into" });
+    await choose(user, csvFile(base, "boundary.csv"));
+    await checkFile(user);
+    await user.click(await screen.findByRole("button", { name: "Review rows" }));
+    await user.click(await screen.findByRole("button", { name: "Continue with 1 trade" }));
+    expect(await screen.findByText(/One unlisted row spans/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Import 1 trade into PA-48213/ }).getAttribute("aria-disabled")).toBe("true");
+    expect(screen.queryByRole("checkbox", { name: "These trades belong to this attempt" })).toBeNull();
+    expect(imports.repository.commit).not.toHaveBeenCalled();
+  });
+
+  it("clears a reviewed confirmation when lineage changes and requires another preview", async () => {
+    const user = userEvent.setup();
+    const base = byName("generic-fees-and-duplicate");
+    imports.overrides.set("historical.csv", () => {
+      const p = structuredClone(base.expected.preview) as CsvPreview;
+      p.targetAssessment.confirmations = ["Review this historical attempt."];
+      return p;
+    });
+    renderAt();
+    await screen.findByRole("combobox", { name: "Import into" });
+    await choose(user, csvFile(base, "historical.csv"));
+    await checkFile(user);
+    await user.click(await screen.findByRole("button", { name: "Review rows" }));
+    await user.click(await screen.findByRole("button", { name: "Continue with 1 trade" }));
+    await user.click(await screen.findByRole("checkbox", { name: "These trades belong to this attempt" }));
+    expect(screen.getByRole("button", { name: /Import 1 trade into PA-48213/ }).getAttribute("aria-disabled")).toBeNull();
+    const lineage = await store.repository.accounts.lineage("a");
+    await act(async () => {
+      client.setQueryData(featureKeys.lineage("a"), { value: [...lineage, { ...lineage[0], accountId: "new-attempt" }] });
+    });
+    expect(await screen.findByText("Your choices changed")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Import 0 trades into PA-48213/ }).getAttribute("aria-disabled")).toBe("true");
+    await user.click(screen.getByRole("button", { name: "Check the file again" }));
+    expect((await screen.findByRole("checkbox", { name: "These trades belong to this attempt" }) as HTMLInputElement).checked).toBe(false);
+    expect(imports.repository.commit).not.toHaveBeenCalled();
   });
 
   it("keeps each account's history separate", async () => {
@@ -374,6 +394,18 @@ describe("commit outcomes", () => {
     await user.click(await screen.findByRole("button", { name: "Continue with 1 trade" }));
     return screen.findByRole("button", { name: "Import 1 trade into PA-48213" });
   }
+
+  it("requires a new preview after native rejects a stale acknowledgement", async () => {
+    const user = userEvent.setup();
+    imports.repository.commit.mockRejectedValueOnce(new RepositoryError({ kind: "validation", message: "stale preview",
+      issues: [{ field: "targetAcknowledgement", message: "Preview the file again and review the destination." }] }));
+    const button = await reachConfirm(user);
+    await user.click(button);
+    expect(await screen.findByText("Nothing was imported")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Check the file again" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Import 0 trades into PA-48213/ }).getAttribute("aria-disabled")).toBe("true");
+    expect(imports.repository.commit).toHaveBeenCalledTimes(1);
+  });
 
   it("imports once when the button is pressed twice", async () => {
     const user = userEvent.setup();

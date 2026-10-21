@@ -168,6 +168,19 @@ describe("currency on Build 7 components", () => {
   });
 });
 
+describe("TabPanel heading", () => {
+  it("adds a visually hidden h2 so the panel's h3 sections keep the outline", () => {
+    render(
+      <Tabs label="Sections" items={[{ value: "a", label: "Overview" }]}>
+        <TabPanel value="a" heading="Overview"><h3>Trades</h3></TabPanel>
+      </Tabs>,
+    );
+    const heading = screen.getByRole("heading", { level: 2, name: "Overview" });
+    expect(heading.className).toContain("ds-sr-only");
+    expect(heading.closest('[role="tabpanel"]')).not.toBeNull();
+  });
+});
+
 describe("TabPanel keepMounted", () => {
   it("keeps a form's unsaved input across tab switches, hidden while inactive", async () => {
     const user = userEvent.setup();

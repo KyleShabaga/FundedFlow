@@ -162,7 +162,12 @@ export function CsvImportSection({
   const runImport = () =>
     run(async () => {
       try {
-        const b = await repository.imports.commit(request());
+        if (!preview || preview.targetAssessment.blocked || preview.targetAssessment.confirmations.length) {
+          throw new Error(preview?.targetAssessment.blocked ?? "Review the destination in the Import CSV wizard before importing historical trades.");
+        }
+        const b = await repository.imports.commit({ ...request(), targetAcknowledgement: {
+          previewToken: preview.targetAssessment.previewToken, historicalConfirmed: false,
+        } });
         reset(
           `Imported ${b.importedCount} of ${b.rowCount} rows from ${b.fileName}: ` +
             `${b.duplicateCount} duplicate and ${b.skippedCount - b.duplicateCount} blank skipped, ` +

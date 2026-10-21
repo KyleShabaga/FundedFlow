@@ -15,6 +15,7 @@ import {
   ConfirmDialog,
   ErrorState,
   focusFirstInvalid,
+  focusFirstInvalidWhenShown,
   formatInstant,
   formatMoney,
   InlineNotice,
@@ -206,7 +207,7 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
     if (issues.length) { queueMicrotask(() => focusFirstInvalid(form.current)); return; }
     save.submit(toReviewInput(account.id, trade.id, revision, values)).then(
       () => { forget(account.id, trade.id); toast.show({ tone: "success", title: "Review saved" }); },
-      () => queueMicrotask(() => focusFirstInvalid(form.current)),
+      () => focusFirstInvalidWhenShown(form.current),
     );
   };
   const feedback = toMutationState(save, { success: "Review saved.", fieldId: f => fid(base, f.split(".")[0]), fieldLabel: f => FIELD_LABELS[f.split(".")[0]] });

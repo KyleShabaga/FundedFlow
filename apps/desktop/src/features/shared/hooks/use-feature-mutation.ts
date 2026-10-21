@@ -42,6 +42,16 @@ export function useFeatureMutation<Input, Output>(spec: WriteSpec<Input, Output>
     });
     return mutation.mutateAsync({ operation, snapshot });
   };
+  /**
+   * Re-reads the records the trader will review (`readReviewed`, a query's throwing refresh) and marks the
+   * write's other affected reads stale. Rejects if that read fails or the runtime isn't ready. It never
+   * resends the write and never releases the lock.
+   */
+  const checkUncertainOutcome = async (readReviewed: () => Promise<unknown>) => {
+    if (current.current.state.kind !== "ready") throw new FeatureDataError("unavailable");
+    await readReviewed();
+    void invalidate(current.current.spec);
+  };
   const acknowledgeUncertainOutcome = async (confirmation: { recordsReviewed: true }) => {
     if (current.current.state.kind !== "ready") throw new FeatureDataError("unavailable");
     // Call only after the UI/user has checked persisted records. This is acknowledgement, not proof of rollback.
@@ -58,6 +68,7 @@ export function useFeatureMutation<Input, Output>(spec: WriteSpec<Input, Output>
     outcome: scopeStatus === "uncertain" ? "uncertain-outcome" as const : currentScope && mutation.isPending ? "submitting" as const : currentScope && mutation.isError ? "failed" as const
       : failedResult ? "confirmed-failure" as const : currentScope && mutation.isSuccess ? "confirmed-success" as const : "idle" as const,
     canAcknowledgeUncertainOutcome: submissions.canAcknowledge(spec.scope),
+    checkUncertainOutcome,
     acknowledgeUncertainOutcome,
     reset: mutation.reset, // Resetting feedback never clears an uncertain write lock.
   };
