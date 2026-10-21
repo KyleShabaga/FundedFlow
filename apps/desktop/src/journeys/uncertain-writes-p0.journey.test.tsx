@@ -212,7 +212,8 @@ const openToday = async (user: User, account: Account, button: string, title: st
   return screen.findByRole("dialog", { name: title });
 };
 const calculation: Surface = {
-  name: "calculation", write: "snapshots.save", read: "snapshots.list",
+  // P0-02: a calculation is written by native compare-and-promote.
+  name: "calculation", write: "snapshots.promote", read: "snapshots.list",
   open: async (user, _store, account) => {
     const dialog = await openToday(user, account, "Calculate estimate", "Calculate estimate");
     await waitFor(() => expect(isDisabled(within(dialog).getByRole("button", { name: "Calculate and save" }))).toBe(false));

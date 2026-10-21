@@ -26,7 +26,7 @@ import { ASSURANCE, RESULT_STATUS, reasonText } from "../../rulebooks/view-model
 export type RiskCategory = EngineResult["status"];
 
 /** Why a saved estimate is not the current one. */
-export type StaleReason = "sources-changed" | "earlier-trading-day" | "newer-data" | "other-rulebook-version";
+export type StaleReason = "sources-changed" | "earlier-trading-day" | "newer-data" | "other-rulebook-version" | "not-promoted";
 
 /** A query's facts as Today reads them: still loading, unreadable, or a value. */
 export type Loadable<T> = { state: "loading" } | { state: "error" } | { state: "ready"; value: T };
@@ -54,7 +54,7 @@ export interface NewerData {
 export interface TruthInput {
   account: Pick<AccountViewModel, "id" | "status" | "archivedAt">;
   snapshot: Loadable<SnapshotViewModel | null>;
-  /** Unchanged-inputs check for the snapshot's own cutoff (useCalculationFreshness). */
+  /** Native unchanged-sources check for the current result's own cutoff (P0-02), or "not-promoted" for history. */
   freshness: Loadable<Freshness>;
   /** Canonical inputs read now (Rust trading day, records and the assignment in force). */
   facts: Loadable<AccountRiskInputs>;
@@ -88,6 +88,7 @@ export function deriveRiskTruth({ account, snapshot, freshness, facts }: TruthIn
   if (now.account.id !== account.id) return { kind: "check-failed", snapshot: saved, result };
   const reasons: StaleReason[] = [];
   if (freshness.value.kind === "changed") reasons.push("sources-changed");
+  if (freshness.value.kind === "not-promoted") reasons.push("not-promoted");
   if (result.tradingDay !== now.effectiveTradingDay) reasons.push("earlier-trading-day");
   const newer = newerThan(result, now);
   if (newer.trades + newer.checkpoints + newer.ledger > 0) reasons.push("newer-data");
@@ -100,6 +101,7 @@ export const STALE_TEXT: Record<StaleReason, string> = {
   "earlier-trading-day": "It was calculated for an earlier trading day.",
   "newer-data": "Records dated after its cutoff exist (newer trades, checkpoints or ledger movements).",
   "other-rulebook-version": "Another rulebook version (or none) applies now.",
+  "not-promoted": "It was stored without being confirmed as the current result against the records (saved before this version, or as history).",
 };
 
 export interface Headline {

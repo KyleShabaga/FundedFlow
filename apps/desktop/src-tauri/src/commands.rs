@@ -23,6 +23,7 @@ use crate::store::authoring::{self, DraftInput, SourceInput};
 use crate::store::offers::{self, OfferSelection, OfferSelectionInput};
 use crate::store::ledger::{self, LedgerEntry, LedgerEntryInput};
 use crate::store::settings::{self, Setting};
+use crate::store::risk_promotion;
 use crate::store::snapshots::{self, Snapshot, SnapshotInput};
 use crate::store::journal::{self, JournalEntry, JournalEntryInput};
 use crate::store::rulebooks;
@@ -460,6 +461,30 @@ pub async fn list_account_snapshots(
 #[tauri::command]
 pub async fn get_latest_account_snapshot(db: State<'_, Runtime>, account_id: String) -> AppResult<Option<Snapshot>> {
     db.with(|c| snapshots::latest(c, &account_id))
+}
+
+/// P0-02: every source of one calculation, read from one database state.
+#[tauri::command]
+pub async fn capture_account_risk(db: State<'_, Runtime>, query: evidence::RiskInputsQuery) -> AppResult<risk_promotion::RiskCapture> {
+    db.with(|c| risk_promotion::capture(c, query))
+}
+
+/// P0-02: store an engine calculation and make it current, only if its sources are unchanged at commit.
+#[tauri::command]
+pub async fn promote_account_risk(db: State<'_, Runtime>, input: SnapshotInput) -> AppResult<Snapshot> {
+    db.with(|c| risk_promotion::promote(c, input))
+}
+
+/// P0-02: the account's current (newest promoted) calculation and whether its sources are unchanged now.
+#[tauri::command]
+pub async fn get_current_account_risk(db: State<'_, Runtime>, account_id: String) -> AppResult<risk_promotion::CurrentRisk> {
+    db.with(|c| risk_promotion::current(c, &account_id))
+}
+
+/// P0-02: whether one stored calculation's sources are unchanged for its own cutoff.
+#[tauri::command]
+pub async fn get_account_snapshot_freshness(db: State<'_, Runtime>, snapshot_id: String) -> AppResult<risk_promotion::SnapshotFreshness> {
+    db.with(|c| risk_promotion::freshness(c, &snapshot_id))
 }
 
 /// Read-only: whether the journal database is open, and why not if it isn't.

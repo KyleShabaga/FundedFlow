@@ -25,6 +25,7 @@ import {
   snapshotSchema,
 } from "@fundedflow/domain";
 import { createTestStore } from "../accounts/test-store";
+import { attachRiskPromotion } from "../../test/risk-promotion-fake";
 
 const conflict = (message: string) => new RepositoryError({ kind: "conflict", message });
 const invalid = (field: string, message: string) => new RepositoryError({ kind: "validation", message, issues: [{ field, message }] });
@@ -237,7 +238,8 @@ export function createRulebookStore(seed: Account[]) {
     },
     catalogue: { load: async () => { throw notFound("no catalogue"); } },
   };
-  return { ...base, repository, versions, rulebooks, assignments, events, writes, evidenceCalls, trades, snapshots, verifiedVersionId: verified.version.id };
+  const promotion = attachRiskPromotion(repository as never, () => snapshots);
+  return { ...base, repository, versions, rulebooks, assignments, events, writes, evidenceCalls, trades, snapshots, promotions: promotion.promotions, verifiedVersionId: verified.version.id };
 }
 
 /** A closed synthetic trade with net realized P&L (Rust-normalized in the real app). */

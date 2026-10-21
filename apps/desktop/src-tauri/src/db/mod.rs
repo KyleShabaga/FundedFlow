@@ -136,6 +136,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "source_fact_immutability",
         step: Step::Sql(include_str!("../../migrations/0020_source_fact_immutability.sql")),
     },
+    Migration {
+        version: 21,
+        name: "risk_promotions",
+        step: Step::Sql(include_str!("../../migrations/0021_risk_promotions.sql")),
+    },
 ];
 
 /// Latest schema version this build understands.

@@ -33,6 +33,9 @@ import {
   settingSchema,
   snapshotInputSchema,
   snapshotSchema,
+  riskCaptureSchema,
+  currentRiskSchema,
+  snapshotFreshnessSchema,
   accountInputSchema,
   attemptSummarySchema,
   deletionPreviewSchema,
@@ -119,6 +122,7 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
     dataControls: createDataControls(invoke),
     evidence: {
       inputs: (query) => call("get_account_risk_inputs", { query: validate(riskInputsQuerySchema, query) }, accountRiskInputsSchema),
+      capture: (query) => call("capture_account_risk", { query: validate(riskInputsQuerySchema, query) }, riskCaptureSchema),
       create: (input) => call("create_financial_observation", { input: validate(observationInputSchema, input) }, observationSchema),
       get: (id) => call("get_financial_observation", { id }, observationSchema),
       list: (accountId) => call("list_financial_observations", { accountId }, z.array(observationSchema)),
@@ -221,6 +225,9 @@ export function createTauriRepository(invoke: Invoke): JournalRepository {
     },
     snapshots: {
       save: (input) => call("save_account_snapshot", { input: validate(snapshotInputSchema, input) }, snapshotSchema),
+      promote: (input) => call("promote_account_risk", { input: validate(snapshotInputSchema, input) }, snapshotSchema),
+      current: (accountId) => call("get_current_account_risk", { accountId }, currentRiskSchema),
+      freshness: (snapshotId) => call("get_account_snapshot_freshness", { snapshotId }, snapshotFreshnessSchema),
       list: (accountId, query) =>
         call(
           "list_account_snapshots",

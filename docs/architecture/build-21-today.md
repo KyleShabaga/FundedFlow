@@ -42,7 +42,7 @@ or when the window becomes visible in a later minute, never on a timer.
 
 | Shown | Source (owner → API) | Freshness / fallback | Test | Screen |
 |---|---|---|---|---|
-| Status Safe/Caution/Stop/Unknown | Build 16 `EngineResult.status` in the latest snapshot (`useLatestSnapshot`) | Truth model above; Unknown when not current, none, legacy, unreadable or unchecked | `today-model.test.ts` "current versus not current"; `today.test.tsx` "the selected account" | Risk estimate headline |
+| Status Safe/Caution/Stop/Unknown | Build 16 `EngineResult.status` in the account's current promoted result (`useCurrentRisk`, P0-02), else the latest snapshot as `not-promoted` stale | Truth model above; Unknown when not current, none, legacy, not promoted, unreadable or unchecked | `today-model.test.ts` "current versus not current"; `today.test.tsx` "the selected account" | Risk estimate headline |
 | Last known balance | `EngineResult.balance` | Unknown when null (baseline/history); "Not current" marker | metrics "known zero" | Figure card |
 | Realized P&L today | `EngineResult.realizedDayPnl` (trading day of the calculation) | as above | metrics | Figure card |
 | Profit target progress | `profit_target` outcome: `profit`, `profitTarget`, `remaining` | outcome state → known/unknown/unsupported/…; no rule → "No rule" | metrics "takes target…" | Figure card |

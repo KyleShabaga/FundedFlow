@@ -155,11 +155,11 @@ it("keeps navigation and Settings available when runtime fails and never enables
   await user.click(screen.getByRole("button", { name: "Import CSV" }));
   await user.click(await screen.findByRole("menuitem", { name: /Quick import/ }));
   await waitFor(() => expect(window.location.hash).toBe("#/import/quick"));
-  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Quick import");
+  expect(await screen.findByRole("heading", { level: 1, name: "Quick import" })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Import CSV" }));
   await user.click(await screen.findByRole("menuitem", { name: /Full wizard/ }));
   await waitFor(() => expect(window.location.hash).toBe("#/import"));
-  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Import trades");
+  expect(await screen.findByRole("heading", { level: 1, name: "Import trades" })).toBeTruthy();
   expect(screen.queryByRole("link", { name: "Import CSV" })).toBeNull();
   expect(screen.queryByRole("navigation", { name: "Primary navigation" })!.querySelector('[aria-current="page"]')).toBeNull();
   await userEvent.setup().click(screen.getByRole("link", { name: "Settings" }));

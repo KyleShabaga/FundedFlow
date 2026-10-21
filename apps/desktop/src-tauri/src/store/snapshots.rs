@@ -165,9 +165,34 @@ pub fn get(conn: &Connection, id: &str) -> AppResult<Snapshot> {
     .ok_or_else(|| AppError::not_found("snapshot", id))
 }
 
-/// Store a snapshot, or return the existing end-of-day row for the same inputs.
-/// Writes only to a non-archived account.
+/// Validated, converted figures of a snapshot input, ready to insert.
+pub(super) struct Prepared {
+    data_as_of: Option<String>,
+    balance: Option<i64>,
+    realized: Option<i64>,
+    unrealized: Option<i64>,
+    limit: Option<i64>,
+    remaining: Option<i64>,
+    hwm: Option<i64>,
+    floor: Option<i64>,
+    headroom: Option<i64>,
+    target: Option<i64>,
+}
+
+/// Store a snapshot as history, or return the existing end-of-day row for the same inputs.
+/// Writes only to a non-archived account. A saved snapshot is never the account's current risk
+/// result: only `risk_promotion::promote` can make one current (P0-02).
 pub fn save(conn: &mut Connection, input: SnapshotInput) -> AppResult<Snapshot> {
+    let prepared = prepare(&input)?;
+    let tx = conn.transaction()?;
+    let saved = insert_prepared(&tx, &input, prepared)?;
+    tx.commit()?;
+    Ok(saved)
+}
+
+/// Every check a snapshot passes before it is written (field formats, engine identity, frozen
+/// inputs, hash and metric projection). Reads nothing.
+pub(super) fn prepare(input: &SnapshotInput) -> AppResult<Prepared> {
     let mut issues = Issues::default();
     if !is_day(&input.trading_day) {
         issues.add("tradingDay", "use a trading day as YYYY-MM-DD");
@@ -239,11 +264,15 @@ pub fn save(conn: &mut Connection, input: SnapshotInput) -> AppResult<Snapshot> 
             "safe/caution requires known balance and daily P&L",
         );
     }
-    validate_engine_payload(&input, &mut issues);
+    validate_engine_payload(input, &mut issues);
     issues.into_result()?;
+    Ok(Prepared { data_as_of, balance, realized, unrealized, limit, remaining, hwm, floor, headroom, target })
+}
 
-    let tx = conn.transaction()?;
-    account_ctx(&tx, &input.account_id)?;
+/// Writes a prepared snapshot inside the caller's transaction (or returns the identical end-of-day row).
+pub(super) fn insert_prepared(tx: &Connection, input: &SnapshotInput, p: Prepared) -> AppResult<Snapshot> {
+    let Prepared { data_as_of, balance, realized, unrealized, limit, remaining, hwm, floor, headroom, target } = p;
+    account_ctx(tx, &input.account_id)?;
     if let Some(version) = &input.rulebook_version_id {
         let owner: Option<Option<String>> = tx.query_row(
             "SELECT b.owner_account_id FROM rulebook_versions v JOIN rulebooks b ON b.id = v.rulebook_id WHERE v.id = ?1",
@@ -267,7 +296,7 @@ pub fn save(conn: &mut Connection, input: SnapshotInput) -> AppResult<Snapshot> 
             )
             .optional()?;
         if let Some(id) = existing {
-            return get(&tx, &id);
+            return get(tx, &id);
         }
     }
     let id = new_id();
@@ -308,9 +337,7 @@ pub fn save(conn: &mut Connection, input: SnapshotInput) -> AppResult<Snapshot> 
             serde_json::to_string(&input.explanation).map_err(|e| AppError::invalid("explanation", e.to_string()))?,
         ],
     )?;
-    let saved = get(&tx, &id)?;
-    tx.commit()?;
-    Ok(saved)
+    get(tx, &id)
 }
 
 /// Snapshots of an account, newest day first. `from` and `to` are inclusive trading days.

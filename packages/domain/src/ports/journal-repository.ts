@@ -34,6 +34,7 @@ import type { InsightsDataset, InsightsQuery } from "../insights/contracts.js";
 import type { LedgerEntry, LedgerEntryInput } from "../contracts/ledger.js";
 import type { Setting } from "../contracts/settings.js";
 import type { Snapshot, SnapshotInput, SnapshotQuery } from "../contracts/snapshots.js";
+import type { CurrentRisk, RiskCapture, SnapshotFreshness } from "../engine/promotion.js";
 import type { Account, AccountInput } from "../contracts/accounts.js";
 import type {
   AccountHistory,
@@ -279,7 +280,17 @@ export interface SettingsRepository {
  * engine version and inputs hash returns the stored row.
  */
 export interface SnapshotRepository {
+  /** Stores a calculation as history. Never makes it the account's current result. */
   save(input: SnapshotInput): Promise<Snapshot>;
+  /**
+   * Stores an engine calculation and makes it current only if the sources it froze are unchanged at commit (one
+   * native write transaction). A refusal is a `conflict` RepositoryError and writes nothing.
+   */
+  promote(input: SnapshotInput): Promise<Snapshot>;
+  /** The account's newest promoted calculation and whether its sources are unchanged now. */
+  current(accountId: string): Promise<CurrentRisk>;
+  /** Whether a stored calculation's sources are unchanged for its own cutoff. */
+  freshness(snapshotId: string): Promise<SnapshotFreshness>;
   /** Newest trading day first. Readable for archived accounts. */
   list(accountId: string, query?: SnapshotQuery): Promise<Snapshot[]>;
   latest(accountId: string): Promise<Snapshot | null>;
@@ -325,6 +336,8 @@ export type CatalogueTransitionTarget = (typeof catalogueTransitionTargets)[numb
 /** Raw evidence and review operations (Build 15.5). No UI, rule evaluation or live feed. */
 export interface FinancialEvidenceRepository {
   inputs(query: RiskInputsQuery): Promise<AccountRiskInputs>;
+  /** Every source of one calculation, from one native database state (P0-02). */
+  capture(query: RiskInputsQuery): Promise<RiskCapture>;
   create(input: ObservationInput): Promise<FinancialObservation>;
   get(id: string): Promise<FinancialObservation>;
   /** Includes originals and superseding revisions, oldest recording first. */

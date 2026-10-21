@@ -214,7 +214,10 @@ fn migration_19_retains_old_bindings_but_never_resolves_a_foreign_provider() {
     let mut conn = super::open_file(&db.0).unwrap();
     assert_eq!(super::upgrade_tests::version(&conn), super::latest_version());
     assert_eq!(super::upgrade_tests::version(&super::upgrade_tests::read_only(&db.backup())), 18);
-    assert_eq!(super::upgrade_tests::dump(&conn, &[]), before, "no historical binding is rewritten");
+    let mut after = super::upgrade_tests::dump(&conn, &[]);
+    // Migration 21 (P0-02) adds an empty promotion table; nothing in it, and every existing table unchanged.
+    assert!(after.remove("risk_promotions").is_some_and(|(_, rows)| rows.is_empty()));
+    assert_eq!(after, before, "no historical binding is rewritten");
     let q = ApplicableRulebookQuery { programme_phase_id: id(0x43), phase_path_id: None };
     assert_eq!(store::applicable(&conn, &q).unwrap().status, "unverified");
     let acc = account(&mut conn, "No foreign rules");

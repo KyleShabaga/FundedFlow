@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 20 (Build 10.5; Build 23 adds no migration) (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`) `0017_trade_reviews.sql` `0018_daily_reviews.sql` `0019_rulebook_binding_provider.sql` and `0020_source_fact_immutability.sql`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 21 (P0-02; Build 23 adds no migration) (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`) `0017_trade_reviews.sql` `0018_daily_reviews.sql` `0019_rulebook_binding_provider.sql`, `0020_source_fact_immutability.sql` and `0021_risk_promotions.sql`; see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks, reviews, library, attachments),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -384,8 +384,10 @@ Repositories in `apps/desktop/src-tauri/src/store/` behind the `JournalRepositor
   tradingDaysCompleted and drawdownLocked nullable. `safe`/`caution` still require known balance and daily P&L;
   an `unknown` status needs reasons; an
   `explanation` object is required. An end-of-day save with the same account, day, engine version and inputs hash
-  returns the stored row. Not built: the "commit bundle" that writes a trade or import change and a snapshot in one
-  transaction, because no engine produces snapshots yet; the first engine slice owns that bundle.
+  returns the stored row. A saved snapshot is history only. The account's **current** result is the newest
+  `risk_promotions` row (migration 21, P0-02). `promote_account_risk` writes it together with its snapshot in one
+  `BEGIN IMMEDIATE` transaction, and only if the calculation's sources, re-read natively, are unchanged. Every read
+  rechecks that; see [P0-02](architecture/p0-02-risk-promotion.md).
 - **Catalogue** (`store::catalogue`): `load` reads the whole catalogue (the same loader the fixture round-trip test
   uses); `transitionVersion` moves a version through review (`verified` needs a named reviewer, a stale version
   re-verified keeps its original sign-off, and the migration 6/8 triggers refuse illegal moves); `setAccountLink`
@@ -521,6 +523,7 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 18 | `daily_reviews` | SQL | Build 22: `daily_reviews` (unique per account and trading day, revision, plan with authored time and timing, reflection, no-trade day, daily checklist snapshot, completion fields), `daily_review_answers` (item label and order snapshots), `daily_review_trades` (links by trade id with the values saved), append-only `daily_review_events`. New tables only; no existing row changes and no journal entry becomes a review. See [Daily reviews](#daily-reviews-build-22) |
 | 19 | `rulebook_binding_provider` | SQL | Build 10.5: additive INSERT/UPDATE guards prevent phase/path bindings to another provider's rulebook. Existing rows and historical references remain unchanged; production applicability reads fail closed for inconsistent or archived bindings. |
 | 20 | `source_fact_immutability` | SQL | Build 10.5: freezes captured source identity/content/date/hash facts without rewriting existing rows; independent reviewer/verification metadata remains updateable. |
+| 21 | `risk_promotions` | SQL | P0-02: append-only `risk_promotions` (account, snapshot, source fingerprint, promoted at); same-account, no-update and no-delete-while-the-account-exists triggers. Nothing backfilled: earlier snapshots stay history and are never current. See [P0-02](architecture/p0-02-risk-promotion.md) |
 
 How an upgrade runs:
 
@@ -862,7 +865,7 @@ Limitations:
 | Accounts | `list_accounts(includeArchived?)`, `list_active_accounts`, `get_account(id)`, `create_account(input)`, `update_account(id, input)`, `archive_account(id)`, `restore_account(id)`, `change_account_status(id, input)`, `get_account_history(id)`, `reset_account_attempt(input)`, `get_account_lineage(id)`, `preview_account_deletion(id)` |
 | Ledger | `list_ledger_entries(accountId)`, `create_ledger_entry(input)`, `update_ledger_entry(id, input)`, `delete_ledger_entry(id)`, `get_ledger_balance_adjustment(accountId)` |
 | Settings | `get_setting(key)`, `list_settings`, `set_setting(key, value)`, `remove_setting(key)` |
-| Snapshots | `save_account_snapshot(input)`, `list_account_snapshots(accountId, from?, to?, endOfDayOnly?)`, `get_latest_account_snapshot(accountId)` |
+| Snapshots | `save_account_snapshot(input)` (history only), `list_account_snapshots(accountId, from?, to?, endOfDayOnly?)`, `get_latest_account_snapshot(accountId)`; P0-02: `capture_account_risk(query)`, `promote_account_risk(input)`, `get_current_account_risk(accountId)`, `get_account_snapshot_freshness(snapshotId)` |
 | Catalogue | `get_catalogue`, `transition_catalogue_version(id, to, reviewer?)`, `get_account_catalogue_link(accountId)`, `set_account_catalogue_link(input)`, `list_account_phase_events(accountId)`, `record_account_phase_event(input)`, `create_catalogue_source(input)`, `create_catalogue_draft(input)`, `replace_catalogue_draft(id, input)`, `select_account_offer(input)`, `list_account_offer_selections(accountId)` |
 | Trades | `list_trades(accountId)`, `create_trade(input)`, `update_trade(id, input, options?)`, `delete_trade(id, reason?)`, `restore_trade(accountId, id, reason?)`, `list_deleted_trades(accountId)`, `get_trade_detail(accountId, id)` |
 | Reviews | `get_trade_review(accountId, tradeId)`, `save_trade_review(input)`, `list_trade_review_summaries(accountId)`, `add_trade_screenshot(input)`, `read_trade_screenshot(accountId, id)`, `remove_trade_screenshot(accountId, id)` |
