@@ -177,3 +177,16 @@ Never change economics, rounding or dedup identity as a side effect of moving co
 ## Financial evidence (Build 15.5)
 
 `src/risk` exports canonical AccountRiskInputs, source observations, ledger revisions, deterministic reconciliation and rule-evidence prerequisites. It reuses existing account/trade/catalogue/rulebook schemas and money primitives. Rust remains authoritative for persisted trade economics and writes. Shared reconciliation outputs are pinned to Rust-generated fixtures; no React or provider rules engine is added. See [the API/Build 16 handoff](../handoffs/build-15-5.md).
+
+## Insights module (Build 23)
+
+`src/insights` holds the versioned Insights contracts (`insightsDatasetSchema`, `InsightsFilter`,
+`INSIGHTS_CONTRACT_VERSION`, `INSIGHTS_SELECTOR_VERSION`), the canonical included-trade selector (`selectTrades`), the
+metric engine (`summarize`, `Metric` states `value` / `na` / `insufficient` / `unavailable` with stable codes) and the
+group helpers (periods, weekday, strategy, tag, symbol, side, source, closed-trade curve, attempt comparison, cohort,
+reported reasons). Money is bigint micro-units of Rust-stored values; dates are integer calendar arithmetic on trading-day
+keys (no `Date`, clock or locale).
+
+These are new calculations in TypeScript, so they carry a parity fixture: `test/fixtures/insights-metrics.json`
+(human-written trades, **Rust-generated** summaries from `src-tauri/src/insights.rs` via `parity.rs`). The `JournalRepository`
+port gains `insights.dataset(query)`; the desktop adapter calls `get_insights_dataset`.

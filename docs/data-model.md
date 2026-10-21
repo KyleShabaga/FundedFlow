@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 18 (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`) `0017_trade_reviews.sql` and `0018_daily_reviews.sql`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 18 (Build 23 adds no migration) (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`) `0017_trade_reviews.sql` and `0018_daily_reviews.sql`; see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks, reviews, library, attachments),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -812,6 +812,7 @@ Limitations:
 | Reviews | `get_trade_review(accountId, tradeId)`, `save_trade_review(input)`, `list_trade_review_summaries(accountId)`, `add_trade_screenshot(input)`, `read_trade_screenshot(accountId, id)`, `remove_trade_screenshot(accountId, id)` |
 | Library | `get_review_library()`, `save_strategy(id?, input)`, `save_tag(id?, input)`, `save_checklist(id?, input)`, `set_library_archived(input)` |
 | Daily reviews | `get_daily_review(accountId, tradingDay)`, `list_daily_reviews(accountId)`, `save_daily_review(input)`, `reopen_daily_review(input)`, `relink_daily_review_trades(input)` |
+| Insights | `get_insights_dataset(query)` (read only; Build 23) |
 | Journal | `list_journal_entries(accountId)`, `create_journal_entry(input)`, `update_journal_entry(id, input)`, `delete_journal_entry(id)` |
 | CSV | `preview_csv_import(request)`, `commit_csv_import(request)`, `list_csv_imports(accountId)`, `list_csv_import_problem_rows(batchId)` |
 | Rulebooks | `list_rulebooks(accountId?)`, `list_rulebook_versions(rulebookId)`, `get_rulebook_version(id)`, `get_applicable_rulebook(query)`, `create_rulebook_draft(input, context?)`, `update_rulebook_draft(id, expectedUpdatedAt, input, context)`, `discard_rulebook_draft(id, expectedUpdatedAt, context)`, `validate_rulebook_draft(id)`, `publish_rulebook_version(id, reviewer?, expectedUpdatedAt?, context?)`, `assign_rulebook_to_account(input, guard?)`, `list_account_rulebook_assignments(accountId)`, `flag_rulebook_source_conflict(input)`, `list_rulebook_events(query)` |
@@ -960,3 +961,21 @@ resolved in the account's zone), the current trading day, `isFuture`, `archived`
 with link status, missing trades, outcome, day state and change flags. `list_daily_reviews(accountId)` returns the
 current trading day, summaries newest first and **legacy day notes**: `journal_entries` without a trade, with the
 trading day derived from their time. They are listed apart, read only, never converted into or counted as reviews.
+
+## Insights (Build 23)
+
+Store: `store/insights.rs`; tests: `store/insights_tests.rs`; contracts and the metric engine:
+`packages/domain/src/insights`; parity mirror: `src-tauri/src/insights.rs` with `insights-metrics.json`. No migration.
+Screens and definitions: [architecture/build-23-insights.md](architecture/build-23-insights.md).
+
+`get_insights_dataset({ accountIds })` is **read only**. It names attempts by local account id (1–500, each must exist;
+archived attempts are readable) and returns `contractVersion` (1), `generatedAt`, per account its identity, status,
+archive time, currency, zone and reset, lineage root and attempt number, the status event that set the current status
+(with the user's `cause`, never inferred), soft-deleted trade count and import counts, and every **active** trade of
+those accounts with Rust-stored values (`tradingDay`, `fees`, `grossPnl`, `realizedPnl`, `reportedPnl`, `pnlStatus`),
+the instrument root, and its review's strategy, tags (recorded labels and kinds), planned risk (entered, or derived from
+the planned entry and stop as Trade detail derives it) and R multiple. Nothing is written, re-derived or matched across
+accounts: a broker account number reused by reset attempts never merges their trades.
+
+All aggregation is in `@fundedflow/domain` (`selectTrades`, `summarize`, groups). Unknown P&L is counted and left out of
+sums, never zero; a zero denominator is N/A; amounts of different currencies are never added.
