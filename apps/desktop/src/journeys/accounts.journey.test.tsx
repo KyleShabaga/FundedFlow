@@ -21,7 +21,7 @@ const nav = () => screen.getByRole("navigation", { name: "Primary navigation" })
 const risk = () => screen.getByRole("region", { name: "Risk estimate" });
 
 describe("first run to a configured account", () => {
-  it("creates the first account from Accounts, makes it active, shows Today as Unknown, and assigns a rulebook", async () => {
+  it("creates the first account from Accounts, makes it active, and shows Today as Unknown with setup needed", async () => {
     const { store, user } = renderApp("/");
     // Today on an empty journal: no figures, a way to add an account.
     expect(await screen.findByText("Add an account to see today's risk")).toBeTruthy();
@@ -47,10 +47,10 @@ describe("first run to a configured account", () => {
     await waitFor(() => expect(within(risk()).getByRole("status").textContent).toContain("Unknown"));
     expect(within(risk()).queryByText(/Safe/)).toBeNull();
     expect(screen.getByText("Setup needed for limits")).toBeTruthy();
+  });
 
-    // Assign the verified catalogue version from the account's rulebook page.
-    await user.click(within(nav()).getByRole("link", { name: "Accounts" }));
-    window.location.hash = "/accounts/acct-1/rulebook";
+  it("assigns a verified rulebook version to the new account; Today names it but stays Unknown until a calculation", async () => {
+    const { store, user } = renderApp("/accounts/acct-1/rulebook", { accounts: [makeAccount({ id: "acct-1", name: "Eval 50K" })] });
     await screen.findByText("No rulebook assigned");
     await screen.findByRole("table", { name: "Versions of Example 50K" });
     await user.click(screen.getAllByRole("button", { name: "Assign a version…" })[0]);

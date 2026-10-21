@@ -17,6 +17,8 @@ export const boundary = {
   /** Every `runtime_status` answer; `retry_runtime` answers from `retryAnswers` first. Last answer repeats. */
   statusAnswers: [readyStatus] as Answer[],
   retryAnswers: [] as Answer[],
+  /** Runs when `retry_runtime` is invoked: what the native runtime does on retry (e.g. install a staged restore). */
+  onRetry: null as (() => void) | null,
   invocations: [] as string[],
   /** Native save/open dialog answers: a path, null for Cancel, or an Error when the chooser can't open. */
   dialog: {
@@ -29,6 +31,7 @@ export const boundary = {
 export function resetBoundaries() {
   boundary.statusAnswers = [readyStatus];
   boundary.retryAnswers = [];
+  boundary.onRetry = null;
   boundary.invocations = [];
   boundary.dialog = { save: [], open: [], calls: [] };
 }
@@ -45,7 +48,10 @@ export const tauriCoreMock = {
   invoke: async (command: string) => {
     boundary.invocations.push(command);
     if (command === "runtime_status") return answer(take(boundary.statusAnswers));
-    if (command === "retry_runtime") return answer(boundary.retryAnswers.length ? boundary.retryAnswers.shift() : take(boundary.statusAnswers));
+    if (command === "retry_runtime") {
+      boundary.onRetry?.();
+      return answer(boundary.retryAnswers.length ? boundary.retryAnswers.shift() : take(boundary.statusAnswers));
+    }
     throw new Error(`Unexpected native command in a frontend test: ${command}`);
   },
 };

@@ -184,8 +184,10 @@ describe("keyboard: menus and dialogs", () => {
     const dialog = await screen.findByRole("dialog", { name: /Permanently delete Example · Eval A/ });
     await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
     // Focus never leaves the modal, forwards or backwards.
-    for (let i = 0; i < 12; i++) { await user.tab(); expect(dialog.contains(document.activeElement)).toBe(true); }
-    for (let i = 0; i < 12; i++) { await user.tab({ shift: true }); expect(dialog.contains(document.activeElement)).toBe(true); }
+    const stops = dialog.querySelectorAll("button:not([disabled]), input:not([disabled]), [tabindex=\"0\"]").length;
+    expect(stops).toBeGreaterThan(1);
+    for (let i = 0; i <= stops; i++) { await user.tab(); expect(dialog.contains(document.activeElement)).toBe(true); }
+    for (let i = 0; i <= stops; i++) { await user.tab({ shift: true }); expect(dialog.contains(document.activeElement)).toBe(true); }
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(trigger));
