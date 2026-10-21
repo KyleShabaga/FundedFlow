@@ -145,7 +145,7 @@ Audit of other forms (not changed; distinct decisions recorded):
 |---|---|---|
 | Import wizard | Acknowledge after "Check import history" | Correct pattern (unchanged) |
 | Daily review | "Check the stored review" acknowledges, keeps the edits and reloads the stored review | Acknowledges before showing; product decision to keep (edits are kept locally, so no loss) |
-| Rulebook draft save/publish, assign, start draft, calculation, Today checkpoints, screenshots | Uncertain state shown without a Check action, so the scope stays locked until restart | Same gap; needs per-surface review content. Follow-up card recommended |
+| Rulebook draft save/publish, assign, start draft, calculation, Today checkpoints, screenshots | Uncertain state shown without a Check action, so the scope stays locked until restart | Same gap; needs per-surface review content. **Closed by P0-03** ([p0-01-p0-03.md §2](p0-01-p0-03.md#2-p0-03-uncertain-write-recovery)) |
 | Data controls | Own operation lock and native preview tokens; no uncertain-write lock | Not applicable |
 
 ## 3. Build 26.7: test reliability
@@ -189,5 +189,6 @@ Windows CI for the pushed head is recorded in the PR description.
 - Native/packaged smoke and controlled-failure runs (§1 Block D): blocked by isolation and tooling; owner action, then
   Build 26.75/27.
 - Manual NVDA/WebView2 reading of the diagnostic disclosure and inline recovery; contrast and scaling (Build 26 §9).
-- Uncertain-write acknowledgement for rulebook, Today checkpoint, calculation and screenshot surfaces (§2 audit).
+- Uncertain-write acknowledgement for rulebook, Today checkpoint, calculation and screenshot surfaces (§2 audit):
+  implemented in P0-03 (jsdom evidence); packaged/manual acceptance still pending.
 - None of these cards is marked Done; the PR is not merged.
