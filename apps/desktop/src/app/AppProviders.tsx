@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { HashRouter } from "react-router-dom";
 
+import { ToastProvider } from "../design-system";
 import { RootErrorBoundary } from "./RootErrorBoundary";
 import { RuntimeProvider } from "./RuntimeProvider";
 
@@ -18,7 +19,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <RootErrorBoundary>
       <HashRouter>
         <QueryClientProvider client={queryClient}>
-          <RuntimeProvider>{children}</RuntimeProvider>
+          <RuntimeProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </RuntimeProvider>
         </QueryClientProvider>
       </HashRouter>
     </RootErrorBoundary>

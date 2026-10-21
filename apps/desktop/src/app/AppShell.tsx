@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 
 import { RuntimeRecoveryNotice } from "../components/RuntimeGate";
 import { AppFrame, Button } from "../design-system";
+import { AccountSwitcher } from "../features/accounts/components/AccountSwitcher";
 import "./shell.css";
 
 const routes = [
@@ -14,6 +15,8 @@ const routes = [
   { path: "/settings", label: "Settings", icon: Settings },
 ];
 const normalizePath = (pathname: string) => pathname.replace(/\/+$/, "").toLowerCase() || "/";
+/** The top-level section a path belongs to ("/accounts/abc" is in Accounts). */
+const sectionOf = (path: string) => routes.find(route => route.path !== "/" && path.startsWith(`${route.path}/`))?.path ?? path;
 const preferenceKey = "fundedflow.sidebarCollapsed";
 const narrowQuery = "(max-width: 759px)";
 
@@ -60,7 +63,7 @@ export function SidebarNav({ collapsed, narrow, toggle }: {
   const developerRoute = import.meta.env.DEV && activePath === "/settings/developer";
   const item = (route: typeof routes[number]) => (
     <Link key={route.path} to={route.path}
-      aria-current={activePath === route.path || (developerRoute && route.path === "/settings") ? "page" : undefined}
+      aria-current={activePath === route.path || (route.path === "/accounts" && sectionOf(activePath) === "/accounts") || (developerRoute && route.path === "/settings") ? "page" : undefined}
       className="shell-nav-link" aria-label={route.label} title={route.label}>
       <route.icon size={20} aria-hidden="true" />
       <span className={collapsed ? "ds-sr-only" : undefined}>{route.label}</span>
@@ -104,8 +107,8 @@ export function PageHeader({ title }: { title: string }) {
     <header className="shell-header">
       <div className="shell-header-context">
         <h1 ref={heading} tabIndex={-1}>{title}</h1>
-        {/* Reserved account selector/filter integration point; no feature data access here. */}
-        <div className="shell-account-context" />
+        {/* Account selector (Build 15). It reads accounts through the feature hooks only. */}
+        <div className="shell-account-context"><AccountSwitcher /></div>
       </div>
       <div className="shell-import">
         <Button variant="primary" disabled aria-describedby="import-unavailable"
@@ -120,8 +123,10 @@ export function AppShell() {
   const sidebar = useSidebar();
   const { pathname } = useLocation();
   const normalizedPath = normalizePath(pathname);
-  const title = routes.find(route => route.path === normalizedPath)?.label
-    ?? (import.meta.env.DEV && normalizedPath === "/settings/developer" ? "Developer tools" : "Page not found");
+  // Only Accounts has nested pages (account detail); other unknown sub-paths stay "Page not found".
+  const title = import.meta.env.DEV && normalizedPath === "/settings/developer"
+    ? "Developer tools"
+    : routes.find(route => route.path === normalizedPath || (route.path === "/accounts" && sectionOf(normalizedPath) === "/accounts"))?.label ?? "Page not found";
   return (
     <>
       <a className="shell-skip" href="#main-content" onClick={event => {

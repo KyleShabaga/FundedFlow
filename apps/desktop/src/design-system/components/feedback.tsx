@@ -120,13 +120,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {/* Portalled to the body so no transformed or contained ancestor can move the fixed stack. */}
       {createPortal(
         <section className="ds-toasts" aria-label="Notifications">
-          {/* Polite and assertive regions exist before any toast so screen readers announce additions. */}
-          <div role="status" aria-live="polite" className="ds-toast-stack">
+          {/* Live regions exist before any toast so screen readers announce additions. They carry aria-live without a
+              status/alert role, so an empty stack mounted at the app root never competes with a page's own alerts. */}
+          <div aria-live="polite" aria-atomic="false" className="ds-toast-stack" data-toast-live="polite">
             {toasts.filter((t) => (t.tone ?? "info") !== "error").map((t) => (
               <ToastView key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
             ))}
           </div>
-          <div role="alert" aria-live="assertive" className="ds-toast-stack">
+          <div aria-live="assertive" aria-atomic="false" className="ds-toast-stack" data-toast-live="assertive">
             {toasts.filter((t) => t.tone === "error").map((t) => (
               <ToastView key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
             ))}

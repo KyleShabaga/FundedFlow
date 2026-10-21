@@ -209,7 +209,9 @@ describe("Toast", () => {
         </ToastProvider>,
       );
       await userEvent.click(screen.getByRole("button", { name: "Go" }));
-      expect(screen.getByRole("status").textContent).toContain("Imported 64 trades");
+      const polite = screen.getByRole("region", { name: "Notifications" }).querySelector("[data-toast-live='polite']")!;
+      expect(polite.getAttribute("aria-live")).toBe("polite");
+      expect(polite.textContent).toContain("Imported 64 trades");
       await act(async () => vi.advanceTimersByTime(5100));
       expect(screen.queryByText("Imported 64 trades")).toBeNull();
     } finally {
@@ -226,7 +228,9 @@ describe("Toast", () => {
       );
       await userEvent.click(screen.getByRole("button", { name: "Go" }));
       await act(async () => vi.advanceTimersByTime(60_000));
-      expect(screen.getByRole("alert").textContent).toContain("Couldn't export");
+      const assertive = screen.getByRole("region", { name: "Notifications" }).querySelector("[data-toast-live='assertive']")!;
+      expect(assertive.getAttribute("aria-live")).toBe("assertive");
+      expect(assertive.textContent).toContain("Couldn't export");
       await userEvent.click(screen.getByRole("button", { name: "Dismiss notification" }));
       expect(screen.queryByText("Couldn't export")).toBeNull();
     } finally {
