@@ -1,5 +1,5 @@
 import { BookOpen, ChartNoAxesCombined, ChevronDown, House, PanelLeftClose, PanelLeftOpen, Settings, Upload, Wallet, Workflow, Zap } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { RuntimeRecoveryNotice } from "../components/RuntimeGate";
@@ -21,6 +21,8 @@ const sectionOf = (path: string) => routes.find(route => route.path !== "/" && p
 const isTradePath = (path: string) => /^\/journal\/trades\/[^/]+$/.test(path);
 const isDayReviewPath = (path: string) => /^\/journal\/days\/[^/]+$/.test(path);
 const preferenceKey = "fundedflow.sidebarCollapsed";
+/** Build 26.9 developer actions (Add Fake Data, Reset All Data): development builds only, never bundled in production. */
+const DevSidebarTools = import.meta.env.DEV ? lazy(() => import("./dev-tools/DevSidebarTools")) : null;
 const narrowQuery = "(max-width: 759px)";
 
 function useSidebar() {
@@ -95,6 +97,7 @@ export function SidebarNav({ collapsed }: { collapsed: boolean }) {
       <nav id="primary-navigation" aria-label="Primary navigation" className="shell-nav">
         <div className="shell-nav-main">{routes.slice(0, 4).map(item)}</div>
         <div className="shell-nav-footer">
+          {DevSidebarTools && <Suspense fallback={null}><DevSidebarTools collapsed={collapsed} /></Suspense>}
           {item(routes[4])}
           <p className="shell-local" title="Saved on this computer">
             <span aria-hidden="true">•</span>

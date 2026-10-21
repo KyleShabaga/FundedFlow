@@ -90,7 +90,8 @@ pub struct ResetPreview {
     pub data_dir: String,
     /// The tool's own description of what a reset covers.
     pub scope: String,
-    pub counts: RecordCounts,
+    /// None when the journal is not open (e.g. a test journal that fails to open): the reset still works.
+    pub counts: Option<RecordCounts>,
     /// The sibling directory the tool moves the journal to (it adds a timestamp and id).
     pub backup_pattern: String,
     pub tool: String,
@@ -151,7 +152,7 @@ fn run_tool_preview(data_dir: &Path) -> AppResult<(String, String)> {
 }
 
 pub fn preview(runtime: &Runtime, data_dir: &Path) -> AppResult<ResetPreview> {
-    let counts = counts(runtime)?;
+    let counts = counts(runtime).ok();
     let (tool, tool_output) = run_tool_preview(data_dir)?;
     let scope = tool_output
         .lines()

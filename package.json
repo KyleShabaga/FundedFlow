@@ -17,6 +17,10 @@
     "test": "npm run test -w @fundedflow/domain && npm run test -w @fundedflow/desktop",
     "check": "npm run check:boundaries -w @fundedflow/domain && npm run check:dist -w @fundedflow/domain",
     "dev:domain": "npm run dev -w @fundedflow/domain",
-    "tauri": "npm run tauri -w @fundedflow/desktop --"
+    "tauri": "npm run tauri -w @fundedflow/desktop --",
+    "dev:test-journal": "node scripts/dev-test-journal.mjs",
+    "seed:test-journal": "node scripts/dev-test-journal.mjs seed",
+    "reset:test-journal": "node scripts/dev-test-journal.mjs reset",
+    "test:dev-scripts": "node --test scripts/reset-test-data.test.mjs scripts/dev-reset-handoff.test.mjs"
   }
 }
