@@ -133,9 +133,10 @@ export function headline(truth: RiskTruth): Headline {
       return unknown("Unknown", "The last saved calculation predates the rules engine, so it gives no status.");
     case "check-failed":
     case "stale": {
-      const why = truth.kind === "stale" ? truth.reasons.map(r => STALE_TEXT[r]).join(" ") : "Its sources couldn't be checked again.";
-      if (truth.result.status === "Stop") return { category: "Stop", label: "Stop (last saved, not current)", status: "danger", detail: `A Stop was recorded and is never cleared without a new calculation. ${why}`, lastRecorded: recordedLine(truth.result) };
-      return unknown("Unknown", `The last saved estimate is not current. ${why}`, recordedLine(truth.result));
+      // Stale reasons are listed beside the headline; a failed check has no other place to say why.
+      const why = truth.kind === "stale" ? "" : " Its sources couldn't be checked again.";
+      if (truth.result.status === "Stop") return { category: "Stop", label: "Stop (last saved, not current)", status: "danger", detail: `A Stop was recorded and is never cleared without a new calculation.${why}`, lastRecorded: recordedLine(truth.result) };
+      return unknown("Unknown", `The last saved estimate is not current.${why}`, recordedLine(truth.result));
     }
     case "current":
       return { category: truth.result.status, label: RESULT_STATUS[truth.result.status].label, status: RESULT_STATUS[truth.result.status].kind, detail: ASSURANCE[truth.result.assurance], lastRecorded: null };

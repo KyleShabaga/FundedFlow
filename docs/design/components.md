@@ -40,7 +40,8 @@ Build 13 added the patterns below; props and usage are in [`../design-system.md`
 ## Build 6 component plan (owned by feature cards)
 
 `AccountContextBar`, `GlobalFreshnessIndicator` (12/21), `AccountHealthCard`, `RiskStatusBadge` (Safe / Caution /
-Stop / Unknown, text + icon + colour), `RiskMetricCard`, `DataFreshnessBadge`, `CalculationBreakdownDrawer` (21),
+Stop / Unknown, text + icon + colour), `RiskMetricCard`, `DataFreshnessBadge`, `CalculationBreakdownDrawer` (21: built
+from `StatusIndicator`, `MetricCard`, `StatList` and `Drawer` in `features/today`, no new primitives),
 `RuleVersionTimeline`, `CalculationPreview` (19: built as the Activity tab, `VersionComparison`, `EvidencePreview` and `CalculationExplanation` in `features/rulebooks`), `ColumnMappingTable`, `ValidationIssueList`, `DuplicateReview`,
 `ImportSummary` (18), `TradeEditor`, `ChecklistReview`, `AttachmentManager`, `SessionReviewForm` (20, 22),
 `FilterBar`, `ChartPanel`, `ContributingTradesDrawer` (23), `BackupRestorePanel`, `DestructiveActionDialog` (25).

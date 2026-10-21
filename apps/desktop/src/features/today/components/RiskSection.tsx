@@ -62,7 +62,7 @@ export function RiskSection({ account, today, current }: {
         </InlineNotice>
       )}
       {truth.kind === "none" && (
-        <p className="ds-faint">Nothing has been calculated for this account. Limits, room left and Safe / Caution / Stop appear once you calculate an estimate; until then every figure is Unknown.</p>
+        <p className="ds-faint">Limits, room left and a status appear once you calculate an estimate; until then every figure is Unknown.</p>
       )}
       {truth.kind === "read-failed" && <InlineNotice tone="error" title="The last estimate couldn't be read">Nothing is shown in its place. Try again from the recovery controls, or calculate a new estimate.</InlineNotice>}
       {truth.kind === "legacy" && <InlineNotice tone="info" live="off" title="Recorded before the rules engine">The last calculation has no engine record, so it gives no status. Open the full record to see it as stored, or calculate a new estimate.</InlineNotice>}
@@ -92,10 +92,11 @@ function Metrics({ account, truth, snapshot }: { account: AccountViewModel; trut
           const word = metricStateWord(m.state);
           return (
             <div role="listitem" key={m.key} className="td-metric">
-              <MetricCard label={m.label} value={m.value} stale={notCurrent} asOf={truth.result.asOf} timeZone={account.timezone}
-                sub={<>{word && <Badge tone={m.state === "conflicting" ? "loss" : m.state === "manual" ? "flow" : "neutral"}>{word}</Badge>}{word && m.sub ? " " : null}{m.sub}</>}
-                basis={m.basis}
-                action={<Button size="sm" variant="ghost" onClick={() => setOpen(m.key)} aria-label={`How ${m.label.toLowerCase()} is calculated`}>Explain</Button>} />
+              <MetricCard label={m.label} value={m.value} stale={notCurrent} asOf={truth.result.asOf} timeZone={account.timezone} sub={m.sub} basis={m.basis}
+                action={<>
+                  {word && <Badge tone={m.state === "conflicting" ? "loss" : m.state === "manual" ? "flow" : "neutral"}>{word}</Badge>}
+                  <Button size="sm" variant="ghost" onClick={() => setOpen(m.key)} aria-label={`How ${m.label.toLowerCase()} is calculated`}>Explain</Button>
+                </>} />
             </div>
           );
         })}
