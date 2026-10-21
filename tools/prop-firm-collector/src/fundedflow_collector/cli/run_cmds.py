@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Annotated
 
@@ -57,6 +58,7 @@ def _select_firms(conn: sqlite3.Connection, firm: str | None, all_firms: bool) -
 
 
 def _report(summaries: list[RunSummary], dry_run: bool) -> int:
+    """Firm runs print exactly as in Build 29; publisher runs add their page-reading counts."""
     code = exit_codes.OK
     for summary in summaries:
         if summary.message:
@@ -71,6 +73,12 @@ def _report(summaries: list[RunSummary], dry_run: bool) -> int:
             counts = summary.counts()
             parts = ", ".join(f"{k} {v}" for k, v in sorted(counts.items())) or "nothing to do"
             typer.echo(f"{summary.firm_key}: {summary.status}; {summary.fetches_used} requests; {parts}")
+            directory = summary.directory_counts()
+            if directory:
+                typer.echo("  pages read: " + ", ".join(f"{k} {v}" for k, v in sorted(directory.items())))
+                for result in summary.results:
+                    if result.directory in ("structure_changed", "js_unavailable", "parse_error"):
+                        typer.echo(f"  {result.directory}: {result.url} ({result.directory_detail})")
             if summary.not_fetched:
                 typer.echo(f"  {summary.not_fetched} queued URLs were not fetched (budget or deadline).")
             if summary.run_id:
@@ -93,12 +101,27 @@ def _run(
     ctx: typer.Context, command: Command, firm: str | None, all_firms: bool, options: RunOptions, *, headed: bool
 ) -> None:
     app: AppState = state(ctx)
-    settings, sha = app.settings()
+    app.settings()  # a bad settings file is reported before anything else, as in Build 29
     conn = app.connect()
     firms = _select_firms(conn, firm, all_firms)
     if not firms:
         typer.echo("No enabled firms.")
         return
+    run_owners(ctx, conn, firms, options, command=command, headed=headed)
+
+
+def run_owners(
+    ctx: typer.Context,
+    conn: sqlite3.Connection,
+    firms: Sequence[registry.Owner],
+    options: RunOptions,
+    *,
+    command: Command,
+    headed: bool,
+) -> None:
+    """Run firms or publishers through the one pipeline (also used by `collector directory fetch`)."""
+    app: AppState = state(ctx)
+    settings, sha = app.settings()
     if options.dry_run:
         env = build_environment(
             conn, settings, sha, fixture_dir=options.fixture_site, use_browser=False, headed=False, live=False
@@ -187,20 +210,38 @@ def fetch(
 @handle_errors
 def import_capture_cmd(
     ctx: typer.Context,
-    firm: Annotated[str, typer.Option("--firm")],
-    url: Annotated[str, typer.Option("--url", help="The page's original address.")],
-    file: Annotated[Path, typer.Option("--file", exists=True, dir_okay=False, help=".html, .htm, .pdf or .txt")],
+    firm: Annotated[str | None, typer.Option("--firm")] = None,
+    url: Annotated[str, typer.Option("--url", help="The page's original address.")] = "",
+    file: Annotated[
+        Path | None, typer.Option("--file", exists=True, dir_okay=False, help=".html, .htm, .pdf or .txt")
+    ] = None,
     captured_at: Annotated[
         str | None, typer.Option("--captured-at", help="When you saved it, UTC, e.g. 2026-10-20T14:30:00Z.")
     ] = None,
+    publisher: Annotated[
+        str | None, typer.Option("--publisher", help="A comparison publisher instead of a firm.")
+    ] = None,
 ) -> None:
     """Import a page you saved from your browser. Makes no network requests."""
+    if bool(firm) == bool(publisher):
+        raise fail("choose --firm KEY or --publisher KEY", exit_codes.USAGE)
+    if not url or file is None:
+        raise fail("--url and --file are required", exit_codes.USAGE)
     app = state(ctx)
     settings, _ = app.settings()
     conn = app.connect()
     with RunLock(app.paths.data_dir):
         try:
-            result = import_capture(conn, settings, clock, firm_key=firm, url=url, file=file, captured_at=captured_at)
+            result = import_capture(
+                conn,
+                settings,
+                clock,
+                firm_key=firm,
+                publisher_key=publisher,
+                url=url,
+                file=file,
+                captured_at=captured_at,
+            )
         except RegistryError:
             raise
         except (ParseError, ParseTimeout) as exc:
@@ -213,3 +254,5 @@ def import_capture_cmd(
     typer.echo(f"  captured  {result.captured_at} (manual_capture)")
     if result.warnings:
         typer.echo(f"  warnings  {', '.join(result.warnings)}")
+    if result.directory:
+        typer.echo(f"  read as   {result.directory} (unverified)")

@@ -57,7 +57,9 @@ def import_capture(
     if (firm_key is None) == (publisher_key is None):
         raise RegistryError("choose a firm or a comparison publisher for the capture")
     firm: registry.Owner = (
-        registry.require_firm(conn, firm_key) if firm_key is not None else registry.require_publisher(conn, str(publisher_key))
+        registry.require_firm(conn, firm_key)
+        if firm_key is not None
+        else registry.require_publisher(conn, str(publisher_key))
     )
     try:
         canonical = canonicalize(url)

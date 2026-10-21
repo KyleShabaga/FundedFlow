@@ -696,6 +696,10 @@ def add_source(
         raise RegistryError(f"host {host} is not an authorised document host for {firm.owner_key}")
     if isinstance(firm, Publisher):
         _check_publisher_path(firm, canonical)
+        from fundedflow_collector.directory.adapters import get_adapter
+
+        if get_adapter(firm.adapter).classify(canonical) is None:
+            raise RegistryError(f"{canonical} is not a page the {firm.adapter} adapter reads")
     if kind is SourceKind.ZENDESK and "/hc/" not in canonical:
         raise RegistryError("a zendesk source URL looks like https://help.example.com/hc/en-us")
     sid = ids.source_id(firm.owner_key, canonical)

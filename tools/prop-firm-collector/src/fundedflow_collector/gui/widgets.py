@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import tkinter as tk
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from tkinter import ttk
-from typing import cast
+from typing import Any, Literal, cast
 
 PAD = 6
+
+
+def short_time(instant: object) -> str:
+    """`2026-10-21T14:23:04.874Z` -> `2026-10-21 14:23Z` for tables (details panes show the full instant)."""
+    text = str(instant or "")
+    return f"{text[:10]} {text[11:16]}Z" if len(text) >= 16 and text[10] == "T" else text
 
 
 @dataclass(frozen=True)
@@ -24,10 +30,24 @@ def outer(widget: tk.Widget) -> tk.Widget:
     return cast(tk.Widget, widget.master)
 
 
-def scrolled_tree(parent: tk.Misc, columns: Sequence[Column], height: int = 8) -> ttk.Treeview:
-    """A Treeview table with a vertical scrollbar, packed into its own frame (the frame is the tree's master)."""
+def scrolled_tree(
+    parent: tk.Misc,
+    columns: Sequence[Column],
+    height: int = 8,
+    *,
+    hierarchy: str | None = None,
+    sortable: bool = False,
+) -> ttk.Treeview:
+    """A Treeview table with a vertical scrollbar, packed into its own frame (the frame is the tree's master).
+
+    `hierarchy` adds the tree column (with that heading) for nested rows; `sortable` sorts by a column when its
+    heading is clicked (click again to reverse), keeping child rows under their parents."""
     frame = ttk.Frame(parent)
-    tree = ttk.Treeview(frame, columns=[c.key for c in columns], show="headings", height=height, selectmode="browse")
+    show: Literal["tree headings", "headings"] = "tree headings" if hierarchy is not None else "headings"
+    tree = ttk.Treeview(frame, columns=[c.key for c in columns], show=show, height=height, selectmode="browse")
+    if hierarchy is not None:
+        tree.heading("#0", text=hierarchy, anchor="w")
+        tree.column("#0", width=230, stretch=True, anchor="w")
     for column in columns:
         tree.heading(column.key, text=column.heading, anchor="w")
         tree.column(column.key, width=column.width, stretch=column.stretch, anchor="w")
@@ -41,7 +61,33 @@ def scrolled_tree(parent: tk.Misc, columns: Sequence[Column], height: int = 8) -
     tree.tag_configure("warn", foreground="#9a5b00")
     tree.tag_configure("fail", foreground="#b00020")
     tree.tag_configure("muted", foreground="#6b6b6b")
+    if sortable:
+        for column in columns:
+            tree.heading(column.key, command=_sorter(tree, column.key))
     return tree
+
+
+def _sorter(tree: ttk.Treeview, key: str) -> Callable[[], None]:
+    return lambda: sort_tree(tree, key)
+
+
+def _sort_value(text: str) -> tuple[int, float, str]:
+    cleaned = text.replace(",", "").replace("$", "").replace("%", "").strip()
+    try:
+        return (0, float(cleaned), "")
+    except ValueError:
+        return (1, 0.0, text.lower())
+
+
+def sort_tree(tree: ttk.Treeview, key: str, parent: str = "") -> None:
+    """Sort the rows under `parent` by column `key`; repeated calls on the same column reverse the order."""
+    untyped: Any = tree
+    reverse = bool(getattr(tree, "_sorted_by", None) == (key, False))
+    rows = [(str(untyped.set(iid, key)), iid) for iid in tree.get_children(parent)]
+    rows.sort(key=lambda r: _sort_value(r[0]), reverse=reverse)
+    for index, (_value, iid) in enumerate(rows):
+        tree.move(iid, parent, index)
+    tree._sorted_by = (key, reverse)  # type: ignore[attr-defined]
 
 
 def fill_tree(tree: ttk.Treeview, rows: Sequence[tuple[str, Sequence[object], str | None]]) -> None:

@@ -202,9 +202,8 @@ def record_action(
     if action not in ACTIONS or subject_type not in SUBJECTS:
         raise RegistryError(f"unknown review action {action!r} on {subject_type!r}")
     note = (note or "").strip() or None
-    if action == "map_firm":
-        if not firm_key or get_firm(conn, firm_key) is None:
-            raise RegistryError(f"map to an existing firm key (see `collector firm list`), not {firm_key!r}")
+    if action == "map_firm" and (not firm_key or get_firm(conn, firm_key) is None):
+        raise RegistryError(f"map to an existing firm key (see `collector firm list`), not {firm_key!r}")
     if action in ("annotate", "dismiss") and not note:
         raise RegistryError("a note is required")
     if action == "verify_official":
@@ -372,7 +371,9 @@ def _uncertain_names(current: list[ObservationView], items: dict[str, sqlite3.Ro
 # ---------------------------------------------------------------- review queue
 
 
-def review_items(views: list[ObservationView], conn: sqlite3.Connection, *, stale_after_days: int = 30) -> list[ReviewItem]:
+def review_items(
+    views: list[ObservationView], conn: sqlite3.Connection, *, stale_after_days: int = 30
+) -> list[ReviewItem]:
     """Conflicts, duplicates, uncertain identities and stale pages, each with a stable key for review actions."""
     actions = latest_actions(conn, "review_item")
     current = [v for v in views if v.current]
@@ -481,7 +482,9 @@ def field_history(conn: sqlite3.Connection, record_key: str, field_name: str) ->
     points: list[HistoryPoint] = []
     previous: str | None = None
     for row in rows:
-        value = display(row["value_kind"], json.loads(row["normalized"]) if row["normalized"] else None, row["raw_value"])
+        value = display(
+            row["value_kind"], json.loads(row["normalized"]) if row["normalized"] else None, row["raw_value"]
+        )
         last = conn.execute(
             "SELECT MAX(started_at) FROM fetch_attempts WHERE snapshot_id = ?", (row["snapshot_id"],)
         ).fetchone()[0]
@@ -501,7 +504,9 @@ def field_history(conn: sqlite3.Connection, record_key: str, field_name: str) ->
     return points
 
 
-def official_evidence(conn: sqlite3.Connection, firm_key: str, field_name: str, limit: int = 5) -> list[OfficialExcerpt]:
+def official_evidence(
+    conn: sqlite3.Connection, firm_key: str, field_name: str, limit: int = 5
+) -> list[OfficialExcerpt]:
     """Dated excerpts from the firm's own stored pages that mention the field, to read next to a publisher claim.
     The collector does not decide which is right."""
     firm = get_firm(conn, firm_key)
@@ -579,7 +584,9 @@ def publisher_status(conn: sqlite3.Connection, publisher: Publisher, now: dateti
         " source_snapshots t WHERE t.source_id = s.source_id AND t.captured_at < s.captured_at)",
         (publisher.id,),
     ).fetchone()[0]
-    first = conn.execute("SELECT MIN(captured_at) FROM source_snapshots WHERE firm_id = ?", (publisher.id,)).fetchone()[0]
+    first = conn.execute("SELECT MIN(captured_at) FROM source_snapshots WHERE firm_id = ?", (publisher.id,)).fetchone()[
+        0
+    ]
     current = conn.execute(
         "SELECT COUNT(*) FROM directory_observations o JOIN collector_sources s ON s.id = o.source_id"
         " AND s.latest_snapshot_id = o.snapshot_id WHERE o.publisher_id = ?",
@@ -600,7 +607,11 @@ def publisher_status(conn: sqlite3.Connection, publisher: Publisher, now: dateti
         state, detail = "disabled", publisher.disabled_reason or ""
     else:
         state = next(
-            (s for s in ("robots_blocked", "structure_changed", "js_unavailable", "permissions_blocked") if s in states),
+            (
+                s
+                for s in ("robots_blocked", "structure_changed", "js_unavailable", "permissions_blocked")
+                if s in states
+            ),
             None,
         ) or next((s for s in ("collected", "unchanged", "no_records") if s in states), "never_collected")
         detail = ""

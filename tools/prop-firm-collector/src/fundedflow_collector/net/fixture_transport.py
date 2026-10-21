@@ -2,8 +2,8 @@
 
 `DIR/<host>/<path>` holds the files. `/` and paths ending in `/` serve `index.html`; a path without an extension
 also tries `<path>.html` and `<path>/index.html`. A query string maps to `<path>__<query>` with unsafe characters
-replaced by `_` (optionally with `.html` added, to serve it as HTML), falling back to `<path>__default`. Every file gets a strong ETag from its content and
-honours If-None-Match with 304.
+replaced by `_` (optionally with `.html` added, to serve it as HTML), falling back to `<path>__default`. Every
+file gets a strong ETag from its content and honours If-None-Match with 304.
 `DIR/_responses.toml` can override any URL:
 
     [[response]]

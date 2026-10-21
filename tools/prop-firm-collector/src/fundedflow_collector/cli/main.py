@@ -8,7 +8,7 @@ from typing import Annotated
 import typer
 
 from fundedflow_collector import __version__
-from fundedflow_collector.cli import admin_cmds, export_cmds, inspect_cmds, registry_cmds, run_cmds
+from fundedflow_collector.cli import admin_cmds, directory_cmds, export_cmds, inspect_cmds, registry_cmds, run_cmds
 from fundedflow_collector.cli.common import AppState, configure_console
 
 app = typer.Typer(
@@ -63,6 +63,7 @@ app.command("init-db")(admin_cmds.init_db)
 app.add_typer(registry_cmds.firm_app, name="firm")
 app.add_typer(registry_cmds.host_app, name="host")
 app.add_typer(registry_cmds.source_app, name="source")
+app.add_typer(directory_cmds.directory_app, name="directory")
 app.command("discover")(run_cmds.discover)
 app.command("fetch")(run_cmds.fetch)
 app.command("import-capture")(run_cmds.import_capture_cmd)

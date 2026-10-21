@@ -3,6 +3,9 @@
 It calls the same functions as the CLI (registry, runner, capture, export, health checks), so every safety rule
 applies unchanged and the window adds no settings that could weaken them. Network runs happen on a worker thread
 with its own database connection and the same run lock as the CLI; the window only reads.
+
+Build 29.25 adds comparison publishers: the Research sources tab (gui/research.py), the Evidence tab
+(gui/evidence.py), publisher selection and per-site counts on Fetch, publisher captures and the directory export.
 """
 
 from __future__ import annotations
@@ -22,12 +25,14 @@ from typing import Any
 from fundedflow_collector import __version__, services
 from fundedflow_collector.capture import import_capture
 from fundedflow_collector.clock import Clock, SystemClock, format_instant
-from fundedflow_collector.config import EXAMPLE_CONFIG, ConfigError, load_settings, update_user_agent
+from fundedflow_collector.config import EXAMPLE_CONFIG, ConfigError, Settings, load_settings, update_user_agent
 from fundedflow_collector.db import registry, runs, snapshots
 from fundedflow_collector.db.connection import DatabaseError, RunLock, open_database
 from fundedflow_collector.db.migrate import MigrationError, recover_interrupted_runs
 from fundedflow_collector.db.registry import RegistryError
-from fundedflow_collector.export.validate import validation_errors
+from fundedflow_collector.export.validate import schema_name, validation_errors
+from fundedflow_collector.gui.evidence import EvidenceTab
+from fundedflow_collector.gui.research import ResearchTab
 from fundedflow_collector.gui.widgets import (
     PAD,
     Column,
@@ -124,9 +129,11 @@ class CollectorApp:
         self.tabs.pack(fill="both", expand=True, padx=PAD, pady=(PAD, 0))
         self._build_setup()
         self._build_firms()
+        self.research = ResearchTab(self, self.tabs)
         self._build_fetch()
         self._build_capture()
         self._build_results()
+        self.evidence = EvidenceTab(self, self.tabs)
         self._build_export()
         self.status = tk.StringVar(value=f"Data folder: {self.paths.data_dir}")
         ttk.Label(root, textvariable=self.status, style="Muted.TLabel", anchor="w").pack(
@@ -219,20 +226,36 @@ class CollectorApp:
     def firm_keys(self) -> list[str]:
         return [f.firm_key for f in registry.list_firms(self.conn)]
 
+    def publishers(self) -> list[registry.Publisher]:
+        return registry.list_publishers(self.conn)
+
+    def settings(self) -> Settings:
+        try:
+            return load_settings(self.config_file)[0]
+        except ConfigError:
+            return Settings()
+
     def refresh_all(self) -> None:
         self.refresh_setup()
         self.refresh_firms()
+        self.research.refresh()
         self.refresh_results()
         keys = self.firm_keys()
+        publisher_keys = [p.publisher_key for p in self.publishers()]
         for combo, extra in (
             (self.fetch_firm, [ALL_FIRMS]),
-            (self.capture_firm, []),
             (self.export_firm, []),
             (self.snap_filter, ["All firms"]),
         ):
             combo.configure(values=[*extra, *keys])
             if not combo.get() and (extra or keys):
                 combo.set((extra or keys)[0])
+        self._refresh_capture_owners(keys, publisher_keys)
+        self.export_publisher.configure(values=publisher_keys)
+        if not self.export_publisher.get() and publisher_keys:
+            self.export_publisher.set(publisher_keys[0])
+        self._refresh_publisher_list()
+        self.evidence.refresh()
 
     # ------------------------------------------------------------------ Setup tab
 
@@ -706,11 +729,31 @@ class CollectorApp:
     def _build_fetch(self) -> None:
         tab = ttk.Frame(self.tabs, padding=PAD * 2)
         self.tabs.add(tab, text="Fetch")
-        options = ttk.LabelFrame(tab, text="What to fetch", padding=PAD * 2)
-        options.grid(row=0, column=0, sticky="we")
-        ttk.Label(options, text="Firm").grid(row=0, column=0, sticky="w")
+        top = ttk.Frame(tab)
+        top.grid(row=0, column=0, sticky="we")
+        options = ttk.LabelFrame(top, text="What to fetch", padding=PAD * 2)
+        options.pack(side="left", fill="y")
+        self.fetch_kind = tk.StringVar(value="firms")
+        ttk.Radiobutton(options, text="Firm", value="firms", variable=self.fetch_kind).grid(row=0, column=0, sticky="w")
         self.fetch_firm = ttk.Combobox(options, state="readonly", width=30)
         self.fetch_firm.grid(row=0, column=1, sticky="w", padx=PAD)
+        sites = ttk.LabelFrame(top, text="Or comparison publishers (select one or more)", padding=PAD * 2)
+        sites.pack(side="left", fill="both", expand=True, padx=(PAD * 2, 0))
+        ttk.Radiobutton(sites, text="Research sources", value="publishers", variable=self.fetch_kind).grid(
+            row=0, column=0, sticky="w"
+        )
+        self.publisher_list = tk.Listbox(sites, selectmode="extended", height=6, exportselection=False, width=60)
+        self.publisher_list.grid(row=1, column=0, sticky="nsew", pady=(PAD, 0))
+        self.publisher_list.bind("<<ListboxSelect>>", lambda _e: self.fetch_kind.set("publishers"))
+        ttk.Label(
+            sites,
+            text="Only enabled publishers are fetched live; Preview works for any of them. Manual-only "
+            "publishers are never fetched.",
+            style="Muted.TLabel",
+            wraplength=430,
+        ).grid(row=2, column=0, sticky="w", pady=(PAD, 0))
+        sites.columnconfigure(0, weight=1)
+        self._publisher_keys: list[str] = []
         self.dry_run = tk.BooleanVar(value=True)
         self.skip_discovery = tk.BooleanVar(value=False)
         self.force = tk.BooleanVar(value=False)
@@ -753,9 +796,29 @@ class CollectorApp:
             value="Idle. Requests are at least 2 s apart, so a full firm takes a few minutes."
         )
         ttk.Label(buttons, textvariable=self.fetch_state, style="Muted.TLabel").pack(side="left", padx=PAD * 2)
-        self.fetch_log = readonly_text(tab, height=20)
+        self.fetch_log = readonly_text(tab, height=14)
         outer(self.fetch_log).grid(row=2, column=0, sticky="nsew")
-        tab.rowconfigure(2, weight=1)
+        ttk.Label(tab, text="Per-site results of the last run", style="Title.TLabel").grid(
+            row=3, column=0, sticky="w", pady=(PAD, 0)
+        )
+        self.site_results = scrolled_tree(
+            tab,
+            [
+                Column("site", "Site", 190),
+                Column("status", "Run status", 120),
+                Column("collected", "Collected", 70),
+                Column("unchanged", "Unchanged", 75),
+                Column("skipped", "Skipped", 60),
+                Column("failed", "Failed", 55),
+                Column("blocked", "Blocked", 60),
+                Column("why", "Why (if not all collected)", 420, stretch=True),
+            ],
+            height=4,
+            sortable=True,
+        )
+        outer(self.site_results).grid(row=4, column=0, sticky="nsew")
+        tab.rowconfigure(2, weight=3)
+        tab.rowconfigure(4, weight=1)
         tab.columnconfigure(0, weight=1)
 
     def _browse_practice(self) -> None:
@@ -772,7 +835,39 @@ class CollectorApp:
             "Running… (Stop finishes the current request, then saves and stops.)" if running else "Idle."
         )
 
+    def _refresh_publisher_list(self) -> None:
+        selected = set(self.selected_publishers())
+        self._publisher_keys = []
+        self.publisher_list.delete(0, "end")
+        now = self.clock.now()
+        from fundedflow_collector.directory.review import publisher_status
+
+        for publisher in self.publishers():
+            status = publisher_status(self.conn, publisher, now)
+            self._publisher_keys.append(publisher.publisher_key)
+            self.publisher_list.insert("end", f"{publisher.publisher_key}  -  {status.label}")
+            if publisher.publisher_key in selected:
+                self.publisher_list.selection_set("end")
+
+    def selected_publishers(self) -> list[str]:
+        if not hasattr(self, "publisher_list"):
+            return []
+        listbox: Any = self.publisher_list
+        indices = listbox.curselection()
+        return [self._publisher_keys[int(i)] for i in indices if int(i) < len(self._publisher_keys)]
+
+    def select_publishers_for_fetch(self, keys: list[str]) -> None:
+        self.fetch_kind.set("publishers")
+        self.publisher_list.selection_clear(0, "end")
+        for index, key in enumerate(self._publisher_keys):
+            if key in keys:
+                self.publisher_list.selection_set(index)
+
     def start_fetch(self) -> None:
+        if self.fetch_kind.get() == "publishers":
+            self.guard(self._start_publisher_fetch, "Could not start")
+            return
+
         def action() -> None:
             choice = self.fetch_firm.get()
             keys = None if choice == ALL_FIRMS else [choice]
@@ -812,21 +907,80 @@ class CollectorApp:
 
         self.guard(action, "Could not start")
 
+    def _options(self) -> RunOptions:
+        fixture = Path(self.practice_dir.get()) if self.practice.get() else None
+        if fixture is not None and not fixture.is_dir():
+            raise RegistryError(f"practice folder not found: {fixture}")
+        max_fetches = _int_or_none(self.max_fetches.get(), "max requests")
+        if max_fetches is not None and not 1 <= max_fetches <= 300:
+            raise RegistryError("max requests must be between 1 and 300")
+        return RunOptions(
+            command="fetch",
+            dry_run=self.dry_run.get(),
+            force=self.force.get(),
+            discover=not self.skip_discovery.get(),
+            use_browser=self.use_browser.get(),
+            max_fetches=max_fetches,
+            fixture_site=fixture,
+        )
+
+    def _start_publisher_fetch(self) -> None:
+        keys = self.selected_publishers()
+        if not keys:
+            raise RegistryError("select one or more publishers in the list (add them on Research sources)")
+        options = self._options()
+        chosen = [registry.require_publisher(self.conn, k) for k in keys]
+        if not options.dry_run:
+            refused = [
+                f"{p.publisher_key}: {'manual capture only' if p.capture_mode != 'auto' else p.disabled_reason}"
+                for p in chosen
+                if not p.enabled
+            ]
+            if refused:
+                raise RegistryError(
+                    "these publishers are not enabled for live collection: " + "; ".join(refused) + ". Use Preview, "
+                    "or import saved pages on Manual capture."
+                )
+            hosts = sorted({h.host for p in chosen for h in registry.list_hosts(self.conn, p.id)})
+            if options.fixture_site is None and not self.ask(
+                "Contact the publishers' websites?",
+                "This live run sends polite, identified requests to: "
+                + ", ".join(hosts)
+                + ". It respects robots.txt and your terms reviews, follows only the adapter's own page links, and "
+                "stops at the first sign of a block. Continue?",
+            ):
+                return
+        append_text(
+            self.fetch_log,
+            f"--- {', '.join(keys)}: {'preview' if options.dry_run else 'fetch'} "
+            f"{'(practice mode)' if options.fixture_site else ''}".rstrip(),
+        )
+        self._run_job(lambda emit: self._fetch_work(None, options, emit, publisher_keys=keys), self._fetch_done)
+
     def stop_fetch(self) -> None:
         self._stop.set()
         self.fetch_state.set("Stopping after the current request…")
 
-    def _fetch_work(self, keys: list[str] | None, options: RunOptions, emit: Callable[[str], None]) -> list[str]:
+    def _fetch_work(
+        self,
+        keys: list[str] | None,
+        options: RunOptions,
+        emit: Callable[[str], None],
+        *,
+        publisher_keys: list[str] | None = None,
+    ) -> tuple[list[str], list[RunSummary]]:
         conn = open_database(self.paths.db)
         try:
             settings, sha = load_settings(self.config_file)
-            firms = (
-                [registry.require_firm(conn, k) for k in keys]
-                if keys
-                else [f for f in registry.list_firms(conn) if f.enabled]
-            )
+            firms: list[registry.Owner]
+            if publisher_keys:
+                firms = services.select_owners(conn, publisher_keys=publisher_keys)
+            elif keys:
+                firms = services.select_owners(conn, firm_keys=keys)
+            else:
+                firms = services.select_owners(conn, all_firms=True)
             if not firms:
-                return ["No enabled firms."]
+                return ["No enabled firms."], []
             if options.dry_run:
                 env = services.build_environment(
                     conn,
@@ -838,7 +992,8 @@ class CollectorApp:
                     headed=False,
                     live=False,
                 )
-                return summary_lines(run_firms(env, firms, options), dry_run=True)
+                summaries = run_firms(env, firms, options)
+                return summary_lines(summaries, dry_run=True), summaries
             with RunLock(self.paths.data_dir):
                 recover_interrupted_runs(conn)
                 env = services.build_environment(
@@ -855,17 +1010,50 @@ class CollectorApp:
                     browser_check=self.browser_check,
                 )
                 try:
-                    return summary_lines(run_firms(env, firms, options), dry_run=False)
+                    summaries = run_firms(env, firms, options)
+                    return summary_lines(summaries, dry_run=False), summaries
                 finally:
                     if env.fetcher is not None:
                         env.fetcher.close()
         finally:
             conn.close()
 
-    def _fetch_done(self, lines: list[str]) -> None:
+    def _fetch_done(self, result: tuple[list[str], list[RunSummary]]) -> None:
+        lines, summaries = result
         for line in lines:
             append_text(self.fetch_log, line)
-        self.status.set("Run finished. See the Results tab for every request and snapshot.")
+        rows = []
+        for n, summary in enumerate(summaries):
+            counts = services.bucket_counts(summary)
+            why = sorted(
+                {
+                    f"{r.outcome.value}: {r.reason or OUTCOME_INFO[r.outcome].meaning}"
+                    for r in summary.results
+                    if r.counted and services.outcome_bucket(r.outcome) in ("failed", "blocked")
+                }
+                | {f"{r.directory}: {r.url}" for r in summary.results if r.directory in _PAGE_PROBLEMS}
+            )
+            if summary.message and not why:
+                why = [summary.message]
+            tag = "fail" if counts["failed"] or counts["blocked"] else ("warn" if why else None)
+            rows.append(
+                (
+                    f"site{n}",
+                    (
+                        summary.firm_key,
+                        summary.status,
+                        counts["collected"],
+                        counts["unchanged"],
+                        counts["skipped"],
+                        counts["failed"],
+                        counts["blocked"],
+                        "; ".join(why)[:400],
+                    ),
+                    tag,
+                )
+            )
+        fill_tree(self.site_results, rows)
+        self.status.set("Run finished. See Results for every request and Evidence for publisher values.")
 
     # ------------------------------------------------------------------ Manual capture tab
 
@@ -883,13 +1071,26 @@ class CollectorApp:
             wraplength=950,
             style="Muted.TLabel",
         ).grid(row=1, column=0, columnspan=3, sticky="w", pady=(0, PAD * 2))
+        self.capture_target = tk.StringVar(value="firm")
+        target = ttk.Frame(tab)
+        ttk.Radiobutton(
+            target, text="A firm's own site", value="firm", variable=self.capture_target, command=self.refresh_all
+        ).pack(side="left")
+        ttk.Radiobutton(
+            target,
+            text="A comparison publisher",
+            value="publisher",
+            variable=self.capture_target,
+            command=self.refresh_all,
+        ).pack(side="left", padx=PAD * 2)
         self.capture_firm = ttk.Combobox(tab, state="readonly", width=30)
         self.capture_url = tk.StringVar(value="https://")
         self.capture_file = tk.StringVar()
         self.capture_time = tk.StringVar()
         for row, (label, widget) in enumerate(
             [
-                ("Firm", self.capture_firm),
+                ("Page belongs to", target),
+                ("Firm or publisher", self.capture_firm),
                 ("Original page URL", ttk.Entry(tab, textvariable=self.capture_url, width=80)),
                 ("Saved file", ttk.Entry(tab, textvariable=self.capture_file, width=80)),
                 ("Saved at (optional, UTC)", ttk.Entry(tab, textvariable=self.capture_time, width=30)),
@@ -898,16 +1099,16 @@ class CollectorApp:
         ):
             ttk.Label(tab, text=label).grid(row=row, column=0, sticky="w", pady=3)
             widget.grid(row=row, column=1, sticky="w", pady=3)
-        ttk.Button(tab, text="Browse…", command=self._browse_capture).grid(row=4, column=2, sticky="w", padx=PAD)
+        ttk.Button(tab, text="Browse…", command=self._browse_capture).grid(row=5, column=2, sticky="w", padx=PAD)
         ttk.Label(tab, text="e.g. 2026-10-20T14:30:00Z. Leave empty for now.", style="Muted.TLabel").grid(
-            row=5, column=2, sticky="w", padx=PAD
+            row=6, column=2, sticky="w", padx=PAD
         )
         ttk.Button(tab, text="Import", command=lambda: self.guard(self.import_capture_now, "Could not import")).grid(
-            row=6, column=1, sticky="w", pady=PAD * 2
+            row=7, column=1, sticky="w", pady=PAD * 2
         )
         self.capture_result = readonly_text(tab, height=8)
-        outer(self.capture_result).grid(row=7, column=0, columnspan=3, sticky="nsew")
-        tab.rowconfigure(7, weight=1)
+        outer(self.capture_result).grid(row=8, column=0, columnspan=3, sticky="nsew")
+        tab.rowconfigure(8, weight=1)
         tab.columnconfigure(3, weight=1)
 
     def _browse_capture(self) -> None:
@@ -919,16 +1120,27 @@ class CollectorApp:
         if name:
             self.capture_file.set(name)
 
+    def _refresh_capture_owners(self, firm_keys: list[str], publisher_keys: list[str]) -> None:
+        values = publisher_keys if self.capture_target.get() == "publisher" else firm_keys
+        self.capture_firm.configure(values=values)
+        if self.capture_firm.get() not in values:
+            self.capture_firm.set(values[0] if values else "")
+
     def import_capture_now(self) -> None:
         if not self.capture_file.get():
             raise RegistryError("choose the saved file first")
+        owner = self.capture_firm.get()
+        if not owner:
+            raise RegistryError("choose the firm or publisher the page belongs to")
+        publisher = self.capture_target.get() == "publisher"
         settings, _ = load_settings(self.config_file)
         with RunLock(self.paths.data_dir):
             result = import_capture(
                 self.conn,
                 settings,
                 self.clock,
-                firm_key=self.capture_firm.get(),
+                firm_key=None if publisher else owner,
+                publisher_key=owner if publisher else None,
                 url=self.capture_url.get(),
                 file=Path(self.capture_file.get()),
                 captured_at=self.capture_time.get().strip() or None,
@@ -942,6 +1154,7 @@ class CollectorApp:
                     f"  text      {result.text_chars} characters",
                     f"  captured  {result.captured_at} (manual_capture)",
                     *([f"  warnings  {', '.join(result.warnings)}"] if result.warnings else []),
+                    *([f"  read as   {result.directory} (unverified)"] if result.directory else []),
                 ]
             ),
         )
@@ -1133,9 +1346,31 @@ class CollectorApp:
         )
         ttk.Button(buttons, text="Validate a file…", command=self._validate_file).pack(side="left", padx=PAD)
         ttk.Button(buttons, text="Open exports folder", command=self._open_exports).pack(side="left")
+        directory = ttk.LabelFrame(
+            tab, text="Comparison publishers (collector-directory-observations-v1, a separate format)", padding=PAD * 2
+        )
+        directory.grid(row=8, column=0, columnspan=3, sticky="we", pady=(0, PAD * 2))
+        self.export_publisher_scope = tk.StringVar(value="all")
+        ttk.Radiobutton(directory, text="All publishers", value="all", variable=self.export_publisher_scope).grid(
+            row=0, column=0, sticky="w"
+        )
+        ttk.Radiobutton(directory, text="One publisher:", value="one", variable=self.export_publisher_scope).grid(
+            row=1, column=0, sticky="w"
+        )
+        self.export_publisher = ttk.Combobox(directory, state="readonly", width=30)
+        self.export_publisher.grid(row=1, column=1, sticky="w")
+        self.export_history = tk.BooleanVar(value=False)
+        ttk.Checkbutton(directory, text="Include superseded (history) values", variable=self.export_history).grid(
+            row=2, column=0, columnspan=2, sticky="w"
+        )
+        ttk.Button(
+            directory,
+            text="Export observations",
+            command=lambda: self.guard(self.export_directory_now, "Export failed"),
+        ).grid(row=3, column=0, sticky="w", pady=(PAD, 0))
         self.export_result = readonly_text(tab, height=10)
-        outer(self.export_result).grid(row=8, column=0, columnspan=3, sticky="nsew")
-        tab.rowconfigure(8, weight=1)
+        outer(self.export_result).grid(row=9, column=0, columnspan=3, sticky="nsew")
+        tab.rowconfigure(9, weight=1)
         tab.columnconfigure(3, weight=1)
 
     def _browse_export(self) -> None:
@@ -1189,6 +1424,41 @@ class CollectorApp:
         )
         self.status.set(f"Exported {len(env.snapshots)} snapshots to {result.path}")
 
+    def export_directory_now(self) -> None:
+        keys = None if self.export_publisher_scope.get() == "all" else [self.export_publisher.get()]
+        if keys == [""]:
+            raise RegistryError("choose a publisher, or export all publishers")
+        out = Path(self.export_path.get()) if self.export_path.get().strip() else None
+        try:
+            result = services.write_directory_export(
+                self.conn,
+                self.paths,
+                self.settings(),
+                now=self.clock.now(),
+                publisher_keys=keys,
+                out=out,
+                include_superseded=self.export_history.get(),
+            )
+        except services.ExportInvalid as exc:
+            set_text(self.export_result, "\n".join([str(exc), *exc.errors]))
+            raise ValueError(str(exc)) from exc
+        summary = result.document["summary"]
+        set_text(
+            self.export_result,
+            "\n".join(
+                [
+                    f"Wrote {result.path}",
+                    f"  export_id  {result.document['export_id']}",
+                    f"  records {summary['records']}, values {summary['observations']}, pages "
+                    f"{len(result.document['pages'])}",
+                    f"  statuses   {', '.join(f'{k} {v}' for k, v in summary['by_status'].items()) or '-'}",
+                    "  schema     collector-directory-observations-v1: valid",
+                    "  status     unverified third-party observations (not rules)",
+                ]
+            ),
+        )
+        self.status.set(f"Exported {summary['observations']} publisher values to {result.path}")
+
     def validate_file(self, path: Path) -> list[str]:
         import json
 
@@ -1208,36 +1478,27 @@ class CollectorApp:
         if not name:
             return
         errors = self.validate_file(Path(name))
+        try:
+            import json
+
+            kind = schema_name(json.loads(Path(name).read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            kind = "collector-snapshot-v1"
         set_text(
             self.export_result,
-            f"{name}: valid collector-snapshot-v1"
-            if not errors
-            else "\n".join([f"{name} does not match collector-snapshot-v1:", *errors]),
+            f"{name}: valid {kind}" if not errors else "\n".join([f"{name} does not match {kind}:", *errors]),
         )
 
 
 # ---------------------------------------------------------------------- helpers
 
 
+_PAGE_PROBLEMS = frozenset({"structure_changed", "js_unavailable", "parse_error"})
+
+
 def summary_lines(summaries: list[RunSummary], *, dry_run: bool) -> list[str]:
-    lines: list[str] = []
-    for summary in summaries:
-        if summary.message:
-            lines.append(summary.message)
-        if dry_run:
-            lines.append(f"Preview for {summary.firm_key} (no network, nothing saved):")
-            if not summary.dry_run_lines:
-                lines.append("  No known targets yet. Add sources, or run a fetch with discovery.")
-            for decision, url, why in summary.dry_run_lines:
-                lines.append(f"  {decision:<16} {url}  ({why})")
-            continue
-        counts = ", ".join(f"{k} {v}" for k, v in sorted(summary.counts().items())) or "nothing to do"
-        lines.append(f"{summary.firm_key}: {summary.status}; {summary.fetches_used} requests; {counts}")
-        for outcome in sorted(
-            {r.outcome for r in summary.results if r.counted and OUTCOME_INFO[r.outcome].category is not Category.OK}
-        ):
-            lines.append(f"  {outcome.value}: {OUTCOME_INFO[outcome].action}")
-    return lines
+    """The same run summary text as the services layer (kept here for callers of the Build 29 GUI)."""
+    return services.summary_lines(summaries, dry_run=dry_run)
 
 
 def _outcome(value: str | None) -> Outcome | None:

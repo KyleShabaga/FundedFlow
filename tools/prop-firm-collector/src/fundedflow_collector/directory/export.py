@@ -128,7 +128,9 @@ def build(
         },
         "publishers": [_publisher(conn, p, now) for p in publishers],
         "pages": pages,
-        "records": sorted(records.values(), key=lambda r: (r["publisher_key"], r["firm"]["normalized"], r["record_key"])),
+        "records": sorted(
+            records.values(), key=lambda r: (r["publisher_key"], r["firm"]["normalized"], r["record_key"])
+        ),
         "review_items": [
             {
                 "key": i.key,

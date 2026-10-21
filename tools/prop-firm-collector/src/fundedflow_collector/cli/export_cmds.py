@@ -12,7 +12,7 @@ from fundedflow_collector import services
 from fundedflow_collector.cli import exit_codes
 from fundedflow_collector.cli.common import clock, fail, handle_errors, state
 from fundedflow_collector.clock import format_instant, parse_instant
-from fundedflow_collector.export.validate import validation_errors
+from fundedflow_collector.export.validate import schema_name, validation_errors
 
 
 @handle_errors
@@ -62,15 +62,20 @@ def export(
 
 @handle_errors
 def validate(file: Annotated[Path, typer.Argument(exists=True, dir_okay=False)]) -> None:
-    """Validate an evidence envelope file against the checked-in v1 JSON Schema."""
+    """Validate an export file against its checked-in JSON Schema (evidence v1 or directory observations v1)."""
     try:
         document = json.loads(file.read_text(encoding="utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise fail(f"{file} is not JSON: {exc}", exit_codes.SCHEMA_INVALID) from exc
+    name = schema_name(document)
     errors = validation_errors(document)
     if errors:
         for line in errors:
             typer.echo(f"  {line}")
-        raise fail(f"{file} does not match collector-snapshot-v1", exit_codes.SCHEMA_INVALID)
-    snapshots = len(document.get("snapshots", []))
-    typer.echo(f"{file}: valid collector-snapshot-v1 ({snapshots} snapshots, {document['verification_status']})")
+        raise fail(f"{file} does not match {name}", exit_codes.SCHEMA_INVALID)
+    if name == "collector-snapshot-v1":
+        snapshots = len(document.get("snapshots", []))
+        typer.echo(f"{file}: valid {name} ({snapshots} snapshots, {document['verification_status']})")
+    else:
+        summary = document["summary"]
+        typer.echo(f"{file}: valid {name} ({summary['records']} records, {summary['observations']} values, unverified)")

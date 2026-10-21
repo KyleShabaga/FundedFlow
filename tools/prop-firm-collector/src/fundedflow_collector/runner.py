@@ -124,6 +124,7 @@ class RunSummary:
     not_fetched: int = 0
     dry_run_lines: list[tuple[str, str, str]] = field(default_factory=list)
     message: str | None = None
+    budget: int = 0
 
     def counts(self) -> Counter[str]:
         """Outcome counts, leaving out uncounted probes such as a guessed /sitemap.xml that does not exist."""
@@ -216,7 +217,7 @@ class FirmRunner:
         self.list_pages: Counter[PageKind] = Counter()
         self.page_kinds: dict[str, PageKind] = {}
         self.run_id: str | None = None
-        self.summary = RunSummary(firm_key=firm.owner_key, run_id=None, status="running")
+        self.summary = RunSummary(firm_key=firm.owner_key, run_id=None, status="running", budget=limit)
 
     # ------------------------------------------------------------------ entry point
 

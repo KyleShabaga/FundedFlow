@@ -11,8 +11,10 @@ import sys
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 from importlib import metadata
 from pathlib import Path
+from typing import Any
 
 from fundedflow_collector import __version__
 from fundedflow_collector.clock import Clock, format_instant
@@ -20,6 +22,8 @@ from fundedflow_collector.config import ConfigError, Settings, load_settings
 from fundedflow_collector.db import registry
 from fundedflow_collector.db.connection import open_database, transaction
 from fundedflow_collector.db.migrate import bundled_migrations, current_version
+from fundedflow_collector.directory import export as directory_export
+from fundedflow_collector.directory import review as directory_review
 from fundedflow_collector.export.csv_diag import to_csv
 from fundedflow_collector.export.envelope import SCHEMA_VERSION, Envelope, build_envelope, serialise
 from fundedflow_collector.export.validate import validation_errors
@@ -28,12 +32,12 @@ from fundedflow_collector.net.fixture_transport import FixtureSite
 from fundedflow_collector.net.pinned_backend import PinnedNetworkBackend
 from fundedflow_collector.net.resolver import SystemResolver
 from fundedflow_collector.net.transport import PinnedTransport
-from fundedflow_collector.outcomes import HostRole
+from fundedflow_collector.outcomes import OUTCOME_INFO, Category, HostRole, Outcome
 from fundedflow_collector.paths import CollectorPaths
 from fundedflow_collector.policy import circuit
 from fundedflow_collector.policy.terms import review_expires, terms_block_reason
 from fundedflow_collector.render.browser import PlaywrightRenderer, Renderer, browser_status
-from fundedflow_collector.runner import Environment, user_agent_suffix
+from fundedflow_collector.runner import Environment, RunSummary, user_agent_suffix
 from fundedflow_collector.safety import banned_installed
 
 PINNED = {"httpx": "0.28.1", "httpcore": "1.0.9"}
@@ -171,6 +175,169 @@ def write_export(
     return ExportResult(path=target, envelope=envelope, csv_path=csv_out)
 
 
+# ---------------------------------------------------------------- comparison publishers (Build 29.25)
+
+#: How the Fetch screen groups outcomes. Every Outcome lands in exactly one bucket (a test checks this).
+BUCKETS: dict[str, frozenset[Outcome]] = {
+    "collected": frozenset({Outcome.NEW_SNAPSHOT, Outcome.MATCHED_EARLIER_SNAPSHOT}),
+    "unchanged": frozenset({Outcome.UNCHANGED, Outcome.SKIPPED_LASTMOD}),
+    "skipped": frozenset(
+        {
+            Outcome.DISABLED,
+            Outcome.EXCLUDED_PATH,
+            Outcome.NOT_ALLOWLISTED,
+            Outcome.URL_REJECTED,
+            Outcome.BUDGET_EXHAUSTED,
+            Outcome.DEADLINE_EXCEEDED,
+        }
+    ),
+    "blocked": frozenset(
+        {
+            Outcome.TERMS_BLOCKED,
+            Outcome.ROBOTS_BLOCKED,
+            Outcome.ROBOTS_UNREACHABLE,
+            Outcome.CIRCUIT_OPEN,
+            Outcome.ACCESS_DENIED,
+            Outcome.BLOCKED_BOT_PROTECTION,
+            Outcome.RATE_LIMITED,
+            Outcome.ADDRESS_BLOCKED,
+        }
+    ),
+}
+BUCKET_ORDER = ("collected", "unchanged", "skipped", "failed", "blocked")
+
+
+def outcome_bucket(outcome: Outcome) -> str:
+    for name, members in BUCKETS.items():
+        if outcome in members:
+            return name
+    return "failed"
+
+
+def bucket_counts(summary: RunSummary) -> dict[str, int]:
+    counts = dict.fromkeys(BUCKET_ORDER, 0)
+    for result in summary.results:
+        if result.counted:
+            counts[outcome_bucket(result.outcome)] += 1
+    return counts
+
+
+def select_owners(
+    conn: sqlite3.Connection,
+    *,
+    firm_keys: list[str] | None = None,
+    publisher_keys: list[str] | None = None,
+    all_firms: bool = False,
+    all_publishers: bool = False,
+) -> list[registry.Owner]:
+    """Firms and/or publishers to run, in a stable order. `all_*` means every *enabled* one."""
+    owners: list[registry.Owner] = []
+    if all_firms:
+        owners += [f for f in registry.list_firms(conn) if f.enabled]
+    owners += [registry.require_firm(conn, k) for k in firm_keys or []]
+    if all_publishers:
+        owners += [p for p in registry.list_publishers(conn) if p.enabled]
+    owners += [registry.require_publisher(conn, k) for k in publisher_keys or []]
+    unique: dict[str, registry.Owner] = {}
+    for owner in owners:
+        unique.setdefault(owner.id, owner)
+    return list(unique.values())
+
+
+def summary_lines(summaries: list[RunSummary], *, dry_run: bool) -> list[str]:
+    """Readable run results for the window and logs: counts per site and why anything did not succeed."""
+    lines: list[str] = []
+    for summary in summaries:
+        if summary.message:
+            lines.append(summary.message)
+        if dry_run:
+            lines.append(f"Preview for {summary.firm_key} (no network, nothing saved):")
+            if summary.status == "skipped_manual_only":
+                continue
+            if not summary.dry_run_lines:
+                lines.append("  No known targets yet. Add sources, or run a fetch with discovery.")
+            for decision, url, why in summary.dry_run_lines:
+                lines.append(f"  {decision:<16} {url}  ({why})")
+            allowed = sum(1 for d, _u, _w in summary.dry_run_lines if d == "allowed")
+            lines.append(
+                f"  Planned: {allowed} of {len(summary.dry_run_lines)} known pages allowed; the run may use up to "
+                f"{summary.budget} requests (robots.txt and pages found by following links count too)."
+            )
+            continue
+        buckets = bucket_counts(summary)
+        counts = ", ".join(f"{k} {v}" for k, v in buckets.items())
+        lines.append(f"{summary.firm_key}: {summary.status}; {summary.fetches_used} requests; {counts}")
+        outcomes = ", ".join(f"{k} {v}" for k, v in sorted(summary.counts().items()))
+        if outcomes:
+            lines.append(f"  outcomes: {outcomes}")
+        directory = summary.directory_counts()
+        if directory:
+            lines.append("  pages read: " + ", ".join(f"{k} {v}" for k, v in sorted(directory.items())))
+        for outcome in sorted(
+            {r.outcome for r in summary.results if r.counted and OUTCOME_INFO[r.outcome].category is not Category.OK}
+        ):
+            lines.append(f"  {outcome.value}: {OUTCOME_INFO[outcome].action}")
+        for result in summary.results:
+            if result.directory in ("structure_changed", "js_unavailable", "parse_error"):
+                lines.append(f"  {result.directory}: {result.url} ({result.directory_detail})")
+    return lines
+
+
+class DirectoryExportInvalid(ExportInvalid):
+    pass
+
+
+@dataclass(frozen=True)
+class DirectoryExportResult:
+    path: Path
+    document: dict[str, Any]
+
+
+def write_directory_export(
+    conn: sqlite3.Connection,
+    paths: CollectorPaths,
+    settings: Settings,
+    *,
+    now: datetime,
+    publisher_keys: list[str] | None = None,
+    out: Path | None = None,
+    include_superseded: bool = False,
+) -> DirectoryExportResult:
+    """Build, validate and atomically write a collector-directory-observations-v1 file."""
+    for key in publisher_keys or []:
+        registry.require_publisher(conn, key)
+    document = directory_export.build(
+        conn,
+        now=now,
+        publisher_keys=publisher_keys,
+        include_superseded=include_superseded,
+        stale_after_days=settings.directory.stale_after_days,
+    )
+    data = directory_export.serialise(document)
+    errors = validation_errors(json.loads(data))
+    if errors:
+        raise DirectoryExportInvalid(errors)
+    target = out or paths.exports / (
+        f"collector-directory-{document['generated_at'][:10]}-{document['export_id'][5:13]}.json"
+    )
+    atomic_write(target, data)
+    with transaction(conn):
+        conn.execute(
+            "INSERT OR REPLACE INTO export_batches (export_id, generated_at, path, firm_keys, snapshot_count,"
+            " file_sha256, schema_version) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                document["export_id"],
+                document["generated_at"],
+                str(target.resolve()),
+                json.dumps([f"publisher:{k}" for k in document["scope"]["publishers"]]),
+                len(document["pages"]),
+                hashlib.sha256(data).hexdigest(),
+                directory_export.SCHEMA_VERSION,
+            ),
+        )
+    return DirectoryExportResult(target, document)
+
+
 # ---------------------------------------------------------------- health checks (`doctor` and the GUI Setup tab)
 
 
@@ -253,6 +420,12 @@ def health_checks(
                 health.add("ok", f"terms {host.host}", detail)
             else:
                 health.add("WARN", f"terms {host.host}", f"{firm.firm_key}: {decision}; manual capture only ({reason})")
+        for publisher in registry.list_publishers(conn):
+            status = directory_review.publisher_status(conn, publisher, now)
+            level = "ok" if status.state in ("collected", "unchanged") else "info"
+            if status.state in ("structure_changed", "permissions_blocked", "rate_limited", "robots_blocked"):
+                level = "WARN"
+            health.add(level, f"publisher {publisher.publisher_key}", f"{status.label}; {status.terms}")
         open_circuits = circuit.list_open(conn, now)
         if not open_circuits:
             health.add("ok", "stopped hosts", "none")
