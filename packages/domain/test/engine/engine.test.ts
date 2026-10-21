@@ -301,6 +301,26 @@ describe("pure sourced risk engine", () => {
       const i = inputs([rules.find((r) => r.ruleType === type)!]);
       expect(evaluate(i).status).toBe("Unknown");
     });
+  it("does not treat an evaluation-only rule as not applicable when the phase is unrecorded", () => {
+    const i = inputs([
+      drawdown(),
+      rule("consistency", {
+        maxBestDayShare: { state: "value", value: "0.5" },
+        denominator: "total_profit",
+        appliesTo: "evaluation",
+      }, 2),
+    ]);
+    // An account-private rulebook needs no catalogue phase, so its phase can be unknown.
+    i.rulebookVersions[0]!.rulebook.ownerAccountId = i.account.id;
+    i.rulebookVersions[0]!.version.verificationStatus = "needs_review";
+    i.rulebookVersions[0]!.version.userConfirmedAt = instant;
+    i.phaseHistory = [];
+    i.trades = [trade("150", 1, "2026-10-19")];
+    const r = evaluate(i);
+    const consistency = r.rules.find((x) => x.ruleType === "consistency")!;
+    expect(consistency).toMatchObject({ state: "unknown", reasonCode: "unknown_account_phase" });
+    expect(r.status).toBe("Unknown");
+  });
   it("does not convert an account-private rulebook to official compliance", () => {
     const i = inputs();
     i.rulebookVersions[0]!.rulebook.ownerAccountId = i.account.id;

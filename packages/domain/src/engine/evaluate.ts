@@ -660,6 +660,9 @@ function calculate(
         return set("unknown", "unknown_consistency_basis");
       if (p.appliesTo === "payout")
         return set("manual_only", "payout_cycle_not_modeled");
+      // An unrecorded phase is not "outside the evaluation": it must not pass as not applicable.
+      if (phase === "unknown")
+        return set("unknown", "unknown_account_phase");
       if (p.appliesTo === "evaluation" && phase !== "evaluation")
         return set("not_applicable", "evaluation_consistency_outside_phase");
       if (p.appliesTo === "both" && phase !== "evaluation")
