@@ -39,7 +39,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     mkdirSync(path.dirname(dir), { recursive: true });
     const { command, args, env } = commandFor(process.argv.slice(2), dir);
     console.log(`Test journal: ${dir}`);
-    const result = spawnSync(command, args, { stdio: 'inherit', cwd: root, env: { ...process.env, ...env }, shell: process.platform === 'win32' });
+    // Only npm.cmd needs a shell on Windows; cargo and node get their arguments (paths may contain spaces) unquoted.
+    const result = spawnSync(command, args, { stdio: 'inherit', cwd: root, env: { ...process.env, ...env }, shell: command.endsWith('.cmd') });
     process.exitCode = result.status ?? 1;
   } catch (error) {
     console.error(error.message);

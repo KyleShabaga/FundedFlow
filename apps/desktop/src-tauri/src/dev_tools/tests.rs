@@ -170,7 +170,7 @@ fn every_named_scenario_covers_its_edge_case() {
             let headroom = at_risk.ending_cents() - at_risk.floor_cents().unwrap();
             assert!(headroom > 0 && headroom <= dd / 4, "{ctx}: at-risk headroom {headroom}");
             assert!(never_breached(at_risk, None));
-            assert_eq!(at_risk.settlement_days.len(), 3);
+            assert_eq!(at_risk.watch_days.len(), 3);
             assert!(at_risk.account.name.chars().count() > 60);
 
             let failed = find(&all, "failed");
@@ -195,6 +195,20 @@ fn every_named_scenario_covers_its_edge_case() {
                 let stress = find(&all, "stress");
                 assert!(per_day(stress).values().any(|n| *n >= 20), "{ctx}: high-volume days");
                 assert!(stress.account.name.chars().count() >= 80 && stress.account.name.chars().count() <= 100);
+            }
+        }
+    }
+}
+
+#[test]
+fn every_settlement_matches_the_trades_closed_by_its_time() {
+    // The risk engine flags a settlement that differs from opening balance + trades closed by then.
+    for preset in [Preset::UiSmoke, Preset::Stress] {
+        for p in plans(preset, 2609).iter().filter(|p| p.rules.as_ref().is_some_and(|r| r.trailing)) {
+            for (day, balance) in &p.eod {
+                let at = seed::settlement_at(p, *day);
+                let closed: i64 = p.all_trades().filter(|t| t.exit <= at).map(|t| t.net_cents).sum();
+                assert_eq!(p.account.start_cents + closed, *balance, "{} {day}", p.key);
             }
         }
     }
@@ -267,7 +281,24 @@ fn the_seeded_journal_reconciles_with_the_plan_and_uses_existing_models() {
     assert!(count(&conn, "SELECT count(*) FROM import_rows WHERE status <> 'imported'") >= 3);
     assert!(by("happy_path").daily_reviews >= 8 && by("happy_path").trade_reviews > 0 && by("happy_path").journal_entries > 0);
     assert_eq!(count(&conn, "SELECT count(*) FROM daily_reviews WHERE no_trade_day = 1"), 1);
-    assert!(by("at_risk").observations == 4);
+    // Trailing EOD drawdowns trail recorded settlements: one per traded day, plus the opening balance.
+    for key in ["happy_path", "passed", "at_risk", "failed", "archived"] {
+        let p = find(&expected, key);
+        assert_eq!(by(key).observations, 1 + p.eod.len(), "{key}");
+        // The high-water mark the engine derives from those settlements gives the plan's floor.
+        let id = &by(key).account_id;
+        let settled: Vec<i64> = {
+            let mut stmt = conn.prepare("SELECT payload_json FROM financial_observations WHERE account_id = ?1").unwrap();
+            stmt.query_map([id], |r| r.get::<_, String>(0)).unwrap().map(|j| {
+                let v: serde_json::Value = serde_json::from_str(&j.unwrap()).unwrap();
+                let input = if v["input"].is_object() { v["input"].clone() } else { v.clone() };
+                (input["kind"].as_str().unwrap_or_default().to_string(), input["value"].as_str().map(|s| s.to_string()))
+            }).filter(|(k, _)| k == "eod_settlement").map(|(_, v)| crate::domain::to_micros(crate::domain::parse_decimal(&v.unwrap()).unwrap()).unwrap() / 10_000).collect()
+        };
+        let rules = p.rules.as_ref().unwrap();
+        let hwm = settled.iter().copied().chain([p.account.start_cents]).max().unwrap();
+        assert_eq!(Some(hwm - rules.drawdown_cents.unwrap()), p.floor_cents(), "{key}");
+    }
     // Rulebooks: private, fictional, assigned from the first day; none for the incomplete accounts.
     assert_eq!(count(&conn, "SELECT count(*) FROM account_rulebook_assignments"), 5);
     assert_eq!(count(&conn, "SELECT count(*) FROM rulebooks WHERE owner_account_id IS NOT NULL AND display_name LIKE 'DEMO rules%'"), 5);

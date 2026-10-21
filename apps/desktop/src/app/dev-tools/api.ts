@@ -94,7 +94,8 @@ export type ResetHandoff = z.infer<typeof resetHandoffSchema>;
 /** A refusal or failure from a developer command, with the native message. */
 export class DevToolError extends Error {
   constructor(message: string, readonly kind: string = "unknown") {
-    super(message);
+    // Native messages are sentence fragments ("this test journal already has…").
+    super(message.charAt(0).toUpperCase() + message.slice(1));
   }
 }
 

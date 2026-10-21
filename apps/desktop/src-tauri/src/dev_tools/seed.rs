@@ -639,7 +639,7 @@ fn write_scenario(conn: &mut Connection, lib: &Library, p: &ScenarioPlan, preset
     let traded: Vec<NaiveDate> = days.keys().copied().collect();
     let review_days: Vec<(NaiveDate, &str)> = match p.key {
         "happy_path" => traded.iter().rev().filter(|d| **d < anchor).take(8).map(|d| (*d, "complete")).collect(),
-        "at_risk" => p.settlement_days.iter().map(|d| (*d, "save")).collect(),
+        "at_risk" => p.watch_days.iter().map(|d| (*d, "save")).collect(),
         "failed" => traded.last().map(|d| vec![(*d, "complete")]).unwrap_or_default(),
         _ => vec![],
     };
@@ -696,12 +696,13 @@ fn write_scenario(conn: &mut Connection, lib: &Library, p: &ScenarioPlan, preset
         daily_reviews += 1;
     }
 
-    // End-of-day settlements the trader "copied from the firm dashboard" while near the floor.
-    for day in &p.settlement_days {
-        if let Some((_, balance)) = p.eod.iter().find(|(d, _)| d == day) {
+    // An end-of-day trailing drawdown trails the firm's end-of-day settlements (the engine reads them, not the
+    // trades), so record each traded day's closing balance as copied from the firm dashboard, just before the reset.
+    if p.rules.as_ref().is_some_and(|r| r.trailing && r.drawdown_cents.is_some()) {
+        for (day, balance) in &p.eod {
             evidence::create(conn, ObservationInput {
                 source_category: "firm_dashboard".into(),
-                ..observation(&id, "eod_settlement", *balance, day_at(p, *day, 16, 59).min(Utc::now()), "End-of-day balance (synthetic).")
+                ..observation(&id, "eod_settlement", *balance, settlement_at(p, *day).min(Utc::now()), "End-of-day settlement (synthetic).")
             })?;
             observations += 1;
         }
@@ -751,6 +752,14 @@ fn write_scenario(conn: &mut Connection, lib: &Library, p: &ScenarioPlan, preset
 fn plan_weekdays(first: NaiveDate, last: NaiveDate) -> Vec<NaiveDate> {
     use chrono::Datelike;
     first.iter_days().take_while(|d| *d <= last).filter(|d| d.weekday().number_from_monday() <= 5).collect()
+}
+
+/// When a trading day's settlement is observed: one second before the account's reset, after every trade
+/// of that day has closed (the engine checks each settlement against the trades closed by then).
+pub fn settlement_at(p: &ScenarioPlan, day: NaiveDate) -> DateTime<Utc> {
+    let reset = crate::domain::parse_reset_time(p.account.reset).unwrap();
+    let day = if reset == chrono::NaiveTime::MIN { day + Duration::days(1) } else { day };
+    p.account.tz.from_local_datetime(&day.and_time(reset)).earliest().unwrap().with_timezone(&Utc) - Duration::seconds(1)
 }
 
 /// Where the rollback copy lives while a run is in progress.

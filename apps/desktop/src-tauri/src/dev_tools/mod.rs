@@ -229,7 +229,7 @@ pub async fn dev_reset_handoff(app: AppHandle, dev: State<'_, DevState>, db: Sta
     let handoff = reset::handoff(&db, &dir, &dev.env.identifier, &confirmation)?;
     std::thread::spawn(move || {
         // Let the response reach the window before the process exits.
-        std::thread::sleep(std::time::Duration::from_millis(900));
+        std::thread::sleep(std::time::Duration::from_millis(2500));
         app.exit(0);
     });
     Ok(handoff)

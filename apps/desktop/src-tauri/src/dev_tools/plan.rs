@@ -219,8 +219,8 @@ pub struct ScenarioPlan {
     pub first_day: NaiveDate,
     /// Closing balance (cents) of each trading day with trades.
     pub eod: Vec<(NaiveDate, i64)>,
-    /// Days that get an end-of-day settlement observation.
-    pub settlement_days: Vec<NaiveDate>,
+    /// The at-risk account's final losing days (draft daily reviews).
+    pub watch_days: Vec<NaiveDate>,
     /// Edge cases this scenario covers, for the report and the docs.
     pub covers: Vec<&'static str>,
 }
@@ -698,8 +698,8 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
             }
             let parts = sim.into_parts();
             ScenarioPlan {
-                settlement_days: tail,
-                covers: vec!["account approaching its drawdown limit", "three consecutive losing days", "long account name", "end-of-day settlement observations"],
+                watch_days: tail,
+                covers: vec!["account approaching its drawdown limit", "three consecutive losing days", "long account name", "draft daily reviews on the losing days"],
                 ..finish(key, spec, Some(rules), parts, first_day)
             }
         }
@@ -849,7 +849,7 @@ fn finish(key: &str, account: AccountSpec, rules: Option<RuleSpec>, (trades, eod
         archived: false,
         first_day,
         eod,
-        settlement_days: Vec::new(),
+        watch_days: Vec::new(),
         covers: Vec::new(),
     }
 }
