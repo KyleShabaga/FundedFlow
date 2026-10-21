@@ -92,6 +92,7 @@ pub struct TradePreview {
     pub bought_at_source: Option<String>,
     pub sold_at_source: Option<String>,
     pub duration: Option<String>,
+    #[serde(serialize_with = "crate::domain::duration_wire::serialize")]
     pub duration_seconds: Option<u64>,
     pub broker_trade_id: Option<String>,
 }

@@ -4,10 +4,42 @@
 import { z } from "zod";
 
 import { fieldIssueSchema } from "./errors.js";
-import { pnlStatuses, tradeSides } from "./trades.js";
+import { durationSecondsSchema, pnlStatuses, tradeSides } from "./trades.js";
 
+/** Inclusive cap on the UTF-8 byte length of the submitted `content` string (P0-04; matches Rust `parse::MAX_CSV_BYTES`). */
 export const MAX_CSV_BYTES = 10 * 1024 * 1024;
 export const MAX_CSV_ROWS = 50_000;
+/** The message Rust gives for a file over the cap; the schema uses the same text. */
+export const CSV_TOO_LARGE_MESSAGE = "The file is larger than 10 MB.";
+
+/**
+ * UTF-8 byte length of a string, or null when it is not well-formed UTF-16 (an unpaired surrogate), which has no
+ * UTF-8 encoding and which native code cannot receive. Portable: no Buffer or TextEncoder needed. A leading U+FEFF
+ * counts as its 3 bytes, as it does natively; hosts that strip a BOM while decoding measure what they submit.
+ */
+export function utf8ByteLength(text: string): number | null {
+  let bytes = 0;
+  for (let i = 0; i < text.length; i++) {
+    const unit = text.charCodeAt(i);
+    if (unit < 0x80) bytes += 1;
+    else if (unit < 0x800) bytes += 2;
+    else if (unit >= 0xd800 && unit <= 0xdbff) {
+      const next = text.charCodeAt(i + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return null;
+      bytes += 4;
+      i++;
+    } else if (unit >= 0xdc00 && unit <= 0xdfff) return null;
+    else bytes += 3;
+  }
+  return bytes;
+}
+
+const csvContentSchema = z.string().superRefine((content, ctx) => {
+  // UTF-8 is never shorter than UTF-16, so a string over the cap in code units is over it in bytes too.
+  const bytes = content.length > MAX_CSV_BYTES ? MAX_CSV_BYTES + 1 : utf8ByteLength(content);
+  if (bytes === null) ctx.addIssue({ code: "custom", message: "is not valid UTF-8 text (it contains an unpaired surrogate)" });
+  else if (bytes > MAX_CSV_BYTES) ctx.addIssue({ code: "custom", message: CSV_TOO_LARGE_MESSAGE });
+});
 
 export const csvFormats = ["auto", "performance", "generic"] as const;
 export const dateFormats = ["auto", "ymd", "mdy", "dmy"] as const;
@@ -31,7 +63,8 @@ export type ColumnMapping = z.input<typeof columnMappingSchema>;
 export const csvImportRequestSchema = z.strictObject({
   accountId: z.string().min(1),
   fileName: z.string().trim().min(1).max(255),
-  content: z.string().max(MAX_CSV_BYTES, "File is larger than 10 MB"),
+  /** UTF-8 text; at most MAX_CSV_BYTES bytes as UTF-8 (not UTF-16 code units). */
+  content: csvContentSchema,
   /** IANA zone for timestamps in the file that have no offset. */
   timezone: z.string().trim().min(1),
   format: z.enum(csvFormats).optional(),
@@ -67,7 +100,7 @@ export const tradePreviewSchema = z.object({
   boughtAtSource: z.string().nullable(),
   soldAtSource: z.string().nullable(),
   duration: z.string().nullable(),
-  durationSeconds: z.number().int().nullable(),
+  durationSeconds: durationSecondsSchema.nullable(),
   brokerTradeId: z.string().nullable(),
 });
 export type TradePreview = z.infer<typeof tradePreviewSchema>;

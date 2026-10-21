@@ -15,6 +15,59 @@ pub const MAX_NOTES_CHARS: usize = 20_000;
 const MICROS_PER_UNIT: i64 = 1_000_000;
 
 // ---------------------------------------------------------------------------
+// Exact JSON integers
+// ---------------------------------------------------------------------------
+
+/// Largest integer a JSON number carries exactly into JavaScript (2^53 - 1).
+pub const MAX_SAFE_JSON_INTEGER: u64 = 9_007_199_254_740_991;
+
+/// `durationSeconds` on the wire (P0-04): a JSON number up to [`MAX_SAFE_JSON_INTEGER`], above it a decimal string,
+/// so JavaScript receives every stored value exactly. One canonical form per value; values that fit a safe integer
+/// serialize exactly as before. The TypeScript side is `durationSecondsSchema` in `@fundedflow/domain`.
+pub mod duration_wire {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    use super::MAX_SAFE_JSON_INTEGER;
+
+    pub fn serialize<S: Serializer, T: Copy + Into<i128>>(
+        value: &Option<T>,
+        s: S,
+    ) -> Result<S::Ok, S::Error> {
+        match value.map(Into::into) {
+            None => s.serialize_none(),
+            Some(n) if (0..=MAX_SAFE_JSON_INTEGER as i128).contains(&n) => {
+                s.serialize_u64(n as u64)
+            }
+            Some(n) => s.serialize_str(&n.to_string()),
+        }
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Option<i64>, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Wire {
+            Number(u64),
+            Text(String),
+        }
+        let invalid = |what: &dyn std::fmt::Display| {
+            serde::de::Error::custom(format!("durationSeconds {what} is not canonical"))
+        };
+        Ok(match Option::<Wire>::deserialize(d)? {
+            None => None,
+            Some(Wire::Number(n)) if n <= MAX_SAFE_JSON_INTEGER => Some(n as i64),
+            Some(Wire::Number(n)) => return Err(invalid(&n)),
+            Some(Wire::Text(t)) => {
+                let canonical = !t.starts_with('0') && t.bytes().all(|b| b.is_ascii_digit());
+                match t.parse::<i64>() {
+                    Ok(n) if canonical && n as u64 > MAX_SAFE_JSON_INTEGER => Some(n),
+                    _ => return Err(invalid(&t)),
+                }
+            }
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
 // IDs and time
 // ---------------------------------------------------------------------------
 

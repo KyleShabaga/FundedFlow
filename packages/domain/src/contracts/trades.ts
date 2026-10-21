@@ -13,6 +13,25 @@ export const tradeSides = ["long", "short"] as const;
  */
 export const pnlStatuses = ["calculated", "reported", "open", "missing_instrument", "currency_mismatch"] as const;
 
+const I64_MAX = 9223372036854775807n;
+/**
+ * A paired-fill export's duration in whole seconds, 0 to signed i64 maximum (native storage). One canonical form per
+ * value: an integer JSON number up to Number.MAX_SAFE_INTEGER, and above that a decimal string of digits without a
+ * leading zero, because a JSON number there would be rounded before it could be validated (P0-04). Every value that
+ * fits a safe integer is sent exactly as before.
+ */
+export const durationSecondsSchema = z.union([
+  z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+  z.string().refine(s => {
+    if (!/^[1-9][0-9]*$/.test(s)) return false;
+    const n = BigInt(s);
+    return n > BigInt(Number.MAX_SAFE_INTEGER) && n <= I64_MAX;
+  }, "is not a whole number of seconds above 2^53 - 1 within signed 64-bit range"),
+]);
+export type DurationSeconds = z.infer<typeof durationSecondsSchema>;
+/** The exact number of seconds. */
+export const durationSecondsValue = (wire: DurationSeconds): bigint => BigInt(wire);
+
 export const tradeInputSchema = z
   .strictObject({
     accountId: z.string().min(1),
@@ -73,7 +92,7 @@ export const tradeSchema = z.object({
       boughtAtSource: z.string(),
       soldAtSource: z.string(),
       durationSource: z.string().nullable(),
-      durationSeconds: z.number().int().nullable(),
+      durationSeconds: durationSecondsSchema.nullable(),
       priceFormat: z.string().nullable(),
       priceFormatType: z.string().nullable(),
       tickSize: z.string().nullable(),

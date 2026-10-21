@@ -1,0 +1,102 @@
+{
+  "fixtureVersion": 1,
+  "generatedBy": "apps/desktop/src-tauri/src/csv_import/wire_limit_tests.rs",
+  "rows": [
+    {
+      "committedStatus": "imported",
+      "durationCell": "0sec",
+      "previewDurationSeconds": 0,
+      "previewStatus": "new"
+    },
+    {
+      "committedStatus": "imported",
+      "durationCell": "32sec",
+      "previewDurationSeconds": 32,
+      "previewStatus": "new"
+    },
+    {
+      "committedStatus": "imported",
+      "durationCell": "9007199254740991sec",
+      "previewDurationSeconds": 9007199254740991,
+      "previewStatus": "new"
+    },
+    {
+      "committedStatus": "imported",
+      "durationCell": "9007199254740992sec",
+      "previewDurationSeconds": "9007199254740992",
+      "previewStatus": "new"
+    },
+    {
+      "committedStatus": "imported",
+      "durationCell": "9007199254740993sec",
+      "previewDurationSeconds": "9007199254740993",
+      "previewStatus": "new"
+    },
+    {
+      "committedStatus": "imported",
+      "durationCell": "2562047788015215:30:07",
+      "previewDurationSeconds": "9223372036854775807",
+      "previewStatus": "new"
+    },
+    {
+      "committedStatus": "imported",
+      "durationCell": "9223372036854775807sec",
+      "previewDurationSeconds": "9223372036854775807",
+      "previewStatus": "new"
+    },
+    {
+      "committedStatus": "invalid",
+      "durationCell": "9223372036854775808sec",
+      "previewDurationSeconds": null,
+      "previewStatus": "invalid"
+    },
+    {
+      "committedStatus": "invalid",
+      "durationCell": "18446744073709551616sec",
+      "previewDurationSeconds": null,
+      "previewStatus": "invalid"
+    },
+    {
+      "committedStatus": "invalid",
+      "durationCell": "-5sec",
+      "previewDurationSeconds": null,
+      "previewStatus": "invalid"
+    },
+    {
+      "committedStatus": "invalid",
+      "durationCell": "1.5sec",
+      "previewDurationSeconds": null,
+      "previewStatus": "invalid"
+    }
+  ],
+  "storedTrades": [
+    {
+      "durationSeconds": 0,
+      "durationSource": "0sec"
+    },
+    {
+      "durationSeconds": 32,
+      "durationSource": "32sec"
+    },
+    {
+      "durationSeconds": 9007199254740991,
+      "durationSource": "9007199254740991sec"
+    },
+    {
+      "durationSeconds": "9007199254740992",
+      "durationSource": "9007199254740992sec"
+    },
+    {
+      "durationSeconds": "9007199254740993",
+      "durationSource": "9007199254740993sec"
+    },
+    {
+      "durationSeconds": "9223372036854775807",
+      "durationSource": "2562047788015215:30:07"
+    },
+    {
+      "durationSeconds": "9223372036854775807",
+      "durationSource": "9223372036854775807sec"
+    }
+  ]
+}

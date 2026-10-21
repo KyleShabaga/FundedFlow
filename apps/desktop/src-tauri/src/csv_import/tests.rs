@@ -411,3 +411,6 @@ mod target_acceptance;
 
 #[path = "identity_tests.rs"]
 mod identity;
+
+#[path = "wire_limit_tests.rs"]
+mod wire_limits;

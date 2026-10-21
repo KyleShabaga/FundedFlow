@@ -1,7 +1,7 @@
 // Journal screen model (Build 20): joins trades with their review summaries, filters, sorts, pages and groups them by
 // the stored trading day, and adds up display statistics. Every sum goes through format.ts (bigint micro-units);
 // unknown P&L is left out of sums and counted, never treated as zero. Stored P&L and trading days come from Rust.
-import { microsToDecimal, toMicros, type ReviewSummary } from "@fundedflow/domain";
+import { durationSecondsValue, microsToDecimal, toMicros, type ReviewSummary } from "@fundedflow/domain";
 import { compareMoney, moneySign, moneyToNumberForDisplay, sumMoney } from "../../../design-system";
 import type { TradeViewModel } from "../../trades/view-models/trade";
 
@@ -169,11 +169,14 @@ export function cumulative(rows: readonly JournalRow[]): string[] {
 
 /** "45s", "1m 17s", "2h 05m": the time between entry and exit, or the export's duration for paired fills. */
 export function holdTime(trade: TradeViewModel): string | null {
-  const seconds = trade.roundTrip?.durationSeconds ?? (trade.exitAt ? Math.round((Date.parse(trade.exitAt) - Date.parse(trade.entryAt)) / 1000) : null);
-  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return null;
-  if (seconds < 60) return `${seconds}s`;
-  const m = Math.floor(seconds / 60);
-  if (m < 60) return `${m}m ${String(seconds % 60).padStart(2, "0")}s`;
-  const h = Math.floor(m / 60);
-  return h < 24 ? `${h}h ${String(m % 60).padStart(2, "0")}m` : `${Math.floor(h / 24)}d ${h % 24}h`;
+  // An export's duration can exceed 2^53 - 1 seconds, so it arrives as a decimal string there (P0-04); count exactly.
+  const exported = trade.roundTrip?.durationSeconds;
+  const measured = trade.exitAt ? Math.round((Date.parse(trade.exitAt) - Date.parse(trade.entryAt)) / 1000) : null;
+  const seconds = exported != null ? durationSecondsValue(exported) : measured != null && Number.isFinite(measured) ? BigInt(measured) : null;
+  if (seconds == null || seconds < 0n) return null;
+  if (seconds < 60n) return `${seconds}s`;
+  const m = seconds / 60n;
+  if (m < 60n) return `${m}m ${String(seconds % 60n).padStart(2, "0")}s`;
+  const h = m / 60n;
+  return h < 24n ? `${h}h ${String(m % 60n).padStart(2, "0")}m` : `${h / 24n}d ${h % 24n}h`;
 }
