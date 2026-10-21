@@ -9,6 +9,8 @@ mod domain;
 mod error;
 #[cfg(test)]
 mod parity;
+#[cfg(test)]
+mod wire_contract;
 mod rulebook;
 mod runtime;
 mod store;
