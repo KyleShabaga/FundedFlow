@@ -372,16 +372,20 @@ pub fn preview(conn: &Connection, req: &CsvImportRequest) -> AppResult<CsvPrevie
         limits: Limits { max_bytes: MAX_CSV_BYTES, max_rows: MAX_CSV_ROWS },
     };
     for (i, ((raw, outcome), m)) in rows.into_iter().zip(matches).enumerate() {
-        let (duplicate, restores) = match m {
-            Match::New => (None, None),
-            Match::Restore(r) => (None, Some(r)),
-            Match::Duplicate(d) => (Some(d), None),
+        let (duplicate, restores, ambiguous) = match m {
+            Match::New => (None, None, None),
+            Match::Restore(r) => (None, Some(r), None),
+            Match::Duplicate(d) => (Some(d), None, None),
+            Match::Ambiguous(a) => (None, None, Some(a)),
         };
         let warnings = warnings_of(outcome).to_vec();
         p.warning_count += u32::from(!warnings.is_empty());
         let (status, errors, trade) = match outcome {
             Outcome::Blank => ("blank", Vec::new(), None),
             Outcome::Invalid { errors, .. } => ("invalid", errors.clone(), None),
+            Outcome::Valid { .. } if ambiguous.is_some() => {
+                ("invalid", vec![FieldIssue::new("identity", ambiguous.as_ref().unwrap().reason.clone())], None)
+            }
             Outcome::Valid { trade, .. } => {
                 (if duplicate.is_some() { "duplicate" } else { "new" }, Vec::new(), Some(trade_preview(trade)))
             }
@@ -512,6 +516,8 @@ fn write_batch(conn: &mut Connection, req: &CsvImportRequest, started: &str) -> 
             ),
             // The row record keeps why it wrote no new trade.
             (Outcome::Valid { .. }, Match::Restore(r)) => ("imported", vec![FieldIssue::new("row", r.reason.clone())], None),
+            // Recorded, never guessed: see dedup::Ambiguity.
+            (Outcome::Valid { .. }, Match::Ambiguous(a)) => ("invalid", vec![FieldIssue::new("identity", a.reason.clone())], None),
             (Outcome::Valid { .. }, Match::New) => ("imported", Vec::new(), None),
         };
         match status {

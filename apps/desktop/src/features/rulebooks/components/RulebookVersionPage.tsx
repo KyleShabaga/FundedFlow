@@ -20,6 +20,7 @@ import { applicabilityText, assignableVersions, isEditable, versionState } from 
 import { AssignDialog } from "./AssignDialog";
 import { useAccountRulebookContext, type AccountRulebookContext } from "./context";
 import { CalculationPreview } from "./CalculationPreview";
+import { RulebookWriteReview } from "./RulebookWriteReview";
 import { RuleCard } from "./RuleCard";
 import { fieldIdFor } from "./RuleParameterFields";
 import { StartDraftDialog } from "./StartDraftDialog";
@@ -128,6 +129,13 @@ function DraftEditor({ d, ctx, onDirtyChange, onForm }: {
       toast.show({ tone: "success", title: "Draft saved", description: `v${saved.version.versionNumber} is still a draft: nothing is in use until it is published.` });
     } catch { /* Shown below; edits stay in the form. */ }
   };
+  // After an uncertain save is reviewed: if the stored draft is exactly these edits, it did save, so it becomes
+  // the baseline. Otherwise the edits stay unsaved in the form (a newer stored draft shows the conflict notice).
+  const reviewed = () => {
+    if (isDirty(form, formFromDetail(d))) return;
+    setBaseline({ form: formFromDetail(d), revision: d.version.updatedAt });
+    forgetEdits(d.version.id);
+  };
   const reloadSaved = () => {
     const next = formFromDetail(d);
     setBaseline({ form: next, revision: d.version.updatedAt });
@@ -150,7 +158,7 @@ function DraftEditor({ d, ctx, onDirtyChange, onForm }: {
           You had unsaved edits, but this draft was saved elsewhere since, so they were set aside rather than mixed in.
         </InlineNotice>
       )}
-      {(conflict || (newer && dirty)) && (
+      {(conflict || (newer && dirty)) && save.outcome !== "uncertain-outcome" && (
         <InlineNotice tone="error" title="This draft changed somewhere else" actions={<Button size="sm" onClick={reloadSaved}>Load the saved draft (drops your edits)</Button>}>
           It was saved, published or discarded in another window after you opened it, so your edits weren't saved over it. Your edits are still here.
         </InlineNotice>
@@ -185,7 +193,9 @@ function DraftEditor({ d, ctx, onDirtyChange, onForm }: {
       </div>
       <footer className="rb-save-bar" aria-label="Save draft">
         <span role="status" className="ds-faint">{save.isPending ? "Saving…" : dirty ? "Unsaved changes" : "All changes saved"}</span>
-        <MutationFeedback state={toMutationState(save, { success: "Draft saved.", fieldId: fieldIdFor })} />
+        {save.outcome === "uncertain-outcome"
+          ? <RulebookWriteReview write={save} accountId={accountId} timeZone={ctx.timeZone} versionId={d.version.id} onAcknowledged={reviewed} />
+          : <MutationFeedback state={toMutationState(save, { success: "Draft saved.", fieldId: fieldIdFor })} />}
         <Button variant="ghost" disabled={!dirty || save.isPending} onClick={() => { setForm(baseline.form); setIssues([]); forgetEdits(d.version.id); }}>Undo changes</Button>
         <Button variant="primary" loading={save.isPending} disabled={!dirty || !save.canSubmit} onClick={submit}>Save draft</Button>
       </footer>
@@ -208,16 +218,23 @@ function PublishPanel({ d, ctx, dirty, onPublished }: { d: RulebookVersionDetail
   const status = d.version.verificationStatus;
   const describe = (e: unknown) => (e as { category?: string; message?: string })?.category === "conflict"
     ? "It changed since you opened it, or a newer version was published. Reload the page, then start again from the newest version."
-    : (e as { message?: string })?.message ?? "It didn't finish. Check the version before trying again.";
+    : (e as { category?: string })?.category === "uncertain-outcome"
+      ? "No answer came back, so it may have been saved. Close this and check the version on this page before trying again; nothing is sent again."
+      : (e as { message?: string })?.message ?? "It didn't finish. Check the version before trying again.";
   const run = async (reviewerName: string | null) => {
     const result = await publish.submit({ id: d.version.id, reviewer: reviewerName, expectedUpdatedAt: d.version.updatedAt, reason: reason.trim() || null });
     onPublished(result);
   };
+  // A publish or discard that did save makes this version read-only, so its review must stay reachable here too.
+  const review = publish.outcome === "uncertain-outcome"
+    ? <RulebookWriteReview write={publish} accountId={accountId} timeZone={ctx.timeZone} versionId={d.version.id} />
+    : null;
   if (status !== "draft" && !(status === "needs_review" && !privateBook)) {
-    return <InlineNotice tone="info" live="off" title={versionState(d).label}>{versionState(d).detail} Published versions can't be changed: start a draft to propose a new one.</InlineNotice>;
+    return <div className="rb-form">{review}<InlineNotice tone="info" live="off" title={versionState(d).label}>{versionState(d).detail} Published versions can't be changed: start a draft to propose a new one.</InlineNotice></div>;
   }
   return (
     <div className="rb-form">
+      {review}
       {dirty && <InlineNotice tone="warning" live="polite" title="Save your edits first">The checks and publishing use the saved draft, not unsaved edits.</InlineNotice>}
       <StateBoundary state={toAsyncState(issues)} label="publish checks" onRetry={retryRead(issues.refresh)}>
         {found => {
@@ -254,7 +271,7 @@ function PublishPanel({ d, ctx, dirty, onPublished }: { d: RulebookVersionDetail
           </div>
         </section>
       )}
-      <MutationFeedback state={toMutationState(publish, { success: "Published." })} />
+      {!review && <MutationFeedback state={toMutationState(publish, { success: "Published." })} />}
       <ConfirmDialog open={confirm === "publish"} onOpenChange={o => !o && setConfirm(null)} tone="neutral" title={`Publish ${d.rulebook.displayName} v${d.version.versionNumber}?`}
         confirmLabel="Publish" busyLabel="Publishing…" describeError={describe} onConfirm={() => run(null)}>
         {privateBook ? "It becomes your account rules, confirmed by you, and can be assigned to this account. Calculations with it are your own estimates. " : "It goes to review and can't be assigned yet. "}

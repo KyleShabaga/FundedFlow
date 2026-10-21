@@ -2,7 +2,7 @@
 // where it comes from and how far it can be trusted, its rules, every version and draft, the
 // assignment history, the audit log and what has (not) been calculated. Empty, Unknown,
 // unavailable and unsupported are distinct states.
-import type { AccountRulebookAssignment, RulebookEvent, RulebookVersionDetail } from "@fundedflow/domain";
+import type { AccountRulebookAssignment, RulebookVersionDetail } from "@fundedflow/domain";
 import { ArrowLeft } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -14,36 +14,23 @@ import {
 } from "../../../design-system";
 import { accountLabel } from "../../accounts/components/presentation";
 import { PROP_ACCOUNT_TYPES, verificationOf } from "../../accounts/setup";
-import { useRulebookVersion, useRulebookVersions } from "../../references/hooks/references";
+import { useRulebookVersions } from "../../references/hooks/references";
 import type { ReadReceipt } from "../../shared/contracts";
 import { featureKeys } from "../../shared/query-keys";
 import { retryRead, toAsyncState } from "../../shared/presentation";
 import { useRulebookEvents } from "../hooks/rulebooks";
 import { ruleLabel } from "../view-models/compare";
+import { EVENT_ACTIONS as ACTIONS } from "../view-models/events";
 import { applicabilityText, assignableVersions, versionState } from "../view-models/versions";
 import { AssignDialog } from "./AssignDialog";
 import { CalculationExplanation } from "./CalculationExplanation";
 import { useAccountRulebookContext, type AccountRulebookContext } from "./context";
 import { RuleSources, RuleSummaryBadge } from "./RuleCard";
 import { StartDraftDialog } from "./StartDraftDialog";
+import { VersionName } from "./VersionName";
 import "./rulebooks.css";
 
-const ACTIONS: Record<RulebookEvent["action"], string> = {
-  draft_created: "Draft started",
-  draft_saved: "Draft saved",
-  draft_discarded: "Draft discarded",
-  published: "Published",
-  verified: "Verified",
-  assigned: "Assigned to the account",
-  conflict_flagged: "Source conflict recorded",
-};
 const actor = (a: string) => (a === "local_user" ? "You (on this computer)" : a);
-
-function VersionName({ id }: { id: string }) {
-  const v = useRulebookVersion(id);
-  if (!v.data) return <span className="ds-faint">{v.error ? "Unreadable version" : "…"}</span>;
-  return <span>{v.data.rulebook.displayName} · v{v.data.version.versionNumber} <Badge tone={versionState(v.data).tone}>{versionState(v.data).label}</Badge></span>;
-}
 
 function CurrentRulebook({ ctx, onStart, onAssign }: { ctx: AccountRulebookContext; onStart: (source: RulebookVersionDetail | null) => void; onAssign: () => void }) {
   const account = ctx.account.data!;

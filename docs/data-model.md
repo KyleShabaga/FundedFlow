@@ -833,9 +833,18 @@ Journal links cleared by the delete are not restored. Preview and commit use the
 
 | Row | Key |
 |---|---|
-| Performance row with both fill IDs | `fills:<buyFillId>:<sellFillId>` — the **pair**. Rows sharing only a buy fill (one buy closed by several sells) or only a sell fill are distinct. |
+| Performance row with both fill IDs | `fills2:<n>:<buyFillId>:<sellFillId>`, where `<n>` is the buy ID's length in UTF-8 bytes — the **pair**. The length makes the key unique even when IDs contain `:`. Rows sharing only a buy fill (one buy closed by several sells) or only a sell fill are distinct. |
 | Generic row with a broker trade ID | `id:<trade id>` |
 | Otherwise | `rt:` + SHA-256 of the normalized fields: format, symbol, quantity, both prices, both timestamps (UTC), reported P&L (and side for generic rows). |
+
+Journals imported before P0-01 hold fill-pair trades under the unversioned key `fills:<buy>:<sell>`, which
+distinct pairs such as `(a:b, c)` and `(a, b:c)` share. Keys are immutable and are not migrated. A pair with no
+`fills2` match is looked up under its legacy key, and matches that trade (duplicate or restore) only if the
+trade's stored `trade_round_trips` fill IDs are exactly this pair; a different stored pair means a different
+trade, so the row imports as new under its `fills2` key. If the stored pair can't be read, the row is reported
+`invalid` with an `identity` error instead of being matched or imported. Rows an earlier release skipped as
+duplicates of a colliding pair keep their recorded history; re-importing the file now imports them. See
+[docs/architecture/p0-01-p0-03.md](architecture/p0-01-p0-03.md).
 
 Limitations:
 - Without IDs, two genuinely identical round trips in one file are indistinguishable; the second is flagged as

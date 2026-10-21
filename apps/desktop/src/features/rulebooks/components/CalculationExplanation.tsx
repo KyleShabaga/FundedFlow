@@ -5,16 +5,17 @@
 // version is said plainly. Snapshots written before Build 16 are shown as recorded, generically.
 // "Calculate now" saves a new calculation; earlier ones are kept. React computes nothing.
 import type { RulebookVersionDetail } from "@fundedflow/domain";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import {
   Badge, Button, Drawer, formatInstant, InlineNotice, MutationFeedback, StateBoundary, StatList, StatusIndicator, type StatusKind,
   UnavailableState, useToast, zonedDay,
 } from "../../../design-system";
-import { useLatestSnapshot } from "../../insights/hooks/insights";
+import { useLatestSnapshot, useSnapshotHistory } from "../../insights/hooks/insights";
 import type { SnapshotViewModel as Snapshot } from "../../insights/view-models/snapshot";
 import { useRulebookVersion } from "../../references/hooks/references";
 import { retryRead, toAsyncState, toMutationState } from "../../shared/presentation";
+import { UncertainOutcomeReview, type UncertainWrite } from "../../shared/UncertainOutcomeReview";
 import { recordedEngineResult } from "../api/risk";
 import { useCalculateRisk, useCalculationFreshness } from "../hooks/rulebooks";
 import { ruleLabel } from "../view-models/compare";
@@ -123,14 +124,38 @@ export function ManualRulesList({ version }: { version: RulebookVersionDetail })
   );
 }
 
+/**
+ * P0-03: what an uncertain calculation is checked against: the account's saved calculations, newest first. A saved
+ * one from after the request was sent means it did save. `sentAt` is known only while the form that sent it is open.
+ */
+function CalculationWriteReview({ write, accountId, timeZone, sentAt }: { write: UncertainWrite; accountId: string; timeZone: string; sentAt: string | null }) {
+  const history = useSnapshotHistory(accountId);
+  const at = (instant: string) => formatInstant(instant, { timeZone, year: true, zoneName: true });
+  const saved = [...(history.data ?? [])].sort((a, b) => (a.calculatedAt < b.calculatedAt ? 1 : -1));
+  const after = sentAt ? saved.filter(s => s.calculatedAt >= sentAt) : [];
+  return (
+    <UncertainOutcomeReview write={write} what="the saved calculations" reviewReady={history.data !== undefined && !history.error} readReviewed={history.refresh}>
+      {sentAt && <p>{after.length ? `${after.length === 1 ? "A calculation was" : `${after.length} calculations were`} saved after you pressed Calculate at ${at(sentAt)}.` : `No calculation was saved after you pressed Calculate at ${at(sentAt)}.`}</p>}
+      {saved.length
+        ? <StatList label="Saved calculations, newest first" items={saved.slice(0, 5).map(s => ({
+          label: at(s.calculatedAt), value: `${STATUS[s.status].label} · trading day ${s.tradingDay}`,
+        }))} />
+        : <p>No calculation is saved for this account.</p>}
+    </UncertainOutcomeReview>
+  );
+}
+
 /** The explicit "calculate and save" action (also Today's Calculate estimate, Build 21). Never runs on its own. */
-export function CalculateNow({ accountId, currency, current, onSaved }: { accountId: string; currency: string; current: RulebookVersionDetail | null; onSaved?: () => void }) {
+export function CalculateNow({ accountId, currency, current, onSaved, timeZone = "UTC" }: { accountId: string; currency: string; current: RulebookVersionDetail | null; onSaved?: () => void; timeZone?: string }) {
   const settings = useCalculationSettings(accountId, currency, current);
   const calculate = useCalculateRisk(accountId);
   const toast = useToast();
+  const [sentAt, setSentAt] = useState<string | null>(null);
   const run = async () => {
+    const asOf = new Date().toISOString();
+    setSentAt(asOf);
     try {
-      const saved = await calculate.submit({ query: { accountId, asOf: new Date().toISOString(), coverage: settings.coverage }, policy: settings.policy });
+      const saved = await calculate.submit({ query: { accountId, asOf, coverage: settings.coverage }, policy: settings.policy });
       toast.show({ tone: "success", title: "Calculation saved", description: `Status ${saved.status}. Earlier calculations are kept.` });
       onSaved?.();
     } catch { /* MutationFeedback shows it. */ }
@@ -143,7 +168,9 @@ export function CalculateNow({ accountId, currency, current, onSaved }: { accoun
       <div className="rb-actions">
         <Button variant="primary" onClick={run} loading={calculate.isPending} disabled={!calculate.canSubmit || !settings.historyLoaded}>Calculate and save</Button>
       </div>
-      <MutationFeedback state={toMutationState(calculate, { success: "Calculation saved." })} />
+      {calculate.outcome === "uncertain-outcome"
+        ? <CalculationWriteReview write={calculate} accountId={accountId} timeZone={timeZone} sentAt={sentAt} />
+        : <MutationFeedback state={toMutationState(calculate, { success: "Calculation saved." })} />}
     </section>
   );
 }
@@ -162,7 +189,7 @@ export function CalculationExplanation({ accountId, current, timeZone, currency,
         {snapshot => snapshot ? <SnapshotExplanation snapshot={snapshot} current={current} timeZone={timeZone} accountId={accountId} /> : null}
       </StateBoundary>
       {current && <ManualRulesList version={current} />}
-      {canCalculate && currency && <CalculateNow accountId={accountId} currency={currency} current={current} />}
+      {canCalculate && currency && <CalculateNow accountId={accountId} currency={currency} current={current} timeZone={timeZone} />}
     </div>
   );
 }

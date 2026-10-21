@@ -5,15 +5,15 @@ use std::path::{Path, PathBuf};
 const HEADER: &str = "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Fees,P&L,Notes";
 const TRADE: &str = "MNQZ6,Buy,1,2026-10-19 09:30:00,21000,2026-10-19 09:31:00,21001,0,2,original";
 
-struct JournalFile(PathBuf);
+pub(super) struct JournalFile(PathBuf);
 impl JournalFile {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self(std::env::temp_dir().join(format!("fundedflow-build17-{}", uuid::Uuid::now_v7())))
     }
     fn path(&self) -> PathBuf {
         self.0.join(crate::db::DB_FILE_NAME)
     }
-    fn open(&self) -> Connection {
+    pub(super) fn open(&self) -> Connection {
         crate::db::open_file(&self.path()).unwrap()
     }
 }

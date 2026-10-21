@@ -1,0 +1,67 @@
+{
+  "identityVersion": 2,
+  "contract": "fills2:<n>:<buyFillId>:<sellFillId>, n = UTF-8 byte length of buyFillId in decimal without leading zeros. Fill IDs are 1-64 ASCII letters, digits, '-', '_', '.' or ':', so n is also the UTF-16 length. legacyKey is the unversioned pre-P0-01 key: read for compatibility only, never written, and not an identity on its own.",
+  "note": "Hand-written vectors checked by csv_import identity tests (Rust is authoritative). Target for a future portable implementation (P0-04).",
+  "vectors": [
+    {
+      "buy": "707776450007",
+      "sell": "707776450023",
+      "key": "fills2:12:707776450007:707776450023",
+      "legacyKey": "fills:707776450007:707776450023"
+    },
+    {
+      "buy": "buy17",
+      "sell": "sell17",
+      "key": "fills2:5:buy17:sell17",
+      "legacyKey": "fills:buy17:sell17"
+    },
+    {
+      "buy": "a:b",
+      "sell": "c",
+      "key": "fills2:3:a:b:c",
+      "legacyKey": "fills:a:b:c"
+    },
+    {
+      "buy": "a",
+      "sell": "b:c",
+      "key": "fills2:1:a:b:c",
+      "legacyKey": "fills:a:b:c"
+    },
+    {
+      "buy": "1",
+      "sell": "1:x",
+      "key": "fills2:1:1:1:x",
+      "legacyKey": "fills:1:1:x"
+    },
+    {
+      "buy": "1:1",
+      "sell": "x",
+      "key": "fills2:3:1:1:x",
+      "legacyKey": "fills:1:1:x"
+    },
+    {
+      "buy": "::",
+      "sell": ":",
+      "key": "fills2:2:::::",
+      "legacyKey": "fills:::::"
+    },
+    {
+      "buy": ":",
+      "sell": "::",
+      "key": "fills2:1:::::",
+      "legacyKey": "fills:::::"
+    },
+    {
+      "buy": "A-1_2.3",
+      "sell": "B",
+      "key": "fills2:7:A-1_2.3:B",
+      "legacyKey": "fills:A-1_2.3:B"
+    },
+    {
+      "buy": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "sell": "y",
+      "key": "fills2:64:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:y",
+      "legacyKey": "fills:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:y"
+    }
+  ]
+}

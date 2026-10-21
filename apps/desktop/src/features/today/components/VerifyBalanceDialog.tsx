@@ -7,13 +7,14 @@ import { type FormEvent, useState } from "react";
 
 import {
   Badge, Button, Checkbox, Dialog, focusFirstInvalid, formatInstant, formatMoney, InlineNotice, MutationFeedback, RadioGroup, Select, Textarea,
-  TextField, ValidationSummary, zonedWallTime, type ValidationIssue,
+  StatList, TextField, ValidationSummary, zonedWallTime, type ValidationIssue,
 } from "../../../design-system";
 import type { AccountViewModel } from "../../accounts/view-models/account";
-import { useReconcileBalance, useRecordObservation } from "../../evidence/hooks/evidence";
+import { useObservations, useReconcileBalance, useReconciliations, useRecordObservation } from "../../evidence/hooks/evidence";
 import { zoneLabel } from "../../journal/components/presentation";
 import { reasonText } from "../../rulebooks/view-models/engine-wording";
 import { fieldErrors, toMutationState } from "../../shared/presentation";
+import { UncertainOutcomeReview, type UncertainWrite } from "../../shared/UncertainOutcomeReview";
 import { checkpointInstant } from "../view-models/zoned-time";
 import { CHECKPOINT_KIND } from "./FreshnessPanel";
 
@@ -60,6 +61,46 @@ export function VerifyBalanceDialog({ account, open, onOpenChange, opening }: {
   );
 }
 
+/**
+ * P0-03: what an uncertain checkpoint or comparison is checked against. Both share one lock per account, so either
+ * step shows the account's stored checkpoints and comparisons, newest first; `entered` says whether the checkpoint
+ * being saved is among them. Nothing is matched or saved on the trader's behalf.
+ */
+function EvidenceWriteReview({ write, account, entered }: {
+  write: UncertainWrite; account: AccountViewModel; entered?: Pick<FinancialObservation, "kind" | "value" | "observedAt"> | null;
+}) {
+  const observations = useObservations(account.id);
+  const comparisons = useReconciliations(account.id);
+  const at = (v: string) => formatInstant(v, { timeZone: account.timezone, year: true, zoneName: true });
+  const money = (v: string | null, currency: string) => (v === null ? "—" : formatMoney(v, { signed: false, currency }));
+  const checkpoints = [...(observations.data ?? [])].sort((a, b) => (a.recordedAt < b.recordedAt ? 1 : -1));
+  const compared = [...(comparisons.data ?? [])].sort((a, b) => (a.recordedAt < b.recordedAt ? 1 : -1));
+  // Compared as amounts and instants, so text formatting can never turn a stored checkpoint into "not saved".
+  const same = (a: string | null, b: string | null) => (a === null || b === null ? a === b : canonicalDecimal(a) === canonicalDecimal(b));
+  const match = entered
+    ? checkpoints.find(o => o.kind === entered.kind && same(o.value, entered.value) && Date.parse(o.observedAt) === Date.parse(entered.observedAt))
+    : undefined;
+  return (
+    <UncertainOutcomeReview write={write} what="your checkpoints and comparisons"
+      reviewReady={[observations, comparisons].every(q => q.data !== undefined && !q.error)}
+      readReviewed={() => Promise.all([observations.refresh(), comparisons.refresh()])}>
+      {entered && <p>{match
+        ? `The checkpoint you entered is saved: ${CHECKPOINT_KIND[match.kind]} ${money(match.value, match.currency)} read at ${at(match.observedAt)}.`
+        : "The checkpoint you entered is not among the saved ones."}</p>}
+      {checkpoints.length
+        ? <StatList label="Saved checkpoints, newest first" items={checkpoints.slice(0, 5).map(o => ({
+          label: `${CHECKPOINT_KIND[o.kind]} · read ${at(o.observedAt)}`, value: `${money(o.value, o.currency)} · ${o.sourceReference} · saved ${at(o.recordedAt)}`,
+        }))} />
+        : <p>No checkpoint is saved for this account.</p>}
+      {compared.length
+        ? <StatList label="Saved comparisons, newest first" items={compared.slice(0, 3).map(r => ({
+          label: `Saved ${at(r.recordedAt)}`, value: `${r.result.reconciliationStatus} · checkpoint read ${at(r.observation.observedAt)}`,
+        }))} />
+        : <p>No comparison is saved for this account.</p>}
+    </UncertainOutcomeReview>
+  );
+}
+
 function CheckpointForm({ account, opening, mutation, onSaved, onCancel }: {
   account: AccountViewModel; opening: FinancialObservation | null; mutation: ReturnType<typeof useRecordObservation>;
   onSaved: (o: FinancialObservation) => void; onCancel: () => void;
@@ -74,6 +115,7 @@ function CheckpointForm({ account, opening, mutation, onSaved, onCancel }: {
   const [confirmed, setConfirmed] = useState(false);
   const [note, setNote] = useState("");
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
+  const [sent, setSent] = useState<Pick<FinancialObservation, "kind" | "value" | "observedAt"> | null>(null);
   const errors: Record<string, string> = Object.fromEntries(issues.filter(i => i.fieldId).map(i => [i.fieldId!, i.message]));
   const backend = fieldErrors(mutation.error);
 
@@ -94,6 +136,7 @@ function CheckpointForm({ account, opening, mutation, onSaved, onCancel }: {
     if (reference.trim() === "") found.push({ fieldId: "td-cp-ref", message: "Say where you read it, e.g. \"Firm dashboard, account overview\"." });
     setIssues(found);
     if (found.length) { requestAnimationFrame(() => focusFirstInvalid(form)); return; }
+    setSent({ kind, value: value!, observedAt: (at as { instant: string }).instant });
     try {
       const savedRow = await mutation.submit({
         accountId: account.id, kind, value, currency: account.currency, basis: "balance",
@@ -127,7 +170,9 @@ function CheckpointForm({ account, opening, mutation, onSaved, onCancel }: {
       <Checkbox label="I read this figure from the firm and confirm it" checked={confirmed} onChange={e => setConfirmed(e.target.checked)}
         description="Confirmed checkpoints can be used in calculations. It remains your report, not a check by FundedFlow." />
       <Textarea label="Note" optional rows={2} value={note} onChange={e => setNote(e.target.value)} />
-      <MutationFeedback state={toMutationState(mutation, { success: "Checkpoint saved." })} />
+      {mutation.outcome === "uncertain-outcome"
+        ? <EvidenceWriteReview write={mutation} account={account} entered={sent} />
+        : <MutationFeedback state={toMutationState(mutation, { success: "Checkpoint saved." })} />}
       <div className="td-form-footer">
         <Button type="button" onClick={onCancel} disabled={mutation.isPending}>Cancel</Button>
         <Button type="submit" variant="primary" loading={mutation.isPending} disabled={!mutation.canSubmit}>Save checkpoint</Button>
@@ -178,9 +223,10 @@ function CompareStep({ account, saved, opening, mutation, result, onCompared, on
             <Select size="sm" label="Fees are complete" options={ASSERT} value={assert.fees} onValueChange={v => setAssert(a => ({ ...a, fees: v }))} />
             <Select size="sm" label="Payouts and adjustments are recorded" options={ASSERT} value={assert.ledger} onValueChange={v => setAssert(a => ({ ...a, ledger: v }))} />
           </div>
-          <MutationFeedback state={toMutationState(mutation, { success: "Comparison saved." })} />
+          {mutation.outcome !== "uncertain-outcome" && <MutationFeedback state={toMutationState(mutation, { success: "Comparison saved." })} />}
         </fieldset>
       )}
+      {mutation.outcome === "uncertain-outcome" && <EvidenceWriteReview write={mutation} account={account} />}
       {result && (
         <section className="td-compare" aria-labelledby="td-compare-title" role="status">
           <h3 id="td-compare-title" className="ds-title">Comparison <Badge tone={STATUS_TONE[result.result.reconciliationStatus]}>{result.result.reconciliationStatus === "matched" ? "Matches exactly" : result.result.reconciliationStatus}</Badge></h3>

@@ -30,13 +30,14 @@ Review every row of a CSV before anything is saved, then import it in one step.
 | `duplicate` (`of: file`) | Duplicate (neutral) | "Same fill pair as line n" |
 | `duplicate` (`of: saved`) | Duplicate | "Same fill pair as a trade saved on {date}" |
 | `invalid` | Error (loss) | Each error with its column, e.g. "qty: must be greater than 0" |
+| `invalid` with an `identity` error | Error (loss) | "Couldn't tell whether this row is already saved…": a pre-P0-01 trade shares its old key and its stored fill pair can't be read, so it is neither matched nor imported |
 | `blank` | Hidden; counted in the file card | — |
 
 Skipped rows (duplicates, errors) are dimmed.
 
 ## Decisions
-- Duplicates match the `(buyFillId, sellFillId)` pair for performance rows; a shared buy or sell fill alone is
-  not a duplicate. Generic rows match on broker trade ID, else the hash of symbol, quantity, prices, timestamps
+- Duplicates match the `(buyFillId, sellFillId)` pair for performance rows exactly, including IDs that contain `:`
+  (P0-01); a shared buy or sell fill alone is not a duplicate. Generic rows match on broker trade ID, else the hash of symbol, quantity, prices, timestamps
   and P&L.
 - Cancel discards the preview without writing (#11). A new file starts from a clean state.
 - After import: a toast, then the Import history list (`list_csv_imports`: file, counts, problem rows via
