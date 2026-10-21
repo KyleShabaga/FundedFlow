@@ -17,6 +17,8 @@ const routes = [
 const normalizePath = (pathname: string) => pathname.replace(/\/+$/, "").toLowerCase() || "/";
 /** The top-level section a path belongs to ("/accounts/abc" is in Accounts). */
 const sectionOf = (path: string) => routes.find(route => route.path !== "/" && path.startsWith(`${route.path}/`))?.path ?? path;
+/** A trade's detail page, the one nested Journal page. */
+const isTradePath = (path: string) => /^\/journal\/trades\/[^/]+$/.test(path);
 const preferenceKey = "fundedflow.sidebarCollapsed";
 const narrowQuery = "(max-width: 759px)";
 
@@ -63,7 +65,7 @@ export function SidebarNav({ collapsed, narrow, toggle }: {
   const developerRoute = import.meta.env.DEV && activePath === "/settings/developer";
   const item = (route: typeof routes[number]) => (
     <Link key={route.path} to={route.path}
-      aria-current={activePath === route.path || (route.path === "/accounts" && sectionOf(activePath) === "/accounts") || (developerRoute && route.path === "/settings") ? "page" : undefined}
+      aria-current={activePath === route.path || (route.path === "/accounts" && sectionOf(activePath) === "/accounts") || (route.path === "/journal" && isTradePath(activePath)) || (developerRoute && route.path === "/settings") ? "page" : undefined}
       className="shell-nav-link" aria-label={route.label} title={route.label}>
       <route.icon size={20} aria-hidden="true" />
       <span className={collapsed ? "ds-sr-only" : undefined}>{route.label}</span>
@@ -124,12 +126,13 @@ export function AppShell() {
   const sidebar = useSidebar();
   const { pathname } = useLocation();
   const normalizedPath = normalizePath(pathname);
-  // Only Accounts has nested pages (account detail); other unknown sub-paths stay "Page not found".
+  // Accounts (account detail) and Journal (trade detail) have nested pages; other unknown sub-paths stay "Page not found".
   // Import has no sidebar item: it opens from the header's Import CSV action.
   const title = import.meta.env.DEV && normalizedPath === "/settings/developer"
     ? "Developer tools"
     : normalizedPath === "/import" ? "Import trades"
     : normalizedPath === "/import/history" ? "Import history"
+    : isTradePath(normalizedPath) ? "Trade"
     : routes.find(route => route.path === normalizedPath || (route.path === "/accounts" && sectionOf(normalizedPath) === "/accounts"))?.label ?? "Page not found";
   return (
     <>

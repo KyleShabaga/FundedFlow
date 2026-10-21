@@ -8,6 +8,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 // The shell is tested on its own: the Accounts page and header account selector make their own
 // data reads and are covered by features/accounts/accounts.test.tsx.
 vi.mock("../features/accounts/components/AccountsPage", () => ({ AccountsPage: () => <h2>Accounts is not built yet</h2> }));
+vi.mock("../features/journal/components/JournalPage", () => ({ JournalPage: () => <h2>Journal is not built yet</h2> }));
 vi.mock("../features/accounts/components/AccountSwitcher", () => ({ AccountSwitcher: () => null }));
 import App from "../App";
 import { AppFrame } from "../design-system";

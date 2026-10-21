@@ -4,36 +4,9 @@
 // against the revision they started from, so a navigation the page cannot intercept (a header
 // button) loses nothing: reopening the draft offers them back. Storage is a per-window convenience:
 // every access is guarded and the editor works without it.
-import { useEffect, useRef } from "react";
 import type { DraftForm } from "../view-models/draft-form";
 
-export function useLeaveGuard(dirty: boolean, onLeaveRequest: (href: string) => void) {
-  const request = useRef(onLeaveRequest);
-  request.current = onLeaveRequest;
-  useEffect(() => {
-    if (!dirty) return;
-    const onClick = (event: MouseEvent) => {
-      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const link = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
-      if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
-      const href = link.getAttribute("href") ?? "";
-      if (!href.startsWith("#/") && !href.startsWith("/")) return;
-      event.preventDefault();
-      event.stopPropagation();
-      request.current(href.startsWith("#") ? href.slice(1) : href);
-    };
-    const onUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    document.addEventListener("click", onClick, true);
-    window.addEventListener("beforeunload", onUnload);
-    return () => {
-      document.removeEventListener("click", onClick, true);
-      window.removeEventListener("beforeunload", onUnload);
-    };
-  }, [dirty]);
-}
+export { useLeaveGuard } from "../../shared/hooks/use-leave-guard";
 
 interface Kept { base: string; keptAt: string; form: DraftForm }
 const key = (versionId: string) => `fundedflow.rulebookDraft.${versionId}`;

@@ -9,6 +9,8 @@ import { RulebookPage } from "./features/rulebooks/components/RulebookPage";
 import { RulebookVersionPage } from "./features/rulebooks/components/RulebookVersionPage";
 import { ImportHistoryPage } from "./features/imports/components/ImportHistoryPage";
 import { ImportWizardPage } from "./features/imports/components/ImportWizardPage";
+import { JournalPage } from "./features/journal/components/JournalPage";
+import { TradeDetailPage } from "./features/journal/components/TradeDetailPage";
 import "./App.css";
 
 const DeveloperTools = import.meta.env.DEV
@@ -21,7 +23,8 @@ export default function App() {
       <Routes>
         <Route element={<AppShell />}>
           <Route index element={<RuntimeGate showStatus={false}><RoutePlaceholder name="Today" /></RuntimeGate>} />
-          <Route path="journal" element={<RuntimeGate showStatus={false}><RoutePlaceholder name="Journal" /></RuntimeGate>} />
+          <Route path="journal" element={<RuntimeGate showStatus={false}><JournalPage /></RuntimeGate>} />
+          <Route path="journal/trades/:tradeId" element={<RuntimeGate showStatus={false}><TradeDetailPage /></RuntimeGate>} />
           <Route path="insights" element={<RuntimeGate showStatus={false}><RoutePlaceholder name="Insights" /></RuntimeGate>} />
           <Route path="accounts" element={<RuntimeGate showStatus={false}><AccountsPage /></RuntimeGate>} />
           <Route path="accounts/:accountId" element={<RuntimeGate showStatus={false}><AccountDetailPage /></RuntimeGate>} />
