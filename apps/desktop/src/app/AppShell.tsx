@@ -1,6 +1,6 @@
 import { BookOpen, ChartNoAxesCombined, House, PanelLeftClose, PanelLeftOpen, Settings, Upload, Wallet } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { RuntimeRecoveryNotice } from "../components/RuntimeGate";
 import { AppFrame, Button } from "../design-system";
@@ -98,6 +98,7 @@ export function SidebarNav({ collapsed, narrow, toggle }: {
 export function PageHeader({ title }: { title: string }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const previousPath = useRef(pathname);
   useEffect(() => {
     if (previousPath.current !== pathname) heading.current?.focus();
@@ -111,9 +112,9 @@ export function PageHeader({ title }: { title: string }) {
         <div className="shell-account-context"><AccountSwitcher /></div>
       </div>
       <div className="shell-import">
-        <Button variant="primary" disabled aria-describedby="import-unavailable"
+        {/* Opens the import wizard (Build 18); the wizard shows its own runtime and account states. */}
+        <Button variant="primary" aria-current={pathname === "/import" ? "page" : undefined} onClick={() => navigate("/import")}
           icon={<Upload size={16} aria-hidden="true" />}>Import CSV</Button>
-        <span id="import-unavailable">Not yet available</span>
       </div>
     </header>
   );
@@ -124,8 +125,11 @@ export function AppShell() {
   const { pathname } = useLocation();
   const normalizedPath = normalizePath(pathname);
   // Only Accounts has nested pages (account detail); other unknown sub-paths stay "Page not found".
+  // Import has no sidebar item: it opens from the header's Import CSV action.
   const title = import.meta.env.DEV && normalizedPath === "/settings/developer"
     ? "Developer tools"
+    : normalizedPath === "/import" ? "Import trades"
+    : normalizedPath === "/import/history" ? "Import history"
     : routes.find(route => route.path === normalizedPath || (route.path === "/accounts" && sectionOf(normalizedPath) === "/accounts"))?.label ?? "Page not found";
   return (
     <>
