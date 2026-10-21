@@ -8,7 +8,10 @@ Build 8.5 and Build 16. Branch `fix/p0-04-csv-contracts`.
 - Starting SHA: `86989481c4d50954f9654e3b7e0623d800ad8100` (main; P0-01/P0-03 in PR #56 and P0-02 in PR #58 are merged).
   No open branch or PR overlapped this work. The P0-04 identity contract from PR #56 (`fills2` version 2,
   ASCII-only fill IDs, `test_csvimport/identity/fill-pair-v2.json`) is kept unchanged.
-- Tested SHA: `de867d03e30fe05ac9658ddc0f269dcacccaba3b` (all code and tests). Later commits change documentation only.
+- Tested SHA: `de867d03e30fe05ac9658ddc0f269dcacccaba3b` (all code and tests; full local suites). `b3df6fc` then changes
+  only the duration-wire tests: the fixture comparison now ignores CRLF line endings, which Windows CI checked
+  out. The wire limit tests, clippy and typecheck were rerun on it, including against a CRLF copy of the fixture.
+  Later commits change documentation only.
 
 Evidence classes: **native** (Rust tests on in-memory and file-backed SQLite), **domain** (Vitest, plain Node),
 **jsdom** (Vitest over desktop modules). Nothing here is packaged-app, manual or real-exporter acceptance.
