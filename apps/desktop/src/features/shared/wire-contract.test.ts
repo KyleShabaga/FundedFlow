@@ -9,6 +9,8 @@ import { readAccountHistory, readAccountLineage, readAccounts, readDeletionPrevi
 import { readImportHistory, readImportProblemRows } from "../imports/api/imports";
 import { readLatestSnapshot, readSnapshots } from "../insights/api/snapshots";
 import { readDailyReviewDay, readDailyReviewIndex } from "../daily-reviews/api/daily-reviews";
+import { readInsightsDataset } from "../insights/api/insights";
+import { selectTrades, summarize, EMPTY_FILTER } from "@fundedflow/domain";
 import { readJournal } from "../journal/api/journal";
 import { readLedger, readLedgerBalance } from "../ledger/api/ledger";
 import { readSettings } from "../settings/api/settings";
@@ -21,7 +23,7 @@ type PerAccount = {
   snapshots: unknown[]; latestSnapshot: unknown;
   dailyReviews: { reviews: { tradingDay: string }[] }; dailyReviewDays: { tradingDay: string }[];
 };
-type Journal = { accounts: { id: string }[]; perAccount: PerAccount[]; settings: unknown[] };
+type Journal = { accounts: { id: string }[]; perAccount: PerAccount[]; settings: unknown[]; insights: { accounts: { id: string }[]; trades: { id: string }[] } | null };
 const fixture = wire as unknown as { journals: Record<string, Journal> };
 
 const adapter = vi.hoisted(() => ({ current: null as unknown as JournalRepository }));
@@ -56,6 +58,7 @@ function answer(journal: Journal) {
       case "list_settings": return journal.settings;
       case "list_daily_reviews": return per(id).dailyReviews;
       case "get_daily_review": return per(id).dailyReviewDays.find(d => d.tradingDay === args.tradingDay);
+      case "get_insights_dataset": return journal.insights;
       default: throw new Error(`unexpected command ${command}`);
     }
   };
@@ -100,6 +103,20 @@ describe.each(Object.entries(fixture.journals))("Rust payloads from the %s journ
       expect(reviews.reviews).toHaveLength(p.dailyReviews.reviews.length);
       for (const r of reviews.reviews) expect((await readDailyReviewDay(id, r.tradingDay)).value.review?.id).toBe(r.id);
     }
+  });
+
+  it("passes the Build 23 Insights dataset of every account through the adapter, scope check and selector", async () => {
+    const ids = journal.accounts.map(a => a.id);
+    const dataset = (await readInsightsDataset(ids)).value;
+    expect(dataset.accounts.map(a => a.id).sort()).toEqual([...ids].sort());
+    expect(dataset.trades).toHaveLength(journal.insights!.trades.length);
+    for (const a of dataset.accounts) {
+      const s = selectTrades(dataset, { ...EMPTY_FILTER, accountIds: [a.id] });
+      expect(s.trades.every(t => t.accountId === a.id)).toBe(true);
+      summarize(s.trades);
+    }
+    // A response holding fewer accounts than asked is refused.
+    await expect(readInsightsDataset([...ids, "not-asked"])).rejects.toMatchObject({ category: "invalid-response" });
   });
 });
 

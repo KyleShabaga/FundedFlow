@@ -41,6 +41,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `components/primitives.tsx` (Build 13 additions) | `Button` `loading` and `disabledReason`, `IconButton`, `SegmentedControl` |
 | `components/rules.tsx` (Build 13 additions) | `MiniMeter`, `RuleStateBadge`, `RulebookLine` |
 | `components/charts.tsx` (Build 13 addition) | `ChartPanel` |
+| Build 23 additions | `PnlBars` (charts.tsx); `PnlCalendar` `selectedDay`, `onSelectWeek`/`selectedWeek`, `display`, `title`/`summary` (journal.tsx) |
 | `design-system.css`, `controls.css`, `states.css`, `data.css` | Component styles (Build 7 components; controls, overlays and feedback; async states; data display) |
 | `*.test.tsx` | Component tests (Vitest + Testing Library, jsdom) |
 | `DesignSystemGallery.tsx`, `GallerySections.tsx`, `gallery.css` | The reference page |
@@ -170,3 +171,13 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
   month is unknown or none was supplied).
 - `RuleStateBadge` follows the RuleState table in [design/components.md](design/components.md#rulestate): unknown
   presence or `needs_setup` shows "Needs setup", never a meter at zero.
+
+## Build 23: selectable calendar and PnlBars
+
+- `PnlCalendar` keeps its defaults. `selectedDay` rings and presses a day; `onSelectWeek` makes week totals buttons
+  (`selectedWeek` rings one); `display` leads cells with P&L, trade count or win rate (`CalendarDay.winRate`, percent
+  text); `title` and `summary` replace the head (for a `MonthYearPicker`). A day with `pnl: null` reads "P&L unknown",
+  shows "—" and takes no tint. Selection is a ring plus `aria-pressed`, never colour alone.
+- `PnlBars` draws diverging bars around zero, one row per item with its exact signed amount and an optional detail line.
+  The rows are the chart's text alternative (a list of labelled groups, or buttons with `onSelect`). `null` draws no bar
+  and reads "P&L unknown". Bar lengths use `moneyToNumberForDisplay` for drawing only.

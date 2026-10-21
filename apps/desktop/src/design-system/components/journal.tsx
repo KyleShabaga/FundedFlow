@@ -1,4 +1,5 @@
 import type { Trade } from "@fundedflow/domain";
+import type { ReactNode } from "react";
 
 import { currencySymbol, formatMoney, formatMoneyCompact, formatTradingDay, moneySign, sumMoney, UNKNOWN } from "../format";
 import { Sparkline } from "./charts";
@@ -11,7 +12,12 @@ export interface CalendarDay {
   /** Net P&L for the trading day as decimal text; null when any trade's P&L is unknown. */
   pnl: string | null;
   trades: number;
+  /** Win rate as percent text ("62.5"), for `display="winRate"`; null when no trade has a known result. */
+  winRate?: string | null;
 }
+
+/** What the day and week cells lead with. P&L tints apply in every mode. */
+export type CalendarDisplay = "pnl" | "trades" | "winRate";
 
 export interface PnlCalendarProps {
   year: number;
@@ -23,6 +29,17 @@ export interface PnlCalendarProps {
   today?: string;
   /** Opens that day's journal. */
   onSelectDay?: (day: string) => void;
+  /** "YYYY-MM-DD"; ringed and pressed (the day shown in a side panel). */
+  selectedDay?: string | null;
+  /** Makes each week total a button; receives the week's in-month trading days and its 1-based number. */
+  onSelectWeek?: (days: string[], week: number) => void;
+  /** Number (1-based) of the selected week, ringed and pressed. */
+  selectedWeek?: number | null;
+  display?: CalendarDisplay;
+  /** Replaces the month title (for example with a MonthYearPicker). */
+  title?: ReactNode;
+  /** Replaces the month summary on the right. */
+  summary?: ReactNode;
   /**
    * Trading days are Monday to Friday (weekend activity rolls to Monday, see
    * docs/data-model.md#trading-day), so weekends are hidden by default.
@@ -34,6 +51,7 @@ export interface PnlCalendarProps {
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const pad2 = (n: number) => String(n).padStart(2, "0");
+const tradesText = (n: number) => (n === 1 ? "1 trade" : `${n} trades`);
 
 /** Weeks (Monday first) of a month as trading-day keys, null outside the month. */
 export function monthWeeks(year: number, month: number): (string | null)[][] {
@@ -48,7 +66,9 @@ export function monthWeeks(year: number, month: number): (string | null)[][] {
   return weeks;
 }
 
-export function PnlCalendar({ year, month, days, today, onSelectDay, showWeekends = false, currency }: PnlCalendarProps) {
+export function PnlCalendar({
+  year, month, days, today, onSelectDay, selectedDay, onSelectWeek, selectedWeek, display = "pnl", title, summary, showWeekends = false, currency,
+}: PnlCalendarProps) {
   const symbol = currencySymbol(currency);
   const cols = showWeekends ? 7 : 5;
   const dow = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].slice(0, cols);
@@ -58,16 +78,23 @@ export function PnlCalendar({ year, month, days, today, onSelectDay, showWeekend
   const inMonth = Object.keys(days).filter((k) => k.startsWith(`${year}-${pad2(month)}-`));
   const monthTotal = sumMoney(inMonth.map((k) => days[k].pnl));
   const monthTrades = inMonth.reduce((n, k) => n + days[k].trades, 0);
+  const lead = (info: CalendarDay) =>
+    display === "trades" ? String(info.trades) : display === "winRate" ? (info.winRate == null ? UNKNOWN : `${info.winRate}%`) : formatMoneyCompact(info.pnl, symbol);
+  const second = (info: CalendarDay) => (display === "pnl" ? tradesText(info.trades) : formatMoneyCompact(info.pnl, symbol));
   return (
     <div className={cx("ds-card", "ds-cal")} style={{ ["--ds-cal-cols" as string]: cols }}>
       <div className="ds-cal-head">
-        <span className="ds-title">
-          {MONTH_NAMES[month - 1]} {year}
-        </span>
-        <span className="ds-cal-sum">
-          <Pnl value={inMonth.length ? monthTotal : "0"} currency={currency} />
-          <span className="ds-faint"> · {monthTrades} trades</span>
-        </span>
+        {title ?? (
+          <span className="ds-title">
+            {MONTH_NAMES[month - 1]} {year}
+          </span>
+        )}
+        {summary ?? (
+          <span className="ds-cal-sum">
+            <Pnl value={inMonth.length ? monthTotal : "0"} currency={currency} />
+            <span className="ds-faint"> · {monthTrades} trades</span>
+          </span>
+        )}
       </div>
       <div className="ds-cal-row ds-cal-dow" aria-hidden="true">
         {[...dow, "Week"].map((d) => (
@@ -78,23 +105,36 @@ export function PnlCalendar({ year, month, days, today, onSelectDay, showWeekend
         const traded = week.filter((d): d is string => !!d && !!days[d]);
         const wkTotal = sumMoney(traded.map((d) => days[d].pnl));
         const wkTrades = traded.reduce((n, d) => n + days[d].trades, 0);
+        const wkSign = traded.length > 0 && wkTotal != null ? moneySign(wkTotal) : null;
+        const wkLabel = `Week ${wi + 1}: ${traded.length ? `${wkTotal == null ? "P&L unknown" : formatMoneyCompact(wkTotal, symbol)}, ${tradesText(wkTrades)}` : "no trades"}`;
+        const wkBody = (
+          <>
+            <span className="ds-cal-date">Week {wi + 1}</span>
+            <span className="ds-cal-pnl">{traded.length ? (display === "trades" ? String(wkTrades) : formatMoneyCompact(wkTotal, symbol)) : UNKNOWN}</span>
+            {traded.length > 0 && <span className="ds-cal-trades">{display === "trades" ? formatMoneyCompact(wkTotal, symbol) : tradesText(wkTrades)}</span>}
+          </>
+        );
+        const wkCls = cx("ds-cal-week", wkSign && `ds-cal-week-${wkSign}`, onSelectWeek && "is-clickable", selectedWeek === wi + 1 && "is-selected");
         return (
           <div className="ds-cal-row" key={wi}>
             {week.map((d, ci) => {
               if (!d) return <div key={ci} className="ds-cal-day is-out" />;
               const info = days[d];
-              const sign = info ? moneySign(info.pnl) : null;
-              const label = `${formatTradingDay(d)}: ${info ? `${formatMoneyCompact(info.pnl, symbol)}, ${info.trades} ${info.trades === 1 ? "trade" : "trades"}` : "no trades"}`;
-              const cls = cx("ds-cal-day", info && sign && `ds-cal-${sign}`, today === d && "is-today", onSelectDay && "is-clickable");
+              // An unknown day (some trade without a known P&L) shows a dash and no tint.
+              const sign = info && info.pnl != null ? moneySign(info.pnl) : null;
+              const rate = display === "winRate" && info ? `, win rate ${info.winRate == null ? "unknown" : `${info.winRate}%`}` : "";
+              const label = `${formatTradingDay(d)}: ${info ? `${info.pnl == null ? "P&L unknown" : formatMoneyCompact(info.pnl, symbol)}, ${tradesText(info.trades)}${rate}` : "no trades"}`;
+              const selected = selectedDay === d;
+              const cls = cx("ds-cal-day", info && sign && `ds-cal-${sign}`, today === d && "is-today", onSelectDay && "is-clickable", selected && "is-selected");
               const body = (
                 <>
                   <span className="ds-cal-date">{Number(d.slice(8))}</span>
-                  {info && <span className="ds-cal-pnl">{formatMoneyCompact(info.pnl, symbol)}</span>}
-                  {info && <span className="ds-cal-trades">{info.trades === 1 ? "1 trade" : `${info.trades} trades`}</span>}
+                  {info && <span className="ds-cal-pnl">{lead(info)}</span>}
+                  {info && <span className="ds-cal-trades">{second(info)}</span>}
                 </>
               );
               return onSelectDay ? (
-                <button key={ci} type="button" className={cls} aria-label={label} onClick={() => onSelectDay(d)}>
+                <button key={ci} type="button" className={cls} aria-label={label} aria-pressed={selectedDay !== undefined ? selected : undefined} onClick={() => onSelectDay(d)}>
                   {body}
                 </button>
               ) : (
@@ -103,11 +143,14 @@ export function PnlCalendar({ year, month, days, today, onSelectDay, showWeekend
                 </div>
               );
             })}
-            <div className={cx("ds-cal-week", traded.length > 0 && `ds-cal-week-${moneySign(wkTotal)}`)}>
-              <span className="ds-cal-date">Week {wi + 1}</span>
-              <span className="ds-cal-pnl">{traded.length ? formatMoneyCompact(wkTotal, symbol) : UNKNOWN}</span>
-              {traded.length > 0 && <span className="ds-cal-trades">{wkTrades} trades</span>}
-            </div>
+            {onSelectWeek ? (
+              <button type="button" className={wkCls} aria-label={wkLabel} aria-pressed={selectedWeek !== undefined ? selectedWeek === wi + 1 : undefined}
+                onClick={() => onSelectWeek(week.filter((d): d is string => !!d), wi + 1)}>
+                {wkBody}
+              </button>
+            ) : (
+              <div className={wkCls}>{wkBody}</div>
+            )}
           </div>
         );
       })}

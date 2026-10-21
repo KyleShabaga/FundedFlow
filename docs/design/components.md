@@ -44,7 +44,7 @@ Stop / Unknown, text + icon + colour), `RiskMetricCard`, `DataFreshnessBadge`, `
 from `StatusIndicator`, `MetricCard`, `StatList` and `Drawer` in `features/today`, no new primitives),
 `RuleVersionTimeline`, `CalculationPreview` (19: built as the Activity tab, `VersionComparison`, `EvidencePreview` and `CalculationExplanation` in `features/rulebooks`), `ColumnMappingTable`, `ValidationIssueList`, `DuplicateReview`,
 `ImportSummary` (18), `TradeEditor`, `ChecklistReview`, `AttachmentManager`, `SessionReviewForm` (20, 22),
-`FilterBar`, `ChartPanel`, `ContributingTradesDrawer` (23), `BackupRestorePanel`, `DestructiveActionDialog` (25).
+`FilterBar`, `ChartPanel`, `ContributingTradesDrawer` (23: built in `features/insights` from `Drawer`, `StatList` and `DataTable`; Build 23 added `PnlBars` to the design system), `BackupRestorePanel`, `DestructiveActionDialog` (25).
 Build 13 also owns the async-state set: `LoadingState`, `EmptyState`, `ErrorState`, `UnavailableState`,
 `StaleDataNotice`, `MutationFeedback`, `StateBoundary`.
 

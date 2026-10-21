@@ -118,3 +118,6 @@ dropzone receive drops).
 - Not verified here: a packaged Windows run (restart persistence, file drop/paste through WebView2, Build 24 backup
   and restore with screenshots, a second Windows profile). The native app has no data-directory override, so it was not
   run against a journal.
+
+Build 23: `tradePath(id, accountId?)` and Trade detail accept `?account=<attempt>` so Insights drill-downs open a trade of
+any selected attempt (archived ones read-only) instead of the active account's; without it the page behaves as before.

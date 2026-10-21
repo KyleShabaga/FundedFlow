@@ -9,7 +9,12 @@ import { useActiveAccount } from "../../accounts/active-account";
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import type { TradeViewModel } from "../../trades/view-models/trade";
 
-export const tradePath = (id: string) => `/journal/trades/${encodeURIComponent(id)}`;
+/**
+ * A trade's detail page. With `accountId` the page shows exactly that attempt's trade (Insights drill-downs across
+ * attempts, archived ones included); without it, the active account's.
+ */
+export const tradePath = (id: string, accountId?: string) =>
+  `/journal/trades/${encodeURIComponent(id)}${accountId ? `?account=${encodeURIComponent(accountId)}` : ""}`;
 
 export const STATUS_NOTE: Record<TradeViewModel["pnlStatus"], string | null> = {
   calculated: null,

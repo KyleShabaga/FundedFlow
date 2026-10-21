@@ -33,6 +33,12 @@ export const featureKeys = {
   dailyReviewIndex: (id: string | null) => [...root, "daily-reviews", id, "index"] as const,
   dailyReviewDay: (id: string | null, day: string | null) => [...root, "daily-reviews", id, "day", day] as const,
   library: [...root, "library"] as const,
+  /**
+   * Build 23 Insights snapshots, keyed by the sorted attempt ids of one request. Trade, review, library, import and
+   * account writes invalidate the root (a snapshot can span accounts); daily-review writes do not touch trade data.
+   */
+  insightsRoot: [...root, "insights"] as const,
+  insights: (accountIds: readonly string[]) => [...root, "insights", [...new Set(accountIds)].sort()] as const,
   trades: (id: string | null, filters: TradeFilters = {}) => [...account(id), "trades", { from: filters.from ?? null, to: filters.to ?? null, symbol: filters.symbol ?? null, side: filters.side ?? null }] as const,
   journalDetail: (id: string | null, entryId: string | null) => [...account(id), "journal", "detail", entryId] as const,
   journalRoot: (id: string | null) => [...account(id), "journal"] as const,
@@ -60,5 +66,4 @@ export const featureKeys = {
   assignments: (id: string | null) => [...account(id), "rulebook-assignments"] as const,
   rulebookEvents: (id: string | null) => [...account(id), "rulebook-events"] as const,
   rulebookRoots: [[...root, "rulebooks"], [...root, "rulebook-versions"], [...root, "rulebook-version"], [...root, "applicable-rulebook"]] as const,
-  capability: (name: string) => [...root, "capability", name] as const,
 };

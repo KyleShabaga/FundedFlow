@@ -33,6 +33,6 @@ export const useCommitCsvImport = (id: string) => useFeatureMutation({ scope: JS
     if (input.accountId !== id) throw new FeatureDataError("validation");
     return api.commitImport(input);
   }, confirmedFailure: batch => batch.status === "failed",
-  invalidate: batch => batch?.status === "failed" ? [keys.imports(id), keys.deletion(id)]
-    : [keys.imports(id), keys.tradesRoot(id), keys.dailyReviewsRoot(id), keys.snapshotsRoot(id), keys.deletion(id), keys.lineageRoot],
+  invalidate: batch => batch?.status === "failed" ? [keys.imports(id), keys.deletion(id), keys.insightsRoot]
+    : [keys.imports(id), keys.tradesRoot(id), keys.dailyReviewsRoot(id), keys.snapshotsRoot(id), keys.deletion(id), keys.lineageRoot, keys.insightsRoot],
 });

@@ -122,3 +122,19 @@
 .ds-chart-sub { margin: 2px 0 0; }
 .ds-chart-meta { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .ds-chart-body { display: grid; align-content: center; min-width: 0; }
+
+/* PnlBars: diverging bars around zero; the exact amount is always text beside the bar. */
+.ds-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; min-width: 0; }
+.ds-bars-row { display: grid; grid-template-columns: minmax(72px, 0.9fr) minmax(80px, 2fr) minmax(88px, auto); grid-template-areas: "label track value" ". detail detail"; align-items: center; column-gap: var(--space-3); width: 100%; padding: 6px var(--space-2); border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--ink); font: inherit; text-align: left; }
+.ds-bars-row.is-clickable { cursor: pointer; }
+.ds-bars-row.is-clickable:hover, .ds-bars-row.is-clickable:active { background: var(--bg-200); border-color: var(--line-200); }
+.ds-bars-row:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.ds-bars-row.is-selected { box-shadow: 0 0 0 2px var(--flow); }
+.ds-bars-label { grid-area: label; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ds-bars-track { grid-area: track; position: relative; height: 14px; }
+.ds-bars-axis { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--line-200); }
+.ds-bars-bar { position: absolute; top: 0; bottom: 0; border-radius: var(--radius-sm); min-width: 2px; }
+.ds-bars-bar.is-profit { background: var(--profit); }
+.ds-bars-bar.is-loss { background: var(--loss); }
+.ds-bars-value { grid-area: value; text-align: right; font-size: 12.5px; white-space: nowrap; }
+.ds-bars-detail { grid-area: detail; font-size: 11px; }
