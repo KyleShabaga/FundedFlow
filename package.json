@@ -19,6 +19,7 @@
     "dev:domain": "npm run dev -w @fundedflow/domain",
     "tauri": "npm run tauri -w @fundedflow/desktop --",
     "dev:test-journal": "node scripts/dev-test-journal.mjs",
+    "dev:another-window": "node scripts/dev-test-journal.mjs window",
     "seed:test-journal": "node scripts/dev-test-journal.mjs seed",
     "reset:test-journal": "node scripts/dev-test-journal.mjs reset",
     "test:dev-scripts": "node --test scripts/reset-test-data.test.mjs scripts/dev-reset-handoff.test.mjs"
