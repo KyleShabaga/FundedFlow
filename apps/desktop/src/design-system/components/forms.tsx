@@ -20,6 +20,7 @@ import {
 } from "react";
 
 import { cx } from "./cx";
+import type { HeadingLevel } from "./primitives";
 
 /* ---------- Field plumbing ---------- */
 
@@ -317,6 +318,8 @@ export function RadioGroup<V extends string>({ label, name, options, value, defa
   const groupName = name ?? ids.control;
   return (
     <fieldset
+      // radiogroup, not the fieldset's implicit group role: only radiogroup supports aria-required (axe aria-allowed-attr).
+      role="radiogroup"
       className={cx("ds-fieldset", "ds-radio-group", inline && "is-inline", error && "is-invalid", className)}
       aria-describedby={describedBy(ids, description, error)}
       aria-invalid={error ? true : undefined}
@@ -556,19 +559,22 @@ export interface FormSectionProps {
   /** Buttons beside the title (rare; the form's Save sits at the end of the form). */
   actions?: ReactNode;
   children: ReactNode;
+  /** Level of the title in the page outline. 2 when the section is a page's top-level section. */
+  headingLevel?: HeadingLevel;
   className?: string;
 }
 
 /** A titled block of a longer form (Account details, Rules, Import options). */
-export function FormSection({ title, description, actions, children, className }: FormSectionProps) {
+export function FormSection({ title, description, actions, children, headingLevel = 3, className }: FormSectionProps) {
   const headingId = useId();
+  const Heading = `h${headingLevel}` as const;
   return (
     <section className={cx("ds-form-section", className)} aria-labelledby={headingId}>
       <header className="ds-form-section-head">
         <div>
-          <h3 id={headingId} className="ds-title">
+          <Heading id={headingId} className="ds-title">
             {title}
-          </h3>
+          </Heading>
           {description != null && <p className="ds-field-desc">{description}</p>}
         </div>
         {actions != null && <div className="ds-row">{actions}</div>}
@@ -641,6 +647,33 @@ export function focusFirstInvalid(root: ParentNode | null | undefined): boolean 
   if (!el) return false;
   el.focus();
   return true;
+}
+
+/**
+ * focusFirstInvalid() for errors that arrive later than the submit handler,
+ * such as a repository's field errors: React Query renders a mutation's error
+ * on its own schedule, so a microtask is too early. Focuses at once if a field
+ * is already invalid, otherwise when one is rendered within `timeoutMs`, but
+ * only while focus is still where it was when called (the user may have moved on).
+ * Returns a function that stops waiting.
+ */
+export function focusFirstInvalidWhenShown(root: HTMLElement | null | undefined, timeoutMs = 1000): () => void {
+  if (!root) return () => {};
+  const startedOn = document.activeElement;
+  const stillThere = () => document.activeElement === startedOn || document.activeElement === document.body;
+  if (focusFirstInvalid(root)) return () => {};
+  const observer = new MutationObserver(() => {
+    if (!root.querySelector('[aria-invalid="true"]')) return;
+    stop();
+    if (stillThere()) focusFirstInvalid(root);
+  });
+  const timer = setTimeout(() => stop(), timeoutMs);
+  function stop() {
+    observer.disconnect();
+    clearTimeout(timer);
+  }
+  observer.observe(root, { subtree: true, attributes: true, attributeFilter: ["aria-invalid"], childList: true });
+  return stop;
 }
 
 /* ---------- FileDropzone ---------- */

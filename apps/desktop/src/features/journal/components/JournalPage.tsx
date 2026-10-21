@@ -62,7 +62,7 @@ function AccountJournal({ account }: { account: AccountViewModel }) {
       </div>
       <Tabs label="Journal views" value={view} onValueChange={setView}
         items={[{ value: "day", label: "By day" }, { value: "log", label: "Trade log", count: trades.data?.length }, { value: "library", label: "Library" }]}>
-        <TabPanel value="day">
+        <TabPanel value="day" heading="By day">
           {trades.data?.length === 0 && (dailyReviews.data?.reviews.length ?? 0) > 0 ? (
             // No trades yet, but reviewed days (no-trade days, or trades not imported yet) still list here.
             <ByDayView rows={[]} account={account} onOpen={t => navigate(tradePath(t.id))} reviews={reviewsState} />
@@ -72,12 +72,12 @@ function AccountJournal({ account }: { account: AccountViewModel }) {
             </TradesBoundary>
           )}
         </TabPanel>
-        <TabPanel value="log">
+        <TabPanel value="log" heading="Trade log">
           <TradesBoundary trades={trades} empty={<NoTrades add={addButton} importButton={importButton} />}>
             {() => <>{summaries.error && <SummariesNotice />}<TradeLogView rows={rows} account={account} onOpen={t => navigate(tradePath(t.id))} /></>}
           </TradesBoundary>
         </TabPanel>
-        <TabPanel value="library">
+        <TabPanel value="library" heading="Library">
           <LibraryView account={account} />
         </TabPanel>
       </Tabs>

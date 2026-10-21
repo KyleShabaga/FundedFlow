@@ -330,26 +330,35 @@ describe("freshness, imports and checkpoints", () => {
     expect(fresh.textContent).toContain("Stated complete for the last estimate");
   });
 
-  it("records a confirmed opening balance and a current balance, then compares them exactly without adjusting anything", async () => {
-    seed([makeAccount({ id: A, name: "Eval A" })]);
+  // Build 26.7: one journey as two tests (it took ~2 s and timed out at 5 s under CPU contention). The second
+  // starts from the checkpoint the first records, written through the same repository call. Values are pasted:
+  // per-keystroke input behaviour is the design system's tests' job, not this flow's.
+  const enter = async (user: ReturnType<typeof userEvent.setup>, field: HTMLElement, text: string) => {
+    await user.clear(field);
+    await user.click(field);
+    await user.paste(text);
+  };
+  function seedNoOpening() {
     holder.store = createTodayStore([makeAccount({ id: A, name: "Eval A" })], { syntheticOpening: false });
     holder.store.settings.set(ACTIVE_ACCOUNT_SETTING, A);
     holder.store.trades.set(A, [closedTrade(A, 1, "125.5", "2026-10-21")]);
+  }
+
+  it("records a confirmed opening balance, refusing a missing amount and source, without adjusting anything", async () => {
+    seedNoOpening();
     const user = userEvent.setup();
     renderToday();
     await user.click(await screen.findByRole("button", { name: "Verify balance" }));
-    let dialog = await screen.findByRole("dialog", { name: "Verify balance against your firm's dashboard" });
+    const dialog = await screen.findByRole("dialog", { name: "Verify balance against your firm's dashboard" });
     expect(within(dialog).getByRole("radio", { name: /Opening balance/ })).toHaveProperty("checked", true);
     // Validation: amount and source are required; nothing is written.
     await user.click(within(dialog).getByRole("button", { name: "Save checkpoint" }));
     expect((await within(dialog).findAllByText(/Enter the amount exactly/)).length).toBeGreaterThan(0);
     expect(holder.store.observations).toHaveLength(0);
 
-    await user.type(within(dialog).getByRole("textbox", { name: /Amount/ }), "50000");
-    const at = within(dialog).getByLabelText(/When you read it/) as HTMLInputElement;
-    await user.clear(at);
-    await user.type(at, "2026-10-20T08:00");
-    await user.type(within(dialog).getByRole("textbox", { name: /Where you read it/ }), "Firm dashboard");
+    await enter(user, within(dialog).getByRole("textbox", { name: /Amount/ }), "50000");
+    await enter(user, within(dialog).getByLabelText(/When you read it/), "2026-10-20T08:00");
+    await enter(user, within(dialog).getByRole("textbox", { name: /Where you read it/ }), "Firm dashboard");
     await user.click(within(dialog).getByRole("checkbox", { name: /confirm it/ }));
     await user.click(within(dialog).getByRole("button", { name: "Save checkpoint" }));
     await within(dialog).findByText("Checkpoint saved");
@@ -359,12 +368,25 @@ describe("freshness, imports and checkpoints", () => {
 
     const fresh = screen.getByRole("region", { name: "How fresh this is" });
     await within(fresh).findByText("Confirmed by you");
+    expect(holder.store.trades.get(A)).toHaveLength(1);
+  });
 
+  it("records a current balance against the confirmed opening one, then compares them exactly without adjusting anything", async () => {
+    seedNoOpening();
+    // The opening checkpoint the previous test records through the dialog.
+    await holder.store.repository.evidence.create({
+      accountId: A, kind: "opening_balance", value: "50000", currency: "USD", basis: "balance", observedAt: "2026-10-20T12:00:00.000Z",
+      sourceCategory: "firm_dashboard", sourceReference: "Firm dashboard", confirmation: "user_confirmed", confidence: "user_reported",
+      validUntil: null, actor: "local_user", note: null,
+    } as never);
+    const user = userEvent.setup();
+    renderToday();
+    await within(await screen.findByRole("region", { name: "How fresh this is" })).findByText("Confirmed by you");
     await user.click(screen.getByRole("button", { name: "Verify balance" }));
-    dialog = await screen.findByRole("dialog", { name: "Verify balance against your firm's dashboard" });
+    const dialog = await screen.findByRole("dialog", { name: "Verify balance against your firm's dashboard" });
     expect(within(dialog).getByRole("radio", { name: /Current balance/ })).toHaveProperty("checked", true);
-    await user.type(within(dialog).getByRole("textbox", { name: /Amount/ }), "50125.5");
-    await user.type(within(dialog).getByRole("textbox", { name: /Where you read it/ }), "Firm dashboard");
+    await enter(user, within(dialog).getByRole("textbox", { name: /Amount/ }), "50125.5");
+    await enter(user, within(dialog).getByRole("textbox", { name: /Where you read it/ }), "Firm dashboard");
     await user.click(within(dialog).getByRole("checkbox", { name: /confirm it/ }));
     await user.click(within(dialog).getByRole("button", { name: "Save checkpoint" }));
     await within(dialog).findByText("Compare with your records");

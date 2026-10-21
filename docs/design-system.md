@@ -33,7 +33,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `components/rules.tsx` | `RuleMeter`, `ruleState`, `AccountCard` |
 | `components/charts.tsx` | `WinGauge`, `Sparkline`, `EquityCurve` |
 | `components/journal.tsx` | `PnlCalendar`, `monthWeeks`, `DayCard`, `TradeTable`, `tradeResult` |
-| `components/forms.tsx` | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select` (Radix), `FieldGroup`, `FormSection`, `FieldError`, `ValidationSummary`, `focusFirstInvalid`, `FileDropzone`, `formatFileSize` |
+| `components/forms.tsx` | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select` (Radix), `FieldGroup`, `FormSection`, `FieldError`, `ValidationSummary`, `focusFirstInvalid`, `focusFirstInvalidWhenShown` (Build 26), `FileDropzone`, `formatFileSize` |
 | `components/overlays.tsx` | `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `OverlayClose`, `DropdownMenu`, `Tooltip` (Radix Dialog, Dropdown Menu, Tooltip) |
 | `components/feedback.tsx` | `InlineNotice`, `ToastProvider` + `useToast`, `StatusIndicator` |
 | `components/async-states.tsx` | `AsyncState`, `StateBoundary`, `Skeleton`, `LoadingState`, `EmptyState`, `ErrorState`, `UnavailableState`, `StaleDataNotice`, `RefreshingIndicator`, `MutationState`, `MutationFeedback`, `isMutationBusy`, `hasData` |
@@ -101,7 +101,11 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
 - Controls render native elements (`input`, `textarea`, radios, a `role="switch"` checkbox), so keyboard behaviour
   is the browser's. `Select` is Radix Select: no option is chosen for the user unless the screen passes one.
 - On submit: collect issues, render `ValidationSummary` at the top of the form, pass each control its `error`, then
-  call `focusFirstInvalid(form)`. Error text has its own slot under the control.
+  call `focusFirstInvalid(form)`. Error text has its own slot under the control. For field errors that come back
+  from the repository, call `focusFirstInvalidWhenShown(form)` instead: React Query renders a mutation's error after
+  the submit handler, so a microtask is too early (Build 26).
+- `RadioGroup` is a `fieldset` with `role="radiogroup"`, the role that allows `aria-required` (Build 26, axe
+  `aria-allowed-attr`). Query it as `radiogroup` in tests.
 - `Button loading` keeps focus and ignores clicks, so one click is one write. `disabledReason` keeps a disabled
   button focusable and reads the reason.
 - `FileDropzone` only hands `File` objects (or an `onBrowse` request for a native dialog) to the caller. Reading,
@@ -118,8 +122,11 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
   open with a safe message if it fails. It never claims "nothing changed"; pass `describeError` when the data layer
   knows. The destructive actions themselves belong to later cards. The developer panel keeps its own
   `components/ConfirmDialog.tsx` until those cards move to this one.
-- `DropdownMenu` runs an item's action just after the menu closes, so an item can open a `Dialog` without the menu's
-  focus return dismissing it.
+- `DropdownMenu` runs an item's action from the menu's close-focus event, after Radix has returned focus to the
+  trigger, so a `Dialog` it opens records the trigger as its return target and isn't dismissed by the menu's focus
+  return. (Build 26: a fixed 0 ms timer used to race Radix's own timer; that was the overlay focus flake.)
+- If the element that opened an overlay is gone when it closes (a row archived or deleted by the dialog's own
+  action), focus goes to the first tabbable control in the nearest surviving container, never to `<body>`.
 - `Popover` (non-modal, anchored by CSS) for the month picker, column chooser and similar; `DropdownMenu` for
   actions on one object; `Tooltip` names or explains a focusable control and is never the only place for
   essential information.
@@ -171,6 +178,18 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
   month is unknown or none was supplied).
 - `RuleStateBadge` follows the RuleState table in [design/components.md](design/components.md#rulestate): unknown
   presence or `needs_setup` shows "Needs setup", never a meter at zero.
+
+### Diagnostics (Build 26.5)
+- `DiagnosticDetails` shows a collapsed, selectable, copyable support summary with a polite copy result and a
+  fallback when the clipboard refuses. Pass text built only from allowlisted fields (`lib/diagnostics.ts`), never
+  from an error message, path or record. It sends nothing anywhere.
+
+### Page outline (Build 26)
+- The shell's page title is the only `h1`. `DataTable`, `ChartPanel` and `FormSection` render an `h3` title by
+  default; pass `headingLevel={2}` when one is a page's top-level section. `TabPanel heading="…"` adds a visually
+  hidden `h2` so a panel's `h3` sections don't skip a level. Dialog titles are `h2`; headings inside a dialog
+  start at `h3`. The Build 26 axe suite (`apps/desktop/src/journeys/accessibility.test.tsx`) fails on a skipped
+  level.
 
 ## Build 23: selectable calendar and PnlBars
 

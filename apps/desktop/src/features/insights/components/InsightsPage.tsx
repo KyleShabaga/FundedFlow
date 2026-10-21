@@ -166,11 +166,11 @@ function Body({ dataset, ids, state, update }: { dataset: InsightsDataset; ids: 
         </div>
       ) : (
         <Tabs label="Insights sections" value={section} onValueChange={v => update({ section: v as Section })} items={sections}>
-          <TabPanel value="overview">{selection.currency ? <OverviewSection {...props} /> : <ChooseCurrency />}</TabPanel>
-          <TabPanel value="calendar">{selection.currency ? <CalendarSection {...props} /> : <ChooseCurrency />}</TabPanel>
-          <TabPanel value="breakdowns">{selection.currency ? <BreakdownsSection {...props} /> : <ChooseCurrency />}</TabPanel>
-          {hasTags && <TabPanel value="tags">{selection.currency ? <TagsSection {...props} /> : <ChooseCurrency />}</TabPanel>}
-          <TabPanel value="attempts"><AttemptsSection {...props} /></TabPanel>
+          <TabPanel value="overview" heading="Overview">{selection.currency ? <OverviewSection {...props} /> : <ChooseCurrency />}</TabPanel>
+          <TabPanel value="calendar" heading="Calendar">{selection.currency ? <CalendarSection {...props} /> : <ChooseCurrency />}</TabPanel>
+          <TabPanel value="breakdowns" heading="Breakdowns">{selection.currency ? <BreakdownsSection {...props} /> : <ChooseCurrency />}</TabPanel>
+          {hasTags && <TabPanel value="tags" heading="Tags">{selection.currency ? <TagsSection {...props} /> : <ChooseCurrency />}</TabPanel>}
+          <TabPanel value="attempts" heading="Attempts"><AttemptsSection {...props} /></TabPanel>
         </Tabs>
       )}
       <ContributingTradesDrawer drill={drill} selection={selection} onClose={() => setDrill(null)} />

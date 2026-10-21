@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // Build 19 journeys through the real rulebook pages, Build 13 components and Build 14 hooks. The repository is
 // an in-memory store that follows the Rust rules (test-store.ts); native persistence is tested in Rust.
+import type { RuleDefinitionInput } from "@fundedflow/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -12,7 +13,7 @@ import { ToastProvider } from "../../design-system";
 import { makeAccount } from "../accounts/test-store";
 import { RulebookPage } from "./components/RulebookPage";
 import { RulebookVersionPage } from "./components/RulebookVersionPage";
-import { closedTrade, createRulebookStore } from "./test-store";
+import { catalogueRules, closedTrade, createRulebookStore, PROVIDER } from "./test-store";
 
 const runtime = vi.hoisted(() => ({ state: { kind: "ready" } as unknown as RuntimeState, check: vi.fn() }));
 const holder = vi.hoisted(() => ({ store: null as unknown as ReturnType<typeof createRulebookStore> }));
@@ -66,6 +67,13 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/** Replaces a field's value in one paste (Build 26.7): typed dates cost ~200 ms each in jsdom under load. */
+async function pasteInto(user: ReturnType<typeof userEvent.setup>, field: HTMLElement, text: string) {
+  await user.clear(field);
+  await user.click(field);
+  await user.paste(text);
+}
+
 async function chooseOption(user: ReturnType<typeof userEvent.setup>, label: RegExp | string, option: RegExp | string, scope: HTMLElement = document.body) {
   await user.click(within(scope).getByRole("combobox", { name: label }));
   await user.click(await screen.findByRole("option", { name: option }));
@@ -117,13 +125,11 @@ describe("rulebook overview", () => {
     await user.click(screen.getAllByRole("button", { name: "Assign a version…" })[0]);
     const dialog = await screen.findByRole("dialog", { name: "Assign a rulebook version" });
     const day = within(dialog).getByLabelText(/First trading day/);
-    await user.clear(day);
-    await user.type(day, "2026-10-18");
+    await pasteInto(user, day, "2026-10-18");
     await user.click(within(dialog).getByRole("button", { name: /Assign from 2026-10-18/ }));
     expect(await within(dialog).findByText(/Trading days run Monday to Friday/)).toBeTruthy();
     expect(holder.store.writes).toEqual(["assign"].slice(0, 0));
-    await user.clear(day);
-    await user.type(day, "2026-10-19");
+    await pasteInto(user, day, "2026-10-19");
     await user.type(within(dialog).getByRole("textbox", { name: /Reason/ }), "Evaluation started");
     await user.click(within(dialog).getByRole("button", { name: /Assign from 2026-10-19/ }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -141,8 +147,7 @@ describe("rulebook overview", () => {
     // Another window assigns meanwhile.
     await assignCatalogue();
     const day = within(dialog).getByLabelText(/First trading day/);
-    await user.clear(day);
-    await user.type(day, "2026-10-20");
+    await pasteInto(user, day, "2026-10-20");
     await user.click(within(dialog).getByRole("button", { name: /Assign from 2026-10-20/ }));
     expect(await within(dialog).findByText(/changed this account's rulebook in another window/)).toBeTruthy();
     expect(holder.store.assignments).toHaveLength(1);
@@ -171,7 +176,10 @@ describe("rulebook overview", () => {
 });
 
 describe("draft, compare, preview, publish and assign", () => {
-  it("runs the whole journey without changing the version it started from", async () => {
+  // One journey in two tests (Build 26): as a single test it took ~1.7 s locally and timed out at 5 s on a busy
+  // Windows CI runner. Nothing hung; it was ~17 jsdom interactions in a row. The second half starts from the
+  // saved draft the first half produces, built through the same repository calls.
+  it("edits, compares and previews a draft without writing, then saves it, without changing the version it started from", async () => {
     await assignCatalogue();
     const before = structuredClone(holder.store.versions.get(holder.store.verifiedVersionId));
     const user = userEvent.setup();
@@ -207,6 +215,27 @@ describe("draft, compare, preview, publish and assign", () => {
     expect((screen.getByRole("textbox", { name: "Target" }) as HTMLInputElement).value).toBe("2500");
     await user.click(screen.getByRole("button", { name: "Save draft" }));
     expect(await screen.findByText("All changes saved")).toBeTruthy();
+    const mine = [...holder.store.versions.values()].find(v => v.rulebook.ownerAccountId === A)!;
+    expect(mine.rules.find(r => r.ruleKey === "profit_target")?.parameters).toMatchObject({ amount: { state: "value", value: "2500" } });
+    expect(holder.store.versions.get(holder.store.verifiedVersionId)).toEqual(before);
+    expect(holder.store.events.map(e => e.action)).toEqual(["assigned", "draft_created", "draft_saved"]);
+  });
+
+  it("publishes a saved draft with explicit confirmation and assigns it, without changing the version it started from", async () => {
+    await assignCatalogue();
+    const before = structuredClone(holder.store.versions.get(holder.store.verifiedVersionId));
+    const rules = catalogueRules().map(r => r.ruleKey === "profit_target" ? { ...r, parameters: { ...r.parameters, amount: { state: "value" as const, value: "2500" } } } as RuleDefinitionInput : r);
+    const draft = await holder.store.repository.rulebooks.createDraft({
+      rulebookId: null, newRulebook: { providerId: PROVIDER, ownerAccountId: A, slug: "account-accta", displayName: "Eval A rules", description: null },
+      supersedesVersionId: null, changeReason: "Copied from Example 50K v1", capturedAt: "2026-10-01T00:00:00.000Z", effectiveFrom: null, effectiveTo: null,
+      rules: catalogueRules(), applicability: [],
+    }, { actor: "local_user", reason: null });
+    await holder.store.repository.rulebooks.updateDraft(draft.version.id, draft.version.updatedAt, {
+      changeReason: draft.version.changeReason, capturedAt: draft.version.capturedAt, effectiveFrom: null, effectiveTo: null, rules, applicability: [],
+    }, { actor: "local_user", reason: null });
+    const user = userEvent.setup();
+    renderAt(`/accounts/${A}/rulebook/versions/${draft.version.id}`);
+    await screen.findByRole("heading", { name: /Eval A rules · v1/ });
 
     // Review and publish with explicit confirmation.
     await user.click(screen.getByRole("tab", { name: "Review and publish" }));
@@ -221,8 +250,7 @@ describe("draft, compare, preview, publish and assign", () => {
     // Then assign it from a later weekday.
     const assign = await screen.findByRole("dialog", { name: "Assign a rulebook version" });
     const day = within(assign).getByLabelText(/First trading day/);
-    await user.clear(day);
-    await user.type(day, "2026-10-21");
+    await pasteInto(user, day, "2026-10-21");
     await user.click(within(assign).getByRole("button", { name: /Assign from 2026-10-21/ }));
     await waitFor(() => expect(location).toBe(`/accounts/${A}/rulebook`));
 
@@ -230,9 +258,8 @@ describe("draft, compare, preview, publish and assign", () => {
     expect(holder.store.versions.get(holder.store.verifiedVersionId)).toEqual(before);
     expect(holder.store.events.map(e => e.action)).toEqual(["assigned", "draft_created", "draft_saved", "published", "assigned"]);
     // The published version is read-only now.
-    const mine = [...holder.store.versions.values()].find(v => v.rulebook.ownerAccountId === A)!;
     cleanup();
-    renderAt(`/accounts/${A}/rulebook/versions/${mine.version.id}`);
+    renderAt(`/accounts/${A}/rulebook/versions/${draft.version.id}`);
     expect(await screen.findByText("Account rules (private)")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
     expect(screen.getByRole("button", { name: "Start a draft from this version" })).toBeTruthy();
@@ -478,7 +505,7 @@ describe("engine integration", () => {
     expect(holder.store.snapshots[1]!.inputsHash).not.toBe(saved.inputsHash);
   });
 
-  it("your published account rules are confirmed by you and evaluate for real once assigned", async () => {
+  it("your published account rules are confirmed by you and assigned from the day you choose", async () => {
     await assignCatalogue();
     holder.store.trades.set(A, [closedTrade(A, 1, "-500")]);
     const user = userEvent.setup();
@@ -497,12 +524,37 @@ describe("engine integration", () => {
     await user.click(within(await screen.findByRole("alertdialog", { name: /Publish/ })).getByRole("button", { name: "Publish" }));
     const assign = await screen.findByRole("dialog", { name: "Assign a rulebook version" });
     const day = within(assign).getByLabelText(/First trading day/);
-    await user.clear(day);
-    await user.type(day, "2026-10-20");
+    await pasteInto(user, day, "2026-10-20");
     await user.click(within(assign).getByRole("button", { name: /Assign from 2026-10-20/ }));
     await waitFor(() => expect(location).toBe(`/accounts/${A}/rulebook`));
     const mine = [...holder.store.versions.values()].find(v => v.rulebook.ownerAccountId === A)!;
     expect(mine.version.userConfirmedAt).not.toBeNull();
+    expect(mine.rules.find(r => r.ruleKey === "max_drawdown")?.parameters).toEqual({ amount: { state: "value", value: "2000" }, method: "static", basis: "realized", lock: { state: "explicit_none" } });
+    expect(holder.store.assignments.find(x => x.rulebookVersionId === mine.version.id)?.effectiveFrom).toBe("2026-10-20");
+  });
+
+  // Build 26.7: the second half of the journey above (as one test it took ~2.8 s). It starts from the rules that
+  // test publishes and assigns, written through the same repository calls with the parameters the form saved.
+  it("assigned account rules you published evaluate for real: recorded, not simulated, and never a false Safe", async () => {
+    await assignCatalogue();
+    holder.store.trades.set(A, [closedTrade(A, 1, "-500")]);
+    const rules = catalogueRules().map(r => r.ruleKey === "max_drawdown"
+      ? { ...r, supportStatus: "supported" as const, parameters: { amount: { state: "value", value: "2000" }, method: "static", basis: "realized", lock: { state: "explicit_none" } } } as RuleDefinitionInput
+      : r);
+    const draft = await holder.store.repository.rulebooks.createDraft({
+      rulebookId: null, newRulebook: { providerId: PROVIDER, ownerAccountId: A, slug: "account-accta", displayName: "Eval A rules", description: null },
+      supersedesVersionId: null, changeReason: "Copied from Example 50K v1", capturedAt: "2026-10-01T00:00:00.000Z", effectiveFrom: null, effectiveTo: null,
+      rules, applicability: [],
+    }, { actor: "local_user", reason: null });
+    const published = await holder.store.repository.rulebooks.publish(draft.version.id, null, { expectedUpdatedAt: draft.version.updatedAt, context: { actor: "local_user", reason: null } });
+    expect(published.version.userConfirmedAt).not.toBeNull();
+    const open = holder.store.assignments.find(x => x.effectiveTo === null)!;
+    await holder.store.repository.rulebooks.assign(
+      { accountId: A, rulebookVersionId: draft.version.id, effectiveFrom: "2026-10-20", programmePhaseId: null, phasePathId: null, accountPhaseEventId: null },
+      { expectedOpenAssignmentId: open.id, actor: "local_user", reason: null },
+    );
+    const user = userEvent.setup();
+    renderAt(`/accounts/${A}/rulebook`);
     await user.click(await screen.findByRole("tab", { name: "Calculation" }));
     const panel = screen.getByRole("tabpanel", { name: "Calculation" });
     await stateEverything(user, within(panel).getByRole("region", { name: "Calculate now" }));

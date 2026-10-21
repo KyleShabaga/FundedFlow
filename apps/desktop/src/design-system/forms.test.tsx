@@ -11,6 +11,7 @@ import {
   FieldGroup,
   FileDropzone,
   focusFirstInvalid,
+  focusFirstInvalidWhenShown,
   formatFileSize,
   IconButton,
   RadioGroup,
@@ -178,7 +179,7 @@ describe("Checkbox, Switch and RadioGroup", () => {
       );
     }
     render(<Pick />);
-    const group = screen.getByRole("group", { name: /Side/ });
+    const group = screen.getByRole("radiogroup", { name: /Side/ });
     expect(group.getAttribute("aria-invalid")).toBe("true");
     screen.getByRole("radio", { name: "Long" }).focus();
     await userEvent.keyboard("{ArrowDown}");
@@ -302,6 +303,41 @@ describe("Validation", () => {
   it("renders nothing without issues", () => {
     const { container } = render(<ValidationSummary issues={[]} />);
     expect(container.innerHTML).toBe("");
+  });
+
+  // Build 26: repository field errors render on React Query's schedule, after any microtask from the submit handler.
+  function ServerForm({ answer }: { answer: Promise<string | null> }) {
+    const ref = useRef<HTMLFormElement>(null);
+    const [error, setError] = useState<string | undefined>();
+    const submit = (e: FormEvent) => {
+      e.preventDefault();
+      void answer.then(message => {
+        setTimeout(() => setError(message ?? undefined), 20);
+        focusFirstInvalidWhenShown(ref.current);
+      });
+    };
+    return (
+      <form ref={ref} onSubmit={submit} noValidate>
+        <TextField label="Name" defaultValue="Eval" error={error} />
+        <TextField label="Notes" />
+        <Button type="submit" variant="primary">Save</Button>
+      </form>
+    );
+  }
+  it("focuses a field whose error renders after the submit handler has finished", async () => {
+    render(<ServerForm answer={Promise.resolve("Already used")} />);
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await vi.waitFor(() => expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Name" })));
+  });
+  it("leaves focus alone when the user has moved on before the error appears", async () => {
+    let answer!: (value: string) => void;
+    render(<ServerForm answer={new Promise(resolve => { answer = resolve; })} />);
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    const notes = screen.getByRole("textbox", { name: "Notes" });
+    await act(async () => answer("Already used"));
+    notes.focus();
+    await vi.waitFor(() => expect(screen.getByRole("textbox", { name: "Name" }).getAttribute("aria-invalid")).toBe("true"));
+    expect(document.activeElement).toBe(notes);
   });
 });
 
