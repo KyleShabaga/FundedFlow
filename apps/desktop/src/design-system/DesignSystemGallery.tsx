@@ -105,9 +105,9 @@ export function DesignSystemGallery() {
           />
         </header>
 
-        <Section title="Application frame" note="Host-independent 248 px sidebar and 72 px icon rail. The desktop host supplies routing and runtime state; sidebarEdge holds a control inside the sidebar header, top-right (the collapse toggle).">
+        <Section title="Application frame" note="Host-independent 248 px sidebar and 72 px icon rail. The desktop host supplies routing and runtime state; sidebarHeader holds the brand row above the scrolling links, so a scrollbar never narrows it; sidebarEdge holds a control inside the sidebar header, top-right (the collapse toggle).">
           <div className="dsg-frame-preview">
-            <AppFrame collapsed={false} sidebar={<p>Navigation slot</p>} sidebarEdge={<span className="dsg-edge-dot" aria-hidden="true" />} header={<h3>Header slot</h3>}>
+            <AppFrame collapsed={false} sidebarHeader={<p>Header slot (brand)</p>} sidebar={<p>Navigation slot</p>} sidebarEdge={<span className="dsg-edge-dot" aria-hidden="true" />} header={<h3>Header slot</h3>}>
               <p>Route content slot</p>
             </AppFrame>
           </div>
