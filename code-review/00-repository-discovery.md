@@ -8,7 +8,7 @@
 | Repository root | `/home/user/FundedFlow` (cloud container clone of `KyleShabaga/FundedFlow`) |
 | Branch / HEAD | `claude/practical-turing-wmii06` at `92e79802593f97d907bdf8b403a088304e203676` (merge of PR #106, `feat/p0-d24-review-controls`) |
 | Working tree at start | Clean: no tracked or untracked changes. There was no `code-review/` folder and no prior audit reports. |
-| Relation to snapshots | HEAD **equals** the 2026-10-22 handoff snapshot `92e7980`, so there is no source drift against it. The earlier tailoring snapshot `8c3dd34` is an older ancestor. Its pinned facts were re-checked against HEAD in this report. |
+| Relation to snapshots | HEAD **equals** the 2026-10-22 handoff snapshot `92e7980`, so there is no source drift against it. The earlier tailoring snapshot `8c3dd34` is an ancestor, 116 commits behind HEAD (499 files changed). The relevant differences are in §0. The clone is shallow, but both snapshot commits and `7679edc` are present. |
 | Host | Linux x86_64 container (kernel 6.18), bash. **This is not Windows and not WSL**, so no Windows runtime, WebView2, NSIS or installer behaviour could be observed. |
 | Tooling present | Node v22.22.0, npm 10.9.4, cargo/rustc 1.97.0, Python 3.13.16, uv 0.11.32. |
 | Checks executed | None. Phase 1 is read-only discovery: no build, test, lint, install, fetch or network command was run. Read-only `git`, `grep`, `find`, `sed` and `wc` were used. |
@@ -17,6 +17,20 @@
 | Agents | Lead plus three read-only specialists: (1) frontend and shared domain, (2) Rust, Tauri and storage, (3) tooling, CI, evidence docs and the collector. All three returned. The lead re-checked the high-impact claims (lock, PRAGMAs, backup path, command registry, async command model, `sync_dir`, legal fail-open, freshness gateway, TS risk calculation, audit-guard, `.gitignore`, draft legal assertions) against source. |
 
 ---
+
+## 0. Revision differences from the earlier tailoring snapshot (`8c3dd34` → `92e7980`)
+
+`git diff --stat 8c3dd34 92e7980` reports 499 files changed (+18,635 / −1,057). Most of the change is UI cards, specs and evidence. The differences relevant to the pinned prompt facts:
+
+| Path | Change | Effect on the prompt's pinned facts |
+|---|---|---|
+| `apps/desktop/src-tauri/migrations/`, `src/db/mod.rs`, `src/runtime.rs`, `src/legal.rs`, `src/data_controls/`, `capabilities/` | **No change** | Schema version 21, the storage layout and the permissions are the same as in the tailoring snapshot |
+| `src-tauri/src/lib.rs` | Adds `commands::list_account_freshness` (P0-D06) | 108 release commands at HEAD |
+| `src-tauri/tauri.conf.json` | Minimum window size 1024×640 → **800×480**; bundles `LICENSE` and `THIRD_PARTY_NOTICES.txt` as resources | Windows scaling and minimum-size checks (Phase 5) apply to the new minimum |
+| `src-tauri/src/db/legacy_rulebook_tests.rs` | `ee52ec9`: "retain legacy fixture journals until connections close" (the fixture-lifetime fix) | Historical `legacy_rulebook_tests` failures (`docs/build-26.9-evidence.md:44`) are not current results |
+| `.github/workflows/ci.yml` (+57 lines), `release-installer.yml` (+13) | Audit-guard resilience, notices check, broader PR path filter | Docs that describe the older workflow have drifted (R-26) |
+| `apps/desktop/src/legal/{index,third-party,third-party-summary}` | Third-party summary added | The legal documents are still `0.1.0-draft` (§12) |
+| `scripts/third-party-notices*` | New notices generator and test | Inventoried in §3 and the coverage matrix (D4) |
 
 ## 1. Executive architecture summary
 
@@ -66,7 +80,7 @@ The code risks most worth deep review in later phases are:
 |---|---|
 | Desktop host | Tauri 2 (`tauri 2.12.4`, `wry 0.57.0`, `tao 0.37.1`, `webview2-com 0.39.1` per `Cargo.lock`); `tauri-plugin-dialog 2.8.3` is the only registered plugin (`src-tauri/src/lib.rs:174`) |
 | Rust crate | `apps/desktop/src-tauri/Cargo.toml:23-48`: serde/serde_json, rusqlite 0.40.2 `bundled`+`backup`, chrono 0.4 + chrono-tz 0.10, csv 1.3, rust_decimal 1.36, sha2, base64, uuid v7, zip 9 (no default features), tempfile, fs2 0.4. Release: LTO, `codegen-units=1`, `strip`, unwinding panics on purpose (no `panic=abort`). 460 crates in the lockfile. |
-| Frontend | React + React Router 7 (`HashRouter`), TanStack Query v5, Zod, Radix-based design system in `apps/desktop/src/design-system`, Vite, TypeScript strict |
+| Frontend | Versions from `apps/desktop/package.json` (ranges; exact versions are in the lockfile): React `^19.1.0`, `react-router-dom` `^7.18.4` (`HashRouter`), `@tanstack/react-query` `^5.104.5`, Zod `^4.6.7`, Radix dialog, dropdown, select, tabs and tooltip, `@tauri-apps/api` `^2`, `@tauri-apps/plugin-dialog` `^2.8.3`. Dev dependencies: TypeScript `~6.0.3`, Vite `^8.0.16`, Vitest `^5.0.3`, `@tauri-apps/cli` `^2`. TypeScript is strict. |
 | Shared domain | `packages/domain`: ESM, `zod` is the only runtime dependency, enforced by `packages/domain/scripts/check-boundaries.mjs` |
 | Tests | Vitest 5 (node by default; 53 desktop files opt into jsdom), Testing Library, user-event, axe-core 4.14 (`apps/desktop/src/test/axe.ts`); Rust `#[test]` (393 annotated functions in `src-tauri/src`); Node `--test` for scripts; pytest/ruff/mypy for the collector |
 | Package management | npm workspaces, one root `package-lock.json` (lockfileVersion 3), `engines.node >=22`. There is no `.nvmrc` and no `rust-toolchain` file. |
@@ -362,6 +376,51 @@ These are leads for later phases. Each has an `R-` number for traceability only.
 | R-28 | Future table rebuilds could cascade into `risk_promotions` | `migrations/0021_risk_promotions.sql:13` (`ON DELETE CASCADE`) with the `DROP TABLE account_snapshots` rebuild pattern (`0012:57`, `0015:44`) under `foreign_keys=ON` | Latent maintenance hazard; safe today | 2 (Informational) |
 | R-29 | Desktop `tsconfig` lacks `noUncheckedIndexedAccess`; about 84 casts | `apps/desktop/tsconfig.json` | Maintainability and type safety | 4 |
 
+### 9.1 Confidence that each lead warrants deep review
+
+These ratings are for prioritising later work only. They are not a judgement that a defect exists.
+
+| Confidence | R-IDs | Basis |
+|---|---|---|
+| High: code behaviour verified by the lead in source; open question is impact | R-01, R-03, R-09 (no shutdown hook), R-14 (`freshness.ts:20`), R-15, R-16, R-20, R-22, R-23, R-26 | The lead read the cited lines |
+| Medium: mapped by a specialist with file:line evidence; not re-read by the lead | R-02, R-04, R-05, R-06, R-07, R-08, R-10, R-11, R-12, R-13, R-17, R-18, R-21, R-24, R-25, R-27 | Specialist report; Phase 2–5 must re-read |
+| Low: latent or provenance question | R-19, R-28, R-29 | Needs an owner answer, or is not reachable today |
+
+### 9.2 Areas with limited direct tests (existing tests mapped first)
+
+Test counts are by grep at 92e7980. The tests were not run.
+
+- **Rust, well covered by dedicated suites:**
+  - migrations and upgrade (`db/*tests.rs`, about 70 tests, including real legacy journals);
+  - store repositories (about 151 tests);
+  - CSV import (about 79);
+  - data controls (34: `tests.rs` 21, `current_schema_tests.rs` 7, `security_tests.rs` 5, `wire_tests.rs` 1);
+  - runtime (14, `runtime/tests.rs`);
+  - legal record (5 inline).
+- **Rust, thin or absent:**
+  - `commands.rs` and `lib.rs` have no tests. Startup wiring, command registration and the async-to-blocking path are only exercised indirectly.
+  - Shutdown and exit have no tests (there is no hook to test, R-09).
+  - Crash windows *between* filesystem and DB steps (attachment rename vs commit, restore swap, erase vs WAL) are not visible as dedicated tests from file names. Phase 2 should confirm this by reading `data_controls/tests.rs`, `store/journal_review_tests.rs` and `runtime/tests.rs`.
+  - Windows-specific filesystem semantics (no `sync_dir`, reparse points, hard links) cannot be exercised by the Linux test run.
+- **Frontend, by feature folder** (non-test source files / test files):
+
+  | Folder | Source files | Test files |
+  |---|---|---|
+  | rulebooks | 25 | 2 |
+  | insights | 14 | 1 |
+  | imports | 14 | 3 |
+  | data-controls | 6 | 1 |
+  | settings | 5 | 1 |
+  | legal | 5 | 1 |
+  | evidence, ledger, library, references, reviews, trades | 2–3 each | 0 each |
+  | accounts | 20 | 8 |
+  | journal | 15 | 6 |
+  | today | 11 | 5 |
+  | shared | 11 | 8 |
+
+  The journeys (`src/journeys/`, 10 files) add whole-app coverage for accounts, data controls, first run, recovery, risk promotion, uncertain writes and workflows. Phase 4 must check whether the rulebook editor, Insights and the import wizard are covered there before treating them as untested.
+- **Platform:** there is no automated packaged-app, WebView2 or installer test. `apps/desktop/scripts/smoke-shell.mjs` is Linux-only and not wired in. The engine-runtime parity check (`check:engine-runtimes`) needs Chromium and is not in CI. Infrastructure proposals should come only after Phase 5 confirms these gaps.
+
 ## 10. Recommended detailed investigation order
 
 1. **Phase 2 (data integrity).** Work in this order: W1 upgrade, backup and recovery (R-05, R-06) → W13 restore (R-03, R-04) → W14 deletion and erase (R-09) → W6 attachments (R-02) → W5 import commit → W3/W4/W7/W8/W10 commit bundles → W12 export caps (R-07) → legal record boundary (export, restore and erase scope).
@@ -378,6 +437,27 @@ These are leads for later phases. Each has an `R-` number for traceability only.
 - **Not opened, deliberately.** The binary DB fixtures, any real user journal, the rows of the CSV fixtures, and git-ignored `gen/schemas`. As a result, the exact `core:default` permission set is unverified.
 - **External evidence not refreshed.** The Notion board, Final Push V1, the P0 audit, and GitHub Actions runs and artifacts (`39735646149`, `39730672821`, `39691474111`) were not fetched. Their status in §12 comes from the supplied 2026-10-22 snapshot and is **unverified** here.
 - **Counts are approximate** (grep-based): test cases, `as` casts, `unwrap` sites.
+
+### 11.1 Commands executed in Phase 1 (all read-only, offline)
+
+Working directory: the repository root unless stated.
+
+| Command | Exit code |
+|---|---|
+| `pwd`, `git branch --show-current`, `git rev-parse HEAD`, `git status --porcelain=v1 -uall`, `git log --oneline -5` | 0 |
+| `git cat-file -t`, `git merge-base --is-ancestor`, `git rev-list --count`, `git diff --stat`/`--name-only` between `8c3dd34`, `7679edc` and `92e7980` | 0 |
+| `uname -a`, `node --version`, `npm --version`, `cargo --version`, `rustc --version`, `python3 --version`, `uv --version` (version queries only) | 0 |
+| `cat`, `sed -n`, `grep`, `find`, `wc`, `ls` over tracked files | 0 (`ls code-review` / `.claude` returned "not found" at the start, as expected) |
+
+- **Not run, by design:** no npm, cargo, uv or pytest invocation (typecheck, test, build, clippy, notices, audit). These checks are scheduled for Phase 5.
+
+### 11.2 Process deviation and final Git state
+
+- **Commit and push.** The prompt says not to commit or push. After the reports were written, the session's stop hook required the untracked reports to be committed and pushed, and the cloud container would otherwise have discarded them.
+  - The two report files only were committed as `24e5c9e` on `claude/practical-turing-wmii06` and pushed to `origin`, which created that remote branch.
+  - Nothing was merged or tagged, and no PR was opened. No application file is in the commit.
+  - This verification update is a further edit to the same two Markdown files.
+- **Final Git state.** After the commit, `git status` was clean apart from these report edits. No unexpected changes were found and nothing was discarded.
 
 ## 12. Owner-only scope, prior-audit snapshot and reconciliation register
 

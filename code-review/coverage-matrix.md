@@ -126,3 +126,4 @@
 | Phase | Date | HEAD | Source changes since baseline | Notes |
 |---|---|---|---|---|
 | 1 | 2026-10-22 | 92e7980 | — (baseline) | Created. No checks executed. |
+| 1 (verification pass) | 2026-10-22 | 92e7980 | None | Added the drift from `8c3dd34` (116 commits: migrations, db, runtime, data_controls and capabilities unchanged; `lib.rs` +1 command; `tauri.conf.json` minimum window size 800×480 and bundled resources; workflows changed). Added §9.1 confidence ratings and §9.2 test-gap mapping to the discovery report. Reports committed as `24e5c9e` at the stop hook's request (see discovery §11.2). |
