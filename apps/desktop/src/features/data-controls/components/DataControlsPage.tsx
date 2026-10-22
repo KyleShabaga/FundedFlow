@@ -1,6 +1,7 @@
 // Settings → Your data (Build 25). Export, restore and permanent deletion over
 // the Build 24 native commands. Export and restore never upload anything; the
-// last export outcome is remembered without its path.
+// last export outcome is remembered without its path. Remembering it is a setting write: an uncertain one is checked
+// against the setting as stored before it may be saved again.
 import { statusLabels, type DataExportResult } from "@fundedflow/domain";
 import { Download, Eraser, FileUp, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -11,6 +12,7 @@ import { Button, Checkbox, formatBytes, formatInstant, FormSection, InlineNotice
 import { useAccounts } from "../../accounts/hooks/accounts";
 import { accountLabel } from "../../accounts/components/presentation";
 import { PrivacyLegalSection } from "../../legal/components/PrivacyLegalSection";
+import { UncertainOutcomeReview, type UncertainWrite } from "../../shared/UncertainOutcomeReview";
 import { useSetSetting, useSetting } from "../../settings/hooks/settings";
 import * as api from "../api/data-controls";
 import { useDataControlOperation } from "../hooks/data-controls";
@@ -19,6 +21,23 @@ import { RestoreArchiveDialog } from "./RestoreArchiveDialog";
 import "./data-controls.css";
 
 const ALL = "__all__";
+
+const describeLast = (last: api.LastExport) =>
+  `${last.kind === "archive" ? "Full backup" : last.scope === "account" ? `Trade CSV · ${last.accountName ?? "one account"}` : "Trade CSV · all accounts"} · ${formatInstant(last.completedAt, { year: true })} · ${formatBytes(last.bytes)}`;
+
+/** What an uncertain "remember the last export" write is checked against: the setting as stored now, re-read. */
+function LastExportWriteReview({ write }: { write: UncertainWrite }) {
+  const setting = useSetting(api.LAST_EXPORT_SETTING);
+  const stored = api.lastExportSchema.safeParse(setting.data?.value);
+  return (
+    <UncertainOutcomeReview write={write} what="the remembered export" reviewReady={setting.data !== undefined && !setting.error} readReviewed={setting.refresh}>
+      {stored.success
+        ? <StatList label="Last export saved in this journal" items={[{ label: "Last export", value: describeLast(stored.data) }]} />
+        : <p>No export is remembered in this journal.</p>}
+      <p>The export file itself is not affected.</p>
+    </UncertainOutcomeReview>
+  );
+}
 
 export interface DataControlsPageProps {
   /** The native file chooser; tests pass a fake. */
@@ -116,9 +135,7 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
           { label: "Journal version", value: runtime.state.kind === "ready" ? `${runtime.state.status.schemaVersion ?? "Unknown"} (backup format 1)` : null },
           { label: "Automatic backups", value: "Only before an upgrade. FundedFlow saves a copy of your journal in the same folder before upgrading its format. That copy isn't a substitute for exporting a full backup." },
           { label: "Backup protection", value: "Not encrypted. Anyone who can open the file can read your trades, notes and screenshots." },
-          { label: "Last export from this journal", value: last
-            ? `${last.kind === "archive" ? "Full backup" : last.scope === "account" ? `Trade CSV · ${last.accountName ?? "one account"}` : "Trade CSV · all accounts"} · ${formatInstant(last.completedAt, { year: true })} · ${formatBytes(last.bytes)}`
-            : "No export yet" },
+          { label: "Last export from this journal", value: last ? describeLast(last) : "No export yet" },
         ]} />
       </FormSection>
 
@@ -168,6 +185,7 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
               {formatBytes(exported.result.bytes)} · SHA-256 <code className="dc-id">{exported.result.sha256}</code>
             </InlineNotice>
           )}
+          {saveLast.outcome === "uncertain-outcome" && <LastExportWriteReview write={saveLast} />}
         </div>
       </FormSection>
 
