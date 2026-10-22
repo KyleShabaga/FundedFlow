@@ -1,0 +1,4 @@
+/* Settings → Privacy & legal (NA-3). Layout only; components come from the design system. */
+.legal-settings .ds-form-section-body { grid-template-columns: minmax(0, 1fr); }
+.legal-settings-text p, p.legal-settings-text { margin: 0; max-width: 72ch; }
+.legal-settings-text h3 { margin: 0; }

@@ -1,0 +1,11 @@
+# cargo-audit settings for the desktop app (NA-3). CI runs `cargo audit --deny unsound` from this folder:
+# vulnerabilities and unsound advisories fail; unmaintained and yanked crates are warnings.
+
+[advisories]
+ignore = [
+    # glib 0.18 `VariantStrIter` unsoundness (GHSA-wrw7-89jp-8q8g). glib is only in the Linux GTK stack that
+    # Tauri pulls in; it is not in the Windows build (`cargo tree -i glib --target x86_64-pc-windows-msvc` prints
+    # nothing), and the fixed glib 0.20 can't be resolved under Tauri's gtk-rs 0.18 pins. Remove this entry once
+    # Tauri moves to gtk-rs 0.20 or later.
+    "RUSTSEC-2024-0429",
+]

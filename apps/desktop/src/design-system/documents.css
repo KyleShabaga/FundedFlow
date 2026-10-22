@@ -1,0 +1,40 @@
+/*
+ * Full-page gate, document view and disclosure (NA-3). Every value comes from tokens.css.
+ * The gate card is one readable column (max 720 px) that fits the 800 px minimum window with a 16 px gutter.
+ */
+
+/* GatePage */
+.ds-gate-page { min-height: 100vh; box-sizing: border-box; padding: var(--space-8) var(--space-4); background: var(--bg-000); }
+.ds-gate-page.is-preview { min-height: 0; padding: var(--space-4); border: 1px solid var(--line-100); border-radius: var(--radius-lg); }
+.ds-gate-main { max-width: 720px; margin: 0 auto; }
+.ds-gate-card { display: grid; gap: var(--space-6); padding: var(--space-8) var(--space-8) 0; }
+.ds-gate-head { display: grid; gap: var(--space-3); }
+.ds-gate-eyebrow { color: var(--ink-muted); }
+.ds-gate-title { margin: 0; font: 600 24px/32px var(--font-display); color: var(--ink); }
+.ds-gate-title:focus { outline: none; }
+.ds-gate-title:focus-visible { outline: 2px solid var(--flow); outline-offset: 4px; border-radius: var(--radius-sm); }
+.ds-gate-body { display: grid; gap: var(--space-4); font: 400 14px/22px var(--font-sans); }
+.ds-gate-body p { margin: 0; }
+/* The decision stays in view while the body scrolls with the page. */
+.ds-gate-actions {
+  position: sticky; bottom: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-3);
+  margin: 0 calc(-1 * var(--space-8)); padding: var(--space-4) var(--space-8);
+  background: var(--bg-100); border-top: 1px solid var(--line-100); border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+/* DocumentView */
+.ds-document { display: grid; gap: var(--space-4); font: 400 14px/22px var(--font-sans); color: var(--ink); }
+.ds-document-head { display: grid; gap: var(--space-1); }
+.ds-document-head .ds-title { margin: 0; }
+.ds-document-meta { margin: 0; }
+.ds-document-section { display: grid; gap: var(--space-2); }
+.ds-document-heading { margin: 0; font: 600 14px/20px var(--font-sans); color: var(--ink); }
+.ds-document-section p { margin: 0; max-width: 72ch; overflow-wrap: anywhere; }
+
+/* Disclosure */
+.ds-disclosure { border: 1px solid var(--line-100); border-radius: var(--radius-md); background: var(--bg-100); }
+.ds-disclosure-summary { cursor: pointer; padding: var(--space-3) var(--space-4); font: 500 14px/20px var(--font-sans); color: var(--flow); border-radius: var(--radius-md); }
+.ds-disclosure-summary:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.ds-disclosure[open] > .ds-disclosure-summary { border-bottom: 1px solid var(--line-100); border-radius: var(--radius-md) var(--radius-md) 0 0; }
+.ds-disclosure-body { padding: var(--space-4); }
+.ds-gate-body h2, .ds-gate-body h3 { margin: 0; }

@@ -10,6 +10,7 @@ import { useRuntime } from "../../../app/RuntimeProvider";
 import { Button, Checkbox, formatBytes, formatInstant, FormSection, InlineNotice, RadioGroup, Select, StatList, useToast } from "../../../design-system";
 import { useAccounts } from "../../accounts/hooks/accounts";
 import { accountLabel } from "../../accounts/components/presentation";
+import { PrivacyLegalSection } from "../../legal/components/PrivacyLegalSection";
 import { useSetSetting, useSetting } from "../../settings/hooks/settings";
 import * as api from "../api/data-controls";
 import { useDataControlOperation } from "../hooks/data-controls";
@@ -102,9 +103,6 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
 
   return (
     <div className="dc-page">
-      <p className="dc-local-notice">
-        FundedFlow keeps your journal only on this computer. Nothing is uploaded and nothing needs an account or internet connection.
-      </p>
       {!op.ready && (
         <InlineNotice tone="warning" title="Local data isn't open">
           Export, restore and deletion are available once the journal is open. Use the recovery banner above.
@@ -112,11 +110,11 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
       )}
       {working && <p role="status" className="dc-working">{working} Other data actions wait until this finishes.</p>}
 
-      <FormSection headingLevel={2} title="Your data on this computer" description="Where your journal lives and what is backed up.">
+      <FormSection headingLevel={2} title="Your data on this computer" description="Where your journal lives and what is backed up. Nothing leaves this computer: see Privacy & legal below.">
         <StatList bordered items={[
           { label: "Stored", value: "In FundedFlow's app-data folder for your Windows user account" },
           { label: "Journal version", value: runtime.state.kind === "ready" ? `${runtime.state.status.schemaVersion ?? "Unknown"} (backup format 1)` : null },
-          { label: "Automatic backups", value: "None. FundedFlow doesn't back up your journal by itself; export a full backup yourself." },
+          { label: "Automatic backups", value: "Only before an upgrade. FundedFlow saves a copy of your journal in the same folder before upgrading its format. That copy isn't a substitute for exporting a full backup." },
           { label: "Backup protection", value: "Not encrypted. Anyone who can open the file can read your trades, notes and screenshots." },
           { label: "Last export from this journal", value: last
             ? `${last.kind === "archive" ? "Full backup" : last.scope === "account" ? `Trade CSV · ${last.accountName ?? "one account"}` : "Trade CSV · all accounts"} · ${formatInstant(last.completedAt, { year: true })} · ${formatBytes(last.bytes)}`
@@ -203,6 +201,8 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
           </div>
         </div>
       </FormSection>
+
+      <PrivacyLegalSection />
 
       {import.meta.env.DEV && <p><Link to="/settings/developer">Developer tools</Link></p>}
 

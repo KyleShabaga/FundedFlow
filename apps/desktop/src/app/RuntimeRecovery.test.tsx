@@ -20,8 +20,10 @@ import { deferred, failed, ready } from "../test/runtime-fixtures";
 import { AppProviders } from "./AppProviders";
 import { AppShell } from "./AppShell";
 import { useRuntime } from "./RuntimeProvider";
+import { primeAccepted } from "../test/legal";
 
 beforeEach(() => {
+  primeAccepted();
   window.location.hash = "/";
   localStorage.clear();
   invoke.mockReset().mockResolvedValue(ready);

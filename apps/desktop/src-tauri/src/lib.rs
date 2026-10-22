@@ -13,6 +13,7 @@ mod domain;
 mod error;
 #[cfg(test)]
 mod insights;
+mod legal;
 #[cfg(test)]
 mod parity;
 #[cfg(test)]
@@ -133,6 +134,8 @@ macro_rules! app_commands {
             commands::reopen_daily_review,
             commands::relink_daily_review_trades,
             commands::get_insights_dataset,
+            legal::get_legal_acceptance,
+            legal::record_legal_acceptance,
             $($extra),*
         ]
     };
@@ -167,7 +170,6 @@ pub fn dev_seed_cli(args: &[String]) -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Per-user data directory, e.g. %APPDATA%\com.fundedflow.desktop\ on
@@ -176,15 +178,25 @@ pub fn run() {
             // failure nor a slow upgrade keeps the window from opening: the
             // frontend polls the runtime status and shows progress or recovery.
             let dir = app.path().app_data_dir().map_err(|e| e.to_string());
+            // The first-run acceptance record belongs to the install (NA-3), in the app config
+            // directory: on Windows the same per-user folder as the journal, but a separate file.
+            let config_dir = app.path().app_config_dir().map_err(|e| e.to_string());
             // Debug builds only: FUNDEDFLOW_DEV_DATA_DIR opens an isolated test journal instead
             // (Build 26.9). A refused value fails startup rather than falling back to the real journal.
+            // The test journal's folder also holds its acceptance record, so it never touches the real one.
             #[cfg(debug_assertions)]
-            let dir = {
+            let (dir, config_dir) = {
                 let dev = dev_tools::DevEnvironment::from_env(dir.clone().ok(), &app.config().identifier);
+                let config_dir = match (&dev.isolated, &dev.problem) {
+                    (Some(isolated), _) => Ok(isolated.clone()),
+                    (None, Some(problem)) => Err(problem.clone()),
+                    (None, None) => config_dir,
+                };
                 let dir = dev.data_dir(dir);
                 app.manage(dev_tools::DevState::new(dev));
-                dir
+                (dir, config_dir)
             };
+            app.manage(legal::LegalStore::new(config_dir));
             let path = dir.map(|dir| dir.join(db::DB_FILE_NAME));
             app.manage(runtime::Runtime::new(path));
             commands::initialize_in_background(app.handle().clone());

@@ -18,6 +18,7 @@ vi.mock("../../features/data-controls/components/DataControlsPage", () => ({ Dat
 import { ToastProvider } from "../../design-system";
 import { featureKeys } from "../../features/shared/query-keys";
 import DevSidebarTools from "./DevSidebarTools";
+import { primeAccepted } from "../../test/legal";
 
 const ready = { state: "ready", stage: "ready", schemaVersion: 20, supportedSchemaVersion: 20, created: false, failure: null };
 const TEST_DIR = "/work/.dev-journal/com.fundedflow.desktop";
@@ -69,6 +70,7 @@ function renderTools(collapsed = false) {
 }
 
 beforeEach(() => {
+  primeAccepted();
   window.location.hash = "/";
   localStorage.clear();
   vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
@@ -84,6 +86,7 @@ afterEach(() => {
 
 it("puts Add Fake Data and Reset All Data directly above Settings in the sidebar footer", async () => {
   const { default: App } = await import("../../App");
+  (await import("../../test/legal")).primeAccepted(); // the module instance this App reads
   render(<App />);
   const nav = await screen.findByRole("navigation", { name: "Primary navigation" });
   const group = await within(nav).findByRole("group", { name: "Developer tools" });
@@ -115,6 +118,7 @@ it("is absent from production builds", async () => {
   vi.stubEnv("DEV", false);
   vi.resetModules();
   const { default: App } = await import("../../App");
+  (await import("../../test/legal")).primeAccepted(); // the module instance this App reads
   render(<App />);
   const nav = await screen.findByRole("navigation", { name: "Primary navigation" });
   await screen.findByRole("heading", { name: "Today page" });

@@ -17,6 +17,7 @@ import { accountMenu } from "../accounts/components/AccountActions";
 import { DataControlProblem, LAST_EXPORT_SETTING, type FilePicker } from "./api/data-controls";
 import { DataControlsPage } from "./components/DataControlsPage";
 import { resetDataControlLock } from "./hooks/data-controls";
+import { primeAccepted } from "../../test/legal";
 
 const runtime = vi.hoisted(() => ({ state: { kind: "ready" } as unknown as RuntimeState, check: vi.fn(), retry: vi.fn() }));
 const holder = vi.hoisted(() => ({ store: null as unknown as ReturnType<typeof createTestStore> & { repository: Record<string, unknown> } }));
@@ -88,6 +89,7 @@ function renderPage() {
 beforeEach(() => {
   ready();
   resetDataControlLock();
+  primeAccepted();
   runtime.check.mockReset().mockResolvedValue(undefined);
   runtime.retry.mockReset().mockResolvedValue(undefined);
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false } } });
@@ -114,10 +116,10 @@ afterEach(() => {
 });
 
 describe("data information and export", () => {
-  it("says the journal is local, has no automatic backups and that exports are not encrypted", async () => {
+  it("says the journal is local, is copied only before an upgrade and that exports are not encrypted", async () => {
     renderPage();
     expect(screen.getByText(/only on this computer/)).toBeTruthy();
-    expect(screen.getByText(/FundedFlow doesn't back up your journal by itself/)).toBeTruthy();
+    expect(screen.getByText("Only before an upgrade. FundedFlow saves a copy of your journal in the same folder before upgrading its format. That copy isn't a substitute for exporting a full backup.")).toBeTruthy();
     expect(screen.getByText(/Not encrypted\. Anyone who can open the file/)).toBeTruthy();
     expect(await screen.findByText("No export yet")).toBeTruthy();
     expect(screen.getByText("18 (backup format 1)")).toBeTruthy();
