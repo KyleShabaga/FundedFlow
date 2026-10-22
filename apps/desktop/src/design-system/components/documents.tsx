@@ -7,7 +7,11 @@
 //   headed sections. It renders bundled text only: no markup is interpreted.
 // - Disclosure: a native details/summary expander, so keyboard and screen-reader behaviour is the browser's.
 //   `srSummary` adds hidden text to the summary for context the visible label leaves out.
+// - DisclosureCard (P0-D22): a card whose header is one real button (title, a short summary, a chevron) that opens
+//   and closes the body below it in the document flow. Notices passed as `notices` stay visible while it is closed.
+//   The closed body is inert, so nothing in it can be focused or read.
 
+import { ChevronDown } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef } from "react";
 
 import { cx } from "./cx";
@@ -122,5 +126,47 @@ export function Disclosure({ summary, srSummary, defaultOpen = false, onToggle, 
       </summary>
       <div className="ds-disclosure-body">{children}</div>
     </details>
+  );
+}
+
+/* ---------- DisclosureCard (P0-D22) ---------- */
+
+export interface DisclosureCardProps {
+  /** The card's name: the heading text, and the accessible name of the region and the toggle. */
+  title: string;
+  /** Heading level of the title. Default 2. */
+  headingLevel?: 2 | 3;
+  /** Short text beside the title, visible open or closed ("Checked at Oct 22, 00:13"). Read as part of the toggle. */
+  summary?: ReactNode;
+  /** Controlled: the caller keeps the choice (for example across data refreshes). */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Essential notices, shown under the header whether the card is open or closed. */
+  notices?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}
+
+export function DisclosureCard({ title, headingLevel = 2, summary, open, onOpenChange, notices, children, className }: DisclosureCardProps) {
+  const id = useId();
+  const titleId = `${id}-title`;
+  const bodyId = `${id}-body`;
+  const Heading = `h${headingLevel}` as const;
+  return (
+    <section className={cx("ds-card", "ds-disclosure-card", open && "is-open", className)} aria-labelledby={titleId}>
+      <Heading className="ds-disclosure-card-heading">
+        <button type="button" className="ds-disclosure-card-toggle" aria-expanded={open} aria-controls={bodyId} onClick={() => onOpenChange(!open)}>
+          <span className="ds-disclosure-card-text">
+            <span id={titleId} className="ds-title">{title}</span>
+            {summary != null && <span className="ds-disclosure-card-summary">{summary}</span>}
+          </span>
+          <ChevronDown size={18} aria-hidden="true" className="ds-disclosure-card-chevron" />
+        </button>
+      </Heading>
+      {notices}
+      <div id={bodyId} className="ds-disclosure-card-body" inert={!open}>
+        <div className="ds-disclosure-card-inner">{children}</div>
+      </div>
+    </section>
   );
 }

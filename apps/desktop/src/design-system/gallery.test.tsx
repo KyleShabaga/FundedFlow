@@ -41,6 +41,15 @@ describe("DesignSystemGallery", () => {
     expect(within(section).getByText("Flow").closest(".ds-brand-name")?.textContent).toBe("FundedFlow");
     expect(section.querySelectorAll("svg.ds-brand-mark").length).toBe(4);
   });
+  it("shows metric cards with info buttons in place of basis footers (P0-D14)", async () => {
+    const user = userEvent.setup();
+    render(<DesignSystemGallery />);
+    const section = screen.getByRole("heading", { name: "Metric info" }).closest("section")!;
+    await user.click(within(section).getByRole("button", { name: "About Win rate" }));
+    expect(within(section).getByRole("dialog", { name: "About Win rate" }).textContent).toContain("Wins ÷ trades with a known result");
+    expect(within(section).getByText("No trade here has a planned risk in its review")).toBeTruthy();
+    expect(within(section).getByRole("button", { name: "About trading days" })).toBeTruthy();
+  });
   it("switches the example async state without showing numbers while loading", async () => {
     render(<DesignSystemGallery />);
     const group = screen.getByRole("group", { name: "Example state" });

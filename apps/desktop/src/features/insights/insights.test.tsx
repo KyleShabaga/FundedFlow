@@ -3,7 +3,7 @@
 // in-memory store with the Insights dataset fake (test-store.ts); SQL, trading days and R derivation are tested in Rust
 // and the metric definitions by the Rust-generated parity fixture.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -155,7 +155,8 @@ describe("Insights", () => {
     const user = userEvent.setup();
     renderAt("/insights?basis=gross&section=calendar");
     const tabs = await screen.findByRole("tablist", { name: "Insights sections" });
-    const filters = await screen.findByRole("region", { name: "Filters" });
+    // The Calendar's filters sit behind its Filters button (P0-D18).
+    const filters = await screen.findByRole("button", { name: "Filters" });
     const basis = screen.getByRole("group", { name: "P&L basis" });
     expect(tabs.compareDocumentPosition(basis) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(tabs.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -229,6 +230,64 @@ describe("Insights", () => {
     expect(await screen.findByText("No closed trades in these attempts")).toBeTruthy();
   });
 
+  it("calendar: filters sit behind a Filters button beside the cell choice and stay applied when closed (P0-D18)", async () => {
+    const user = userEvent.setup();
+    renderAt("/insights?section=calendar&show=trades&from=2026-10-01&to=2026-10-31&source=csv_import");
+    const button = await screen.findByRole("button", { name: "Filters, 2 filters applied" });
+    // Starts closed; the old always-visible bar is gone from the Calendar.
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("region", { name: "Filters" })).toBeNull();
+    const cellChoice = screen.getByRole("group", { name: "Calendar cells show" });
+    expect(cellChoice.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(cellChoice).queryByRole("button", { name: /Filters/ })).toBeNull();
+    // Closed with filters applied: a summary with the range as one group, and Clear filters.
+    expect(screen.getByText("Oct 1, 2026 to Oct 31, 2026 · Imported only", { exact: false })).toBeTruthy();
+    // The calendar is filtered: only the imported Oct 20 trade.
+    expect(screen.getByRole("button", { name: "Mon Oct 19: no trades" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Tue Oct 20: \+\$26, 1 trade/ })).toBeTruthy();
+
+    button.focus();
+    await user.keyboard("{Enter}");
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    const panel = screen.getByRole("region", { name: "Filters" });
+    expect(document.getElementById(button.getAttribute("aria-controls")!)!.contains(panel)).toBe(true);
+    expect(button.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(panel.compareDocumentPosition(screen.getByRole("complementary", { name: "Selected period" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole("region", { name: "Filters" })).toHaveLength(1);
+    expect((within(panel).getByLabelText("From trading day") as HTMLInputElement).value).toBe("2026-10-01");
+    // Applying from the open panel keeps today's semantics, and the count follows.
+    fireEvent.change(within(panel).getByLabelText("To trading day"), { target: { value: "" } });
+    await waitFor(() => expect(location).not.toContain("to=2026-10-31"));
+    expect(screen.getByRole("button", { name: "Filters, 2 filters applied" })).toBe(button);
+
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+    button.focus();
+    await user.keyboard(" ");
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(location).toContain("source=csv_import");
+    expect(screen.getByText("From Oct 1, 2026 · Imported only", { exact: false })).toBeTruthy();
+
+    // Clear filters while closed resets the filters only: the section and cell choice stay.
+    await user.click(screen.getByRole("button", { name: "Clear filters" }));
+    await waitFor(() => expect(location).not.toContain("source="));
+    expect(location).not.toContain("from=");
+    expect(location).toContain("section=calendar");
+    expect(location).toContain("show=trades");
+    expect(screen.getByRole("button", { name: "Filters" }).getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
+    expect(screen.getByRole("button", { name: /Mon Oct 19: \+\$42, 2 trades/ })).toBeTruthy();
+  });
+
+  it("keeps the filter bar in view on other sections, and on a Calendar with nothing to show (P0-D18)", async () => {
+    renderAt("/insights?section=overview&source=manual");
+    expect(await screen.findByRole("region", { name: "Filters" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Filters/ })).toBeNull();
+    cleanup();
+    renderAt("/insights?section=calendar&from=2027-01-04");
+    expect(await screen.findByText("No closed trades match these filters")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Filters" })).toBeTruthy();
+  });
+
   it("calendar: an unknown day shows a dash, a selected day links to its daily review, a week opens its trades", async () => {
     const user = userEvent.setup();
     renderAt("/insights?section=calendar");
@@ -284,5 +343,55 @@ describe("Insights", () => {
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
     expect(screen.queryByText("$0.00")).toBeNull();
+  });
+});
+
+describe("Insights metric info (P0-D14)", () => {
+  const card = async (label: string) => (await screen.findByText(label, { selector: ".ds-label" })).closest(".ds-metric") as HTMLElement;
+  const info = async (user: ReturnType<typeof userEvent.setup>, label: string) => {
+    await user.click(within(await card(label)).getByRole("button", { name: `About ${label}` }));
+    return screen.findByRole("dialog", { name: `About ${label}` });
+  };
+
+  it("puts each headline explanation behind an info button and drops the empty footers", async () => {
+    const user = userEvent.setup();
+    renderAt("/insights");
+    for (const label of ["Net P&L", "Win rate", "Expectancy", "Profit factor", "Average R"]) {
+      expect(within(await card(label)).getByRole("button", { name: `About ${label}` })).toBeTruthy();
+    }
+    for (const label of ["Win rate", "Expectancy", "Profit factor", "Average R"]) expect((await card(label)).querySelector(".ds-metric-foot")).toBeNull();
+
+    expect((await info(user, "Win rate")).textContent).toBe("About Win rateWins ÷ trades with a known result (break-evens count), as in the Journal");
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(within(await card("Win rate")).getByRole("button", { name: "About Win rate" }));
+
+    expect((await info(user, "Expectancy")).textContent).toContain("Net P&L ÷ trades with a known result · needs 5");
+    await user.keyboard("{Escape}");
+    expect((await info(user, "Profit factor")).textContent).toContain("Net P&L · needs 5 trades and a loss");
+    await user.keyboard("{Escape}");
+    expect((await info(user, "Average R")).textContent).toContain("Net P&L ÷ the review's planned risk (1R), only where recorded");
+    await user.keyboard("{Escape}");
+    // The reason for N/A stays on the card, not only in the popup.
+    expect(within(await card("Average R")).getByText("No trade here has a planned risk in its review")).toBeTruthy();
+  });
+
+  it("keeps partial coverage visible on the Net P&L card and repeats it in the info", async () => {
+    const user = userEvent.setup();
+    renderAt("/insights");
+    const net = await card("Net P&L");
+    expect(within(net.querySelector(".ds-metric-foot") as HTMLElement).getByText("3 of 4 closed trades with a known P&L")).toBeTruthy();
+    expect((await info(user, "Net P&L")).textContent).toContain("3 of 4 closed trades with a known P&L");
+  });
+
+  it("drops the Net P&L footer when every trade has a known P&L, keeping the count in the info", async () => {
+    const user = userEvent.setup();
+    renderAt(`/insights?accounts=${A2}`);
+    const net = await card("Net P&L");
+    await waitFor(() => expect(within(net).getByText("+$350.00")).toBeTruthy());
+    expect(net.querySelector(".ds-metric-foot")).toBeNull();
+    expect((await info(user, "Net P&L")).textContent).toContain("2 trades, all with a known P&L");
+    await user.click(within(screen.getByRole("group", { name: "P&L basis" })).getByRole("button", { name: "Gross P&L" }));
+    expect((await info(user, "Expectancy")).textContent).toContain("Gross P&L ÷ trades with a known result");
   });
 });

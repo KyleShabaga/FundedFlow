@@ -10,7 +10,8 @@ const sheets: Record<string, string> = Object.fromEntries(
   (readdirSync(src, { recursive: true }) as string[])
     .map(f => f.replace(/\\/g, "/"))
     .filter(f => f.endsWith(".css") && !f.endsWith("DataModelPanel.css"))
-    .map(f => [f, readFileSync(new URL(f, src), "utf8") as string]),
+    // Line endings as in the repository, whatever the checkout converted them to.
+    .map(f => [f, (readFileSync(new URL(f, src), "utf8") as string).replace(/\r\n/g, "\n")]),
 );
 const sheet = (suffix: string) => {
   const key = Object.keys(sheets).find(k => k.endsWith(suffix));
@@ -83,6 +84,17 @@ describe("Today", () => {
     expect(css).toContain("@container td-overview (min-width: 560px) { .td-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }");
     expect(css).toContain("@container td-overview (min-width: 880px) { .td-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }");
     expect(css).toContain("@container td-overview (min-width: 1200px) { .td-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }");
+  });
+
+  it("lays List rows out as four aligned groups from 880 px of the section's own width, wrapping below that (P0-D23)", () => {
+    // One row per account at every width: List never becomes a grid of columns.
+    expect(rule(css, ".td-rows")).not.toContain("grid-template-columns");
+    expect(rule(css, ".td-row")).toContain('grid-template-areas: "head foot" "est est" "setup setup" "note note"');
+    const at = css.indexOf("@container td-overview (min-width: 880px) {\n  .td-row {");
+    expect(at).toBeGreaterThanOrEqual(0);
+    const wide = css.slice(at, css.indexOf("\n}", at));
+    expect(wide).toContain("grid-template-columns: minmax(10rem, 1.1fr) minmax(13rem, 1.6fr) minmax(11rem, 1.2fr) 11rem;");
+    expect(wide).toContain('grid-template-areas: "head est setup foot" "note note note foot";');
   });
 
   it("places freshness beside the next panel only on a wide main column, by CSS alone", () => {

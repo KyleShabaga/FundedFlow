@@ -64,3 +64,15 @@
 
 /* Two-column page grids stack below 880 px of main column (docs/design/window-support.md). */
 @container ds-main (max-width: 879px) { .in-cal { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- P0-D18: Calendar Filters button and its panel (Calendar session) ---------- */
+/* The toolbar groups the cell choice, the Filters action and the panel, so the section's gap doesn't split them. */
+.in-cal-toolbar { display: grid; gap: var(--space-2); min-width: 0; }
+/* A gap and a rule set Filters apart from the segmented control: it is an action, not a fourth metric. */
+.in-cal-filters-btn { position: relative; margin-left: var(--space-2); }
+.in-cal-filters-btn::before { content: ""; position: absolute; left: calc(-1 * var(--space-3) - 1px); top: 4px; bottom: 4px; border-left: 1px solid var(--line-200); }
+.in-cal-note { flex: 1 1 260px; min-width: 0; }
+.in-cal-applied { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin: 0; font-size: 12.5px; min-width: 0; overflow-wrap: anywhere; }
+.in-cal-filters[hidden] { display: none; }
+/* In flow, so date pickers and select menus have room; the bar's own title is replaced by the button. */
+.in-cal-filters .in-filters { margin: 0; }

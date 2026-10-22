@@ -48,4 +48,6 @@
   .ds-btn, .ds-icon-btn, .ds-tab { border: 1px solid ButtonBorder; }
   .ds-btn:disabled, .ds-icon-btn:disabled, .ds-tab:disabled { color: GrayText; border-color: GrayText; opacity: 1; }
   .ds-skel { border: 1px dashed GrayText; }
+  /* P0-D18: an open DisclosureButton keeps a Highlight edge, so its state survives a contrast theme. */
+  .ds-disclosure-btn.is-expanded { border: 2px solid Highlight; }
 }

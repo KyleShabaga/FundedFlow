@@ -197,7 +197,7 @@ describe("list, states and selection", () => {
     makeAccount({ id: "d", name: "Old eval", archivedAt: "2026-10-01T00:00:00.000Z" }),
   ];
 
-  it("lists live accounts by default with status filters, counts and per-currency starting balances", async () => {
+  it("lists live accounts by default with status filters, counts and a Current balance that is never the starting balance", async () => {
     holder.store = createTestStore(seed());
     const user = userEvent.setup();
     renderApp();
@@ -206,14 +206,19 @@ describe("list, states and selection", () => {
       expect.stringContaining("A very long account name"),
       expect.stringContaining("Apex"),
     ]);
-    expect(within(table).getByText("€12,480.55")).toBeTruthy();
+    // P0-D19: nothing is calculated, so each Current balance is the latest checkpoint (here the confirmed opening one),
+    // labelled as such, in the account's own currency. Starting balance is no longer a table column.
+    expect(within(table).getByRole("columnheader", { name: "Current balance" })).toBeTruthy();
+    expect(within(table).queryByRole("columnheader", { name: /Starting balance/ })).toBeNull();
+    expect(await within(table).findByText("€12,480.55")).toBeTruthy();
     expect(within(table).getByText("$50,000.00")).toBeTruthy();
+    expect(within(table).getAllByText(/^Confirmed by you · /)).toHaveLength(2);
     const filters = screen.getByRole("group", { name: "Show" });
     expect(within(filters).getByRole("button", { name: "Failed 1" })).toBeTruthy();
     await user.click(within(filters).getByRole("button", { name: "Archived 1" }));
     expect(within(screen.getByRole("table", { name: "Accounts" })).getByText("Old eval")).toBeTruthy();
     // Nothing is calculated, so the Current balance KPI is unknown (—) and says so; never a starting balance or 0.
-    expect(screen.getByText("Current balance")).toBeTruthy();
+    expect(screen.getAllByText("Current balance")).toHaveLength(2);
     expect((await screen.findAllByText(/live accounts has a current estimate|live account has no current estimate/)).length).toBeGreaterThan(0);
   });
 

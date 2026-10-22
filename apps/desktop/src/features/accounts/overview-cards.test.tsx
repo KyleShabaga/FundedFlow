@@ -116,6 +116,39 @@ describe("account overview cards", () => {
     expect(where).toBe(`/accounts/${A}`);
   });
 
+  it("shows the card's balance in the table's Current balance column: a current estimate, else the latest checkpoint", async () => {
+    seed([makeAccount({ id: A, name: "Eval A" }), makeAccount({ id: B, name: "Eval B", currency: "EUR", startingBalance: "12480.55" })]);
+    holder.store.trades.set(A, [closedTrade(A, 1, "125.5", "2026-10-21")]);
+    await assign(A);
+    const ids = holder.store.trades.get(A)!.map(t => t.id);
+    await holder.store.saveEstimate(A, CUTOFF, r => ({ ...r, status: "Safe", reasons: [], balance: "52125.5", rules: [drawdownOutcome({ headroom: "2125.5", sourceReferences: ids })] }));
+    renderCards();
+    const table = await screen.findByRole("table", { name: "Accounts" });
+    const rowOf = (name: string) => within(table).getByRole("rowheader", { name: new RegExp(name) }).closest("tr") as HTMLElement;
+    // Not sortable: amounts read per row (estimate or checkpoint, maybe unknown or in another currency) aren't ordered here.
+    expect(within(within(table).getByRole("columnheader", { name: "Current balance" })).queryByRole("button")).toBeNull();
+    await waitFor(() => expect(within(rowOf("Eval A")).getByText("$52,125.50")).toBeTruthy());
+    expect(within(rowOf("Eval A")).getByText(/^From your records · /)).toBeTruthy();
+    expect(within(rowOf("Eval A")).getByText(/Estimated balance · From your records · As of /)).toBeTruthy();
+    // B has nothing calculated: its latest checkpoint (the store's confirmed opening one), labelled as a checkpoint
+    // with its time and in B's own currency, never added to A's.
+    await waitFor(() => expect(within(rowOf("Eval B")).getByText("€12,480.55")).toBeTruthy());
+    expect(within(rowOf("Eval B")).getByText(/^Confirmed by you · /)).toBeTruthy();
+    expect(within(rowOf("Eval B")).getByText(/^Last confirmed balance · Confirmed by you · from the firm's dashboard, /)).toBeTruthy();
+    // A's starting balance is not the balance shown.
+    expect(within(rowOf("Eval A")).queryByText("$50,000.00")).toBeNull();
+  });
+
+  it("puts the status filter and search on one toolbar row, search last", async () => {
+    seed([makeAccount({ id: A, name: "Eval A" })]);
+    renderCards();
+    const table = await screen.findByRole("table", { name: "Accounts" });
+    const toolbar = table.closest(".ds-dt-card")!.querySelector(".ds-dt-toolbar")!;
+    const [left, right] = Array.from(toolbar.children);
+    expect(within(left as HTMLElement).getByRole("group", { name: "Show" })).toBeTruthy();
+    expect(within(right as HTMLElement).getByRole("searchbox", { name: "Search accounts" })).toBeTruthy();
+  });
+
   it("offers Quick import for that attempt from the card menu, but not for an archived one", async () => {
     seed([makeAccount({ id: A, name: "Eval A" }), makeAccount({ id: B, name: "Old B", archivedAt: "2026-10-01T00:00:00.000Z" })]);
     const user = userEvent.setup();

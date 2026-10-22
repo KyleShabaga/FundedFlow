@@ -16,6 +16,7 @@ import {
   formatMoney,
   LoadingState,
   Pnl,
+  Skeleton,
   StateBoundary,
   StatList,
   TextField,
@@ -25,6 +26,7 @@ import {
 } from "../../../design-system";
 import { useActiveAccount } from "../../accounts/active-account";
 import type { AccountViewModel } from "../../accounts/view-models/account";
+import { useGuardedNavigate } from "../../shared/hooks/use-leave-guard";
 import { retryRead, toAsyncState } from "../../shared/presentation";
 import { useRemoveTrade, useRestoreTrade, useTradeRecord } from "../../trades/hooks/trades";
 import type { TradeRecordView } from "../../trades/api/trades";
@@ -40,7 +42,7 @@ export function TradeDetailPage() {
   const accountId = params.get("account");
   // ?account= names the attempt explicitly (Insights drill-downs across attempts); otherwise the active account.
   if (accountId) return <NamedAccountTrade accountId={accountId} tradeId={tradeId} />;
-  return <JournalAccountGate>{account => <AccountTrade key={`${account.id}:${tradeId}`} account={account} tradeId={tradeId} />}</JournalAccountGate>;
+  return <JournalAccountGate>{account => <AccountTrade key={account.id} account={account} tradeId={tradeId} />}</JournalAccountGate>;
 }
 
 function NamedAccountTrade({ accountId, tradeId }: { accountId: string; tradeId: string }) {
@@ -57,7 +59,7 @@ function NamedAccountTrade({ accountId, tradeId }: { accountId: string; tradeId:
       </div>
     );
   }
-  return <AccountTrade key={`${account.id}:${tradeId}`} account={account} tradeId={tradeId} named />;
+  return <AccountTrade key={account.id} account={account} tradeId={tradeId} named />;
 }
 
 const PNL_SOURCE: Record<string, string> = {
@@ -74,6 +76,9 @@ const FIELD_LABEL: Record<string, string> = {
   realizedPnl: "Net P&L", pnlStatus: "P&L source", notes: "Notes",
 };
 
+// The page stays mounted across previous/next (keyed on the account only), so the back link and layout never blank
+// out. The record query is keyed per trade: an uncached trade reads as loading (never the previous trade's values),
+// and a late response for a trade no longer shown only fills its own cache entry.
 function AccountTrade({ account, tradeId, named = false }: { account: AccountViewModel; tradeId: string; named?: boolean }) {
   const record = useTradeRecord(account.id, tradeId);
   const location = useLocation();
@@ -91,16 +96,44 @@ function AccountTrade({ account, tradeId, named = false }: { account: AccountVie
         </div>
       ) : (
         <StateBoundary state={toAsyncState(record)} label="trade" scope="route" onRetry={retryRead(record.refresh)}
-          loading={<LoadingState label="Loading the trade" layout="lines" rows={8} />}>
-          {r => <TradeView account={account} record={r} named={named} />}
+          loading={<TradeLoading />}>
+          {r => <TradeView key={r.trade.id} account={account} record={r} named={named} />}
         </StateBoundary>
       )}
     </div>
   );
 }
 
+// Stands in for TradeView with the same header, actions and two columns, so the page keeps its shape while the next
+// trade loads. Nothing in it belongs to a trade: no symbol, position or P&L until the record arrives.
+function TradeLoading() {
+  return (
+    <article className="jr-detail" aria-busy="true" aria-label="Loading the trade">
+      <header className="jr-detail-head">
+        <Skeleton width={240} height={14} />
+        <div className="jr-detail-title"><Skeleton width={180} height={28} /></div>
+        {/* Placeholders that hold the actions' place; hidden from assistive tech, which hears the loading status. */}
+        <div className="jr-detail-actions" aria-hidden="true">
+          <Button size="sm" icon={<ChevronLeft size={14} aria-hidden="true" />} disabled>Previous trade</Button>
+          <Button size="sm" icon={<ChevronRight size={14} aria-hidden="true" />} disabled>Next trade</Button>
+          <Button size="sm" icon={<Pencil size={14} aria-hidden="true" />} disabled>Correct trade</Button>
+          <Button size="sm" variant="ghost" icon={<Trash2 size={14} aria-hidden="true" />} disabled>Delete</Button>
+        </div>
+      </header>
+      <div className="jr-detail-grid">
+        <div className="jr-detail-main"><div className="ds-card"><LoadingState label="Loading the trade" layout="panel" /></div></div>
+        <div className="jr-detail-side"><div className="ds-card jr-section">
+          {Array.from({ length: 8 }, (_, i) => <Skeleton key={i} width={i === 7 ? "60%" : "100%"} />)}
+        </div></div>
+      </div>
+    </article>
+  );
+}
+
 function TradeView({ account, record, named = false }: { account: AccountViewModel; record: TradeRecordView; named?: boolean }) {
   const navigate = useNavigate();
+  // Previous/Next ask first while the review has unsaved edits, as links do.
+  const go = useGuardedNavigate();
   const toast = useToast();
   const t = record.trade;
   const tz = account.timezone;
@@ -128,9 +161,9 @@ function TradeView({ account, record, named = false }: { account: AccountViewMod
         </div>
         <div className="jr-detail-actions">
           <Button size="sm" icon={<ChevronLeft size={14} aria-hidden="true" />} disabled={!record.previousTradeId}
-            onClick={() => record.previousTradeId && navigate(tradePath(record.previousTradeId, named ? account.id : undefined))}>Previous trade</Button>
+            onClick={() => record.previousTradeId && go(tradePath(record.previousTradeId, named ? account.id : undefined))}>Previous trade</Button>
           <Button size="sm" icon={<ChevronRight size={14} aria-hidden="true" />} disabled={!record.nextTradeId}
-            onClick={() => record.nextTradeId && navigate(tradePath(record.nextTradeId, named ? account.id : undefined))}>Next trade</Button>
+            onClick={() => record.nextTradeId && go(tradePath(record.nextTradeId, named ? account.id : undefined))}>Next trade</Button>
           <Button size="sm" icon={<Pencil size={14} aria-hidden="true" />} onClick={() => setEditing(true)} disabled={readOnly} disabledReason={readOnly ? "Archived accounts are read-only" : undefined}>Correct trade</Button>
           <Button size="sm" variant="ghost" icon={<Trash2 size={14} aria-hidden="true" />} onClick={() => setDeleting(true)} disabled={readOnly} disabledReason={readOnly ? "Archived accounts are read-only" : undefined}>Delete</Button>
         </div>

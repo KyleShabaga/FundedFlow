@@ -136,6 +136,8 @@ describe("account overview card model", () => {
     const m = model({ records: records({ observations: [checkpoint()], trades: [after] }) });
     expect(m.balance).toMatchObject({ label: "Last confirmed balance", value: { amount: "50210.25" }, provenance: { label: "Confirmed by you" } });
     expect(m.balance.note).toContain("1 trade since, not included");
+    // The Accounts table's short line reads these: the checkpoint's own time and the trades it leaves out.
+    expect(m.balance).toMatchObject({ at: checkpoint().observedAt, tradesSince: 1 });
     const unconfirmed = model({ records: records({ observations: [checkpoint({ confirmation: "unconfirmed", sourceCategory: "user_entered" })] }) });
     expect(unconfirmed.balance).toMatchObject({ label: "Last reported balance", provenance: { label: "Not confirmed", tone: "warn" } });
     const partial = model({ truth: current(result(), { baseline: "available", closedTrades: "incomplete", fees: "available", ledger: "incomplete", openPositions: "unsupported", eodHistory: "available", intradayHistory: "unsupported", sourceReference: "t" }) });

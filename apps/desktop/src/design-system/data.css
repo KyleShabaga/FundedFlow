@@ -48,6 +48,7 @@
 .ds-pager-page:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
 
 /* MetricCard, LabeledValue, StatList */
+.ds-metric-title { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
 .ds-metric-main { min-width: 0; }
 .ds-metric-main .ds-tile-value { overflow-wrap: anywhere; }
 .ds-metric-unit { font-size: .6em; color: var(--ink-muted); font-family: var(--font-sans); font-weight: 500; }

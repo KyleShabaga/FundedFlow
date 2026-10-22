@@ -42,12 +42,11 @@ async function saveSafe(store: AppStore, accountId: string) {
 }
 
 describe("import to every view", () => {
-  it("quick-imports a platform export from the header menu, and Journal shows it", async () => {
+  it("quick-imports a platform export from the header button, and Journal shows it", async () => {
     const store = createAppStore({ accounts: [makeAccount({ id: "acct-a", name: "Eval A" })], activeId: "acct-a" });
     const { user } = renderApp("/journal", store);
     expect(await screen.findByText(/No trades in this account yet/)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Import" }));
-    await user.click(await screen.findByRole("menuitem", { name: /Quick import/ }));
+    await user.click(screen.getByRole("button", { name: "Quick Import" }));
     await waitFor(() => expect(currentPath()).toBe("/import/quick"));
     await screen.findByRole("group", { name: "Choose a CSV file" });
     const golden = goldenCase("paired-short-warning");
@@ -70,9 +69,8 @@ describe("import to every view", () => {
     await go(user, "Insights");
     expect(await screen.findByText(/No closed trades in these attempts/)).toBeTruthy();
 
-    // The header Import menu offers Quick import and the full wizard (Build 18.5); a generic CSV belongs in the wizard.
-    await user.click(screen.getByRole("button", { name: "Import" }));
-    await user.click(await screen.findByRole("menuitem", { name: /Full wizard/ }));
+    // Quick Import is the header button and Import Wizard the sidebar item (P0-D07); a generic CSV belongs in the wizard.
+    await user.click(screen.getByRole("link", { name: "Import Wizard" }));
     await waitFor(() => expect(currentPath()).toBe("/import"));
     await screen.findByRole("group", { name: "Choose a CSV file" });
     const golden = goldenCase("generic-fees-and-duplicate");

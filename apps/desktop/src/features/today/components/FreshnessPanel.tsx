@@ -4,9 +4,10 @@
 // the Rust trading day now are shown separately. P0-D05: the last trade, the last import and the check time show in
 // the display time zone (Settings → Date and time); the other times and the trading day stay in the account's zone.
 import type { FinancialObservation } from "@fundedflow/domain";
+import { useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 
-import { Badge, formatInstant, formatMoney, InlineNotice, StatList, StatusIndicator, type StatItem } from "../../../design-system";
+import { Badge, DisclosureCard, formatInstant, formatMoney, InlineNotice, StatList, StatusIndicator, type StatItem } from "../../../design-system";
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import type { ImportViewModel } from "../../imports/view-models/import";
 import { displayZoneName, useDisplayTimeZone } from "../../settings/display-time-zone";
@@ -21,6 +22,19 @@ export const CHECKPOINT_KIND: Record<FinancialObservation["kind"], string> = {
 const SOURCE: Record<FinancialObservation["sourceCategory"], string> = { firm_dashboard: "firm dashboard", statement: "statement", user_entered: "entered by you" };
 
 const faint = (text: string) => <span className="ds-faint">{text}</span>;
+
+// P0-D22: open or closed is one choice for the whole window session. It outlives data refreshes and the remount on
+// an account change (the panel is keyed by account), and starts closed. Opening it reads nothing and checks nothing.
+let detailsOpen = false;
+const openListeners = new Set<() => void>();
+const subscribeOpen = (listener: () => void) => { openListeners.add(listener); return () => { openListeners.delete(listener); }; };
+const readOpen = () => detailsOpen;
+function setDetailsOpen(open: boolean) {
+  detailsOpen = open;
+  openListeners.forEach(l => l());
+}
+/** Tests only: back to the first-run state. */
+export function resetFreshnessDetails() { detailsOpen = false; }
 
 export function FreshnessPanel({ account, today, imports, importing, checkedAt }: {
   account: AccountViewModel;
@@ -95,12 +109,43 @@ export function FreshnessPanel({ account, today, imports, importing, checkedAt }
     },
   ];
 
+  // Closed, the rows are hidden, so anything in them that changes how the page reads is said under the header.
+  const attention: string[] = [];
+  if (factsFailed) attention.push("Trades and the trading day couldn't be read");
+  if (imports === null) attention.push("Import history couldn't be read");
+  else if (!importing && lastImport && lastImport.status === "failed") attention.push("The last import failed");
+  if (checkpoints === null && today.observations.error) attention.push("Checkpoints couldn't be read");
+  if (facts && result && result.tradingDay !== facts.effectiveTradingDay) attention.push(`The last estimate is for ${result.tradingDay}, not trading day ${facts.effectiveTradingDay}`);
+
+  const open = useSyncExternalStore(subscribeOpen, readOpen, readOpen);
   return (
-    <section className="ds-card td-panel td-fresh" aria-labelledby="td-fresh-title">
-      <div className="td-panel-head">
-        <h2 id="td-fresh-title" className="ds-title">How fresh this is</h2>
-        <span className="ds-faint">Checked against your records at {display.kind === "resolved" ? formatInstant(checkedAt, { timeZone: display.zone, zoneName: "offset" }) : "…"}</span>
-      </div>
+    <DisclosureCard
+      className="td-fresh"
+      title="How fresh this is"
+      open={open}
+      onOpenChange={setDetailsOpen}
+      summary={<>Checked against your records at {display.kind === "resolved" ? formatInstant(checkedAt, { timeZone: display.zone, zoneName: "offset" }) : "…"}</>}
+      notices={<>
+        {!open && attention.length > 0 && (
+          <ul className="td-fresh-attention" aria-label="Needs attention">
+            {attention.map(a => <li key={a}><StatusIndicator status="unknown" variant="inline" label={a} /></li>)}
+          </ul>
+        )}
+        {checkpoints && checkpoints.conflicts.length > 0 && (
+          <InlineNotice tone="warning" title="Checkpoints disagree">
+            {checkpoints.conflicts.length === 1 ? "Two checkpoints" : `${checkpoints.conflicts.length} sets of checkpoints`} for the same moment have different values, so balances that use them are Unknown. Record a correction with the figure from the firm's dashboard.
+          </InlineNotice>
+        )}
+        {discrepancies.map(d => (
+          <InlineNotice key={d.id} tone="error" title={d.result.reconciliationStatus === "mismatched" ? "Your records differ from the firm's figure" : `Comparison ${d.result.reconciliationStatus}`}>
+            {d.result.reconciliationStatus === "mismatched" && d.result.difference !== null
+              ? `At ${at(d.result.asOf)} the firm showed ${formatMoney(d.observation.value, { signed: false, currency: d.observation.currency })}; your trades and ledger give ${formatMoney(d.result.derivedBalance, { signed: false, currency: d.observation.currency })} (difference ${formatMoney(d.result.difference, { currency: d.observation.currency })}). `
+              : `${reasonText(d.result.reasonCode)} `}
+            {d.result.nextVerificationAction}. Nothing was adjusted.
+          </InlineNotice>
+        ))}
+      </>}
+    >
       <StatList label="Data freshness" items={items} />
       {display.kind === "resolved" && (
         <p className="ds-faint td-fresh-zone">
@@ -109,19 +154,6 @@ export function FreshnessPanel({ account, today, imports, importing, checkedAt }
           <Link to="/settings">Change in Settings</Link>
         </p>
       )}
-      {checkpoints && checkpoints.conflicts.length > 0 && (
-        <InlineNotice tone="warning" title="Checkpoints disagree">
-          {checkpoints.conflicts.length === 1 ? "Two checkpoints" : `${checkpoints.conflicts.length} sets of checkpoints`} for the same moment have different values, so balances that use them are Unknown. Record a correction with the figure from the firm's dashboard.
-        </InlineNotice>
-      )}
-      {discrepancies.map(d => (
-        <InlineNotice key={d.id} tone="error" title={d.result.reconciliationStatus === "mismatched" ? "Your records differ from the firm's figure" : `Comparison ${d.result.reconciliationStatus}`}>
-          {d.result.reconciliationStatus === "mismatched" && d.result.difference !== null
-            ? `At ${at(d.result.asOf)} the firm showed ${formatMoney(d.observation.value, { signed: false, currency: d.observation.currency })}; your trades and ledger give ${formatMoney(d.result.derivedBalance, { signed: false, currency: d.observation.currency })} (difference ${formatMoney(d.result.difference, { currency: d.observation.currency })}). `
-            : `${reasonText(d.result.reasonCode)} `}
-          {d.result.nextVerificationAction}. Nothing was adjusted.
-        </InlineNotice>
-      ))}
-    </section>
+    </DisclosureCard>
   );
 }
