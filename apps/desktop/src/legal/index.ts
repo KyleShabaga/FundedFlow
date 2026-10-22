@@ -1,4 +1,5 @@
 // The documents this build asks the user to accept (NA-3). Final text replaces the drafts here and only here.
+import MIT_LICENSE from "../../../../LICENSE?raw";
 import type { LegalDocument } from "./document";
 import { privacyNotice } from "./privacy-notice";
 import { userAgreement } from "./user-agreement";
@@ -15,10 +16,12 @@ export const PRIVACY_SUMMARY = [
 ] as const;
 
 /** A summary of the repository's root LICENSE; the LICENSE file is the authority. */
+export const LICENSE_TEXT = MIT_LICENSE;
+
 export const LICENSE_SUMMARY = {
-  notice: "Copyright (c) 2026 Kyle Shabaga. All rights reserved.",
+  notice: "Copyright (c) 2026 Kyle Shabaga",
   terms: [
-    "FundedFlow is proprietary, source-available software. It is not open source: any use the licence doesn't permit needs the copyright holder's written permission.",
+    "FundedFlow is open source under the MIT License. You may use, copy, modify, distribute, sublicense and sell copies, provided you include the copyright and permission notice in all copies or substantial portions of the software.",
     "It is provided as is, without warranty, as a record-keeping tool that doesn't give financial, trading or investment advice.",
     "Third-party components (libraries, crates, npm packages and fonts) are licensed by their own authors under their own terms.",
   ],

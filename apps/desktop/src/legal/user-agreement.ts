@@ -5,8 +5,8 @@ import type { LegalDocument } from "./document";
 export const userAgreement: LegalDocument = {
   id: "user-agreement",
   title: "User agreement (draft)",
-  version: "0.1.0-draft",
-  effectiveDate: "2026-10-21",
+  version: "0.1.1-draft",
+  effectiveDate: "2026-10-22",
   draft: true,
   summary: "A placeholder for the user agreement, which is still being prepared. FundedFlow records your trades; it doesn't give financial advice.",
   sections: [
@@ -19,7 +19,7 @@ export const userAgreement: LegalDocument = {
     {
       heading: "Licence",
       paragraphs: [
-        "FundedFlow is proprietary software. Copyright (c) 2026 Kyle Shabaga. All rights reserved. The licence summary is in Settings, under Privacy & legal.",
+        "FundedFlow is open source under the MIT License. Copyright (c) 2026 Kyle Shabaga. The full MIT License, including its permissions, notice requirement and warranty and liability provisions, is available in Settings, under Privacy & legal, and in the installed LICENSE file. This draft does not add restrictions to the permissions granted by the MIT License. Third-party components retain their own licences and notices.",
       ],
     },
     {
@@ -35,5 +35,5 @@ export const userAgreement: LegalDocument = {
       ],
     },
   ],
-  digest: "d3d42532fc413f21162cd5696be91ebafac51b3f4e3285f03826fe5163c2dec6",
+  digest: "77da15c530c2f0da74b7b1920b1659d6c1427633d7eccd9d141caba59c7de530",
 };

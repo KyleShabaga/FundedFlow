@@ -15,7 +15,7 @@ BANNED_PACKAGES: dict[str, str] = {
     "cloudscraper": "bot-challenge solving",
     "curl-cffi": "browser TLS impersonation",
     "tls-client": "browser TLS impersonation",
-    "pymupdf": "AGPL-3.0, incompatible with the proprietary repository",
+    "pymupdf": "AGPL-3.0, outside the collector's permitted dependency licenses",
     "fitz": "PyMuPDF alias (AGPL-3.0)",
     "firecrawl": "hosted scraping service",
     "firecrawl-py": "hosted scraping service",

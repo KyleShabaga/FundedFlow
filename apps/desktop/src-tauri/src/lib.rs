@@ -1,5 +1,5 @@
-// Copyright (c) 2026 Kyle Shabaga. All rights reserved.
-// Proprietary and source-available, not open source. See LICENSE in the repository root.
+// Copyright (c) 2026 Kyle Shabaga
+// SPDX-License-Identifier: MIT
 
 mod catalogue;
 mod data_controls;

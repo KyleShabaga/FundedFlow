@@ -12,7 +12,8 @@ vi.mock("@tauri-apps/plugin-dialog", async () => (await import("../test/boundari
 const close = vi.hoisted(() => vi.fn<() => Promise<void>>());
 vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => ({ close }) }));
 
-import { CURRENT_LEGAL_DOCUMENTS, currentAcceptance, THIRD_PARTY_SUMMARY } from "../legal";
+import { CURRENT_LEGAL_DOCUMENTS, currentAcceptance, LICENSE_TEXT, THIRD_PARTY_SUMMARY } from "../legal";
+import { formatDocumentDate } from "../features/legal/components/LegalDocuments";
 import { preloadLegalAcceptance, primeLegalAcceptance } from "../lib/data/legal";
 import { archivePreview, createAppStore, makeAccount, makeTrade } from "../test/app-store";
 import { expectNoAxeViolations } from "../test/axe";
@@ -63,7 +64,7 @@ describe("first launch", () => {
       await user.click(summary);
       const article = within(main).getByRole("article", { name: doc.title });
       expect(within(article).getByText("Draft")).toBeTruthy();
-      expect(within(article).getByText(`Version ${doc.version} · Draft dated October 21, 2026`)).toBeTruthy();
+      expect(within(article).getByText(`Version ${doc.version} · Draft dated ${formatDocumentDate(doc.effectiveDate)}`)).toBeTruthy();
     }
     // Keyboard only: from the title, Tab reaches the expanders, then Decline, then Accept.
     title.focus();
@@ -224,7 +225,9 @@ describe("Settings → Privacy & legal", () => {
     const section = heading.closest("section")!;
     expect(within(section).getByText(/keeps your journal only on this computer/)).toBeTruthy();
     const list = section.querySelector<HTMLElement>("dl[aria-label='Accepted documents']")!;
-    expect(within(list).getAllByText(`Version ${privacy.version} · Draft dated October 21, 2026`)).toHaveLength(2);
+    for (const doc of CURRENT_LEGAL_DOCUMENTS) {
+      expect(within(list).getByText(`Version ${doc.version} · Draft dated ${formatDocumentDate(doc.effectiveDate)}`)).toBeTruthy();
+    }
     expect(within(list).getByText(agreement.title)).toBeTruthy();
     expect(within(list).getByText(/Oct 21, 2026/)).toBeTruthy();
     expect(ACCEPTED_AT).toBe("2026-10-21T18:00:00.000Z");
@@ -234,7 +237,10 @@ describe("Settings → Privacy & legal", () => {
       await user.click(within(section).getByText(name));
     }
     expect(within(section).getByRole("article", { name: privacy.title })).toBeTruthy();
-    expect(within(section).getByText("Copyright (c) 2026 Kyle Shabaga. All rights reserved.")).toBeTruthy();
+    expect(within(section).getByText("Copyright (c) 2026 Kyle Shabaga")).toBeTruthy();
+    await user.click(within(section).getByText("Read the MIT License"));
+    const license = within(section).getByRole("article", { name: "MIT License" });
+    expect(within(license).getByText((_, element) => element?.tagName === "P" && element.textContent === LICENSE_TEXT)).toBeTruthy();
     // Build 26.78: the real notices, loaded from THIRD_PARTY_NOTICES.txt when opened.
     expect(within(section).queryByText(/Not included in this build yet/)).toBeNull();
     expect(within(section).getByText(new RegExp(`includes ${THIRD_PARTY_SUMMARY.total} third-party components`))).toBeTruthy();

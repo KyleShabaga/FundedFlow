@@ -7,6 +7,10 @@ Card: [NA-3 — First-run privacy notice and agreement](https://app.notion.com/p
 > **The documents are DRAFT placeholders (version `0.1.0-draft`).** They are written only from verified facts about
 > V1 and have not been reviewed by counsel. They block distribution until the owner records counsel sign-off (P0-13).
 
+The MIT transition updates the license and the agreement’s license section (version `0.1.1-draft`, dated
+2026-10-22). The privacy notice remains `0.1.0-draft`. The draft warning and release-review requirement
+above remain in place; see [transition scope and remaining work](../../licensing-transition.md).
+
 ## When it shows
 
 Before any app content, whenever this install has no acceptance record that covers every current document at its
@@ -73,7 +77,8 @@ Settings only; the first-run screen doesn't show them (the installer has no lice
 Privacy & legal ends with a `Disclosure` **Licence and third-party notices**:
 
 1. `h3` **Licence**: `LICENSE_SUMMARY` (copyright line and a plain-language paraphrase; the root `LICENSE` is the
-   authority and counsel may change its wording, P0-13).
+   authority). The summary identifies MIT and its notice requirement. A nested **Read the MIT License** disclosure
+   shows the complete root license with the existing preformatted DocumentView; the installer ships the same file.
 2. `h3` **Third-party notices**: one sentence with the counts from `third-party-summary.json` ("FundedFlow includes N
    third-party components: R Rust crates, P npm packages and F fonts…") and where the installed file is.
 3. A nested `Disclosure` **Read the third-party notices** (screen readers also hear "(N components)"). Its first open

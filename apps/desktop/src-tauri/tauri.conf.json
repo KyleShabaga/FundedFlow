@@ -33,7 +33,7 @@
     "homepage": "https://github.com/KyleShabaga/FundedFlow",
     "shortDescription": "Local-first trading journal for funded-account traders",
     "longDescription": "FundedFlow: a local-first trading journal for funded-account traders. Accounts, trades, journal entries and CSV imports stay in a SQLite file on this computer; nothing leaves the machine.",
-    "copyright": "Copyright (c) 2026 Kyle Shabaga. All rights reserved.",
+    "copyright": "Copyright (c) 2026 Kyle Shabaga. Licensed under the MIT License.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

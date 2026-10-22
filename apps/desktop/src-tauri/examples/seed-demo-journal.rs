@@ -1,5 +1,5 @@
-// Copyright (c) 2026 Kyle Shabaga. All rights reserved.
-// Proprietary and source-available, not open source. See LICENSE in the repository root.
+// Copyright (c) 2026 Kyle Shabaga
+// SPDX-License-Identifier: MIT
 
 //! Developer CLI for Add Fake Data (Build 26.9): seeds synthetic DEMO / TEST DATA into an isolated
 //! test journal that FundedFlow does not have open. Debug builds only; see docs/development/dev-tools.md.

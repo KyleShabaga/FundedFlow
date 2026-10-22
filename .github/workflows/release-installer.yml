@@ -16,6 +16,8 @@ on:
       - 'apps/desktop/vite.config.ts'
       - 'apps/desktop/index.html'
       - 'apps/desktop/scripts/**'
+      - 'LICENSE'
+      - 'apps/desktop/THIRD_PARTY_NOTICES.txt'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/release-installer.yml'

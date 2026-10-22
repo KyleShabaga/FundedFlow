@@ -150,10 +150,21 @@ the job still passes, so an outage can't block code checks or merges; on the sch
 
 ## License and ownership
 
-Copyright (c) 2026 Kyle Shabaga. All rights reserved.
+Copyright (c) 2026 Kyle Shabaga.
 
-FundedFlow is proprietary software. Its source code is publicly viewable, but it is **not open source**: being able to read it on GitHub does not give you a license to copy, modify, redistribute, sublicense or commercially use it, or to make derivative works. See [LICENSE](LICENSE) for the full terms.
+FundedFlow's original software and associated documentation are open source under the [MIT License](LICENSE).
+You may use, copy, modify, distribute, sublicense and sell copies, including in commercial products, provided
+you include the copyright and permission notice in all copies or substantial portions of the software.
+The software is provided as is, without warranty; see the full license for its terms.
 
-- Viewing the code, and the forking that GitHub's Terms of Service allow for public repositories, are fine.
-- Anything beyond that, including reuse in another project or commercial licensing, needs written permission from the copyright holder. To ask, open an issue in this repository or contact [@KyleShabaga](https://github.com/KyleShabaga) through GitHub.
-- Third-party libraries, crates and fonts used by FundedFlow keep their own licenses and notices; the FundedFlow license does not apply to them.
+- Third-party libraries, crates, fonts and other third-party materials keep their own licenses and notices.
+  The MIT license for FundedFlow does not relicense them. The installed app includes LICENSE and
+  THIRD_PARTY_NOTICES.txt, also available in Settings → Privacy & legal.
+- Imported journals and CSVs, screenshots, and third-party pages or documents used by the standalone collector
+  are not granted an MIT license merely because FundedFlow processes or stores them.
+- FundedFlow is a record-keeping tool. It does not provide financial, trading or investment advice or guarantee
+  broker or prop-firm compliance. Verify calculations against the original records and keep your own backups.
+- Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+The privacy notice and user agreement remain drafts. The MIT transition does not constitute counsel review or
+complete the existing release gate; see [transition scope and remaining work](docs/licensing-transition.md).
