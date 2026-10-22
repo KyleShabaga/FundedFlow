@@ -46,13 +46,13 @@ Decision only.
    - Gate rows TASK-029..TASK-034 for the one candidate recorded by TASK-029 (TASK-034 is a kept gate: TASK-008 Option A).
    - Owner decisions TASK-001..TASK-011 as recorded.
    - TASK-007 dispositions: P0-05 exporter/rule cohort **waived for owner-only V1** (no broad support claims); P0-09 existing reconciliation evidence linked in the register (TASK-035); P0-10 multi-user studies **deferred** until before external release; D5 **deferred** pending identification. None of these is a run/keep/adopt choice, so no TASK-007 follow-up task exists.
-   - TASK-002 follow-ups: TASK-037 (synthetic `Performance.csv` fixture and Rust tests), TASK-038 (remove two unreferenced real exports), TASK-039 (Git-history exposure assessment) and Kyle's separate disposition of TASK-039's result.
+   - TASK-002 follow-ups: TASK-037 (synthetic `Performance.csv` fixture and Rust tests), TASK-038 (remove two unreferenced real exports), TASK-039 (Git-history exposure assessment), Kyle's separate disposition of TASK-039's result and, if he chose option B (make private) or option C (rewrite history), the Verified state of its separate execution task; TASK-041 (value-level copies of real rows) with Kyle's ruling on it (remove, or accept as residual low-risk) and, if removal, its state.
    - TASK-008 follow-up: TASK-040 (`cargo fmt` formatting-only change and CI check).
    - TASK-010 outcome (whether ISSUE-002 was escalated to P0).
 2. Record Kyle's decision verbatim.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-035. Through TASK-029 this includes TASK-037, TASK-038 and TASK-039 resolved and TASK-040 Verified (TASK-002 and TASK-008 decisions; these four are r1 drafts on the Notion board with no repository specification yet).
+- Prerequisites: TASK-035. Through TASK-029 this includes TASK-037, TASK-038 and TASK-039 resolved and TASK-040 Verified (TASK-002 and TASK-008 decisions; these four are r1 cards: Notion drafts with repository specifications `TASK-037…040-*.md`, awaiting approval), plus, if TASK-039 option B or C is chosen, its execution task Verified, and TASK-041 if Kyle chooses removal.
 - Likely shared-file conflicts: None.
 
 ## Acceptance criteria (pass/fail)
@@ -70,10 +70,13 @@ Kyle's explicit choice recorded verbatim with date and source (trusted conversat
 
 ## Changes in r3
 - TASK-007 r3 approved (2026-10-22, Notion approval board): step 1 now lists its waivers and deferrals (P0-05 waived for owner-only V1; P0-10 and D5 deferred; P0-09 via TASK-035) as named go/no-go inputs, since "waived gates" was unspecific.
-- TASK-002 and TASK-008 approved with follow-ups TASK-037, 038, 039 and TASK-040 (Notion r1 drafts): added to step 1 and to Prerequisites (they gate TASK-029, so TASK-035 and this card depend on them); TASK-039's separate owner disposition is listed as its own input.
+- TASK-002 and TASK-008 approved with follow-ups TASK-037, 038, 039 and TASK-040 (r1 cards: Notion drafts with repository specifications `TASK-037…040-*.md`): added to step 1 and to Prerequisites (they gate TASK-029, so TASK-035 and this card depend on them); TASK-039's separate owner disposition is listed as its own input.
 - TASK-008 Option A keeps the TASK-034 gate: step 1 names it among the gate rows.
 - TASK-010 approved with a possible ISSUE-002 escalation: its outcome is listed as an input.
 - Added a pass/fail criterion that the presented inputs cover step 1, so the presentation step is checkable.
+- Independent review (review3_B), blocking: step 1 now includes, if TASK-039 option B or C is chosen, the Verified state of its execution task; Prerequisites likewise.
+- Independent review (review3_B), blocking: replaced the stale "no repository specification yet" wording; TASK-037..040 have r1 repository specifications (commit 4ff16f5).
+- Independent review (review3_B), nit: TASK-041 (split from TASK-037: value-level copies of real rows) and Kyle's ruling on it listed as an input.
 
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).

@@ -48,14 +48,14 @@ Installing (TASK-030).
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: All W1–W3 tasks Verified (incl. TASK-025, TASK-026, TASK-027). W1–W3 here means the code and documentation tasks.
 - Decisions (approved 2026-10-22): TASK-001 (A), TASK-002 (B + cleanup), TASK-005 (A), TASK-006 (A), TASK-008 (A for both gates).
-- TASK-002 follow-ups resolved (this card stays **Blocked** until then, per the TASK-002 decision): TASK-037 (synthetic replacement for `test_csvimport/Performance.csv` and its Rust tests) Verified and merged into the candidate SHA; TASK-038 (removal of the two unreferenced exports) Verified and merged; TASK-039 (Git-history exposure) assessed and its separate owner disposition recorded.
+- TASK-002 follow-ups resolved (this card stays **Blocked** until then, per the TASK-002 decision): TASK-037 (synthetic replacement for `test_csvimport/Performance.csv` and its Rust tests) Verified and merged into the candidate SHA; TASK-038 (removal of the two unreferenced exports) Verified and merged; TASK-039 (Git-history exposure) assessed, Kyle's separate owner disposition recorded and, if he chose option B (make the repository private) or option C (rewrite history), its separate execution task **Verified** (for C, the candidate SHA is taken from the rewritten history). If Kyle rules (TASK-041) that the value-level copies of real rows must be removed, TASK-041 Verified and merged into the candidate SHA is a prerequisite too; if he accepts them as low-risk, it is not.
 - TASK-040 (`cargo fmt` formatting and CI check, the TASK-008 cargo-fmt follow-up) **Verified** and contained in the candidate SHA (TASK-008 = A: adopt; G5).
 - TASK-034 code change (W3c) merged and contained in the candidate SHA (TASK-008 = A: gate kept). Its W5 owner run is **not** a prerequisite (it runs on this candidate).
 - Likely shared-file conflicts: None.
 
 ## Acceptance criteria (pass/fail)
 - [ ] Evidence register row complete: SHA, CI run, advisory result (not 'NOT RUN'), release run, version (`0.1.1` or later and higher than every earlier candidate, TASK-005 = A; equal to the `FundedFlow_<version>_x64-setup.exe` file name and, for a tag run, to the tag `v<version>`), EXE SHA-256 (matches SHA256SUMS.txt), artifact expiry ≥ 30 days.
-- [ ] The candidate SHA contains the merged TASK-037, TASK-038, TASK-040 and TASK-034 (code) changes, and TASK-039's disposition is recorded; the CI run on that SHA includes the TASK-040 `cargo fmt` check, green.
+- [ ] The candidate SHA contains the merged TASK-037, TASK-038, TASK-040 and TASK-034 (code) changes, and TASK-039's owner disposition is recorded and, if option B or C was chosen, its execution task is Verified (for C, the SHA is from the rewritten history); TASK-041 is merged if Kyle chose removal; the CI run on that SHA includes the TASK-040 `cargo fmt` check, green.
 - [ ] The CI run is a `push` to `main` or a `workflow_dispatch` run whose head SHA equals the recorded SHA (not a `pull_request` merge-commit run); if the push run's audit said 'NOT RUN', a `workflow_dispatch` run on the same SHA is green (`--fail-on-outage` applied automatically, `ci.yml:109, 124`).
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
@@ -82,6 +82,8 @@ Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE
 - Prerequisites: "TASK-00x decided" replaced by the decided options (decisions 2026-10-22).
 - Version: recorded version must follow TASK-005 Option A (`0.1.1` onward, increasing per candidate, tag matches) in scope and acceptance (TASK-005 r2 approved); the tag check applies to tag runs only (`release-installer.yml:7-9, 67-68`: `workflow_dispatch` and `v*` tag triggers; mismatch check only when the ref is a tag).
 - Acceptance: added a criterion that the candidate SHA contains the TASK-037/038/040/034 changes, TASK-039 is recorded and the CI run includes the TASK-040 fmt check (follows from the prerequisites above).
+- Independent review (review3_B), blocking: the TASK-039 prerequisite and acceptance now match TASK-039's own gate: disposition recorded **and**, if option B or C is chosen, its execution task Verified (for C, the candidate SHA comes from the rewritten history).
+- Independent review (review3_B), nit: TASK-041 (value-level copies of real rows, split from TASK-037) added as a conditional prerequisite, only if Kyle chooses removal. The matching TASK-029 row in `08-stage2-remediation-task-index.md:52` still shows r3 prerequisites and is to be updated in the index pass (not edited here).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.

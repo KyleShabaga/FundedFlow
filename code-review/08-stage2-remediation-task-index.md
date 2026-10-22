@@ -54,7 +54,7 @@
 | [TASK-031](remediation-tasks/TASK-031-gate-upgrade-reinstall-uninstall.md) | Gate: upgrade, reinstall, downgrade and uninstall (ticked and unticked) on the candidate | ISSUE-042; N/A (existing gate/decision); WIN-003, WIN-004 (linked) | Gate / NA-5 | Verification / Yes — ISSUE-042 | TASK-029; TASK-027 unique versions. | M | Low | Windows only | r3 (2026-10-22; r2 + Block 4 corrections, 10 §8.2/§8.3; independently reviewed) | No approval; Ready for Approval (r3) |
 | [TASK-032](remediation-tasks/TASK-032-gate-manual-recovery.md) | Gate: manual recovery acceptance on the candidate (incl. ISSUE-001–004 scenarios) | ISSUE-044; TEST-007 (canonical here) | Gate / Build 26.5–26.7 / Build 10.5 gate 6 | Verification / Yes — ISSUE-044 | TASK-029. | M | Low | Windows only | r3 (2026-10-22; r2 + Block 4 corrections, 10 §8.2/§8.3; independently reviewed) | No approval; Ready for Approval (r3) |
 | [TASK-033](remediation-tasks/TASK-033-gate-accessibility-dpi.md) | Gate: manual accessibility and window/DPI matrix on the candidate | ISSUE-045, ISSUE-046; TEST-007 (cross-ref); WIN-009 (linked) | Gate / Build 26 §9 / P0-08 / NA-5 | Verification / Yes — ISSUE-045, ISSUE-046 | TASK-029. | M | Low | Windows only | r3 (2026-10-22; r2 + Block 4 corrections, 10 §8.2/§8.3; independently reviewed) | No approval; Ready for Approval (r3) |
-| [TASK-034](remediation-tasks/TASK-034-gate-real-journal-copy-upgrade.md) | Gate (conditional): real-journal-copy upgrade with a safe procedure | ISSUE-052, ISSUE-038; TEST-006 | Gate (if kept) / P2 test safety / Build 10.5 gate | Test / Yes if TASK-008 keeps it — ISSUE-052 | TASK-008 (keep). Code change (W3c) before TASK-029; owner run (W5) after TASK-029 (r3). | S | Low | Any OS (test) + Windows (owner run) | r3 (2026-10-22; r2 + Block 4 corrections, 10 §8.2/§8.3; independently reviewed) | No approval; Ready for Approval (r3) |
+| [TASK-034](remediation-tasks/TASK-034-gate-real-journal-copy-upgrade.md) | Gate: real-journal-copy upgrade with a safe procedure (kept by TASK-008 Option A) | ISSUE-052, ISSUE-038; TEST-006 | Gate (kept, TASK-008 A) / P2 test safety / Build 10.5 gate | Test / Yes if TASK-008 keeps it — ISSUE-052 | TASK-008 (keep). Code change (W3c) before TASK-029; owner run (W5) after TASK-029 (r3). | S | Low | Any OS (test) + Windows (owner run) | r3 (2026-10-22; r2 + Block 4 corrections, 10 §8.2/§8.3; independently reviewed) | No approval; Ready for Approval (r3) |
 | [TASK-035](remediation-tasks/TASK-035-evidence-register-na7-final.md) | Documentation/gate: final evidence register and NA-7 release notes | ISSUE-049; N/A (existing gate/decision) | Gate / NA-7 | Documentation / Yes — ISSUE-049 | TASK-029..TASK-033 (and TASK-034 if kept). | S | Low | Any OS | r3 (2026-10-22; r2 + Block 4 nits, 10 §8.3; independently reviewed) | No approval; Ready for Approval (r3) |
 | [TASK-036](remediation-tasks/TASK-036-owner-go-no-go.md) | Owner decision: P0-18 human go/no-go | ISSUE-054; N/A (existing gate/decision) | Gate / P0-18 (V1) | Owner Decision / Yes — ISSUE-054 | TASK-035. | S | Low | N/A | r2 (2026-10-22; r1 + independent-review corrections) | No approval; Ready for Approval |
 
@@ -72,9 +72,9 @@ Card paths are relative to `code-review/`. Every card carries the full field set
 | W0 | Owner decisions and measurements. No code. | 001, 002, 003, 004 (docs after 003), 005, 006, 007, 008, 009, 010, 011 |
 | W1 | Data safety (native), merged in this order because they share `data_controls` files | 012 → 013 → 014 → 015 → 016 → 017 → 018; 019 is an optional pull-in that can run in parallel |
 | W2 | Correctness (Rust, then UI). W2 and the independent units (019, 020, 022, 026, and the TASK-034 code change in W3c) may run alongside W1 (09 §4; r3). | 020 → 021; 022 → 023 (023 needs the result of 011(a)); 024 goes after 021 and 022 |
-| W3 | Legal, release and docs | 026 → 025; 027 (after 005 and 006; merges after 017, before 029); 028 (after 025, 026 and 011); W3c: the TASK-034 code change, before 029, only if 008 keeps the gate (r3) |
+| W3 | Legal, release and docs | 026 → 025; 027 (after 005 and 006; merges after 017, before 029); 028 (after 025, 026 and 011); W3c: the TASK-034 code change, before 029 (gate kept by TASK-008 A) |
 | W4 | Candidate | 029 |
-| W5 | Manual Windows gates | 030, 031, 032, 033; the TASK-034 owner run, conditional on 008 (r3) |
+| W5 | Manual Windows gates | 030, 031, 032, 033; the TASK-034 owner run (gate kept by TASK-008 A) |
 | W6 | Release notes and go/no-go | 035 → 036 |
 
 **Critical path:**
@@ -133,7 +133,7 @@ Card paths are relative to `code-review/`. Every card carries the full field set
 | ISSUE-035 Duplicate collapse | DATA-020 | TASK-009 | Decision only (by design) |
 | ISSUE-036 Test CSV provenance | TR-020 | TASK-002 | Decision. TR-020 is Unverified, pending the owner's answer. |
 | ISSUE-037 No ledger-entry UI | UI-020 | TASK-009 (D-LEDGER) | Decision. **Deferred to V1.1:** implementation. |
-| ISSUE-038 Real-journal upgrade test safety | TEST-006 | TASK-008, TASK-034 | Only if gate ISSUE-052 is kept; otherwise **deferred to V1.1** |
+| ISSUE-038 Real-journal upgrade test safety | TEST-006 | TASK-008, TASK-034 | V1: gate ISSUE-052 kept (TASK-008 Option A, approved 2026-10-22) |
 
 ### C.2 Gates (ISSUE-039 to ISSUE-054)
 
