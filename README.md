@@ -4,6 +4,10 @@ FundedFlow is a Windows-first, local-first trading journal built with Tauri 2, R
 
 ## Prerequisites
 
+**To install and run FundedFlow:** Windows 10 or 11. The installer ensures the Microsoft Edge WebView2 runtime is present (see [Windows installer](#windows-installer)).
+
+**To develop FundedFlow:**
+
 - Windows 10 (1803+) or Windows 11 with Microsoft Edge WebView2 Runtime
 - Node.js LTS (22 or newer) and npm
 - Rust stable with the `x86_64-pc-windows-msvc` target
@@ -60,6 +64,21 @@ npm run tauri build
 | `npm run seed:test-journal` / `npm run reset:test-journal` | Seed or reset that test journal from the command line (FundedFlow closed) |
 
 FundedFlow is a desktop app: its React UI runs inside the app's own window, not in a web browser. SQLite is bundled through `rusqlite` and accessed only through Rust commands.
+
+## Windows installer
+
+`npm run tauri build` produces an unsigned NSIS installer, `FundedFlow_<version>_x64-setup.exe`, in `apps/desktop/src-tauri/target/release/bundle/nsis/`. NSIS is the only bundle target.
+
+The [Release installer workflow](.github/workflows/release-installer.yml) builds the same installer on `windows-latest`. It runs manually (`workflow_dispatch`), on `v*` tags (the tag must equal `v<version>` from `tauri.conf.json`), and on pull requests that change `tauri.conf.json` or the workflow. Nothing is published: it uploads a workflow artifact named `fundedflow-<version>-<short sha>-windows-nsis`, kept for 30 days, containing the installer and `SHA256SUMS.txt`. Find it on the workflow run's page under **Artifacts**; the run summary also shows the hash and source commit.
+
+**Installing, verifying and updating (end users):**
+
+1. Download the installer and `SHA256SUMS.txt`. Check the file with `Get-FileHash .\FundedFlow_<version>_x64-setup.exe -Algorithm SHA256`; the hash must match the line in `SHA256SUMS.txt`.
+2. Run the installer. It is not code-signed, so SmartScreen shows "Windows protected your PC": choose **More info**, then **Run anyway**. No administrator rights are needed (per-user install).
+3. If WebView2 is missing, the installer downloads it from Microsoft once.
+4. Updates are manual: verify and run the newer installer. If it offers to uninstall the old version first, leave **Delete the application data** unticked to keep your journal. FundedFlow does not check for updates.
+
+Full wording, uninstall behaviour and the clean-machine smoke checklist: [Install and verify](docs/build-26.75-evidence.md#install-and-verify-for-the-na-7-release-notes) in `docs/build-26.75-evidence.md`.
 
 ## Local data
 
