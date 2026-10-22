@@ -238,6 +238,9 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
   300 px only identity, status, the primary figure and the actions remain. It computes nothing.
 - `ProgressMeter` draws a bar for two amounts the caller already has (engine figures), with a required `valueText`
   for screen readers. Only `value ÷ max` (bigint micro-units, `meterFraction`) sets the width; it states no verdict.
+- `OverviewFigure` (NA-4) is the card's figure block on its own: label, `MetricValue`, optional provenance badge and
+  note, `primary` for the larger value. The account detail page's Risk section uses it so a figure reads the same on
+  the card and the page; the page lays the figures out itself. Gallery: under the overview card section.
 
 ## P0-D01: brand mark and logo
 

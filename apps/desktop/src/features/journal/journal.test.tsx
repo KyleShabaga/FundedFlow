@@ -237,6 +237,25 @@ describe("Review", () => {
     expect(within(card).getByText("Outcome")).toBeTruthy();
   });
 
+  it("compares planned risk in micro-units: zero (even written with extra decimals) is refused, a tiny amount is kept", async () => {
+    const user = userEvent.setup();
+    renderAt("/journal/trades/t1");
+    const card = await screen.findByRole("region", { name: "Review" });
+    const risk = await within(card).findByLabelText(/^Planned risk/);
+    const refused = "Planned risk: must be greater than zero (leave it empty when unknown)";
+    for (const value of ["0.000", "0.0000001"]) {
+      await user.clear(risk);
+      await user.type(risk, value);
+      await user.click(within(card).getByRole("button", { name: "Save review" }));
+      expect((await screen.findAllByText(refused)).length).toBeGreaterThan(0);
+    }
+    expect(holder.store.calls.some(c => c.method === "reviews.save")).toBe(false);
+    await user.clear(risk);
+    await user.type(risk, "0.000001");
+    await user.click(within(card).getByRole("button", { name: "Save review" }));
+    await waitFor(() => expect(holder.store.calls.some(c => c.method === "reviews.save")).toBe(true));
+  });
+
   it("shows the label a review recorded after the strategy is renamed", async () => {
     const { s } = await seedLibrary();
     await holder.store.repository.reviews.save({ accountId: A, tradeId: "t1", expectedRevision: null, strategyId: s.id, checklistId: null, reviewed: true, tagIds: [], checklistResults: [] });

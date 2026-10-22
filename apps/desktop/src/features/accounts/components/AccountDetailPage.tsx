@@ -1,8 +1,10 @@
 // One account's profile: saved settings with labels and units, setup, rulebook,
-// activity, lifecycle history and attempt lineage. Archived and historical
-// attempts are browsable and clearly not live.
+// risk, activity, lifecycle history and attempt lineage. Archived and historical
+// attempts are browsable and clearly not live. The Risk section reads the same
+// overview model as the Accounts card (useAccountOverview), so the two agree.
 import { isHistorical, statusLabels } from "@fundedflow/domain";
-import { ArrowLeft, Ellipsis, History, Pencil, Upload } from "lucide-react";
+import { ArrowLeft, Calculator, Ellipsis, History, Pencil, Upload } from "lucide-react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -10,34 +12,95 @@ import {
   Button,
   type DataColumn,
   DataTable,
+  Dialog,
   DropdownMenu,
   EmptyState,
   formatInstant,
   IconButton,
   InlineNotice,
   MoneyCell,
+  OverviewFigure,
+  ProgressMeter,
   StateBoundary,
   StatList,
   StatusIndicator,
   TabPanel,
   Tabs,
+  useToast,
   zonedWallTime,
 } from "../../../design-system";
+import { CalculateNow } from "../../rulebooks/components/CalculationExplanation";
 import { retryRead, toAsyncState } from "../../shared/presentation";
+import { useCheckTime } from "../../today/hooks/today";
 import { useActiveAccount } from "../active-account";
 import { PROP_ACCOUNT_TYPES } from "../setup";
 import { useAccount, useAccountHistory, useAccountLineage } from "../hooks/accounts";
+import { useAccountOverview } from "../hooks/overview";
 import type { AccountViewModel } from "../view-models/account";
 import { accountMenu, useAccountDialogs } from "./AccountActions";
-import { ACCOUNT_TYPE_LABELS, AccountMark, AccountStatus, LastImport, RulebookSummary, SetupBadge, useAccountFacts } from "./presentation";
+import { ACCOUNT_TYPE_LABELS, AccountMark, AccountStatus, LastImport, RulebookSummary, SetupBadge } from "./presentation";
 import "./accounts.css";
 
 type Attempt = NonNullable<ReturnType<typeof useAccountLineage>["data"]>[number];
 
 const notSet = <span className="ds-faint">Not set</span>;
 
-function Overview({ account, onEdit }: { account: AccountViewModel; onEdit?: () => void }) {
-  const facts = useAccountFacts(account);
+/**
+ * Risk from the card's own model: Today's status only while the saved calculation is current, otherwise the card's
+ * state word and why. Figures are the engine's, a checkpoint's or none; nothing is calculated here.
+ */
+function RiskPanel({ account, overview, activeId, onShowToday }: {
+  account: AccountViewModel;
+  overview: ReturnType<typeof useAccountOverview>;
+  activeId: string | null;
+  onShowToday: () => void;
+}) {
+  const [calculating, setCalculating] = useState(false);
+  const { model, facts } = overview;
+  const { risk } = model;
+  const archived = account.archivedAt !== null;
+  return (
+    <section className="ds-card acct-panel" aria-labelledby="acct-risk">
+      <h2 id="acct-risk" className="ds-title">Risk</h2>
+      <div className="acct-risk-head" role="status" aria-live="polite">
+        <StatusIndicator status={risk.status} label={risk.label} />
+        <p>{risk.detail}</p>
+      </div>
+      {risk.reasons.length > 0 && <ul className="acct-risk-reasons" aria-label="Why it isn't current">{risk.reasons.map(r => <li key={r}>{r}</li>)}</ul>}
+      {risk.lastRecorded && <p className="ds-faint">{risk.lastRecorded}</p>}
+      <div className="acct-risk-figures">
+        {/* Not current: the status above already says why, so the figure doesn't repeat it. */}
+        <OverviewFigure primary figure={risk.current ? model.headroom : { ...model.headroom, note: null }} />
+        <OverviewFigure figure={model.floor} />
+        <OverviewFigure figure={model.balance} />
+      </div>
+      {model.meters.length > 0 && <div className="acct-risk-meters">{model.meters.map(m => <ProgressMeter key={m.label} {...m} />)}</div>}
+      {risk.neverSafe && <p className="ds-faint">Without a current calculation this account is never shown as safe.</p>}
+      {!archived && (
+        <div className="acct-risk-actions">
+          {risk.canCalculate && <Button size="sm" variant="primary" icon={<Calculator size={16} aria-hidden="true" />} onClick={() => setCalculating(true)}>Calculate estimate</Button>}
+          {activeId === account.id
+            ? <Link className="acct-link" to="/">Open Today</Link>
+            : <Button size="sm" variant="ghost" onClick={onShowToday}>Use as active and open Today</Button>}
+        </div>
+      )}
+      <Dialog open={calculating} onOpenChange={setCalculating} size="lg" title="Calculate estimate"
+        description="Runs the rules engine on this account's records as of now and saves a new estimate. Earlier estimates are kept.">
+        <CalculateNow accountId={account.id} currency={account.currency} current={facts.rulebookVersion ?? null} timeZone={account.timezone} onSaved={() => setCalculating(false)} />
+      </Dialog>
+    </section>
+  );
+}
+
+function Overview({ account, activeId, checkedAt, onEdit, onShowToday }: {
+  account: AccountViewModel;
+  activeId: string | null;
+  checkedAt: string;
+  onEdit?: () => void;
+  onShowToday: () => void;
+}) {
+  const overview = useAccountOverview(account, activeId, checkedAt);
+  const facts = overview.facts;
   const summary = facts.summary;
   const zoneNow = zonedWallTime(Date.now(), account.timezone).slice(11);
   return (
@@ -101,13 +164,7 @@ function Overview({ account, onEdit }: { account: AccountViewModel; onEdit?: () 
           </div>
         </section>
 
-        <section className="ds-card acct-panel" aria-labelledby="acct-risk">
-          <h2 id="acct-risk" className="ds-title">Risk</h2>
-          <StatusIndicator status="unknown" label="Not calculated yet" detail="Current balance, drawdown and limits need balance checkpoints and rule calculations" />
-          <p className="ds-faint">
-            Room left and limits appear once balance checkpoints and rule calculations are available. Until then this account is never shown as safe.
-          </p>
-        </section>
+        <RiskPanel account={account} overview={overview} activeId={activeId} onShowToday={onShowToday} />
 
         <section className="ds-card acct-panel" aria-labelledby="acct-activity">
           <h2 id="acct-activity" className="ds-title">Activity</h2>
@@ -191,6 +248,14 @@ export function AccountDetailPage() {
   const active = useActiveAccount();
   const dialogs = useAccountDialogs();
   const navigate = useNavigate();
+  const toast = useToast();
+  const { checkedAt } = useCheckTime();
+  // Today shows the active account, so opening it for another attempt makes that attempt active first (as Today's own "Show" does).
+  const showToday = (a: AccountViewModel) => {
+    active.select(a.id)
+      .then(() => navigate("/"))
+      .catch(() => toast.show({ tone: "error", title: "The account wasn't switched", description: "Try again when local data is available." }));
+  };
 
   return (
     <div className="acct-page">
@@ -243,7 +308,7 @@ export function AccountDetailPage() {
               )}
 
               <Tabs label="Account sections" defaultValue="overview" items={[{ value: "overview", label: "Overview" }, { value: "history", label: "History" }, { value: "attempts", label: "Attempts", count: lineage.data?.length }]}>
-                <TabPanel value="overview"><Overview account={a} onEdit={archived ? undefined : () => dialogs.open({ kind: "edit", account: a, tradeCount })} /></TabPanel>
+                <TabPanel value="overview"><Overview account={a} activeId={active.activeId} checkedAt={checkedAt} onShowToday={() => showToday(a)} onEdit={archived ? undefined : () => dialogs.open({ kind: "edit", account: a, tradeCount })} /></TabPanel>
                 <TabPanel value="history"><HistoryTab account={a} /></TabPanel>
                 <TabPanel value="attempts"><AttemptsTab account={a} /></TabPanel>
               </Tabs>

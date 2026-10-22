@@ -92,9 +92,13 @@ export interface AccountOverviewCardProps {
   className?: string;
 }
 
-function Figure({ figure, primary }: { figure: OverviewFigureProps; primary?: boolean }) {
+/**
+ * One figure with its label, value, provenance badge and note: the card's figure block, also used where a page shows
+ * the same figure outside a card (the account detail page's Risk section), so both read alike.
+ */
+export function OverviewFigure({ figure, primary, className }: { figure: OverviewFigureProps; primary?: boolean; className?: string }) {
   return (
-    <div className={cx("ds-aoc-figure", primary && "is-primary")}>
+    <div className={cx("ds-aoc-figure", primary && "is-primary", className)}>
       <span className="ds-label">{figure.label}</span>
       <span className="ds-aoc-value">
         <MetricValueView value={figure.value} />
@@ -133,8 +137,8 @@ export function AccountOverviewCard({
         <div className="ds-aoc-badges">{badges}</div>
       </header>
       <div className="ds-aoc-figures">
-        <Figure figure={primary} primary />
-        {figures.map(f => <Figure key={f.label} figure={f} />)}
+        <OverviewFigure figure={primary} primary />
+        {figures.map(f => <OverviewFigure key={f.label} figure={f} />)}
       </div>
       {meters != null && <div className="ds-aoc-meters">{meters}</div>}
       {rules.length > 0 && (

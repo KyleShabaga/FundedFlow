@@ -108,9 +108,11 @@ describe("Build 15 on real Rust payloads through the merged adapter", () => {
     await user.click(within(filters).getByRole("button", { name: "Archived 1" }));
     expect(within(screen.getByRole("table", { name: "Accounts" })).getByText("Euro account")).toBeTruthy();
     expect(screen.getByText("€50,000.00")).toBeTruthy();
-    // Every read went through commands Rust registers; nothing else was called.
+    // Every read went through commands Rust registers; nothing else was called. The Current balance KPI reads Today's
+    // risk truth per live account (NA-4): the current result, latest snapshot, inputs as of now and evidence. All reads.
     const commands = new Set(bridge.invoke.mock.calls.map(c => c[0]));
-    for (const c of commands) expect(["list_accounts", "get_account", "get_account_history", "get_account_lineage", "list_csv_imports", "list_account_rulebook_assignments", "get_setting", "get_catalogue"]).toContain(c);
+    for (const c of commands) expect(["list_accounts", "get_account", "get_account_history", "get_account_lineage", "list_csv_imports", "list_account_rulebook_assignments", "get_setting", "get_catalogue",
+      "get_current_account_risk", "get_latest_account_snapshot", "capture_account_risk", "list_financial_observations", "list_financial_reconciliations"]).toContain(c);
   });
 
   it("shows a reset predecessor's history and lineage, and chooses an active account by id", async () => {

@@ -15,7 +15,7 @@ import {
 } from "@fundedflow/domain";
 import { useMemo, useState } from "react";
 
-import { ChartPanel, type DataColumn, DataTable, EquityCurve, MetricCard, MoneyCell, PnlBars, SegmentedControl, StatList } from "../../../design-system";
+import { ChartPanel, type DataColumn, DataTable, EquityCurve, formatMoney, MetricCard, MoneyCell, PnlBars, SegmentedControl, StatList } from "../../../design-system";
 import { dayLabel, monthLabel, moneyView, numberView, rateView, tradesText } from "../view-models/insights";
 import { barValue, BASIS_LABEL, DrillButton, GroupTable, groupDetail, MetricText, type SectionProps } from "./shared";
 
@@ -158,7 +158,7 @@ function CurvePanel({ selection, basis, currency, drill }: SectionProps) {
       state={points.length ? { status: "success", data: points } : { status: "empty", kind: "no-records" }}
       empty={{ "no-records": "No closed trade with a known result to draw." }}>
       {data => show === "chart"
-        ? <EquityCurve points={data.map(p => p.cumulative)} step label={`${label}: ${data.length} trades, ending at ${data[data.length - 1]?.cumulative ?? "0"} ${currency ?? ""}. Use the table view for each point.`} />
+        ? <EquityCurve points={data.map(p => p.cumulative)} step label={`${label}: ${data.length} trades, ending at ${formatMoney(data[data.length - 1]?.cumulative ?? null, { currency })}. Use the table view for each point.`} />
         : <DataTable label={`${label} by trade`} columns={columns} rows={data} getRowId={p => p.tradeId}
             onRowClick={p => drill({ title: `${label}: trade ${points.indexOf(p) + 1}`, basis: "One closed trade", ids: [p.tradeId] })} />}
     </ChartPanel>

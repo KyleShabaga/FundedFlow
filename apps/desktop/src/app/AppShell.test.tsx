@@ -271,6 +271,8 @@ it("uses a compact, text-only Import action that still opens the import menu", a
   expect(button.querySelector("svg")).toBeNull();
   expect(button.classList.contains("ds-btn-primary")).toBe(false);
   await user.click(button);
-  expect(await screen.findByRole("menuitem", { name: /Quick import/ })).toBeTruthy();
+  // NA-4: Quick import says what it does; nothing about the file or its settings is remembered.
+  expect(await screen.findByRole("menuitem", { name: "Quick import: check and import a CSV in one step" })).toBeTruthy();
+  expect(screen.queryByText(/imported before/)).toBeNull();
   expect(screen.getByRole("menuitem", { name: /Full wizard/ })).toBeTruthy();
 });

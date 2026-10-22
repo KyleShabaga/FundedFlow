@@ -248,7 +248,8 @@ describe("keyboard and semantics: data", () => {
     expect(screen.getByText(/never treated as zero/)).toBeTruthy();
     expect(screen.getByText(/2 of 3 closed trades with a known P&L/)).toBeTruthy();
     // The curve has a text alternative and a table view with named columns.
-    expect(screen.getByRole("img", { name: /Closed-trade net P&L: 2 trades/ })).toBeTruthy();
+    // Its ending total is formatted money (format.ts), never raw decimal text or a "0" fallback.
+    expect(screen.getByRole("img", { name: /^Closed-trade net P&L: 2 trades, ending at [+−]?\$[\d,]+\.\d{2}\. Use the table view/ })).toBeTruthy();
     const asTable = screen.getByRole("button", { name: "Table" });
     await user.click(asTable);
     expect(asTable.getAttribute("aria-pressed")).toBe("true");

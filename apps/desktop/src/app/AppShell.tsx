@@ -214,7 +214,7 @@ export function PageHeader({ title }: { title: string }) {
         <DropdownMenu label="Import" trigger={
           <Button variant="ghost" aria-current={pathname === "/import" || pathname === "/import/quick" ? "page" : undefined}>Import</Button>
         } items={[
-          { label: "Quick import: a file you've imported before", icon: <Zap size={16} aria-hidden="true" />, onSelect: () => navigate("/import/quick") },
+          { label: "Quick import: check and import a CSV in one step", icon: <Zap size={16} aria-hidden="true" />, onSelect: () => navigate("/import/quick") },
           { label: "Full wizard: first-time or custom files", icon: <Workflow size={16} aria-hidden="true" />, onSelect: () => navigate("/import") },
         ]} />
       </div>

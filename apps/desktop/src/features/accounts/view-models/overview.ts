@@ -15,7 +15,7 @@ import {
   type Trade,
 } from "@fundedflow/domain";
 
-import type { MetricValue, Tone } from "../../../design-system";
+import type { MetricValue, StatusKind, Tone } from "../../../design-system";
 import { RULE_FIELDS, enumLabel, PRESENCE_LABELS, describeValue, presenceOf } from "../../rulebooks/view-models/rule-fields";
 import { checkpointSummary, headline, latestTrade, metricsOf, STALE_TEXT, statedCoverage, type Loadable, type MoneyText, type RiskTruth } from "../../today/view-models/today";
 import { PROP_ACCOUNT_TYPES, type RulebookStatus, type SetupItem } from "../setup";
@@ -86,6 +86,27 @@ export interface OverviewRule {
   muted: boolean;
 }
 
+/**
+ * The Risk section of the account detail page: the same state the card's headroom badge names, with Today's
+ * status only when the saved calculation is current. Detail page and card read one model, so they never disagree.
+ */
+export interface OverviewRisk {
+  /** The saved calculation is current: its figures carry their as-of time. */
+  current: boolean;
+  /** Today's status for a current estimate; otherwise the card's state word (Not current, No rulebook, …). */
+  label: string;
+  status: StatusKind;
+  detail: string;
+  /** Why the last saved estimate isn't current, one line each. */
+  reasons: string[];
+  /** What the last saved estimate said and its cutoff in the account zone, when it isn't current. */
+  lastRecorded: string | null;
+  /** A live attempt without a current calculation: it is never shown as safe. */
+  neverSafe: boolean;
+  /** A live attempt with a rulebook in force today: Calculate can run. */
+  canCalculate: boolean;
+}
+
 export type LastTraded = { kind: "checking" } | { kind: "unknown" } | { kind: "none" } | { kind: "at"; at: string; text: string };
 
 export interface OverviewModel {
@@ -112,6 +133,7 @@ export interface OverviewModel {
   floor: OverviewFigure;
   meters: OverviewMeter[];
   rules: OverviewRule[];
+  risk: OverviewRisk;
   lastTraded: LastTraded;
   /** Failed attempts keep their card, tinted. */
   tint: "loss" | "muted" | null;
@@ -215,6 +237,26 @@ function riskGap(input: OverviewInput): { provenance: Provenance; reason: string
       };
     }
   }
+}
+
+function riskSummary(input: OverviewInput, gap: ReturnType<typeof riskGap>): OverviewRisk {
+  const { truth, rulebook, when } = input;
+  const h = headline(truth);
+  const live = truth.kind !== "historical";
+  const canCalculate = live && rulebook.kind === "assigned";
+  if (!gap) return { current: true, label: h.label, status: h.status, detail: h.detail, reasons: [], lastRecorded: null, neverSafe: false, canCalculate };
+  const saved = truth.kind === "stale" || truth.kind === "check-failed" ? truth.result : null;
+  const status: StatusKind = !live || truth.kind === "checking" ? "neutral" : h.category === "Stop" ? "danger" : saved ? "stale" : "unknown";
+  return {
+    current: false,
+    label: gap.provenance.label,
+    status,
+    detail: truth.kind === "stale" ? "The last saved estimate isn't current." : gap.reason,
+    reasons: truth.kind === "stale" ? truth.reasons.map(r => STALE_TEXT[r]) : [],
+    lastRecorded: saved && h.lastRecorded ? `${h.lastRecorded} Its cutoff was ${when(saved.asOf)}.` : null,
+    neverSafe: live && truth.kind !== "checking",
+    canCalculate,
+  };
 }
 
 function drawdownOutcome(truth: RiskTruth): RuleOutcome | null {
@@ -390,6 +432,7 @@ export function overviewModel(input: OverviewInput): OverviewModel {
     floor,
     meters: meters.slice(0, 2),
     rules,
+    risk: riskSummary(input, gap),
     lastTraded,
     tint: account.status === "failed" ? "loss" : account.archivedAt ? "muted" : null,
   };

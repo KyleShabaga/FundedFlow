@@ -1,23 +1,14 @@
 // One account attempt's overview card on the Accounts page (Build 18.5). Reads only existing hooks: the account,
 // its lineage, setup and assigned rulebook (Build 15/19), and the same saved calculation, freshness check and
-// canonical records Today uses (Build 16/21). overviewModel turns them into words; AccountOverviewCard lays them out.
+// canonical records Today uses (Build 16/21), through useAccountOverview, which the detail page's Risk section shares.
+// AccountOverviewCard lays them out.
 import { Ellipsis, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import { AccountOverviewCard, Badge, Button, DropdownMenu, formatInstant, formatMoney, IconButton, ProgressMeter } from "../../../design-system";
-import { useRulebookVersion } from "../../references/hooks/references";
-import { useTodayAccount } from "../../today/hooks/today";
-import type { Loadable } from "../../today/view-models/today";
-import { useAccountLineage } from "../hooks/accounts";
-import { overviewModel, type OverviewRecords } from "../view-models/overview";
+import { AccountOverviewCard, Badge, Button, DropdownMenu, IconButton, ProgressMeter } from "../../../design-system";
+import { useAccountOverview } from "../hooks/overview";
 import type { AccountViewModel } from "../view-models/account";
 import { accountMenu, type AccountDialog } from "./AccountActions";
-import { useAccountFacts } from "./presentation";
-
-function loadable<T>(data: T | undefined, error: unknown): Loadable<T> {
-  if (data !== undefined) return { state: "ready", value: data };
-  return error ? { state: "error" } : { state: "loading" };
-}
 
 export function OverviewCard({ account, activeId, checkedAt, dialogs }: {
   account: AccountViewModel;
@@ -27,29 +18,8 @@ export function OverviewCard({ account, activeId, checkedAt, dialogs }: {
   dialogs: { open: (d: AccountDialog) => void; activate: (a: AccountViewModel) => void; activeId: string | null };
 }) {
   const navigate = useNavigate();
-  const facts = useAccountFacts(account);
-  const today = useTodayAccount(account, checkedAt);
-  const lineage = useAccountLineage(account.id);
-  const versionId = facts.rulebook.kind === "assigned" ? facts.rulebook.assignment.rulebookVersionId : null;
-  const version = useRulebookVersion(versionId);
-  const inputs = today.facts.data?.inputs;
-  const records: Loadable<OverviewRecords> = inputs
-    ? { state: "ready", value: { trades: inputs.trades, observations: inputs.observations, phaseHistory: inputs.phaseHistory } }
-    : today.facts.error ? { state: "error" } : { state: "loading" };
+  const { model, facts } = useAccountOverview(account, activeId, checkedAt);
   const summary = facts.summary;
-  const fmt = (amount: string | null) => formatMoney(amount, { signed: false, currency: account.currency, dp: 2 });
-  const model = overviewModel({
-    account,
-    activeId,
-    attempt: summary && lineage.data ? { number: summary.attemptNumber, of: lineage.data.length } : null,
-    setup: facts.setup,
-    rulebook: facts.rulebook,
-    version: loadable(version.data, version.error),
-    truth: today.truth,
-    records,
-    fmt,
-    when: at => formatInstant(at, { timeZone: account.timezone, year: true, zoneName: true }),
-  });
 
   const titleId = `acct-card-${account.id}`;
   const open = () => navigate(`/accounts/${encodeURIComponent(account.id)}`);

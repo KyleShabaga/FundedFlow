@@ -27,6 +27,7 @@ import {
   ErrorState,
   FieldGroup,
   AccountOverviewCard,
+  OverviewFigure,
   FileDropzone,
   ProgressMeter,
   focusFirstInvalid,
@@ -389,6 +390,11 @@ export function AccountOverviewSection() {
         })}
         {sample({ title: "Failed attempt", tint: "loss", badges: <><Badge tone="loss">Failed</Badge><Badge>Archived</Badge></>, meters: undefined,
           primary: { label: "Drawdown headroom", value: { kind: "unavailable", reason: "History only" }, provenance: { label: "History only", tone: "neutral" } } })}
+      </div>
+      <h3 className="ds-label">OverviewFigure outside a card (account detail Risk section, NA-4)</h3>
+      <div className="dsg-row">
+        <OverviewFigure primary figure={{ label: "Drawdown headroom", value: { kind: "money", amount: "1500", signed: false }, provenance: { label: "Current estimate", tone: "flow" }, note: "As of 21 Oct 2026, 13:00 EDT" }} />
+        <OverviewFigure figure={{ label: "Drawdown floor", value: { kind: "unavailable", reason: "The last estimate isn't current" }, provenance: { label: "Not current", tone: "warn" } }} />
       </div>
     </Section>
   );

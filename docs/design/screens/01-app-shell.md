@@ -50,7 +50,7 @@ panel and Design system gallery stay reachable from Settings › Developer in de
   by feature cards and Build 14).
 - Account selector sits `space-3` below the title (P0-D03).
 - Right: **Import**, a compact text-only ghost button (no icon or chevron; P0-D02). It opens a menu (Build 18.5):
-  Quick import (a file you've imported before) and Full wizard (first-time or custom files).
+  "Quick import: check and import a CSV in one step" and Full wizard (first-time or custom files).
 - Reserved, not in Build 12: GlobalFreshnessIndicator (Build 21 data), day-ending timer (Triage).
 
 ## Route lifecycle

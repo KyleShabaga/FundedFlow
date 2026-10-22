@@ -1,8 +1,9 @@
 // The Accounts page: every account with its status, setup and rulebook, and the
 // place to add, open, edit, archive and select accounts. It shows only values the
 // backend supplies: starting balance (never presented as today's balance), Rust's
-// known net P&L per attempt, and rulebook assignment. Current balance, drawdown and
-// target meters wait for Builds 15.5/16 and are marked unavailable, never computed here.
+// known net P&L per attempt, and rulebook assignment. The Current balance KPI totals,
+// per currency, only the engine balances Today calls current (NA-4); cards show
+// headroom and meters from the same model.
 import { accountFilterLabels, filterAccounts, type AccountFilter } from "@fundedflow/domain";
 import { ChevronDown, Ellipsis, Plus, Upload, Workflow, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -27,9 +28,10 @@ import {
 } from "../../../design-system";
 import { retryRead, toAsyncState } from "../../shared/presentation";
 import { useActiveAccount } from "../active-account";
-import { useCheckTime } from "../../today/hooks/today";
+import { useCheckTime, useTodayAccount } from "../../today/hooks/today";
 import { useAccounts } from "../hooks/accounts";
 import type { AccountViewModel } from "../view-models/account";
+import { currentBalanceKpi, type CurrentBalance } from "../view-models/balance-kpi";
 import { accountMenu, useAccountDialogs } from "./AccountActions";
 import { OverviewCard } from "./OverviewCard";
 import { ACCOUNT_TYPE_LABELS, AccountMark, AccountStatus, LastImport, RulebookSummary, SetupBadge, useAccountFacts } from "./presentation";
@@ -67,31 +69,39 @@ function LastImportCell({ account }: { account: AccountViewModel }) {
   return <LastImport at={lastImportAt} timeZone={account.timezone} />;
 }
 
-/** Collects per-account facts for the KPI row from the same cached queries the table uses. */
-function FactsProbe({ account, report }: { account: AccountViewModel; report: (id: string, facts: { needsSetup: boolean | null; lastImportAt: string | null | undefined }) => void }) {
+/** Collects per-account facts for the KPI row from the same cached queries the table and cards use. */
+function FactsProbe({ account, checkedAt, report }: { account: AccountViewModel; checkedAt: string; report: (id: string, facts: Facts[string]) => void }) {
   const facts = useAccountFacts(account);
+  const { truth } = useTodayAccount(account, checkedAt);
   const needsSetup = facts.setup === null ? null : facts.setup.length > 0;
-  useEffect(() => report(account.id, { needsSetup, lastImportAt: facts.lastImportAt }), [account.id, needsSetup, facts.lastImportAt, report]);
+  // Only a balance Today calls current counts, exactly as the card's "Estimated balance"; a checkpoint or a stale
+  // estimate is shown on the account, not totalled.
+  const amount = truth.kind === "checking" ? undefined : truth.kind === "current" ? truth.result.balance : null;
+  useEffect(() => report(account.id, { needsSetup, lastImportAt: facts.lastImportAt, balance: amount == null ? amount : { amount, currency: account.currency } }),
+    [account.id, account.currency, needsSetup, facts.lastImportAt, amount, report]);
   return null;
 }
 
-type Facts = Record<string, { needsSetup: boolean | null; lastImportAt: string | null | undefined }>;
+type Facts = Record<string, { needsSetup: boolean | null; lastImportAt: string | null | undefined; balance: CurrentBalance }>;
 
-function Kpis({ live }: { live: AccountViewModel[] }) {
+const sameBalance = (a: CurrentBalance, b: CurrentBalance) => a === b || (!!a && !!b && a.amount === b.amount && a.currency === b.currency);
+
+function Kpis({ live, checkedAt }: { live: AccountViewModel[]; checkedAt: string }) {
   const [facts, setFacts] = useState<Facts>({});
-  const report = useCallback((id: string, f: Facts[string]) => setFacts(prev => (prev[id]?.needsSetup === f.needsSetup && prev[id]?.lastImportAt === f.lastImportAt ? prev : { ...prev, [id]: f })), []);
+  const report = useCallback((id: string, f: Facts[string]) => setFacts(prev => (prev[id]?.needsSetup === f.needsSetup && prev[id]?.lastImportAt === f.lastImportAt && prev[id] && sameBalance(prev[id].balance, f.balance) ? prev : { ...prev, [id]: f })), []);
   const known = live.map(a => facts[a.id]).filter(Boolean);
   const allKnown = known.length === live.length;
   const needsSetup = allKnown && known.every(f => f.needsSetup !== null) ? known.filter(f => f.needsSetup).length : null;
   const imports = known.map(f => f.lastImportAt);
   const lastImport = allKnown && imports.every(i => i !== undefined) ? imports.reduce<string | null>((latest, at) => (at && (!latest || at > latest) ? at : latest), null) : undefined;
+  const balance = currentBalanceKpi(live.map(a => facts[a.id]?.balance));
   const paused = live.filter(a => a.status === "paused").length;
   return (
     <div className="acct-kpis">
-      {live.map(a => <FactsProbe key={a.id} account={a} report={report} />)}
+      {live.map(a => <FactsProbe key={a.id} account={a} checkedAt={checkedAt} report={report} />)}
       <MetricCard label="Live accounts" value={{ kind: "count", value: live.length }} sub={paused ? `${live.length - paused} active · ${paused} paused` : "Active and paused, not archived"} />
       <MetricCard label="Need setup" value={{ kind: "count", value: needsSetup }} sub="Firm or rulebook still to add" />
-      <MetricCard label="Current balance" value={{ kind: "unavailable", reason: "Needs balance checkpoints; starting balances are in the table. Currencies are never added together." }} />
+      <MetricCard label="Current balance" value={balance.value} sub={balance.sub} />
       <MetricCard label="Last import" value={lastImport === undefined ? { kind: "text", text: null } : { kind: "text", text: lastImport === null ? "None yet" : formatInstant(lastImport) }} sub="Across live accounts, this computer's time" />
     </div>
   );
@@ -199,7 +209,7 @@ export function AccountsPage() {
           )}
           {all.length > 0 && (
             <DropdownMenu label="Import trades" trigger={<Button icon={<Upload size={16} aria-hidden="true" />}>Import trades<ChevronDown size={14} aria-hidden="true" /></Button>} items={[
-              { label: "Quick import: a file you've imported before", icon: <Zap size={16} aria-hidden="true" />, onSelect: () => navigate("/import/quick", { state: { accountId: active.activeId } }) },
+              { label: "Quick import: check and import a CSV in one step", icon: <Zap size={16} aria-hidden="true" />, onSelect: () => navigate("/import/quick", { state: { accountId: active.activeId } }) },
               { label: "Full wizard: first-time or custom files", icon: <Workflow size={16} aria-hidden="true" />, onSelect: () => navigate("/import", { state: { accountId: active.activeId } }) },
             ]} />
           )}
@@ -234,7 +244,7 @@ export function AccountsPage() {
         {() => (
           // Its own grid: StateBoundary's content doesn't take part in the page's gap, so the KPI row touched the list.
           <div className="acct-body">
-            <Kpis live={filterAccounts(all, "live")} />
+            <Kpis live={filterAccounts(all, "live")} checkedAt={checkedAt} />
             {view === "table" ? (
               <DataTable
                 label="Accounts"
