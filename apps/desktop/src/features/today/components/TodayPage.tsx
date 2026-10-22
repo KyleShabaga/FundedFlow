@@ -27,6 +27,7 @@ import { dailyReviewPath } from "../../daily-reviews/view-models/daily-review";
 import { checkpointSummary, splitAttempts } from "../view-models/today";
 import { AccountsOverview } from "./AccountsOverview";
 import { FreshnessPanel } from "./FreshnessPanel";
+import { SessionPrompt } from "./SessionPrompt";
 import { DISCLAIMER, RiskSection } from "./RiskSection";
 import { VerifyBalanceDialog } from "./VerifyBalanceDialog";
 import "./today.css";
@@ -70,6 +71,8 @@ export function TodayPage() {
 
   return (
     <div className="td-page">
+      {/* P0-D27: the optional session prompt comes first, for the selected active account and its current trading day. */}
+      {selected && live.some(a => a.id === selected.id) && <SessionPrompt key={`session-${selected.id}`} account={selected} checkedAt={checkedAt} />}
       {/* P0-D21: Check again stays at the top, beside the freshness it refreshes; the general note is the page footer. */}
       <div className="td-intro">
         <Button size="sm" variant="ghost" icon={<RefreshCw size={16} aria-hidden="true" />} onClick={recheck}>Check again</Button>

@@ -76,3 +76,38 @@ Details, traceability and the "current" rules: [build-21-today.md](../../archite
   (`list_daily_reviews`); it reads "Continue review" when that day has a draft and "Open review" when it is completed,
   and is unavailable with its reason while the day can't be read. It never waits for, refreshes or changes the risk
   estimate. The equity curve with the floor is not drawn (no floor series stored).
+
+## Session plan / review prompt (P0-D27)
+An optional card at the top of Today, before Check again and freshness, for the **selected active account and its
+current trading day as Rust reports it** (`list_daily_reviews` → `currentTradingDay`, then `get_daily_review` for that
+day). It names its scope ("Example · Eval A · trading day Wed Oct 21") and opens the existing Daily review page
+(`/journal/days/:day?account=`) for that account and day; there is no second editor.
+
+| Day (from `get_daily_review`) | Card | Primary action |
+|---|---|---|
+| Reading the index or the day | "Checking today's trading day…" (compact, `aria-busy`) | none; never a guessed "no trades" |
+| Index or day unreadable | "Session plan / review unavailable" (Unknown, with the reason) | none |
+| 0 trades, no plan text | **Before-session plan** | Start plan |
+| 0 trades, plan text saved | Before-session plan · *Plan saved* | View or edit plan |
+| ≥ 1 trade, no reflection | **After-session review** ("n trades recorded… this doesn't end the session or complete the review") | Start after-session review; View plan when a plan is saved |
+| ≥ 1 trade, reflection or no-trade day in a draft | After-session review · *Draft* | Continue after-session review |
+| Review status `completed` (either stage) | **Daily review** · *Completed* | Open completed review (no Skip) |
+
+Rules:
+- **Activity** is `outcome.trades` of the current trading day: Rust's attribution (zone, reset, Monday–Friday), never
+  the computer's date, an import's processing time or all-time history. Manual trade writes and committed imports
+  already invalidate the daily-review queries, so the stage follows the trades: a historical-only import leaves the
+  day at 0 trades, and duplicate-only, failed or cancelled imports add none. If the day's trades are later removed, the
+  card returns to the plan stage; the saved plan, review and skips are kept.
+- **One record.** Build 22 stores the plan and the after-session review in one daily review per account and day, so a
+  plan is never erased when trading starts, and "completed" is that record's saved status, never inferred from
+  activity or a skip.
+- **Skip for now** hides the current stage for that account and day only and records nothing in the review. Skips are
+  saved locally in settings as `today.session_prompt_skips` (a list of `{ accountId, tradingDay, stage }`, the newest
+  100). A plan skip doesn't skip the review. A compact line keeps **Session plan / review** to bring it back; a new day
+  or another account has its own state.
+- **Refresh:** each check (Check again, or returning to the app) re-reads the current trading day, so crossing the
+  day boundary gives the new day its own prompt. Reads are keyed by account and day and the card remounts on an
+  account switch, so a late answer never shows under another account or day.
+- Not done here: the Daily review page opens at its top, not at "Before the session" or "After the session" (no
+  section parameter exists).
