@@ -19,6 +19,8 @@ import {
   PnlBars,
   PnlCalendar,
   RuleMeter,
+  RunningTotalChart,
+  SegmentedControl,
   StatTile,
   TabPanel,
   Tabs,
@@ -77,6 +79,20 @@ const DAYS = {
 };
 
 const BALANCE = ["100000", "100250", "99800", "100120", "101400", "101100", "102300", "102050", "103400", "103900", "103300", "104800", "105300", "105100"];
+/** Mixed results with zero crossings, for RunningTotalChart. */
+const RUNNING = ["120", "45.5", "-60", "-210.25", "-90", "180", "310", "260.75", "640", "590", "910.4", "870", "1240.1", "1190"];
+
+function RunningTotalExample() {
+  const [curve, setCurve] = useState<"step" | "smooth">("step");
+  return (
+    <div className="ds-card dsg-stack">
+      <SegmentedControl label="Line style" value={curve} onValueChange={setCurve} options={[{ value: "step", label: "Stepped" }, { value: "smooth", label: "Smooth" }]} />
+      <RunningTotalChart curve={curve} currency="USD" yTitle="Cumulative net P&L" xTitle="Closed trades (exit order)" startLabel="Start of the selection"
+        label="Example running total of 14 closed trades" points={RUNNING.map((value, i) => ({ key: String(i), value, label: `Trade ${i + 1} · ES · example` }))} />
+    </div>
+  );
+}
+
 const FLOOR = ["97000", "97250", "97250", "97250", "98400", "98400", "99300", "99300", "100000", "100000", "100000", "100000", "100000", "100000"];
 
 export function DesignSystemGallery() {
@@ -206,6 +222,10 @@ export function DesignSystemGallery() {
           <div className="ds-card">
             <EquityCurve points={BALANCE} floor={FLOOR} target="106000" label="Example balance with drawdown floor and target" />
           </div>
+        </Section>
+
+        <Section title="RunningTotalChart" note="Labelled axes, a zero line and tooltips that read the observed points. Smooth is a monotone curve: it never passes above or below the two points it joins.">
+          <RunningTotalExample />
         </Section>
 
         <Section title="PnlCalendar and DayCard" note="Trading days run Monday to Friday; weekend activity rolls to Monday.">
