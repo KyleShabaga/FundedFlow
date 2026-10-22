@@ -1,0 +1,144 @@
+[
+ {
+  "file": "code-review/00-repository-discovery.md",
+  "sha256": "9674ad89a053b8ef7b7a7983cb645f624c80db9f8a70a63ce385586628fbc026",
+  "commit": "4fee79e 2026-10-22",
+  "bytes": 55817,
+  "parts": 3,
+  "part_chars": [
+   27404,
+   19946,
+   8135
+  ]
+ },
+ {
+  "file": "code-review/01-data-integrity-audit.md",
+  "sha256": "b4bee433db10a0e593746a97424e4263fb952f81bc303ea34d03f78143c5a5bd",
+  "commit": "feb00e2 2026-10-22",
+  "bytes": 48175,
+  "parts": 3,
+  "part_chars": [
+   11210,
+   27330,
+   9437
+  ]
+ },
+ {
+  "file": "code-review/02-tauri-rust-security-audit.md",
+  "sha256": "571ce3ff2690ea579978ef0cdaffa04d2056df8b2f9d642387319beef455c63c",
+  "commit": "aad865f 2026-10-22",
+  "bytes": 31537,
+  "parts": 2,
+  "part_chars": [
+   27202,
+   4201
+  ]
+ },
+ {
+  "file": "code-review/03-react-typescript-audit.md",
+  "sha256": "ef2fd7afca33df861089a12a08b3223b696cc00d10a4ee514b719d839372149f",
+  "commit": "aad865f 2026-10-22",
+  "bytes": 30955,
+  "parts": 2,
+  "part_chars": [
+   27321,
+   3512
+  ]
+ },
+ {
+  "file": "code-review/04-windows-testing-readiness.md",
+  "sha256": "8e8e180daab0112b671efffc6ee2e3dde92dcd5d35b8a3fad2504a34f231d3ba",
+  "commit": "7ca8c7f 2026-10-22",
+  "bytes": 33961,
+  "parts": 2,
+  "part_chars": [
+   26539,
+   7156
+  ]
+ },
+ {
+  "file": "code-review/05-final-codebase-audit.md",
+  "sha256": "3e7d0493ed7e2d7623c94c5d34be62324474e4d3c446c1d6c239a31dbaf5ffb0",
+  "commit": "bba845b 2026-10-22",
+  "bytes": 44383,
+  "parts": 2,
+  "part_chars": [
+   27160,
+   16943
+  ]
+ },
+ {
+  "file": "code-review/coverage-matrix.md",
+  "sha256": "de9688cd114dbfa2f41618cb28b6c6b21c59c233b15c5f0d55e953449032fe49",
+  "commit": "bba845b 2026-10-22",
+  "bytes": 19993,
+  "parts": 1,
+  "part_chars": [
+   19791
+  ]
+ },
+ {
+  "file": "code-review/06-stage2-evidence-reconciliation.md",
+  "sha256": "3b12de7231012595f17908019a1f4fb44ee738c6c85c3500812ab062f92bf7b9",
+  "commit": "45de2af 2026-10-22",
+  "bytes": 16438,
+  "parts": 1,
+  "part_chars": [
+   16288
+  ]
+ },
+ {
+  "file": "code-review/remediation-findings-ledger.md",
+  "sha256": "1b8cf1e304526ecc1ea564599ef92bfb125b8db366fe75365ab5f78887258c8d",
+  "commit": "45de2af 2026-10-22",
+  "bytes": 36978,
+  "parts": 3,
+  "part_chars": [
+   1757,
+   27550,
+   7477
+  ]
+ },
+ {
+  "file": "code-review/07-stage2-priorities-and-dependencies.md",
+  "sha256": "6e964fc70adaa133c7c1c05f0abe761594ea46af19a7436f8066a5a411f9462c",
+  "commit": "a7310fd 2026-10-22",
+  "bytes": 35633,
+  "parts": 2,
+  "part_chars": [
+   25325,
+   10004
+  ]
+ },
+ {
+  "file": "code-review/08-stage2-remediation-task-index.md",
+  "sha256": "04c13975ef18a1128582e99897d0a3200a9a9f51b7a17ba1ad4add612d9c4fc8",
+  "commit": "295c89f 2026-10-22",
+  "bytes": 37293,
+  "parts": 2,
+  "part_chars": [
+   27510,
+   9591
+  ]
+ },
+ {
+  "file": "code-review/09-stage2-implementation-waves.md",
+  "sha256": "bb0c4b44b2213cd8c1daeb8e2d43b7b69aa43d774bab1c6e175943fbfdf6dcf8",
+  "commit": "b01e2b9 2026-10-22",
+  "bytes": 18490,
+  "parts": 1,
+  "part_chars": [
+   18374
+  ]
+ },
+ {
+  "file": "code-review/10-stage2-approval-and-execution-runbook.md",
+  "sha256": "f1809eeaa4ac8ca4fcce861fbc0cf9a54090dfd7cc2392edd3c22a1d07d63872",
+  "commit": "b01e2b9 2026-10-22",
+  "bytes": 25443,
+  "parts": 1,
+  "part_chars": [
+   25293
+  ]
+ }
+]
