@@ -1,7 +1,8 @@
 // Journal library (Build 20), a sub-view of the Journal: the account's trade notes, its daily reviews (Build 22; earlier
 // day notes are listed apart, read only), and the shared review library: playbooks (strategies), templates
 // (checklists) and tags. Nothing a review used is deleted: archiving hides it from new choices, and past reviews keep
-// the labels they recorded.
+// the labels they recorded. Library writes share one lock; an uncertain one is checked against the item as stored
+// (on the page and in the dialog that sent it) before saving is allowed again.
 import { tagKinds, type LegacyDayNote, type Checklist, type ChecklistInput, type Strategy, type Tag, type TagKind } from "@fundedflow/domain";
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import { type FormEvent, type ReactNode, useMemo, useRef, useState } from "react";
@@ -23,6 +24,7 @@ import {
   SearchField,
   SegmentedControl,
   Select,
+  StatList,
   StateBoundary,
   TabPanel,
   Tabs,
@@ -31,9 +33,10 @@ import {
   useToast,
 } from "../../../design-system";
 import type { AccountViewModel } from "../../accounts/view-models/account";
-import { useLibrary, useSaveChecklist, useSaveStrategy, useSaveTag, useSetArchived } from "../../library/hooks/library";
+import { type LibraryChange, useLibrary, useSaveChecklist, useSaveStrategy, useSaveTag, useSetArchived } from "../../library/hooks/library";
 import { useReviewSummaries } from "../../reviews/hooks/reviews";
 import { fieldErrors, retryRead, toAsyncState } from "../../shared/presentation";
+import { UncertainOutcomeReview, type UncertainWrite } from "../../shared/UncertainOutcomeReview";
 import { useTrades } from "../../trades/hooks/trades";
 import { DayChooser } from "../../daily-reviews/components/DayChooser";
 import "../../daily-reviews/components/daily-review.css";
@@ -52,8 +55,11 @@ export function LibraryView({ account }: { account: AccountViewModel }) {
   const setSection = (s: string) => setParams(p => { const next = new URLSearchParams(p); next.set("section", s); return next; }, { replace: true });
   const library = useLibrary();
   const lib = library.data;
+  // Any library write hook reports the one shared library lock.
+  const write = useSetArchived();
   return (
     <div className="jr-library">
+      {write.outcome === "uncertain-outcome" && <LibraryWriteReview write={write} change={write.submitted} />}
       <Tabs label="Library sections" value={section} onValueChange={setSection} items={[
         { value: "notes", label: "Trade notes" }, { value: "daily", label: "Daily journals" },
         { value: "playbooks", label: "Playbooks", count: lib?.strategies.filter(s => !s.archived).length },
@@ -234,6 +240,38 @@ function LegacyNotes({ account, notes, entries, onOpenDay }: {
 
 /* ---------- Shared library pieces ---------- */
 
+const NOUNS: Record<LibraryChange["entity"], string> = { strategy: "playbook", tag: "tag", checklist: "checklist" };
+type LibraryWrite = UncertainWrite & { canSubmit: boolean; submitted?: LibraryChange };
+const isUncertain = (error: unknown) => (error as { category?: string } | null)?.category === "uncertain-outcome";
+const LOCKED = "Check the result of the last library change first";
+
+/**
+ * What an uncertain library write is checked against: the item it sent as stored now (by id, or by name for a new
+ * one), from a fresh read of the library. Stored values and fixed copy only.
+ */
+function LibraryWriteReview({ write, change }: { write: UncertainWrite; change: LibraryChange | undefined }) {
+  const library = useLibrary();
+  const lib = library.data;
+  const noun = change ? NOUNS[change.entity] : "item";
+  const wanted = change?.name?.trim().toLowerCase() ?? null;
+  const pool: (Strategy | Tag | Checklist)[] = !lib || !change ? [] : change.entity === "strategy" ? lib.strategies : change.entity === "tag" ? lib.tags : lib.checklists;
+  const found = pool.filter(item => (change?.id ? item.id === change.id : wanted !== null && item.name.trim().toLowerCase() === wanted));
+  const details = (item: Strategy | Tag | Checklist) => [
+    { label: "Name", value: item.name },
+    { label: "Status", value: item.archived ? "Archived" : "Active" },
+    ...("kind" in item ? [{ label: "Kind", value: TAG_KIND_LABELS[item.kind] }] : []),
+    ...("items" in item ? [{ label: "Items", value: String(item.items.filter(i => !i.archived).length) }] : []),
+    ...("description" in item && !("items" in item) ? [{ label: "Description", value: item.description?.trim() ? item.description : "None" }] : []),
+  ];
+  return (
+    <UncertainOutcomeReview write={write} what="the library" reviewReady={lib !== undefined && !library.error} readReviewed={library.refresh}>
+      {found.length
+        ? found.map(item => <StatList key={item.id} label={change?.id ? `The ${noun} as saved now` : `Saved ${noun}s with this name`} items={details(item)} />)
+        : <p>{change?.id || !change?.name ? `This ${noun} isn't in the library.` : `No ${noun} named “${change.name.trim()}” is in the library.`}</p>}
+    </UncertainOutcomeReview>
+  );
+}
+
 type ArchiveTarget = { entity: "strategy" | "tag" | "checklist"; id: string; archived: boolean; name: string };
 
 /**
@@ -245,20 +283,25 @@ function useArchive({ entity, id, archived, name }: ArchiveTarget, body?: ReactN
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
   const run = () => set.submit({ entity, id, archived: !archived }).then(() => toast.show({ tone: "success", title: archived ? `${name} restored` : `${name} archived` }));
-  const request = () => (archived ? void run().catch(() => toast.show({ tone: "error", title: "Nothing changed", description: "Try again." })) : setConfirm(true));
+  const locked = !set.canSubmit && !set.isPending;
+  // An uncertain restore is checked at the top of the library, never reported as "nothing changed".
+  const request = () => (archived ? void run().catch(error => { if (!isUncertain(error)) toast.show({ tone: "error", title: "Nothing changed", description: "Try again." }); }) : setConfirm(true));
   const dialog = (
-    <ConfirmDialog open={confirm} onOpenChange={setConfirm} tone="neutral" title={`Archive ${name}?`} confirmLabel="Archive" onConfirm={async () => { await run(); setConfirm(false); }}>
+    <ConfirmDialog open={confirm} onOpenChange={setConfirm} tone="neutral" title={`Archive ${name}?`} confirmLabel="Archive" onConfirm={async () => { await run(); setConfirm(false); }}
+      describeError={error => (isUncertain(error)
+        ? "No answer came back, so it may have been archived. Close this and check the library on this page; nothing is sent again."
+        : "It wasn't archived. Try again.")}>
       {body ?? <p>It can't be chosen for new reviews. Reviews that use it keep it exactly as recorded, and you can restore it later. Nothing is deleted.</p>}
     </ConfirmDialog>
   );
-  return { request, dialog, pending: set.isPending };
+  return { request, dialog, pending: set.isPending, locked };
 }
 
 function ArchiveButton(target: ArchiveTarget) {
   const archive = useArchive(target);
   return (
     <>
-      <Button size="sm" variant="ghost" loading={archive.pending} onClick={archive.request}>
+      <Button size="sm" variant="ghost" loading={archive.pending} disabled={archive.locked} disabledReason={archive.locked ? LOCKED : undefined} onClick={archive.request}>
         {target.archived ? "Restore" : "Archive"}
       </Button>
       {archive.dialog}
@@ -266,9 +309,9 @@ function ArchiveButton(target: ArchiveTarget) {
   );
 }
 
-function NameDialog({ title, open, onOpenChange, initial, onSave, kindChoice, description }: {
+function NameDialog({ title, open, onOpenChange, initial, onSave, kindChoice, description, write }: {
   title: string; open: boolean; onOpenChange: (o: boolean) => void; initial: { name: string; description?: string; kind?: TagKind };
-  onSave: (v: { name: string; description: string; kind: TagKind }) => Promise<unknown>; kindChoice?: boolean; description?: boolean;
+  onSave: (v: { name: string; description: string; kind: TagKind }) => Promise<unknown>; kindChoice?: boolean; description?: boolean; write: LibraryWrite;
 }) {
   const [name, setName] = useState(initial.name);
   const [text, setText] = useState(initial.description ?? "");
@@ -277,17 +320,20 @@ function NameDialog({ title, open, onOpenChange, initial, onSave, kindChoice, de
   const [busy, setBusy] = useState(false);
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (busy) return;
     if (!name.trim()) { setError("Required"); return; }
+    if (busy || !write.canSubmit) return;
     setBusy(true);
     onSave({ name: name.trim(), description: text, kind }).then(() => onOpenChange(false), (err: { category?: string; issues?: { message: string }[] }) => {
+      if (isUncertain(err)) return; // Checked in LibraryWriteReview below; the entries stay.
       setError(err?.category === "conflict" ? "That name is already used" : err?.issues?.[0]?.message ?? "It wasn't saved. Try again.");
     }).finally(() => setBusy(false));
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={title} dismissible={!busy}
-      footer={<><Button onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button><Button type="submit" form="jr-name-form" variant="primary" loading={busy}>Save</Button></>}>
+      footer={<><Button onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button><Button type="submit" form="jr-name-form" variant="primary" loading={busy}
+        disabled={!busy && !write.canSubmit} disabledReason={!busy && !write.canSubmit ? LOCKED : undefined}>Save</Button></>}>
       <form id="jr-name-form" onSubmit={submit} noValidate className="jr-form">
+        {write.outcome === "uncertain-outcome" && <LibraryWriteReview write={write} change={write.submitted} />}
         <TextField label="Name" required autoFocus value={name} onChange={e => { setName(e.target.value); setError(null); }} error={error} maxLength={kindChoice ? 40 : 80} />
         {kindChoice && <RadioGroup<TagKind> label="Kind" inline value={kind} onValueChange={setKind} options={tagKinds.map(k => ({ value: k, label: TAG_KIND_LABELS[k] }))} />}
         {description && <Textarea label="Description" optional rows={4} value={text} onChange={e => setText(e.target.value)} maxLength={20_000} placeholder="When you take it, how you manage it" />}
@@ -333,7 +379,7 @@ function Playbooks({ strategies, checklists }: { strategies: Strategy[]; checkli
       {strategies.some(s => s.archived) && <Button size="sm" variant="ghost" onClick={() => setShowArchived(v => !v)}>{showArchived ? "Hide archived" : "Show archived"}</Button>}
       {editing && (
         <NameDialog title={editing === "new" ? "New playbook" : `Edit ${editing.name}`} open onOpenChange={o => !o && setEditing(null)} description
-          initial={editing === "new" ? { name: "" } : { name: editing.name, description: editing.description ?? "" }}
+          initial={editing === "new" ? { name: "" } : { name: editing.name, description: editing.description ?? "" }} write={save}
           onSave={v => save.submit({ id: editing === "new" ? null : editing.id, input: { name: v.name, description: v.description.trim() || null } })} />
       )}
     </div>
@@ -398,8 +444,10 @@ function ChecklistDialog({ checklist, strategies, onClose }: { checklist: Checkl
   const archivedItems = (checklist?.items ?? []).filter(i => i.archived);
   const move = (i: number, d: -1 | 1) => setV(s => { const items = [...s.items]; [items[i], items[i + d]] = [items[i + d], items[i]]; return { ...s, items }; });
   const close = () => (dirty ? setConfirm(true) : onClose());
+  const uncertain = save.outcome === "uncertain-outcome";
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    if (!save.canSubmit) return;
     const input: ChecklistInput = {
       name: v.name.trim(), description: v.description.trim() || null, scope: v.scope, strategyId: v.scope === "trade" ? v.strategyId : null,
       items: v.items.filter(i => i.label.trim() !== "").map(i => ({ id: i.id, label: i.label.trim() })),
@@ -410,9 +458,11 @@ function ChecklistDialog({ checklist, strategies, onClose }: { checklist: Checkl
     <>
       <Dialog open onOpenChange={o => !o && close()} size="lg" title={checklist ? `Edit ${checklist.name}` : "New checklist"} dismissible={!save.isPending}
         description="Renaming or removing an item never changes past reviews: their answers keep the label they were given under."
-        footer={<><Button onClick={close} disabled={save.isPending}>Cancel</Button><Button type="submit" form="jr-checklist-form" variant="primary" loading={save.isPending}>Save checklist</Button></>}>
+        footer={<><Button onClick={close} disabled={save.isPending}>Cancel</Button><Button type="submit" form="jr-checklist-form" variant="primary" loading={save.isPending}
+          disabled={!save.isPending && !save.canSubmit} disabledReason={uncertain ? LOCKED : !save.isPending && !save.canSubmit ? "Saving isn't available right now" : undefined}>Save checklist</Button></>}>
         <form id="jr-checklist-form" onSubmit={submit} noValidate className="jr-form">
-          {save.error && !Object.keys(errors).length && <InlineNotice tone="error">{save.error.category === "conflict" ? "It changed elsewhere. Close and reopen it." : "It wasn't saved. Try again."}</InlineNotice>}
+          {uncertain && <LibraryWriteReview write={save} change={save.submitted} />}
+          {!uncertain && save.error && !Object.keys(errors).length && <InlineNotice tone="error">{save.error.category === "conflict" ? "It changed elsewhere. Close and reopen it." : "It wasn't saved. Try again."}</InlineNotice>}
           <TextField label="Name" required autoFocus value={v.name} onChange={e => setV(s => ({ ...s, name: e.target.value }))} error={errors.name} maxLength={80} />
           <RadioGroup<"trade" | "daily"> label="Used for" inline value={v.scope} onValueChange={scope => setV(s => ({ ...s, scope }))} error={errors.scope}
             options={[{ value: "trade", label: "Each trade" }, { value: "daily", label: "Each day" }]} disabled={(checklist?.reviewCount ?? 0) > 0} />
@@ -479,7 +529,8 @@ function TagPill({ tag, onRename }: { tag: Tag; onRename: () => void }) {
         actionsLabel={`Actions for tag ${tag.name}`}
         actions={[
           { label: "Rename…", onSelect: onRename },
-          { label: tag.archived ? "Restore" : "Archive…", onSelect: archive.request, disabled: archive.pending },
+          // While an uncertain library change is unchecked, archive and restore wait (the check is at the top of the library).
+          { label: tag.archived ? "Restore" : "Archive…", onSelect: archive.request, disabled: archive.pending || archive.locked },
         ]}
       />
       {archive.dialog}
@@ -527,7 +578,7 @@ function Tags({ tags }: { tags: Tag[] }) {
       {editing && (
         <NameDialog title={"id" in editing ? `Rename ${editing.name}` : `New ${TAG_KIND_LABELS[editing.kind].toLowerCase()} tag`} open kindChoice
           onOpenChange={o => !o && closeEditor()}
-          initial={"id" in editing ? { name: editing.name, kind: editing.kind } : { name: "", kind: editing.kind }}
+          initial={"id" in editing ? { name: editing.name, kind: editing.kind } : { name: "", kind: editing.kind }} write={save}
           onSave={v => save.submit({ id: "id" in editing ? editing.id : null, input: { name: v.name, kind: v.kind } })} />
       )}
     </div>

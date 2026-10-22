@@ -33,16 +33,16 @@ import { useCommitCsvImport, useCsvPreview } from "../hooks/imports";
 import { useCsvFileChoice } from "../hooks/use-csv-file";
 import {
   buildRequest,
-  checkMapping,
   fileProblemText,
-  GENERIC_FIELDS,
   initialWizardState,
   mappingFromPreview,
   requestKey,
   wizardReducer,
   type CsvFormatChoice,
   type DateFormatChoice,
+  type WizardState,
 } from "../wizard-state";
+import { ColumnMappingTable } from "./ColumnMappingTable";
 import { assessTarget, ImportTargetPicker, useDestinationRecheck } from "./ImportTarget";
 import { RowsTable } from "./RowsTable";
 import { DATE_ORDER_LABELS, FORMAT_LABELS, fileSize } from "./presentation";
@@ -132,26 +132,32 @@ export function ImportWizardPage() {
   const confirmationKey = p ? JSON.stringify([key, p.targetAssessment.previewToken]) : null;
   const confirmed = confirmationKey !== null && state.confirmedTargetFor === confirmationKey;
   const targetReady = !assessment.blocked && (assessment.confirmations.length === 0 || confirmed);
-  const columns: ColumnMapping | null = p && p.format === "generic" ? (state.columns ?? mappingFromPreview(p.mapping)) : null;
-  const mapping = columns ? checkMapping(columns) : { errors: {}, warnings: {} };
+  // The last preview checked for this file, so Match columns stays on screen while a changed mapping is checked
+  // again (P0-D09). Its statuses describe that earlier request, so the table hides them until Rust answers.
+  const lastChecked = useRef<{ file: number; preview: Preview } | null>(null);
+  if (current && state.file) lastChecked.current = { file: state.file.version, preview: current };
+  const shown = current ?? (state.file && lastChecked.current?.file === state.file.version ? lastChecked.current.preview : undefined);
+  const columns: ColumnMapping | null = shown && shown.preview.format === "generic" ? (state.columns ?? mappingFromPreview(shown.preview.mapping)) : null;
+  // Rust's statuses are the only mapping check: an error always has a blocking `columns.*` file issue.
+  const mappingBlocked = Boolean(p?.mapping.some(m => m.status === "error"));
   const issueFor = (prefix: string) => p?.fileIssues.find(i => i.field === prefix)?.message;
   const dateAmbiguous = Boolean(p?.fileIssues.some(i => i.field === "dateFormat"));
   const committing = commit.isPending;
   const outcome = commit.outcome;
   const finished = outcome === "confirmed-success" || outcome === "confirmed-failure";
 
-  const runPreview = (then?: () => void) => {
-    const request = buildRequest(state);
-    const k = requestKey(state);
+  const runPreview = (then?: (checked: Preview["preview"]) => void, from: WizardState = state) => {
+    const request = buildRequest(from);
+    const k = requestKey(from);
     if (!request || !k) return;
     dispatch({ type: "confirm-target", key: null });
     preview
       .preview(request)
-      .then(() => {
+      .then(result => {
         if (latestKey.current !== k) return;
         setPreviewFor(k);
         setPreviewContext(context);
-        then?.();
+        then?.(result.value.preview);
       })
       .catch(() => {});
   };
@@ -247,17 +253,19 @@ export function ImportWizardPage() {
     </div>
   );
 
-  const mappingStep = p && (
+  const shownPreview = shown?.preview;
+  const unchecked = current ? undefined : preview.isPending ? "pending" as const : "stale" as const;
+  const mappingStep = shown && shownPreview && (
     <section className="ds-card imp-panel" aria-labelledby="imp-map-h">
       <div className="imp-panel-head">
         <h2 id="imp-map-h" className="ds-title">Match columns</h2>
-        <span className="ds-faint">{p.headers.length} columns in {current.fileName}</span>
+        <span className="ds-faint">{shownPreview.headers.length} columns in {shown.fileName}</span>
       </div>
       <StatList bordered label="Detected" items={[
-        { label: "Format", value: `${FORMAT_LABELS[p.format]} — ${p.formatReason}` },
-        { label: "Date order", value: p.dateFormat ? `${DATE_ORDER_LABELS[p.dateFormat]} — ${p.dateFormatReason}` : p.fileIssues.some(i => i.field === "dateFormat") ? "Needs your choice: more than one order fits" : p.dateFormatReason || "Not needed" },
+        { label: "Format", value: `${FORMAT_LABELS[shownPreview.format]} — ${shownPreview.formatReason}` },
+        { label: "Date order", value: shownPreview.dateFormat ? `${DATE_ORDER_LABELS[shownPreview.dateFormat]} — ${shownPreview.dateFormatReason}` : shownPreview.fileIssues.some(i => i.field === "dateFormat") ? "Needs your choice: more than one order fits" : shownPreview.dateFormatReason || "Not needed" },
       ]} />
-      {dateAmbiguous && (
+      {p && dateAmbiguous && (
         <InlineNotice tone="warning" live="polite" title="Choose the date order">
           {issueFor("dateFormat")} FundedFlow won't guess.
           <div className="imp-inline-field">
@@ -266,31 +274,33 @@ export function ImportWizardPage() {
           </div>
         </InlineNotice>
       )}
-      {p.format === "performance" ? (
-        <StatList label="Columns used" items={p.mapping.map(m => ({ label: m.field, value: m.header ?? (m.required ? "Missing" : "Not in file") }))} />
-      ) : (
-        <div className="imp-mapping">
-          {GENERIC_FIELDS.map(f => (
-            <Select
-              key={f.field}
-              label={f.label}
-              required={f.required}
-              optional={!f.required}
-              value={columns?.[f.field] ?? (f.required ? undefined : "__none")}
-              placeholder="Choose the column"
-              onValueChange={v => dispatch({ type: "columns", columns: { ...columns!, [f.field]: v === "__none" ? null : v } as ColumnMapping })}
-              error={mapping.errors[f.field] ?? issueFor(`columns.${f.field}`)}
-              description={mapping.warnings[f.field]}
-              options={[...(f.required ? [] : [{ value: "__none", label: "Not in file" }]), ...p.headers.filter(h => h.trim()).map(h => ({ value: h, label: h }))]}
-            />
-          ))}
-        </div>
-      )}
-      {p.ignoredHeaders.length > 0 && <p className="ds-faint">Not used: {p.ignoredHeaders.join(", ")}</p>}
-      {blockingIssues.filter(i => !i.field.startsWith("columns.") && i.field !== "dateFormat").map((i, n) => (
+      <p className="ds-faint imp-map-note">
+        {shownPreview.format === "performance"
+          ? "A recognized export: its columns are fixed. "
+          : "Change a column to check the file again. "}
+        Matched means the column was recognized, not that every row's values are valid; Review rows checks each row.
+      </p>
+      <ColumnMappingTable
+        format={shownPreview.format}
+        mapping={shownPreview.mapping}
+        unchecked={unchecked}
+        edit={columns ? {
+          headers: shownPreview.headers,
+          columns,
+          disabled: committing,
+          onChange: next => {
+            const changed = { ...state, columns: next };
+            dispatch({ type: "columns", columns: next });
+            // Every edit is checked again by Rust, so each status always describes the mapping on screen.
+            runPreview(undefined, changed);
+          },
+        } : undefined}
+      />
+      {p && p.ignoredHeaders.length > 0 && <p className="ds-faint">Not used: {p.ignoredHeaders.join(", ")}</p>}
+      {p && blockingIssues.filter(i => !i.field.startsWith("columns.") && i.field !== "dateFormat").map((i, n) => (
         <InlineNotice key={n} tone="error" live="assertive">{i.message}</InlineNotice>
       ))}
-      {p.fileWarnings.map((w, n) => <InlineNotice key={n} tone="warning" live="off">{w.message}</InlineNotice>)}
+      {p?.fileWarnings.map((w, n) => <InlineNotice key={n} tone="warning" live="off">{w.message}</InlineNotice>)}
     </section>
   );
 
@@ -382,13 +392,14 @@ export function ImportWizardPage() {
   const step = state.step;
   const nextDisabled =
     step === 0 ? !canLeaveFileStep || preview.isPending
-      : step === 1 ? preview.isPending || Object.keys(mapping.errors).length > 0 || (dateAmbiguous && state.dateFormat === "auto")
+      : step === 1 ? preview.isPending || mappingBlocked || (dateAmbiguous && state.dateFormat === "auto")
         : step === 2 ? !fresh || blockingIssues.length > 0 || importable === 0
           : true;
 
   const next = () => {
     if (step === 0) runPreview(() => dispatch({ type: "step", step: 1 }));
-    else if (step === 1) (fresh ? dispatch({ type: "step", step: 2 }) : runPreview(() => dispatch({ type: "step", step: 2 })));
+    // Rows are reviewed only for a mapping Rust has accepted: an "Action required" column keeps the trader here.
+    else if (step === 1) (fresh ? dispatch({ type: "step", step: 2 }) : runPreview(checked => { if (!checked.mapping.some(m => m.status === "error")) dispatch({ type: "step", step: 2 }); }));
     else if (step === 2) dispatch({ type: "step", step: 3 });
   };
 
@@ -458,7 +469,8 @@ export function ImportWizardPage() {
               <Button onClick={() => (state.file || step > 0 ? setConfirmCancel(true) : navigate("/accounts"))} disabled={committing}>Cancel</Button>
               {step > 0 && <Button onClick={() => dispatch({ type: "step", step: (step - 1) as 0 | 1 | 2 })} disabled={committing}>Back</Button>}
               {step < 3 ? (
-                <Button variant="primary" onClick={next} disabled={nextDisabled} loading={preview.isPending}>
+                <Button variant="primary" onClick={next} disabled={nextDisabled} loading={preview.isPending}
+                  disabledReason={step === 1 && mappingBlocked && !preview.isPending ? "Fix the columns marked Action required first" : undefined}>
                   {step === 0 ? "Check the file" : step === 1 ? "Review rows" : `Continue with ${importable.toLocaleString("en-US")} ${importable === 1 ? "trade" : "trades"}`}
                 </Button>
               ) : (

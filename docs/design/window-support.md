@@ -82,6 +82,8 @@ Before P0-D29 these were window-width media queries at 900 px (Accounts, Import)
 - **Today Active accounts** (`td-overview` container): 1 column below 560 px, 2 from 560, 3 from 880, 4 from
   1200 px of the section's own width. Cards stay roughly 270–560 px wide; a few accounts never stretch across an
   ultrawide frame.
+- **Today Active accounts, List view** (P0-D23): one row per account at every width; four aligned groups from 880 px
+  of the section's own width, wrapping to name and actions over the rest below that.
 - Grids of figures and cards elsewhere keep `repeat(auto-fit|auto-fill, minmax(…))` with their existing minimums.
 - The account overview card has its own container breakpoints (460 and 300 px; Build 18.5).
 

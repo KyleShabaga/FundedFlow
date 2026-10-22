@@ -164,6 +164,15 @@
 .ds-popover { position: absolute; top: calc(100% + 6px); z-index: 50; padding: var(--space-4); width: max-content; max-width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 120px); overflow: auto; }
 .ds-popover-start { left: 0; }
 .ds-popover-end { right: 0; }
+/* InfoTip: a 14 px "i" with a 24 px target; the popup is a Popover surface sized for reading. */
+.ds-infotip { vertical-align: middle; }
+.ds-infotip-btn { display: inline-grid; place-items: center; width: 24px; height: 24px; margin: -4px 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--ink-faint); cursor: help; }
+.ds-infotip-btn svg { width: 14px; height: 14px; }
+.ds-infotip-btn:hover, .ds-infotip-btn[aria-expanded="true"] { color: var(--ink); }
+.ds-infotip-btn:focus-visible { outline: 2px solid var(--flow); outline-offset: 0; }
+.ds-infotip-pop { padding: var(--space-3); font: 400 13px/19px var(--font-sans); color: var(--ink); white-space: normal; text-transform: none; letter-spacing: normal; }
+.ds-infotip-pop p { margin: 0; }
+.ds-infotip-pop p + p { margin-top: var(--space-2); }
 
 .ds-menu { min-width: 180px; max-width: min(320px, calc(100vw - 16px)); padding: var(--space-1); z-index: 60; }
 .ds-menu-item { display: flex; align-items: center; gap: var(--space-2); min-height: 32px; padding: 0 var(--space-2); border-radius: var(--radius-sm); font-size: 13px; color: var(--ink); cursor: pointer; outline: none; user-select: none; }
@@ -253,3 +262,10 @@
 .ds-diagnostics { margin-top: var(--space-3); }
 .ds-diagnostics > summary { cursor: pointer; font: 500 13px/18px var(--font-sans); }
 .ds-diagnostics-text { margin: var(--space-2) 0; padding: var(--space-3); max-width: 100%; overflow-x: auto; white-space: pre-wrap; border: 1px solid var(--line-200); border-radius: var(--radius-md); font: 400 12px/18px var(--font-mono); user-select: text; }
+
+/* P0-D18: DisclosureButton. Open reads as pressed (flow edge and tint) plus a turned chevron, never colour alone. */
+.ds-disclosure-btn.is-expanded { background: var(--flow-soft); border-color: var(--flow); color: var(--ink); }
+.ds-disclosure-count { font-family: var(--font-mono); color: var(--flow); }
+.ds-disclosure-chevron { flex: none; color: var(--ink-muted); transition: transform .15s ease; }
+.ds-disclosure-btn.is-expanded .ds-disclosure-chevron { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .ds-disclosure-chevron { transition: none; } }

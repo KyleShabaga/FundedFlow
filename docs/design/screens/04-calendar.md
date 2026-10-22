@@ -9,7 +9,8 @@ Mockup: `Calendar.dc.html` (picker open by default). References: `tw-calendar.pn
 See P&L by trading day, week, month and year, and jump to any of them.
 
 ## Layout
-1. Page head with a segmented control: Net P&L / Trades / Win rate (what the cells show).
+1. Page head with a segmented control: Net P&L / Trades / Win rate (what the cells show), then a **Filters** button
+   (P0-D18) that opens the Insights filters in an inline panel below that toolbar.
 2. Month card: previous, **month title button** (opens `MonthYearPicker`), next, Today; month P&L and
    "n trades · n trading days" on the right.
 3. Grid: Monday–Friday plus a Week column. Each day: date, compact P&L, trade count; tinted `profit-soft` /
@@ -43,3 +44,13 @@ months without trades dimmed but selectable. Picking a month closes the popover.
   and the unknown count.
 - The selected-day panel links each attempt's daily review (`/journal/days/:day?account=`) with its status.
 - Open question resolved: the week cell shows P&L and trade count; win rate shows in the cell only in Win rate mode.
+
+## As built (P0-D18)
+- The Calendar shows the page's one Insights filter bar behind a `DisclosureButton` (funnel icon, "Filters") beside
+  the cell choice, set apart by a rule. It starts closed on each visit; open, the same controls sit in flow between the
+  toolbar and the month. Filters stay in the URL, so closing only hides them.
+- The count is the number of filter groups not at their default that Clear filters resets: the trading-day range
+  counts once; accounts, currency, basis and the cell choice never count. Closed with filters applied, a summary
+  ("Filtered by Oct 1, 2026 to Oct 31, 2026 · Long only · Manual only") and Clear filters stay in view.
+- When the calendar has nothing to show (no match, or a currency to choose), the bar returns above the tabs as on the
+  other sections, so filters stay reachable. Screenshots: [p0-d18](p0-d18/README.md).

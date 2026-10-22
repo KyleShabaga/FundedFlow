@@ -95,6 +95,33 @@ describe("uncertain account create", () => {
     expect(first.calls).toHaveLength(1);
   });
 
+  it.each([true, false])("a form reopened during the uncertain save reviews the name that was sent, not its own field (saved: %s)", async happened => {
+    const store = createAppStore();
+    const { user } = renderApp("/accounts", store);
+    const dialog = await startAdd(user);
+    const first = await uncertainCreate(store, user, dialog, happened);
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    const discard = screen.queryByRole("alertdialog");
+    if (discard) await user.click(within(discard).getAllByRole("button").slice(-1)[0]!);
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add account" })).toBeNull());
+    // Reopened with an empty name field: the review still checks "Eval 50K".
+    await user.click((await screen.findAllByRole("button", { name: "Add account" }))[0]);
+    const again = await screen.findByRole("dialog", { name: "Add account" });
+    expect((within(again).getByRole("textbox", { name: /Account name/ }) as HTMLInputElement).value).toBe("");
+    await user.click(within(again).getByRole("button", { name: "Check result" }));
+    if (happened) {
+      const saved = await within(again).findByLabelText("Accounts with this name");
+      expect(within(saved).getByText("Eval 50K")).toBeTruthy();
+    } else {
+      expect(await within(again).findByText("No account named “Eval 50K” is in your journal.")).toBeTruthy();
+    }
+    expect(within(again).queryByText("No account named “” is in your journal.")).toBeNull();
+    await user.click(within(again).getByRole("button", { name: "I've checked; allow saving again" }));
+    await waitFor(() => expect(within(again).queryByText("Couldn't confirm it saved")).toBeNull());
+    expect(first.calls).toHaveLength(1);
+    expect(store.accounts.size).toBe(happened ? 1 : 0);
+  });
+
   it("keeps the lock when the check itself fails, and lets the trader check again", async () => {
     const store = createAppStore();
     const { user } = renderApp("/accounts", store);

@@ -3,11 +3,12 @@
 // here reads or writes the journal.
 
 import { toMicros } from "@fundedflow/domain";
-import { Columns3, Ellipsis, Plus } from "lucide-react";
-import { type FormEvent, type ReactNode, useMemo, useRef, useState } from "react";
+import { Columns3, Ellipsis, Filter, Plus } from "lucide-react";
+import { type FormEvent, type ReactNode, useId, useMemo, useRef, useState } from "react";
 
 import {
   Disclosure,
+  DisclosureButton,
   DocumentView,
   GatePage,
   type AsyncState,
@@ -38,6 +39,7 @@ import {
   InlineNotice,
   LabeledValue,
   LoadingState,
+  InfoTip,
   MetricCard,
   MiniMeter,
   MoneyCell,
@@ -171,6 +173,8 @@ export function FormsSection() {
 export function OverlaysSection() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [fail, setFail] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersId = useId();
   const toast = useToast();
   return (
     <Section title="Buttons, dialogs and menus" note="Focus moves into overlays, Escape closes them and focus returns to what opened them. ConfirmDialog focuses Cancel first and blocks double submits.">
@@ -180,7 +184,10 @@ export function OverlaysSection() {
         <IconButton label="Previous month" icon={<span aria-hidden="true">‹</span>} />
         <IconButton label="Row actions" variant="ghost" icon={<Ellipsis size={16} aria-hidden="true" />} />
         <SegmentedControl label="Layout" value="table" onValueChange={() => {}} options={[{ value: "table", label: "Table" }, { value: "cards", label: "Cards" }]} />
+        <DisclosureButton size="sm" icon={<Filter size={14} aria-hidden="true" />} expanded={filtersOpen} controls={filtersId} count={2}
+          countLabel={n => `${n} filters applied`} onClick={() => setFiltersOpen(o => !o)}>Filters</DisclosureButton>
       </div>
+      <div id={filtersId} hidden={!filtersOpen} className="ds-faint">DisclosureButton (P0-D18): the region it shows sits wherever the layout needs it; the button carries aria-expanded and aria-controls, and the count of active items.</div>
       <div className="dsg-row">
         <Dialog
           trigger={<Button>Open dialog</Button>}
@@ -237,6 +244,29 @@ export function OverlaysSection() {
         <Tooltip content="Resets at 17:00 New York time">
           <Button variant="ghost">Hover or focus me</Button>
         </Tooltip>
+      </div>
+    </Section>
+  );
+}
+
+/* ---------- Metric info (P0-D14) ---------- */
+
+export function MetricInfoSection() {
+  return (
+    <Section title="Metric info" note="MetricCard's info slot: an InfoTip after the label in place of a basis footer. Hover or keyboard focus shows it; a click or tap pins it until Escape, a click outside or another click. Reasons the value needs stay visible.">
+      <div className="dsg-grid-4">
+        <MetricCard label="Win rate" value={{ kind: "text", text: "52.5%" }} sub="31 W · 28 L · 0 BE"
+          info={<p>Wins ÷ trades with a known result (break-evens count). Example text.</p>} />
+        <MetricCard label="Average R" value={{ kind: "unavailable", reason: "No trade here has a planned risk in its review" }}
+          info={<p>Net P&amp;L ÷ the review&apos;s planned risk (1R), only where recorded. Example text.</p>} />
+        <MetricCard label="Net P&L" value={{ kind: "money", amount: "537.9" }} sub="After $206.60 in fees" basis="52 of 59 closed trades with a known P&L"
+          info={<><p>52 of 59 closed trades with a known P&amp;L.</p><p>The partial-data line also stays visible under the card. Example text.</p></>} />
+        <MetricCard label="Profit factor" value={{ kind: "text", text: "1.5" }} sub="Winning ÷ losing net P&L"
+          info={<p>Net P&amp;L · needs 5 trades and a loss. A long explanation wraps inside the popup, which stays within the window and opens toward the side with more room. Example text.</p>} />
+      </div>
+      <div className="dsg-row">
+        <span className="ds-label">Standalone</span>
+        <InfoTip label="About trading days">Trading days run Monday to Friday; weekend activity counts toward Monday.</InfoTip>
       </div>
     </Section>
   );
