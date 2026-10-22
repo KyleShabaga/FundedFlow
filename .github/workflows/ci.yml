@@ -104,8 +104,6 @@ jobs:
       # `npm audit` reads package-lock.json, so no install is needed. Each attempt is killed after 120 s, and npm's
       # own fetch is capped at 60 s with no internal retries (its defaults, 5 min and 2 retries, hung CI for minutes).
       - name: npm audit (production dependencies)
-        env:
-          npm_config_registry: https://registry.invalid # TEMPORARY: simulated outage, revert before review
         run: >
           node scripts/audit-guard.mjs --label "npm audit" --expect metadata --attempts 3 --backoff 15 --timeout 120
           ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '--fail-on-outage' || '' }}
@@ -121,8 +119,6 @@ jobs:
       # running (on Windows, killing cargo would leave its cargo-audit child behind).
       - name: cargo audit
         working-directory: apps/desktop/src-tauri
-        env:
-          HTTPS_PROXY: http://127.0.0.1:9 # TEMPORARY: simulated outage, revert before review
         run: >
           node ../../../scripts/audit-guard.mjs --label "cargo audit" --expect vulnerabilities --attempts 3 --backoff 15
           --timeout 120 ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '--fail-on-outage' || '' }}
