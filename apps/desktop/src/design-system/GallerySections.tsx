@@ -12,6 +12,7 @@ import {
   DocumentView,
   GatePage,
   type AsyncState,
+  ActionPill,
   Badge,
   Button,
   ChartPanel,
@@ -235,6 +236,11 @@ export function OverlaysSection() {
             { label: "Delete…", tone: "danger", onSelect: () => setConfirmOpen(true) },
           ]}
         />
+        <ActionPill label="ORB" meta="Used in 47 reviews" actionsLabel="Actions for tag ORB" actions={[
+          { label: "Rename…", onSelect: () => toast.show({ title: "Rename chosen", description: "Example only." }) },
+          { label: "Archive…", onSelect: () => toast.show({ title: "Archive chosen", description: "Example only." }) },
+        ]} />
+        <ActionPill label="FOMO" muted badge={<Badge tone="warn">Archived</Badge>} meta="Not used yet" actionsLabel="Actions for tag FOMO" actions={[{ label: "Restore", onSelect: () => {} }]} />
         <Tooltip content="Resets at 17:00 New York time">
           <Button variant="ghost">Hover or focus me</Button>
         </Tooltip>

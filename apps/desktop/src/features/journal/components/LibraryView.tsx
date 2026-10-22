@@ -5,10 +5,11 @@
 // (on the page and in the dialog that sent it) before saving is allowed again.
 import { tagKinds, type LegacyDayNote, type Checklist, type ChecklistInput, type Strategy, type Tag, type TagKind } from "@fundedflow/domain";
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
+  ActionPill,
   Badge,
   Button,
   ConfirmDialog,
@@ -271,25 +272,39 @@ function LibraryWriteReview({ write, change }: { write: UncertainWrite; change: 
   );
 }
 
-function ArchiveButton({ entity, id, archived, name }: { entity: "strategy" | "tag" | "checklist"; id: string; archived: boolean; name: string }) {
+type ArchiveTarget = { entity: "strategy" | "tag" | "checklist"; id: string; archived: boolean; name: string };
+
+/**
+ * Archive (after a confirmation) or restore (at once) through the existing `set_archived` mutation. `request` starts
+ * it; `dialog` must be rendered. Archiving only hides an item from new choices; nothing is deleted or untagged.
+ */
+function useArchive({ entity, id, archived, name }: ArchiveTarget, body?: ReactNode) {
   const set = useSetArchived();
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
   const run = () => set.submit({ entity, id, archived: !archived }).then(() => toast.show({ tone: "success", title: archived ? `${name} restored` : `${name} archived` }));
   const locked = !set.canSubmit && !set.isPending;
+  // An uncertain restore is checked at the top of the library, never reported as "nothing changed".
+  const request = () => (archived ? void run().catch(error => { if (!isUncertain(error)) toast.show({ tone: "error", title: "Nothing changed", description: "Try again." }); }) : setConfirm(true));
+  const dialog = (
+    <ConfirmDialog open={confirm} onOpenChange={setConfirm} tone="neutral" title={`Archive ${name}?`} confirmLabel="Archive" onConfirm={async () => { await run(); setConfirm(false); }}
+      describeError={error => (isUncertain(error)
+        ? "No answer came back, so it may have been archived. Close this and check the library on this page; nothing is sent again."
+        : "It wasn't archived. Try again.")}>
+      {body ?? <p>It can't be chosen for new reviews. Reviews that use it keep it exactly as recorded, and you can restore it later. Nothing is deleted.</p>}
+    </ConfirmDialog>
+  );
+  return { request, dialog, pending: set.isPending, locked };
+}
+
+function ArchiveButton(target: ArchiveTarget) {
+  const archive = useArchive(target);
   return (
     <>
-      {/* An uncertain restore is checked at the top of the library, never reported as "nothing changed". */}
-      <Button size="sm" variant="ghost" loading={set.isPending} disabled={locked} disabledReason={locked ? LOCKED : undefined}
-        onClick={() => (archived ? void run().catch(error => { if (!isUncertain(error)) toast.show({ tone: "error", title: "Nothing changed", description: "Try again." }); }) : setConfirm(true))}>
-        {archived ? "Restore" : "Archive"}
+      <Button size="sm" variant="ghost" loading={archive.pending} disabled={archive.locked} disabledReason={archive.locked ? LOCKED : undefined} onClick={archive.request}>
+        {target.archived ? "Restore" : "Archive"}
       </Button>
-      <ConfirmDialog open={confirm} onOpenChange={setConfirm} tone="neutral" title={`Archive ${name}?`} confirmLabel="Archive" onConfirm={async () => { await run(); setConfirm(false); }}
-        describeError={error => (isUncertain(error)
-          ? "No answer came back, so it may have been archived. Close this and check the library on this page; nothing is sent again."
-          : "It wasn't archived. Try again.")}>
-        <p>It can't be chosen for new reviews. Reviews that use it keep it exactly as recorded, and you can restore it later. Nothing is deleted.</p>
-      </ConfirmDialog>
+      {archive.dialog}
     </>
   );
 }
@@ -493,10 +508,51 @@ function ChecklistDialog({ checklist, strategies, onClose }: { checklist: Checkl
 
 /* ---------- Tags ---------- */
 
+const usedIn = (n: number) => (n === 0 ? "Not used yet" : `Used in ${n.toLocaleString("en-US")} ${n === 1 ? "review" : "reviews"}`);
+
+/** One tag as a pill with its own menu (P0-D12): Rename… and Archive… (or Restore), never an X. */
+function TagPill({ tag, onRename }: { tag: Tag; onRename: () => void }) {
+  const archive = useArchive({ entity: "tag", id: tag.id, archived: tag.archived, name: tag.name }, (
+    <p>
+      It won't be offered for new reviews.{" "}
+      {tag.reviewCount > 0 ? `The ${tag.reviewCount === 1 ? "review" : `${tag.reviewCount.toLocaleString("en-US")} reviews`} already tagged with it keep it exactly as recorded` : "No review uses it yet"}
+      : archiving doesn't remove it from any trade and deletes nothing. You can restore it later.
+    </p>
+  ));
+  return (
+    <li>
+      <ActionPill
+        label={tag.name}
+        muted={tag.archived}
+        badge={tag.archived ? <Badge tone="warn">Archived</Badge> : undefined}
+        meta={usedIn(tag.reviewCount)}
+        actionsLabel={`Actions for tag ${tag.name}`}
+        actions={[
+          { label: "Rename…", onSelect: onRename },
+          // While an uncertain library change is unchecked, archive and restore wait (the check is at the top of the library).
+          { label: tag.archived ? "Restore" : "Archive…", onSelect: archive.request, disabled: archive.pending || archive.locked },
+        ]}
+      />
+      {archive.dialog}
+    </li>
+  );
+}
+
 function Tags({ tags }: { tags: Tag[] }) {
   const save = useSaveTag();
   const [editing, setEditing] = useState<Tag | { kind: TagKind } | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  // The name dialog unmounts when it closes, so it can't return focus itself: send it back to what opened it (the
+  // tag's menu button, which a menu action leaves focused, or Add).
+  const opener = useRef<HTMLElement | null>(null);
+  const edit = (target: Tag | { kind: TagKind }) => {
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setEditing(target);
+  };
+  const closeEditor = () => {
+    setEditing(null);
+    requestAnimationFrame(() => { if (opener.current?.isConnected) opener.current.focus(); });
+  };
   return (
     <div className="jr-lib-section">
       <p className="ds-faint">Setup, mistake, mindset and general tags are chosen on a trade's review. Renaming a tag keeps past reviews as they were tagged.</p>
@@ -507,19 +563,11 @@ function Tags({ tags }: { tags: Tag[] }) {
             <section key={kind} className="ds-card jr-tag-col" aria-labelledby={`jr-tags-${kind}`}>
               <div className="jr-lib-head">
                 <h3 id={`jr-tags-${kind}`}>{TAG_KIND_LABELS[kind]}</h3>
-                <Button size="sm" icon={<Plus size={14} aria-hidden="true" />} onClick={() => setEditing({ kind })}>Add</Button>
+                <Button size="sm" icon={<Plus size={14} aria-hidden="true" />} onClick={() => edit({ kind })}>Add</Button>
               </div>
               {list.length === 0 ? <p className="ds-faint">None yet.</p> : (
-                <ul className="jr-tag-list">
-                  {list.map(t => (
-                    <li key={t.id} className="jr-row">
-                      <span className="jr-tag-name">{t.name}</span>
-                      {t.archived && <Badge tone="warn">Archived</Badge>}
-                      <span className="ds-faint">{t.reviewCount}</span>
-                      <Button size="sm" variant="ghost" onClick={() => setEditing(t)}>Rename</Button>
-                      <ArchiveButton entity="tag" id={t.id} archived={t.archived} name={t.name} />
-                    </li>
-                  ))}
+                <ul className="jr-tag-pills">
+                  {list.map(t => <TagPill key={t.id} tag={t} onRename={() => edit(t)} />)}
                 </ul>
               )}
             </section>
@@ -529,7 +577,7 @@ function Tags({ tags }: { tags: Tag[] }) {
       {tags.some(t => t.archived) && <Button size="sm" variant="ghost" onClick={() => setShowArchived(v => !v)}>{showArchived ? "Hide archived" : "Show archived"}</Button>}
       {editing && (
         <NameDialog title={"id" in editing ? `Rename ${editing.name}` : `New ${TAG_KIND_LABELS[editing.kind].toLowerCase()} tag`} open kindChoice
-          onOpenChange={o => !o && setEditing(null)}
+          onOpenChange={o => !o && closeEditor()}
           initial={"id" in editing ? { name: editing.name, kind: editing.kind } : { name: "", kind: editing.kind }} write={save}
           onSave={v => save.submit({ id: "id" in editing ? editing.id : null, input: { name: v.name, kind: v.kind } })} />
       )}

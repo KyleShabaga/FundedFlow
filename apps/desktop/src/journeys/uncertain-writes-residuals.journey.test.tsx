@@ -365,14 +365,18 @@ describe("uncertain Library changes", () => {
     const { user } = renderApp("/journal?view=library&section=tags", store);
     const mindset = await screen.findByRole("region", { name: "Mindset" });
     const hold = store.hold("library.setArchived");
-    await user.click(within(mindset).getByRole("button", { name: "Archive" }));
+    // P0-D12: archive is in the tag's own menu.
+    await user.click(within(mindset).getByRole("button", { name: "Actions for tag FOMO" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Archive…" }));
     const confirm = await screen.findByRole("alertdialog");
     await user.click(within(confirm).getByRole("button", { name: "Archive" }));
     await act(() => hold.lose(lostAnswer()));
     expect(await within(confirm).findByText(/may have been archived/)).toBeTruthy();
     await user.click(within(confirm).getByRole("button", { name: "Cancel" }));
-    // Every library write waits for the check, with a reason.
-    expect(isDisabled(within(mindset).getByRole("button", { name: "Archive" }))).toBe(true);
+    // Every library write waits for the check: the tag's Archive menu item is unavailable until then.
+    await user.click(within(mindset).getByRole("button", { name: "Actions for tag FOMO" }));
+    expect((await screen.findByRole("menuitem", { name: "Archive…" })).getAttribute("aria-disabled")).toBe("true");
+    await user.keyboard("{Escape}");
     await user.click(await screen.findByRole("button", { name: "Check result" }));
     const item = await screen.findByLabelText("The tag as saved now");
     expect(within(item).getByText("Archived")).toBeTruthy();
