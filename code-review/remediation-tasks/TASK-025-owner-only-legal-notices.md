@@ -55,7 +55,7 @@ Counsel review/external-user agreements (V2); third-party notices regeneration.
 - [ ] Document versions equal `1.0.1-owner-only` and `1.0.0-owner-only`; digests match the texts (test).
 - [ ] Full root checks → exit 0.
 - [ ] Packaged first-run shows the v1.1 texts (verified in TASK-030).
-- [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` unset for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
+- [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
 ## Verification plan
 Existing acceptance records re-prompt by design (`coversCurrent`).
@@ -79,6 +79,7 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - TASK-001 approved as Option A (keep 0BSD; no notice regeneration): prerequisite now records the decision and that no follow-up blocks this card (TASK-001's Option B follow-up branch no longer applies); consistent with "third-party notices regeneration" being out of scope.
 - TASK-006 approved as Option A (keep `downloadBootstrapper`): prerequisite now states the decided wording basis for `PRIVACY_SUMMARY`, matching TASK-026 r3 step 2.
 - The two remaining prerequisites (Kyle's v1.1 texts; the `user-agreement` id decision) are marked open; they are not decided here.
+- Fixture rule: unset (not `0`) (10 §8.3; independent review nit).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.

@@ -46,12 +46,16 @@ Signing; updater; pinning actions by SHA (optional, V1.1).
 5. Apply TASK-005 Option A: set every version field above to `0.1.1` for the first candidate (a later candidate gets the next increasing version); keep the tag-equals-version check (`release-installer.yml:65-69`, so the tag is `v0.1.1`) and the `source_sha`/`version` lines in `SHA256SUMS.txt` (`release-installer.yml:96-100`); update `recovery.journey.test.tsx:66` and the wire fixture `producerVersion` (or take the `normalize()` option above).
 6. Not applicable (TASK-006 = Option A): leave `webviewInstallMode` unchanged.
 
+**Later candidates.** This card sets `0.1.1`. Each replacement candidate needs its own small version-bump PR that repeats step 5 with the next higher version (0.1.2, …) and is recorded in the execution log; TASK-029 and TASK-031 rely on that.
+
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-005 decided — Option A, approved 2026-10-22 on the Notion approval board; TASK-006 decided — Option A, approved 2026-10-22 on the Notion approval board (no config change follows from it).
 - Merge order: after TASK-017 (the last W1 wire-fixture edit; 013 → 015 (option B only) → 016 → 017 → 027 on `data-controls-wire.json`) and before TASK-029 (candidate).
 - Likely shared-file conflicts: Version files with TASK-029 (candidate); `packages/domain/test/fixtures/data-controls-wire.json` with TASK-013, 015 (option B), 016, 017.
 
 ## Acceptance criteria (pass/fail)
+- [ ] Domain package version rule: `packages/domain/package.json:3` and the pin `apps/desktop/package.json:22` either both stay `0.1.0` or both become `0.1.1`; the PR records which.
+- [ ] If the optional `normalize()` change in `src-tauri/src/data_controls/wire_tests.rs` is taken and TASK-040 has merged, `cargo fmt --check` in `apps/desktop/src-tauri` → exit 0.
 - [ ] Workflow lint/dry run: a PR changing only `apps/desktop/src/**` triggers the installer build (observed in Actions).
 - [ ] A dispatch on a SHA without green CI fails with a clear message (observed).
 - [ ] Summary shows toolchain versions; SHA256SUMS.txt still contains the EXE hash and the `source_sha` and `version` lines.
@@ -92,6 +96,7 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - TASK-005 Option A also requires the source SHA to be recorded: step 5 and the SHA256SUMS criterion now keep the existing `source_sha`/`version` lines (`release-installer.yml:96-100`) and cite the existing tag check (`release-installer.yml:65-69`).
 - TASK-006 approved as Option A (2026-10-22, Notion approval board): the B/C `webviewInstallMode` branch is removed from scope, step 6 is marked not applicable, and the criterion now requires `tauri.conf.json:49-52` unchanged.
 - Prerequisites record both decisions as made (TASK-005 A, TASK-006 A).
+- Independent review nits: fixed rule for the domain package version; later candidates need their own version-bump PR repeating step 5; `cargo fmt --check` criterion if the optional Rust change is taken after TASK-040.
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.

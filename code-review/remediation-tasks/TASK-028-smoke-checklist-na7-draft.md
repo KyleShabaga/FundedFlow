@@ -35,7 +35,7 @@ Running the smoke on a current artifact.
 Stale checklist.
 
 ## Expected change scope
-Target file (r3): `docs/build-26.75-evidence.md` only — the "Clean-machine smoke checklist" section (lines 117-145: header table 121-128, steps 130-143, evidence line 145) and the NA-7 draft "Install and verify (for the NA-7 release notes)" (lines 147-166). Lines 145-166 belong to this card, not TASK-026 (TASK-026 is limited to lines 51-71). Record fields for SHA, EXE SHA-256, Windows build, WebView2 version, tester, date.
+Target file: `docs/build-26.75-evidence.md` only — the "Clean-machine smoke checklist" section (lines 117-145: header table 121-128, steps 130-143, evidence line 145) and the NA-7 draft "Install and verify (for the NA-7 release notes)" (lines 147-166). Lines 145-166 belong to this card, not TASK-026 (TASK-026 is limited to lines 51-71). Record fields for SHA, EXE SHA-256, Windows build, WebView2 version, tester, date.
 
 ## Out of scope
 Running the gates (TASK-030..033).
