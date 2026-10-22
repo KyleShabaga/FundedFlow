@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r3; awaiting independent review) |
+| Status | Ready for Approval (r3) |
 | Type | Fix |
 | Audit priority | P1 (P0 if TASK-010 escalates) |
 | Roadmap lane | Unassigned (owner) |
@@ -81,3 +81,4 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
+Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r3.

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r1; awaiting independent review) |
+| Status | Ready for Approval (r1) |
 | Type | Fix |
 | Audit priority | P1 (TASK-002 follow-up; release-blocking) |
 | Roadmap lane | Unassigned (owner) |
@@ -34,25 +34,30 @@ Repository is public; the file and its copies are readable on GitHub at HEAD.
 ## Root cause / evidence
 Real exports committed as test fixtures (owner confirmation 2026-10-22). Read-only facts at 1012d63 (counts only; no rows were printed):
 - Format shape: 13 columns `symbol,_priceFormat,_priceFormatType,_tickSize,buyFillId,sellFillId,qty,buyPrice,sellPrice,pnl,boughtTimestamp,soldTimestamp,duration`; CRLF line endings, trailing newline, no BOM, no quoted fields (`.gitattributes:2` keeps `test_csvimport/*.csv -text`); one symbol; 12-digit fill IDs, 16 IDs shared between rows; `pnl` in `$n.nn` and parenthesised-negative `$(n.nn)` styles; timestamps `MM/DD/YYYY HH:MM:SS`; durations in seconds-only, minutes-and-seconds and single-unit styles.
-- Consumers via `include_str!` / `PERFORMANCE`: `src-tauri/src/csv_import/tests.rs:13` (17 uses, 14 tests), `csv_import/regression_tests.rs:27,235` and `csv_import/wire_limit_tests.rs:102-103` (via `use super::*`), `store/attempt_tests.rs:13,305`, `store/insights_tests.rs:24,32,121`, `store/risk_promotion_tests.rs:390-394` (header and first data row).
+- Consumers via `include_str!` / `PERFORMANCE`: `src-tauri/src/csv_import/tests.rs:13` (declared at `:13`; 16 uses in about 10 of the file's 14 tests), `csv_import/regression_tests.rs:27,235` and `csv_import/wire_limit_tests.rs:102-103` (via `use super::*`), `store/attempt_tests.rs:13,305`, `store/insights_tests.rs:24,32,121`, `store/risk_promotion_tests.rs:390-394` (header and first data row).
 - Identifiers equal to `Performance.csv` fill IDs hard-coded elsewhere (line numbers only): `csv_import/tests.rs:93,141,173,174,237,238`; `csv_import/regression_tests.rs:245`; `csv_import/identity_tests.rs:73` (its header claims all values are synthetic); `csv_import/wire_limit_tests.rs:108-109`; `test_csvimport/identity/fill-pair-v2.json:7-10` (consumed by `identity_tests.rs:283`); `docs/architecture/p0-01-p0-03.md:42`; `docs/design/mockups/TradeDetail.dc.html:109,111`.
-- Checked and **not** copies of any of the three exports (no matching data line and no matching fill ID): `store/attempt_tests.rs`, `store/journal_review_tests.rs` (own inline `CSV`, line 200), `store/risk_promotion_tests.rs` constants, `wire_contract.rs:38` (and so `apps/desktop/src/test/fixtures/command-wire.json`), `db/upgrade_tests.rs:19`, `db/fixtures/generate.rs.txt:18`, `db/fixtures/*.db`, `test_csvimport/build17/normalization-v1.json` (18 inline synthetic cases; no `synthetic-*.csv` files exist), `test_csvimport/limits/byte-limit-v1.json`. The long numerals in the three store test files are timestamps/sizes and UUID constants, not fill IDs.
+- Value-level copies (fields of real rows without the real fill IDs; verified at 4ff16f5 by a script printing only file:line and booleans; independent review review3_B):
+  - In this card's own file `csv_import/tests.rs`: row-1 values (prices, P&L, timestamps, duration) with short substituted IDs at `:188-196`; the row-1 price pair at `:89,91`; a row-7 timestamp pair and price pair at `:143-144` (next to the fill ID at `:141`); partial values of rows 38-40 at `:256-258`. **In scope here.**
+  - `docs/design/mockups/TradeDetail.dc.html:100,110,112`: row-9 P&L and both timestamps beside the copied fill IDs at `:109,111`. **In scope here** (same file and row as the listed identifiers).
+  - Outside this card's files, row-1 values with substituted fill IDs: `store/journal_review_tests.rs:201` (exact contiguous `qty…duration` tail and symbol), `wire_contract.rs:39,41-42` (and so the generated `apps/desktop/src/test/fixtures/command-wire.json`, row-1 timestamp pair in 9 payload objects, e.g. `:759-762`), `db/upgrade_tests.rs:20,23-24`, `db/fixtures/generate.rs.txt:19,22-23`, binary `db/fixtures/fundedflow-v3.db` and `fundedflow-v4.db` (row-1 price and timestamp strings). Weaker matches (row-1 price pair only, or price + buy time): `store/evidence_tests.rs:678`, `features/journal/journal.test.tsx:63`, `features/journal/trade-nav-guard.test.tsx:61`, `docs/design/mockups/p0/ImportDetail.dc.html:94` (`:96` matches the symbol only); `docs/design/mockups/Journal.dc.html` holds the row-1 time-of-day pair only. **Split to TASK-041** (needs an owner ruling and regeneration of fixtures this card forbids).
+- Checked and **not** copies of any of the three exports (no matching data line, fill ID, timestamp pair or price pair): `store/attempt_tests.rs`, `store/risk_promotion_tests.rs` constants, `test_csvimport/build17/normalization-v1.json` (18 inline synthetic cases; no `synthetic-*.csv` files exist), `test_csvimport/limits/byte-limit-v1.json`. The long numerals in the store test files are timestamps/sizes and UUID constants, not fill IDs.
 
 ## Expected change scope
 - `test_csvimport/Performance.csv`: replaced (same path, same file name) by a synthetic file with the same header, column order, line endings, value styles and edge cases (rows sharing a fill ID, sell-before-buy rows, negative and positive P&L styles, each duration style, the timestamp format), generated from documented rules, not by editing real rows.
-- Assertions that depend on the fixture's values, re-derived from the synthetic file: `src-tauri/src/csv_import/tests.rs`, `csv_import/regression_tests.rs`, `csv_import/wire_limit_tests.rs`, `csv_import/identity_tests.rs:73`, `store/attempt_tests.rs`, `store/insights_tests.rs`, `store/risk_promotion_tests.rs` (only where values change).
+- Assertions that depend on the fixture's values, re-derived from the synthetic file: `src-tauri/src/csv_import/tests.rs` (including its value-level copies at `:89,91`, `:143-144`, `:188-196`, `:256-258`, replaced with synthetic values), `csv_import/regression_tests.rs`, `csv_import/wire_limit_tests.rs`, `csv_import/identity_tests.rs:73`, `store/attempt_tests.rs`, `store/insights_tests.rs`, `store/risk_promotion_tests.rs` (only where values change).
 - `test_csvimport/identity/fill-pair-v2.json`: replace the copied fill IDs with synthetic IDs and their contract keys, written by hand from the documented P0-01 contract (as `docs/architecture/p0-01-p0-03.md:112` requires), not by running the code under test.
-- Fixture guidance and copied identifiers in docs: `README.md:118,149`, `docs/architecture/build-17-csv-backend.md:14,23`, `docs/architecture/p0-01-p0-03.md:42`, `docs/design/mockups/TradeDetail.dc.html:109,111` (identifier text only).
+- Fixture guidance and copied identifiers in docs: `README.md:118,149`, `docs/architecture/build-17-csv-backend.md:14,23`, `docs/architecture/p0-01-p0-03.md:42`, `docs/design/mockups/TradeDetail.dc.html:100,109-112` (identifier, timestamp and P&L text only; no layout change).
 
 ## Out of scope
 - `test_csvimport/Performance Oct 20.csv`, `Performance Oct 20(1).csv` and the real pair copied into `csv_import/direction_pnl_tests.rs` (TASK-038).
 - Git history, forks, PR pages, repository visibility (TASK-039).
-- Regenerating `normalization-v1.json`, `command-wire.json`, `byte-limit-v1.json` or `db/fixtures/*.db` (verified not derived from the export).
+- Regenerating `normalization-v1.json` or `byte-limit-v1.json` (verified not derived from the export).
+- Value-level copies outside `csv_import/tests.rs` and `TradeDetail.dc.html` (`store/journal_review_tests.rs`, `wire_contract.rs` and `command-wire.json`, `db/upgrade_tests.rs`, `db/fixtures/generate.rs.txt`, `db/fixtures/*.db`, and the weaker matches listed above): they contain value-level copies; see split card TASK-041.
 - Importer behaviour changes; new formats; mockup layout changes.
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
-2. Before changing anything, record in the execution log (no raw rows): the inventory of every test that consumes the fixture, what each asserts (counts, IDs, duplicate keys, warnings, totals), and the edge cases the fixture must contain. Re-run the identifier scan (fill IDs of all three exports against all tracked files, printing only file:line) and confirm the list above.
+2. Before changing anything, record in the execution log (no raw rows): the inventory of every test that consumes the fixture, what each asserts (counts, IDs, duplicate keys, warnings, totals), and the edge cases the fixture must contain. Re-run the scan (for all three exports, over all tracked files, printing only file:line and match type: every fill ID, every full data line, and every row's (boughtTimestamp, soldTimestamp) pair and (buyPrice, sellPrice) pair, also with the time-of-day parts and with trailing-zero-trimmed prices) and confirm the lists above.
 3. Write the synthetic file from a short written specification (row count, which rows share fills, which are sell-before-buy, P&L and duration styles), with obviously synthetic fill IDs and plausible, non-real prices and dates on Monday–Friday. Keep the 13-column header byte-identical, CRLF line endings and trailing newline.
 4. Re-derive every changed expectation by hand from the synthetic specification (comment the arithmetic beside it, as `direction_pnl_tests.rs` does); never derive expectations by running the code under test and pasting its output.
 5. Update `fill-pair-v2.json` and `identity_tests.rs:73` with synthetic IDs and hand-computed keys; correct the "all values synthetic" header only if it still would be untrue.
@@ -63,11 +68,12 @@ Real exports committed as test fixtures (owner confirmation 2026-10-22). Read-on
 - Prerequisites: TASK-002 approved (done, Option B). This card's own approval.
 - Recommended ordering: record TASK-039's owner disposition before opening this PR on GitHub; a public PR diff re-displays the deleted rows, and a later history rewrite also has to deal with PR refs.
 - Independent of TASK-038 (no shared files); either may merge first.
+- TASK-041 (split from this card): merge this card first; TASK-041 does not touch `csv_import/tests.rs` or `TradeDetail.dc.html`.
 - Likely shared-file conflicts: TASK-040 (formatting touches every Rust test file; see TASK-040 merge order); `README.md` (TASK-026 docs).
 - Dependants: TASK-029 (Blocked until this is Verified and merged).
 
 ## Acceptance criteria (pass/fail)
-- [ ] `test_csvimport/Performance.csv` at the tested SHA is synthetic: a scan for every fill ID and full data line of the original three exports over all tracked files returns no match outside history (record command and count, not values).
+- [ ] `test_csvimport/Performance.csv` at the tested SHA is synthetic: a scan for every fill ID, every full data line, and every row's (boughtTimestamp, soldTimestamp) and (buyPrice, sellPrice) pair of the original three exports over all tracked files returns no match except the accepted residuals: the locations assigned to TASK-041 (until it merges, or permanently if Kyle accepts them as low-risk) and `csv_import/direction_pnl_tests.rs` (TASK-038, until it merges). Record command and counts per file, not values.
 - [ ] Header line byte-identical to the original; CRLF endings, trailing newline, no BOM; each listed edge case is present (record row numbers, not values).
 - [ ] Every test that consumed the old fixture still exists and still covers its scenario; each changed expectation has a hand-derivation comment; the PR mapping table is reviewed.
 - [ ] Affected Rust tests pass (`csv_import::`, `store::attempt_tests`, `store::insights_tests`, `store::risk_promotion_tests`, `identity_tests`) and the full standard checks exit 0.
@@ -84,6 +90,7 @@ Standard checks (run serially, frontend build before Rust):
 - Repository root: `npm test` → exit 0 (domain + desktop Vitest incl. journeys/axe, test:notices, test:ci-scripts)
 - Repository root: `npm run build` → exit 0 (includes the dev-tools dist check)
 - Repository root: `npm run check:dist -w @fundedflow/domain` → exit 0
+- `apps/desktop/src-tauri`: `cargo fmt --check` → exit 0 (once TASK-040 has merged, which is the recommended order)
 - `apps/desktop/src-tauri`: `cargo test --offline --locked` → exit 0 (after `npm run build`, run serially)
 - `apps/desktop/src-tauri`: `cargo clippy --offline --locked --all-targets -- -D warnings` → exit 0
 
@@ -93,5 +100,13 @@ Never print, paste or log rows or identifiers from the real exports (Notion, cha
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; every acceptance criterion has recorded evidence (command, directory, exit code); the reviewer confirms coverage is preserved. Compiling or passing unrelated tests is not completion.
 
+## Changes in r1 (after independent review)
+- Independent review (review3_B), blocking: the "not copies" list was wrong. Row-1 values with substituted fill IDs exist in `store/journal_review_tests.rs`, `wire_contract.rs` (→ `command-wire.json`), `db/upgrade_tests.rs`, `db/fixtures/generate.rs.txt` and `db/fixtures/fundedflow-v3.db`/`-v4.db`; each location re-verified at 4ff16f5 (locations and match types only). These, and the weaker matches, moved to the new card TASK-041; Out of scope now says they contain value-level copies.
+- Independent review (review3_B), scope: value-level copies in this card's own file `csv_import/tests.rs` (`:89,91`, `:143-144`, `:188-196`, `:256-258`) stay here, as do the row-9 timestamps and P&L beside the copied IDs in `TradeDetail.dc.html` (`:100,110,112`, found by the re-verification scan).
+- Independent review (review3_B), blocking: step 2 and acceptance criterion 1 now scan timestamp pairs and price pairs per row, not only fill IDs and whole lines, and name the accepted residuals (TASK-041, TASK-038).
+- Independent review (review3_B), nits: `PERFORMANCE` use count corrected; `cargo fmt --check` added to the standard checks (after TASK-040).
+
 ## Independent review notes
 Not yet reviewed. r1 written from the Notion draft; draft scope carried over and made concrete from source at 1012d63. Reviewer to confirm: (a) including the copied identifiers in `fill-pair-v2.json`, `p0-01-p0-03.md` and `TradeDetail.dc.html` is within the draft's "no copied real … identifiers" intent (else split to a Triage card); (b) the coordinator's note that store tests contain copied IDs was not confirmed by the fill-ID scan — those files only consume the fixture.
+Independent review r1 (review3_B, 2026-10-22): CHANGES — (a) confirmed within Option B; (b) partly confirmed: store tests copy values, not IDs (split to TASK-041). Corrections applied in "Changes in r1 (after independent review)"; awaiting re-check.
+Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r1.

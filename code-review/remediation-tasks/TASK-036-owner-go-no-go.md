@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r3; awaiting independent review) |
+| Status | Ready for Approval (r3) |
 | Type | Owner Decision |
 | Audit priority | Gate |
 | Roadmap lane | P0-18 (V1) |
@@ -80,3 +80,4 @@ Kyle's explicit choice recorded verbatim with date and source (trusted conversat
 
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).
+Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r3.

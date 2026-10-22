@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r1; awaiting independent review) |
+| Status | Ready for Approval (r1) |
 | Type | Fix |
 | Audit priority | P1 (TASK-002 follow-up; release-blocking) |
 | Roadmap lane | Unassigned (owner) |
@@ -32,12 +32,12 @@ Repository is public; both files are readable on GitHub at HEAD.
 ## Root cause / evidence
 Added in commit `31f1447` ("Add test csv files.", 2026-10-20, merged by PR #25 / `0828db4`); unchanged since. Read-only facts at 1012d63:
 - No reference by path: a search for `test_csvimport`, `Performance Oct 20` and both file names over all tracked files (excluding `code-review/`) finds no code, test, script, workflow or doc that reads either file. `.gitattributes:2` (`test_csvimport/*.csv -text`) is a glob and stays for `Performance.csv`.
-- One **copy** (not a reader): `src-tauri/src/csv_import/direction_pnl_tests.rs` embeds one fill pair and its row values copied from `Performance Oct 20(1).csv` (doc comment line 3 says so; data line 26; assertions at lines 100, 188, 193; worked-total comment at 221). Removing the file does not break this test, but the real values would remain in the tracked tree.
+- One **copy** (not a reader): `src-tauri/src/csv_import/direction_pnl_tests.rs` embeds one fill pair and its row values copied from `Performance Oct 20(1).csv` (doc comment line 3 says so; a row comment at lines 24-25 holding the real row's time-of-day pair and price pair with no fill ID; data line 26; assertions at lines 100, 188, 193; worked-total comment at 221). Removing the file does not break this test, but the real values would remain in the tracked tree.
 - No fill ID or data line of `Performance Oct 20.csv` appears in any other tracked file. No fill IDs are shared between the three exports.
 
 ## Expected change scope
 - Delete `test_csvimport/Performance Oct 20.csv` and `test_csvimport/Performance Oct 20(1).csv`.
-- `src-tauri/src/csv_import/direction_pnl_tests.rs`: replace the copied pair with a synthetic pair that keeps the scenario (a real-format Performance row whose sell timestamp precedes its buy timestamp, classified short, with the same kind of hand-worked P&L), update the hand-derived expected values, the worked totals in the line-221 comment and the module doc comment ("All CSV values are synthetic").
+- `src-tauri/src/csv_import/direction_pnl_tests.rs`: replace the copied pair with a synthetic pair that keeps the scenario (a real-format Performance row whose sell timestamp precedes its buy timestamp, classified short, with the same kind of hand-worked P&L), update the hand-derived expected values, the line 24-25 row comment, the worked totals in the line-221 comment and the module doc comment ("All CSV values are synthetic").
 
 ## Out of scope
 - `test_csvimport/Performance.csv` and identifiers copied from it (TASK-037).
@@ -46,7 +46,7 @@ Added in commit `31f1447` ("Add test csv files.", 2026-10-20, merged by PR #25 /
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
-2. Re-run the reference check at the implementation revision: path/name search, plus a scan of both files' fill IDs and full data lines over all tracked files, printing only file:line. If a new reader or copy appears, handle it the same way (synthetic replacement preserving coverage) and record it.
+2. Re-run the reference check at the implementation revision: path/name search, plus a scan of both files' fill IDs, full data lines, and every row's (boughtTimestamp, soldTimestamp) pair and (buyPrice, sellPrice) pair (also time-of-day parts and trailing-zero-trimmed prices) over all tracked files, printing only file:line. If a new reader or copy appears, handle it the same way (synthetic replacement preserving coverage) and record it.
 3. `git rm` the two files.
 4. Rewrite the copied pair in `direction_pnl_tests.rs` with synthetic values; re-derive each expected value by hand in the comment beside it (the file's existing rule: no expected value from the code under test).
 5. Re-run the scan: zero matches.
@@ -60,7 +60,7 @@ Added in commit `31f1447` ("Add test csv files.", 2026-10-20, merged by PR #25 /
 
 ## Acceptance criteria (pass/fail)
 - [ ] `git ls-files test_csvimport` at the tested SHA lists neither file.
-- [ ] Scan of both exports' fill IDs and data lines over all tracked files at the tested SHA → 0 matches (record command and count, not values).
+- [ ] Scan of both exports' fill IDs, data lines, and per-row timestamp pairs and price pairs (as in step 2, which catches the line 24-25 comment) over all tracked files at the tested SHA → 0 matches (record command and count, not values).
 - [ ] `direction_pnl_tests` still covers the short/sell-before-buy real-format row; every changed expected value has a hand-derivation comment; `cargo test --offline --locked direction_pnl` → pass.
 - [ ] Full standard checks → exit 0.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed (this card names none).
@@ -84,5 +84,10 @@ Never print, paste or log rows or identifiers from the exports (Notion, chat, PR
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; every acceptance criterion has recorded evidence (command, directory, exit code). Compiling or passing unrelated tests is not completion.
 
+## Changes in r1 (after independent review)
+- Independent review (review3_B), nit: `direction_pnl_tests.rs:24-25` is a comment holding the real row's time-of-day pair (line 24) and price pair (line 25) with no fill ID, so the ID scan missed it (re-verified at 4ff16f5; locations only). Added to Root cause, Expected change scope, the step 2 scan and acceptance criterion 2 (scan now also checks per-row timestamp and price pairs).
+
 ## Independent review notes
 Not yet reviewed. r1 written from the Notion draft. Reviewer to confirm that rewriting the pair copied into `direction_pnl_tests.rs` falls under the draft's "resolve any discovered consumer while preserving its intended coverage" (else split to a Triage card and keep this card to the two deletions).
+Independent review r1 (review3_B, 2026-10-22): READY; rewriting the copied pair falls within B. Recommended nit applied (see "Changes in r1 (after independent review)"). Status stays Proposed until approval.
+Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r1.

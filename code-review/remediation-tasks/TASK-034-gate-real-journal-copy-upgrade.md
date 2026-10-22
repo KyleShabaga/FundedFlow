@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r4; awaiting independent review) |
+| Status | Ready for Approval (r4) |
 | Type | Test |
 | Audit priority | Gate (kept, TASK-008 = A) / P2 test safety |
 | Roadmap lane | Build 10.5 gate |
@@ -51,7 +51,7 @@ Owner run (W5, after TASK-029 is recorded):
 ## Prerequisites, dependencies and conflicts
 - Prerequisites (code change, W3c): none beyond approval (TASK-008 r3 approved Option A: gate kept). Must merge before TASK-029 builds the candidate (09 G7); independent of W1 and W2.
 - Prerequisites (owner run, W5): the code change merged; TASK-029 recorded (the run uses the candidate SHA).
-- Likely shared-file conflicts: None.
+- Likely shared-file conflicts: TASK-041 edits `db/upgrade_tests.rs` (its fixture CSV constant near `:19-24`) if Kyle chooses removal of value-level copies; this card edits the same file (`:426-459`). Different regions, but merge one before opening the other (recommended: this card first, W3c). TASK-040 formats the same file (merge TASK-040 first).
 
 ## Acceptance criteria (pass/fail)
 - [ ] Code change merged before TASK-029's candidate SHA (the candidate SHA contains it).
@@ -72,6 +72,7 @@ Standard checks (run serially, frontend build before Rust):
 - Repository root: `npm test` → exit 0 (domain + desktop Vitest incl. journeys/axe, test:notices, test:ci-scripts)
 - Repository root: `npm run build` → exit 0 (includes the dev-tools dist check)
 - Repository root: `npm run check:dist -w @fundedflow/domain` → exit 0
+- `apps/desktop/src-tauri`: `cargo fmt --check` → exit 0 (once TASK-040 has merged; CI then runs it)
 - `apps/desktop/src-tauri`: `cargo test --offline --locked` → exit 0 (after `npm run build`, run serially)
 - `apps/desktop/src-tauri`: `cargo clippy --offline --locked --all-targets -- -D warnings` → exit 0
 
@@ -91,8 +92,12 @@ Tests merged after review; they fail against a deliberately broken variant or th
 
 ## Changes in r4
 - Gate is unconditional: title, Audit priority, Mandatory gate, step 2 and the code-change prerequisite no longer say "conditional" / "if kept" / "only if TASK-008 keeps the gate", because TASK-008 r3 was approved with Option A (keep the real-journal-copy upgrade gate). The W3c code / W5 owner-run split is unchanged.
+- Independent review (review3_B), nit: added `cargo fmt --check` (after TASK-040 merges) to the standard checks.
+- Independent review (review3_B), nit: listed the `db/upgrade_tests.rs` conflict with TASK-041 (new card for value-level copies) and TASK-040 under conflicts.
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: W3c code / W5 owner-run split with code before TASK-029 (G7); `FUNDEDFLOW_UPGRADE_DB` set to the copy; `upgrade_tests.rs:428` doc-comment fix; fixture rule unset (not 0).
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
+Independent review r4 (review3_B, 2026-10-22): READY; nits applied (see "Changes in r4"). Status stays Proposed until approval.
+Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r4.

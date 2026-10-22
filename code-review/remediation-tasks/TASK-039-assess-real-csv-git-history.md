@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r1; awaiting independent review) |
+| Status | Ready for Approval (r1) |
 | Type | Owner Decision |
 | Audit priority | P1 (decision; release-blocking) |
 | Roadmap lane | Unassigned (owner) |
@@ -32,16 +32,18 @@ The repository is public: `origin` is `https://github.com/KyleShabaga/FundedFlow
 ## Root cause / evidence
 Read-only, local facts at 1012d63 (no network queries; no rows printed):
 - Affected paths: `test_csvimport/Performance.csv` (added `75fd6f4`, 2026-10-19, merged by PR #4 / `4e3c01f`), `test_csvimport/Performance Oct 20.csv` and `test_csvimport/Performance Oct 20(1).csv` (added `31f1447`, 2026-10-20, merged by PR #25 / `0828db4`). Their blobs have not changed since they were added.
-- Copies outside these paths (also in history from the commits that introduced them): identifiers or a row from the exports in `src-tauri/src/csv_import/{tests,regression_tests,identity_tests,wire_limit_tests,direction_pnl_tests}.rs`, `test_csvimport/identity/fill-pair-v2.json`, `docs/architecture/p0-01-p0-03.md`, `docs/design/mockups/TradeDetail.dc.html` (line numbers in TASK-037/038).
-- Commits touching `test_csvimport/`: 7 on the current branch, 9 across all local refs (`git log --oneline [--all] -- test_csvimport | wc -l`; these counts include the JSON fixture commits). Refs seen locally: `main`, `origin/main`, `origin/claude/practical-turing-wmii06`.
+- Copies outside these paths (also in history from the commits that introduced them; line numbers and match types in TASK-037, TASK-038 and TASK-041, no values here):
+  - Fill IDs or a whole row: `src-tauri/src/csv_import/{tests,regression_tests,identity_tests,wire_limit_tests,direction_pnl_tests}.rs`, `test_csvimport/identity/fill-pair-v2.json`, `docs/architecture/p0-01-p0-03.md`, `docs/design/mockups/TradeDetail.dc.html` (TASK-037/038).
+  - Row values without the real fill IDs (symbol, qty, prices, P&L, timestamps, duration): `csv_import/tests.rs`, `TradeDetail.dc.html`, `direction_pnl_tests.rs:24-25` (TASK-037/038); `store/journal_review_tests.rs`, `wire_contract.rs`, `db/upgrade_tests.rs`, `db/fixtures/generate.rs.txt`, the generated text fixture `apps/desktop/src/test/fixtures/command-wire.json` and the **binary** SQLite fixtures `db/fixtures/fundedflow-v3.db` and `fundedflow-v4.db` (TASK-041); weaker matches (price pair, or price and time) in `store/evidence_tests.rs`, two `features/journal/*.test.tsx` files and `docs/design/mockups/p0/ImportDetail.dc.html` (TASK-041).
+- Commits touching `test_csvimport/`: 7 on the current branch, 9 across all local refs (`git log --oneline [--all] -- test_csvimport | wc -l`; these counts include the JSON fixture commits). Refs seen locally: `main`, `origin/main`, `origin/claude/practical-turing-wmii06` and the local branch `claude/practical-turing-wmii06`.
 - The local clone is **shallow** (`git rev-parse --is-shallow-repository` → true; 4 shallow boundaries), so the full set of commits, branches and tags on GitHub is not visible here.
 - Unknowns to establish (owner or GitHub UI/API, not this audit): number of forks and who owns them; other remote branches, tags and `refs/pull/*`; release artifacts; whether any automated archive or search index has copied the repository; other clones (owner machines, CI caches, agent sessions).
 
 ## Options and consequences (owner decides)
 - **(A) Accept exposure.** Keep history as is; TASK-037/038 clean HEAD. No SHA changes, no coordination. The rows stay readable in history, PR #4/#25 file views, forks and clones indefinitely.
 - **(B) Stopgap: make the repository private** (GitHub Settings → Danger Zone). Immediate and reversible; no SHA changes. Stops new anonymous access, but existing clones and forks keep the data (existing public forks are detached and stay public). Contradicts `README.md:155-157` and possibly `LICENSE` wording (doc follow-up needed); GitHub Actions minutes for Windows runners become billable against the plan (check before choosing); release artifacts and Notion links to GitHub become owner-only.
-- **(C) Rewrite history.** On a fresh mirror clone, `git filter-repo` removes the three paths and replaces the copied identifiers (`--invert-paths --path …` plus `--replace-text`), then force-pushes every branch and tag. Every commit SHA changes: the recorded baselines (`92e7980`, `a7310fd`, `1012d63`), the `0.1.0` artifact's source SHA, CI run links and all code-review evidence go stale and must be re-mapped; every clone must be re-cloned and open branches rebuilt. GitHub keeps cached views and `refs/pull/*` until a GitHub Support purge request is made; forks are not rewritten. Destructive and irreversible for collaborators.
-- B and C can be combined (B now, C later). C, if chosen, should run before any W1 branch is opened and in all cases before TASK-029, so the candidate SHA is never invalidated.
+- **(C) Rewrite history.** On a fresh mirror clone, `git filter-repo` removes the three paths and replaces the copied identifiers (`--invert-paths --path …` plus `--replace-text`), then force-pushes every branch and tag. Every commit SHA changes: the recorded baselines (`92e7980`, `a7310fd`, `1012d63`), the `0.1.0` artifact's source SHA, CI run links and all code-review evidence go stale and must be re-mapped; every clone must be re-cloned and open branches rebuilt. GitHub keeps cached views and `refs/pull/*` until a GitHub Support purge request is made; forks are not rewritten. Destructive and irreversible for collaborators. **Binary fixtures:** `--replace-text` is a byte substitution meant for text; it cannot reliably rewrite values inside SQLite pages (a replacement of different length corrupts record and page layout, and freed pages may still hold old copies), so the `db/fixtures/fundedflow-v3.db`/`-v4.db` blobs (and their sibling `-wal`/`-shm`, if ever committed) must be removed or replaced as whole blobs in history (for example `git filter-repo --path … --invert-paths` for those paths, or a blob callback / `--strip-blobs-with-ids` substituting the sanitized blobs that TASK-041 produces). Consequence: at every historic SHA the upgrade tests (`db/upgrade_tests.rs`, `wire_contract.rs`) either lose their fixtures or see different ones, so historic fixture tests no longer reproduce; the generated `command-wire.json` must likewise be rewritten consistently or the old SHAs' wire-contract test fails.
+- B and C can be combined (B now, C later). C, if chosen, must run before TASK-029 so the candidate SHA is never invalidated. Recommended: after TASK-037, TASK-038 and (if removal is chosen) TASK-041 have merged, so one rewrite covers every location; running it before W1 instead avoids rewriting open branches but needs a second pass for the copies those cards remove later.
 
 **Recommendation (for the owner to accept or reject):** decide now, before W1 work starts, not at W4. If the owner considers the rows sensitive, take (B) immediately as a reversible stopgap, then decide between (A) and (C) with the concrete plan above; choose (C) only if the data must be unrecoverable from GitHub, and accept the SHA re-mapping cost. If the rows are not sensitive enough to justify that, (A) with TASK-037/038 is sufficient.
 
@@ -56,11 +58,11 @@ Changing visibility, `git filter-repo`, force-pushes, deleting branches/tags/rel
 2. Ask Kyle to supply or confirm GitHub-side facts (fork count, other branches/tags/releases, known clones), or approve a read-only GitHub query for them; record unknowns explicitly.
 3. Present options A/B/C with the consequences above and the recommendation.
 4. Record Kyle's disposition verbatim with date and source.
-5. If B or C: create the execution card (Triage card per CLAUDE.md) with a concrete step list, rollback, and verification (for C: re-clone and scan all refs for the paths and identifiers → 0; Support purge confirmation; SHA re-mapping table), and obtain its separate approval. Do not execute it under this card.
+5. If B or C: create the execution card (Triage card per CLAUDE.md) with a concrete step list, rollback, and verification (for C: re-clone and scan all refs for the paths, identifiers and per-row timestamp/price pairs → 0, including the binary `.db` blobs; Support purge confirmation; SHA re-mapping table), and obtain its separate approval. Do not execute it under this card. For C, run it after TASK-037, TASK-038 and (if removal is chosen) TASK-041 have merged, so one rewrite covers every location, unless Kyle prefers C before W1 and accepts a second rewrite.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-002 approved (done, Option B).
-- Ordering: decide before TASK-037/038 PRs are opened (their diffs re-display the rows) and before any W1 branch if C is likely.
+- Ordering: decide before TASK-037/038/041 PRs are opened (their diffs re-display the rows) and before any W1 branch if C is likely. TASK-041 (value-level copies) needs Kyle's ruling too; take both decisions together.
 - Dependants: TASK-029 (Blocked until the disposition is recorded and any chosen cleanup is verified).
 - Likely shared-file conflicts: None for this card; option C conflicts with every open branch.
 
@@ -80,5 +82,13 @@ Do not print or copy CSV rows or identifiers. No `git push`, force-push, history
 ## Definition of done
 Kyle's explicit choice recorded verbatim with date and source (trusted conversation or attributable Notion decision). Claude may prepare options but cannot decide, waive a gate, or infer approval; a history rewrite or visibility change needs its own explicit approval.
 
+## Changes in r1 (after independent review)
+- Independent review (review3_B), blocking: "Copies outside these paths" completed with the value-level copies (now owned by TASK-037, TASK-038 and the new TASK-041), including the generated `command-wire.json` and the binary `db/fixtures/*.db`.
+- Independent review (review3_B), blocking: option C now states that text replacement cannot clean the binary `.db` fixtures; those blobs must be removed or replaced in history, so historic fixture tests at old SHAs change.
+- Step 5, options and ordering: C verification includes timestamp/price pairs and `.db` blobs; C is now recommended once, after TASK-037/038/041 merge (before TASK-029), instead of before any W1 branch.
+- Independent review (review3_B), nit: local branch `claude/practical-turing-wmii06` added to the refs seen.
+
 ## Independent review notes
 Not yet reviewed. r1 written from the Notion draft; options made concrete from local repository facts. GitHub-side facts (forks, PR refs, releases) are unverified and listed as unknowns.
+Independent review r1 (review3_B, 2026-10-22): CHANGES — copies list incomplete (affects option C cost). Corrections applied in "Changes in r1 (after independent review)"; awaiting re-check.
+Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r1.

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r1; awaiting independent review) |
+| Status | Ready for Approval (r1) |
 | Type | Fix |
 | Audit priority | Gate |
 | Roadmap lane | Build 10.5 gates (historical, V1) |
@@ -53,8 +53,8 @@ Read-only facts at 1012d63:
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-008 approved (done, Option A); this card's own approval; Rust toolchain with the `rustfmt` component available locally.
-- **Merge order (recommended: first).** Merge this PR before any W1–W3 Rust branch is opened (TASK-012…020, TASK-034 code, TASK-037, TASK-038, all Not Started at spec time). Reason: a formatting-only PR touches nearly every Rust file and conflicts with every concurrent Rust branch; at the start nothing is open, so it merges conflict-free, and from then on the CI check keeps each later functional diff free of formatting noise. Doing it last would also be conflict-free but leaves every W1–W3 review mixed with incidental formatting and still requires a full re-check of the crate just before TASK-029. Fallback: if any Rust branch is already open when this card is approved, merge this immediately after the last W1–W3 Rust PR and before TASK-029, and do not open new Rust branches meanwhile. If TASK-039 option C (history rewrite) is chosen, run that first.
-- Likely shared-file conflicts: every Rust file (all W1–W3 Rust tasks, TASK-037, TASK-038); `ci.yml` (no other card edits it at spec time; TASK-027 reads it).
+- **Merge order (recommended: first).** Merge this PR before any W1–W3 Rust branch is opened (TASK-012…020, TASK-025 (`src-tauri/src/legal.rs`), TASK-027 (`data_controls/wire_tests.rs`, optional part), TASK-034 code, TASK-037, TASK-038, TASK-041, all Not Started at spec time). Reason: a formatting-only PR touches nearly every Rust file and conflicts with every concurrent Rust branch; at the start nothing is open, so it merges conflict-free, and from then on the CI check keeps each later functional diff free of formatting noise. Doing it last would also be conflict-free but leaves every W1–W3 review mixed with incidental formatting and still requires a full re-check of the crate just before TASK-029. Fallback: if any Rust branch is already open when this card is approved, merge this immediately after the last W1–W3 Rust PR and before TASK-029, and do not open new Rust branches meanwhile. If TASK-039 option C (history rewrite) is scheduled before W1, run that first; if it is scheduled after TASK-037/038/041 merge (TASK-039's recommendation), this commit is simply rewritten with the rest.
+- Likely shared-file conflicts: every Rust file (all W1–W3 Rust tasks incl. TASK-025 and TASK-027, TASK-037, TASK-038, TASK-041); `ci.yml` (no other card edits it at spec time; TASK-027 reads it).
 - Dependants: TASK-029 (Blocked until this is Verified; verification resolves only this blocker).
 
 ## Acceptance criteria (pass/fail)
@@ -84,5 +84,11 @@ Use only disposable test journals and temporary directories created by tests. Ne
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed and confirmed formatting-only apart from the CI step; every acceptance criterion has recorded evidence (command, directory, exit code) including the green CI run. Compiling or passing unrelated tests is not completion.
 
+## Changes in r1 (after independent review)
+- Independent review (review3_B), nit: Rust-touching card list now includes TASK-025 (`src-tauri/src/legal.rs`) and TASK-027 (`data_controls/wire_tests.rs`, optional), plus the new TASK-041; conflicts line updated to match.
+- TASK-039 option C ordering wording aligned with TASK-039 r1 (one rewrite after TASK-037/038/041 is now its recommendation).
+
 ## Independent review notes
 Not yet reviewed. r1 written from the Notion draft; command scope made concrete from source (single crate, `cargo fmt --check` in `apps/desktop/src-tauri`, add `rustfmt` component). Reviewer to confirm the "merge first" order against the actual state of W1 branches at approval time.
+Independent review r1 (review3_B, 2026-10-22): READY; merge-first order sound. Nits applied (see "Changes in r1 (after independent review)"). Status stays Proposed until approval. Open index nit: `08-…index.md:35` and the 09 waves table do not yet show TASK-040 merging first (not edited here).
+Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r1.

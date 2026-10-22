@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r4; awaiting independent review) |
+| Status | Ready for Approval (r4) |
 | Type | Fix |
 | Audit priority | P1 (P0 if TASK-010 escalates) |
 | Roadmap lane | Unassigned (owner) |
@@ -93,3 +93,4 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: mandatory VACUUM of the temporary snapshot and no narrowed acceptance (G3); >64 MiB free-pages export criterion (G10); desktop data-controls detail test and `detail`-only fixture diff (G10); `skip_serializing_if`/`.optional()`; `DataControlProblem` carries `detail`; fixture rule "unset (not `0`)".
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
+Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r4.
