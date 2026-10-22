@@ -88,7 +88,9 @@ describe("Today", () => {
   it("places freshness beside the next panel only on a wide main column, by CSS alone", () => {
     expect(css).toContain("@container ds-main (min-width: 1280px) {");
     const wide = css.slice(css.indexOf("@container ds-main (min-width: 1280px) {"));
-    expect(wide).toContain(".td-page > .td-fresh { grid-column: span 5; align-self: start; }");
+    expect(wide).toContain(".td-page > .td-fresh { grid-column: 1 / span 5; align-self: start; }");
+    // P0-D21: Check again keeps to freshness's columns, so it stays right-aligned above the panel it refreshes.
+    expect(wide).toContain(".td-page > .td-intro:has(+ .td-fresh) { grid-column: 1 / span 5; }");
     expect(wide).toContain(".td-page > .td-fresh + * { grid-column: span 7; }");
     expect(wide).toContain(".td-page > .td-fresh + .td-account + .td-risk { grid-column: 6 / -1; }");
     // Nothing is moved out of reading order: no `order`, only column spans.

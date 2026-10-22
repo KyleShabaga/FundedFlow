@@ -6,11 +6,13 @@
 /* P0-D29 layout (docs/design/window-support.md). The page fills the shared content frame and nothing is reordered:
    placement is CSS only, so no panel remounts when the arrangement changes. From 1280 px of main column, freshness
    (5 of 12 columns) shares its row with the panel after it in reading order: Active accounts, or, with one active
-   account, that account's summary with the risk estimate under it. Below 1280 px everything stacks. */
+   account, that account's summary with the risk estimate under it. Check again keeps to freshness's 5 columns so it
+   stays right-aligned above the panel it refreshes (P0-D21). Below 1280 px everything stacks. */
 @container ds-main (min-width: 1280px) {
   .td-page { grid-template-columns: repeat(12, minmax(0, 1fr)); }
   .td-page > * { grid-column: 1 / -1; }
-  .td-page > .td-fresh { grid-column: span 5; align-self: start; }
+  .td-page > .td-intro:has(+ .td-fresh) { grid-column: 1 / span 5; }
+  .td-page > .td-fresh { grid-column: 1 / span 5; align-self: start; }
   .td-page > .td-fresh + * { grid-column: span 7; }
   .td-page > .td-fresh:has(+ .td-account + .td-risk) { grid-row: span 2; }
   .td-page > .td-fresh + .td-account + .td-risk { grid-column: 6 / -1; }
