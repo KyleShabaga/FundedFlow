@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r1; awaiting independent review) |
+| Status | Ready for Approval (r1) |
 | Type | Fix |
 | Audit priority | P1 (V1: hard prerequisite of the TASK-042 migration; was P2 while no V1 migration existed, 07 §F.1) |
 | Roadmap lane | Unassigned (owner) |
@@ -12,7 +12,7 @@
 | Canonical issue | ISSUE-018 (B2-1 planning constraint) (see `code-review/remediation-findings-ledger.md`; `code-review/07-stage2-priorities-and-dependencies.md` §F.1; `code-review/08-stage2-remediation-task-index.md:93`) |
 | Original Stage 1 finding IDs | None (B2-1 was found in Block 2, 07 §A/§F.1) |
 | Source card / date | Approved-task audit 2026-10-22 (TASK-009 fee decision needs a V1 migration; 08:93 "Any future migration task must list B2-1 as its prerequisite") |
-| Wave | W1 tail (serial on `restore.rs` after TASK-012, TASK-014, TASK-016 and TASK-017); must be Verified before TASK-042 opens |
+| Wave | W1 tail (serial on `restore.rs` after TASK-012, TASK-014, TASK-016, TASK-017 and TASK-018); must be Verified before TASK-042 opens |
 | Effort / risk | S / Low |
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
@@ -49,7 +49,7 @@ Test reproduction without a new migration: write a `safety.db` at version `lates
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
-2. Rebase on the merged W1 `restore.rs` cards first. TASK-017 changes `rollback` (preserved attachment bytes must stay available after rollback); keep its behaviour intact and change only the version check.
+2. Rebase on the merged W1 `restore.rs` cards first. TASK-017 leaves `rollback` unchanged but adds operation-folder files (`safety-missing.json`, `safety-changed-attachments/`) that must remain after rollback; change only the version check.
 3. In `rollback`, open `safety.db` read-only (reuse the `readonly` helper `validate_database` uses), read `user_version`, reject anything outside `3..=db::latest_version()` with an error that keeps the pending marker (so the operation folder is preserved and the existing recovery message applies), then call `validate_database` at that version.
 4. Tests in `data_controls/tests.rs`:
    - **Older safety copy rolls back.** Prepare a restore through the normal path, replace the operation's `safety.db` with a copy at `latest_version() - 1` holding a known account, rewrite the marker to `installing`, overwrite the live file, call `restore::recover` → `Ok`; the live journal is at `latest_version() - 1`; `db::open_file` then upgrades it to `latest_version()`, writes `fundedflow.db.before-v<latest>.bak`, and the account is present; the marker is gone. Fails before the change (`Integrity`).
@@ -58,9 +58,9 @@ Test reproduction without a new migration: write a `safety.db` at version `lates
    - The existing `failed_swap_and_interrupted_install_restore_the_original_journal` (`data_controls/tests.rs:251-295`) still passes unchanged.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-012, TASK-014, TASK-016 and TASK-017 merged (all edit `restore.rs`; W1 is strictly serial on that file, 07 §D). TASK-040 (cargo fmt) merged first if approved.
+- Prerequisites: TASK-012, TASK-014, TASK-016, TASK-017 and TASK-018 merged (all edit `restore.rs`; TASK-018 switches its `no_symlink_components` call sites; W1 is strictly serial on that file, 07 §D). TASK-040 (cargo fmt) merged first if approved.
 - Blocks: TASK-042 (any new migration; 07 §F.1, 08:93).
-- Likely shared-file conflicts: `data_controls/restore.rs` (`rollback`) with TASK-017 (rollback preserves changed attachment bytes; owner amendment) and TASK-012 (adds a previous-version rollback test, step 6); `data_controls/tests.rs` with TASK-012, TASK-014, TASK-015, TASK-016 and TASK-017.
+- Likely shared-file conflicts: `data_controls/restore.rs` (`rollback`) with TASK-017 (operation-folder files that must survive rollback; owner amendment), TASK-018 (`no_symlink_components` call sites) and TASK-012 (adds a previous-version rollback test, step 6); `data_controls/tests.rs` with TASK-012, TASK-014, TASK-015, TASK-016 and TASK-017.
 
 ## Acceptance criteria (pass/fail)
 - [ ] The older-safety-copy test passes and fails on the pre-fix code (record both runs).
@@ -87,5 +87,11 @@ Use only disposable test journals and temporary directories created by tests. Ne
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
+## Changes in r1
+- Step 2 and conflicts: TASK-017 r5 leaves `rollback` unchanged and only adds operation-folder files that must survive it; the wording no longer says TASK-017 changes `rollback` (independent review (review4), reviewer A N1).
+- Wave, prerequisites and conflicts: TASK-018 added, since it switches `no_symlink_components` call sites in `restore.rs` and W1 is serial on that file (independent review (review4), reviewer A N2).
+- Follow-ups: the stale 08:93 sentence is listed for update; the TASK-029 dependency follow-up is removed because TASK-029 r6 already names TASK-043 (independent review (review4), reviewer A N3 and reviewer B nit).
+
 ## Independent review notes
-Not yet reviewed. Created from the approved-task audit (TASK-009 MUST: the fee decision needs a V1 migration, and B2-1 "must precede any new migration", 07 §A and §F.1). Board and index follow-ups (not done here): add TASK-043 to 08 §A, the 09 waves and TASK-029's dependencies.
+Not yet reviewed. Created from the approved-task audit (TASK-009 MUST: the fee decision needs a V1 migration, and B2-1 "must precede any new migration", 07 §A and §F.1). Board and index follow-ups (not done here): add TASK-043 to 08 §A and the 09 waves, and update 08:93 ("No V1 task adds a migration, so B2-1 does not block V1"), which TASK-042 makes stale. TASK-029 r6 already names TASK-043.
+Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r1.

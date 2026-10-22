@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r1; awaiting independent review) |
+| Status | Ready for Approval (r1) |
 | Type | Fix |
 | Audit priority | P1 (V1, by Kyle's TASK-009 decision of 2026-10-22) |
 | Roadmap lane | Unassigned (owner). Absorbs the trade-level part of roadmap card "Triage: Performance-import fees show $0.00 instead of unknown" (lane P1 - V1.1); the board needs updating (not done here) |
@@ -63,7 +63,7 @@ UPDATE trades SET fees_recorded = 0 WHERE fees_micros = 0;
 
 ## Expected change scope
 - Rust: `src-tauri/migrations/0022_trade_fees_recorded.sql` (new); `src-tauri/src/db/mod.rs` (`MIGRATIONS` entry 22); `src-tauri/src/domain.rs` (`TradeFields` gains `fees_recorded: bool`; `validate_trade` sets it from presence, `:330-331`); `src-tauri/src/csv_import/normalize.rs` (`:327` Performance → `false`; generic from the cell); `src-tauri/src/store/trades.rs` (`Trade` DTO `feesRecorded` after `fees`; `insert` `:137`; `update_with` `:386`; `rederive_account` keeps the flag; correction `values()` `:295-300` includes `feesRecorded` so a blank → `0` edit records a changed field); `src-tauri/src/store/evidence.rs` (strip the key in `risk_inputs_in`); tests in `db/tests.rs` or a new region of `db/upgrade_tests.rs` (not `:426-459`, owned by TASK-034), `store/tests.rs`, `csv_import/tests.rs`, `store/risk_promotion_tests.rs`.
-- TS: `packages/domain/src/contracts/trades.ts`; `features/trades/view-models/trade.ts`; `features/journal/components/TradeFormDialog.tsx` (prefill `0` when recorded, blank only when not recorded; placeholder no longer `"0"`; help text says blank means "not recorded"); `TradeDetailPage.tsx` (`:160`, `:186-188`); `TradeLogView.tsx` (`:141`), `LibraryView.tsx`, `ByDayView.tsx`, `journal-model.ts` (markers per R-NET); `features/rulebooks/components/CalculationSettings.tsx` (note); tests beside each.
+- TS: `packages/domain/src/contracts/trades.ts`; `features/trades/view-models/trade.ts`; `features/journal/components/TradeFormDialog.tsx` (prefill `0` when recorded, blank only when not recorded; placeholder no longer `"0"`; help text says blank means "not recorded"); `TradeDetailPage.tsx` (`:160`, `:186-188`); `TradeLogView.tsx` (`:141`), `LibraryView.tsx`, `ByDayView.tsx`, `journal-model.ts` (markers per R-NET); `features/rulebooks/components/CalculationSettings.tsx` (note); tests beside each. Desktop test factories, since the desktop trade schema will require `feesRecorded`: `features/journal/test-store.ts:33` (`trade`, default `feesRecorded: true` unless a test sets it) and `apps/desktop/src/test/app-store.ts:82-84` (`makeTrade` for fake CSV commits fed by the unchanged golden previews: Performance-format rows `false`, generic-format rows per the CSV rule, recorded only when the fees cell is mapped and non-blank).
 - Docs: `docs/data-model.md` (`:50` trades row, `:686-687` fee rule, `:789` Performance note); `docs/design/screens/10-trade-detail.md:15`, `03-journal.md:30`, `13-rulebook.md:73`.
 - Named fixture regenerations (explicit approval required at execution; diff limited to `feesRecorded`): `apps/desktop/src/test/fixtures/command-wire.json` and `packages/domain/test/fixtures/trade-contract.json`.
 
@@ -98,7 +98,7 @@ UPDATE trades SET fees_recorded = 0 WHERE fees_micros = 0;
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: **TASK-043 Verified** (B2-1: "Must precede any new migration", 07 §A, §F.1; 08:93). TASK-009 r3 approved. Kyle's answers to the four rules (step 3). TASK-040 merged if approved.
 - Blocks: TASK-029 (the candidate must contain the migration); TASK-034 owner run (exercises it).
-- Likely shared-file conflicts: `domain.rs` with TASK-019 (`realized_pnl`, `:410`) and TASK-016; `store/trades.rs` with TASK-019; `docs/data-model.md` with TASK-004, TASK-015 and TASK-034; `command-wire.json` and `db/upgrade_tests.rs` with TASK-041 and TASK-034 (merge those first, then regenerate); `TradeDetailPage.tsx`, `TradeFormDialog.tsx`, `TradeLogView.tsx`, `LibraryView.tsx` with TASK-022 and TASK-024 (merge them first). Any other migration must be serialized after this one (0022, then 0023; 07 §D).
+- Likely shared-file conflicts: `domain.rs` with TASK-019 (`realized_pnl`, `:410`); `store/trades.rs` with TASK-019; `docs/data-model.md` with TASK-004, TASK-015 and TASK-034; `command-wire.json` and `db/upgrade_tests.rs` with TASK-041 and TASK-034 (merge those first, then regenerate); `TradeDetailPage.tsx`, `TradeFormDialog.tsx`, `TradeLogView.tsx`, `LibraryView.tsx` with TASK-022 and TASK-024 (merge them first). Any other migration must be serialized after this one (0022, then 0023; 07 §D).
 
 ## Acceptance criteria (pass/fail)
 - [ ] Kyle's answers on the four rules are recorded in the execution log before coding.
@@ -128,5 +128,11 @@ Use only disposable test journals and temporary directories created by tests. Ne
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
+## Changes in r1
+- Scope: named the desktop test factories (`features/journal/test-store.ts:33`, `test/app-store.ts:82-84`) and the `feesRecorded` value the fake CSV commit uses per format (independent review (review4), reviewer B nit).
+- Conflicts: dropped TASK-016 from the `domain.rs` conflict; it only cites `domain.rs:74-76` (independent review (review4), reviewer B nit).
+- Follow-ups: removed the TASK-029 dependency item, already done in TASK-029 r6 (independent review (review4), reviewer B nit).
+
 ## Independent review notes
-Not yet reviewed. Created from the approved-task audit (TASK-009 MUST: the fee amendment needs storage and an owning task) and Kyle's 2026-10-22 decision. Open owner points: the legacy rule, the CSV rule, R-NET versus strict `—` totals, and the coverage-statement behaviour. Board and index follow-ups (not done here): add TASK-042 to 08 §A, the 09 waves and TASK-029's dependencies; update the "Performance-import fees show $0.00" roadmap card.
+Not yet reviewed. Created from the approved-task audit (TASK-009 MUST: the fee amendment needs storage and an owning task) and Kyle's 2026-10-22 decision. Open owner points: the legacy rule, the CSV rule, R-NET versus strict `—` totals, and the coverage-statement behaviour. Board and index follow-ups (not done here): add TASK-042 to 08 §A and the 09 waves (TASK-029 r6 already names it); update the "Performance-import fees show $0.00" roadmap card.
+Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r1.

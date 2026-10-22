@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r4; awaiting independent review) |
+| Status | Ready for Approval (r4) |
 | Type | Documentation |
 | Audit priority | P1 |
 | Roadmap lane | NA-7 / P0-13 (V1) |
@@ -33,7 +33,7 @@ Owner relies on docs during install/uninstall.
 Docs drift.
 
 ## Expected change scope
-`README.md` (Windows installer section, `:68-81`, including the required WebView2/offline statement at `:78`; and the "nothing leaves the machine" sentence at `:85`, see step 2), `docs/build-26.75-evidence.md:51-71` only (the "Uninstall and data" paragraph and the release-workflow facts; lines 117-166, the smoke checklist and NA-7 draft, belong to TASK-028), wording input for `apps/desktop/src/legal/index.ts` (implemented in TASK-025).
+`README.md` (Windows installer section, `:68-81`, including the required WebView2/offline statement at `:78`; and the "nothing leaves the machine" sentence at `:85`, see step 2), `docs/build-26.75-evidence.md:51-71` only (the "Uninstall and data" paragraph and the release-workflow facts; lines 117-166, the smoke checklist and NA-7 draft, belong to TASK-028). `apps/desktop/src/legal/index.ts` is not in scope: TASK-025 takes `PRIVACY_SUMMARY`/`LICENSE_SUMMARY` verbatim from the owner-only package.
 
 ## Out of scope
 Changing installer behaviour (TASK-006/027).
@@ -48,10 +48,11 @@ Changing installer behaviour (TASK-006/027).
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-006; TASK-027 merged (ordering: the workflow facts documented here must be the post-TASK-027 ones).
 - Likely shared-file conflicts: `README.md` with TASK-027/028.
+- Blocks: nothing. TASK-025 no longer depends on this card (TASK-025 r4, review4). Follow-up outside this card: `09-stage2-implementation-waves.md:189-190` (W3a "026 → 025 → 028", W3b independent) and the Notion 025←026 relation need updating to the order 027 → 026 and 025 independent of 026; TASK-027 does not list TASK-026 as blocked.
 
 ## Acceptance criteria (pass/fail)
 - [ ] `README.md` (in the Windows installer section, replacing the sentence at `:78`) states that the installer needs an internet connection only if WebView2 is missing, and that FundedFlow works offline once installed; this statement is a mandatory row in the checklist below, checked against `src-tauri/tauri.conf.json:49-52`.
-- [ ] `README.md` contains no absolute "nothing leaves the machine" / "makes no network connections" claim; the `:85` sentence matches the approved owner-only package wording.
+- [ ] `README.md` contains no absolute "nothing leaves the machine" / "makes no network connections" claim; the `:85` sentence matches the approved owner-only package wording (owner-only package page 4001bd4b6bde81e28d74f5e17bb56a16, the page TASK-025 cites); the PR checklist row quotes the package sentence it was matched against.
 - [ ] The PR description contains a checklist with one row per changed statement: the statement, its doc file:line, and the source file:line it was checked against at the merge SHA (for example `.github/workflows/release-installer.yml:116` for retention, `tauri.conf.json:49-52` for the WebView2 install mode). Every row is ticked.
 - [ ] No line of `docs/build-26.75-evidence.md` outside 51-71 is changed by this card, except a line named in the checklist under step 2.
 - [ ] Root `npm test` → exit 0 (sanity).
@@ -76,8 +77,11 @@ Documents updated; every factual statement checked against the cited source (fil
 - Step 2: "Keep 'FundedFlow itself makes no network connections'" removed. That phrase exists nowhere in `README.md` or `docs/` (only in `privacy-notice.ts:12, 30`, replaced by TASK-025) and conflicts with the approved package, which scopes the claim. `README.md:85` is aligned with the package wording; `tauri.conf.json:35` is left to TASK-027 or a Triage card because it is config (approved-task audit, SHOULD). Note: the absolute claim is not shown to be false by a network trace; it is replaced because it is broader than the approved owner text.
 - Ordering: TASK-027 merged is now a prerequisite, and step 3 documents the workflow facts at this card's merge SHA (approved-task audit, SHOULD).
 - Trigger-path citation corrected from `release-installer.yml:10-21` to `:11-21` (approved-task audit, NIT).
+- Scope: removed the dangling "wording input for `legal/index.ts` (implemented in TASK-025)" item; no step produced it, and with the TASK-027 prerequisite it chained 027 → 026 → 025. TASK-025 now takes the summaries from the package. Follow-up recorded for `09-stage2-implementation-waves.md:189-190` and the Notion relation (independent review (review4), reviewer C blocking 1).
+- Acceptance: the `:85` criterion cites the package page and requires the matched package sentence to be quoted in the PR checklist (independent review (review4), reviewer C nit).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
 Block 4 review (10 §8.3): nits only — applied in r3.
 Independent review r3 (2026-10-22): CHANGES on 012, 024, 026 (citations, test construction, scope lines); applied. READY.
+Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.

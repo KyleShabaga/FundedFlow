@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r4; awaiting independent review) |
+| Status | Ready for Approval (r4) |
 | Type | Owner Decision |
 | Audit priority | Gate / decision |
 | Roadmap lane | Final Push V1 |
@@ -24,7 +24,7 @@
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
 
 ## Purpose / risk
-Four Final Push items have no recorded disposition in the repository (grep finds 0 hits for P0-09/P0-10; P0-05 cohort: `docs/architecture/p0-04-csv-contracts.md:169`).
+Four Final Push items have no recorded disposition in the repository (grep finds 0 hits for P0-09/P0-10; P0-05 cohort: `docs/architecture/p0-04-csv-contracts.md:170`).
 
 D5 (corrected in r4) is the design-system item named on the source card as "D5 Card/Panel wrappers": the roadmap card "Create frontend design system and async-state patterns" (https://app.notion.com/p/3fe1bd4b6bde813681ddf4e89b4ba70d) asks to "Decide whether shared classes satisfy the Card/Panel/SectionHeader/Separator contract or whether small wrappers are needed (D5)". It is **not** the ultrawide row `D5` in `docs/design/window-support-matrix.md:26`, nor the collector "Export envelope v1 (D5)" heading at `docs/architecture/prop-firm-collector.md:470` (r3 cited `:471`, which is blank). Those two repository hits share the label only.
 
@@ -39,8 +39,10 @@ See steps; any 'run' choice creates a separate gate task. A 'run' or 'keep' choi
 
 ### Recorded decisions (Kyle, 2026-10-22)
 - P0-05, P0-09, P0-10: as approved at r3 on the Notion approval board (P0-05 cohort waived for owner-only V1, no broad support claims; P0-09 existing reconciliation evidence linked, register completion via TASK-035; P0-10 multi-user studies deferred until before external release). Unchanged in r4.
-- **P0-05 waiver, real-format evidence (r4).** After TASK-037 replaces `test_csvimport/Performance.csv` (the only real-format CSV evidence) with a synthetic fixture, nothing in the repository exercises a real exporter file. The waiver therefore does not drop real-format checking entirely: a one-off owner-run import of a current real export on the release candidate is part of the TASK-030 and TASK-036 evidence. The export stays untracked; nothing from it is committed, and only the outcome (file type and exporter, row count, result, warnings) is recorded, never row values.
 - **D5 (re-decided on the corrected options):** Kyle chose option (a): "accept the shared classes as satisfying the contract and close D5 for V1, with no work." This replaces the r3 disposition "D5 deferred pending identification", which rested on the wrong options. No follow-up task is created.
+
+### Proposed condition (audit SHOULD; needs Kyle's approval with this revision)
+- **P0-05 waiver, real-format evidence.** Not a recorded decision: this condition comes from the approved-task audit (SHOULD) and takes effect only when Kyle approves r4. After TASK-037 replaces `test_csvimport/Performance.csv` (the only real-format CSV evidence) with a synthetic fixture, nothing in the repository exercises a real exporter file. The waiver therefore does not drop real-format checking entirely: a one-off owner-run import of a current real export on the release candidate (TASK-030 step R1) is part of the TASK-030 and TASK-036 evidence. The export stays untracked; nothing from it is committed. Only the outcome is recorded: exporter, file row count, imported/duplicate/skipped counts, warning and error counts by kind, pass/fail; never row values or message text.
 
 ## Expected change scope
 Record each decision; no code.
@@ -55,7 +57,7 @@ Running studies; implementing wrappers.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: None.
-- Dependants: TASK-035 (evidence register) — Blocked while any P0-05 cohort or P0-10 studies follow-up task created here is not Verified.
+- Dependants: TASK-035 (evidence register) — Blocked while any P0-05 cohort or P0-10 studies follow-up task created here is not Verified. TASK-030 (step R1) and TASK-036 consume the proposed P0-05 real-format condition.
 - Likely shared-file conflicts: None.
 
 ## Acceptance criteria (pass/fail)
@@ -75,7 +77,7 @@ Kyle's explicit choice recorded verbatim with date and source (trusted conversat
 ## Changes in r3
 - 10 §8.2 TASK-007 (G5, G10): added the criterion that any run/keep/adopt choice creates a follow-up task and TASK-035 (cohort, studies) is marked Blocked until it is Verified; matching step 3 and Dependants line.
 - 10 §8.3 fixture rule: fixture line says `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`).
-- Source re-check at b01e2b9: P0-05 cohort citation corrected from `p0-04-csv-contracts.md:170` to `:169`.
+- Source re-check at b01e2b9: P0-05 cohort citation changed from `p0-04-csv-contracts.md:170` to `:169` (wrong: `:169` is the "None for §4" bullet; restored to `:170` in r4, independent review (review4)).
 
 ## Changes in r4
 - D5 corrected: it is the design-system Card/Panel/SectionHeader/Separator wrappers decision (source card "D5 Card/Panel wrappers"; roadmap card 3fe1bd4b6bde813681ddf4e89b4ba70d), not the window-matrix row or the collector envelope; the "ambiguous D5" wording and the "clarify which D5" option removed; step 1 now offers the real options (approved-task audit, MUST).
@@ -83,8 +85,11 @@ Kyle's explicit choice recorded verbatim with date and source (trusted conversat
 - Citation fixed: the collector heading is `docs/architecture/prop-firm-collector.md:470`, not `:471` (approved-task audit, NIT).
 - P0-05 waiver: a one-off owner-run import of a current real export on the candidate (untracked, nothing committed) is part of the TASK-030/TASK-036 evidence, because TASK-037 removes the only real-format CSV evidence (approved-task audit, SHOULD).
 - Added "Recorded decisions" under Options so the repository card carries the dispositions.
+- The P0-05 real-export condition moved out of "Recorded decisions (Kyle)" into its own "Proposed condition" heading, because it is an audit SHOULD that Kyle has not yet approved; the recorded outcome is now counts by kind with no values or message text, matching TASK-030 R1 (independent review (review4), reviewer C blocking 1).
+- Purpose and the r3 note: the P0-05 cohort citation is `p0-04-csv-contracts.md:170` (the P0-05 line), not `:169`; Dependants name TASK-030 (R1) and TASK-036 (independent review (review4), reviewer C nits).
 
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: follow-up-task criterion with TASK-035 Blocked until Verified (G5, G10); fixture rule unset (not 0); P0-05 citation line fix.
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
+Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r4; awaiting independent review) |
+| Status | Ready for Approval (r4) |
 | Type | Fix |
 | Audit priority | P1 (wording only) |
 | Roadmap lane | Unassigned (owner); P0-03 rule (merged) |
@@ -41,24 +41,27 @@ Those files, including `AccountDetailPage.tsx`, `TodayPage.tsx` and `DailyReview
 
 ## Out of scope
 Settings auto-acknowledge and daily-review acknowledge flow (ISSUE-011 rest, V1.1); invalidate-on-uncertain changes to the lock or caches.
-- The other settings toasts, `today/components/AccountsOverview.tsx:31` ("The layout wasn't saved") and `today/components/SessionPrompt.tsx:31` ("That choice wasn't saved"): their description ("It applies until you close FundedFlow") is still true, and Kyle's decision widened scope only to the three account-switch toasts. Record any change to them as a new Triage card.
+- The other settings toasts, `today/components/AccountsOverview.tsx:31` ("The layout wasn't saved") and `today/components/SessionPrompt.tsx:31` ("That choice wasn't saved"): their description ("It applies until you close FundedFlow") is still true, and Kyle's decision widened scope only to the three account-switch toasts. Record them as a new Triage card.
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 2. Branch on `error.category === 'uncertain-outcome'`:
-   - Account and trade writes (archive, restore, trade restore): show 'may have been archived/restored — check before trying again', say where to check (the page or list that shows the record), as `journal/components/LibraryView.tsx:287-293` does ("check the library on this page"), and say where the review that releases the lock appears (accounts: the Edit, Change status or Reset dialog of that account; trades: editing a trade of that account). No link to the record is added; that is out of scope.
+   - Account and trade writes (archive, restore, trade restore): show 'may have been archived/restored — check before trying again', say where to check (the page or list that shows the record), as `journal/components/LibraryView.tsx:287-293` does ("check the library on this page"), and say where the review that releases the lock appears: for an account that still shows as not archived, its Edit, Change status or Reset dialog; for an account that shows as archived, no review is reachable (the archived account's menu offers only Open, Rulebook, Restore and Delete, `AccountActions.tsx:99-108`; the detail page hides Edit, `AccountDetailPage.tsx:288-289, 300`; `RestoreDialog` renders no `AccountWriteReview`, `LifecycleDialogs.tsx:173-195`), so say that archiving and restoring this account are locked until FundedFlow restarts and to check the account after reopening; trades: adding or editing a trade of that account (`useCreateTrade` shares the `["trades", id]` scope, `trades/hooks/trades.ts:10`). No link to the record is added, and no review is added to `RestoreDialog`; both are out of scope.
+   - Uncertain results shown as toasts use the `warning` tone (`NoticeTone`, `design-system/components/feedback.tsx:28`); definite failures keep `error`; dialog error text keeps its existing styling.
    - Active-account switches (all five sites; owner decision, 2026-10-22): the wording must say that no answer came back so the active account may have changed, that switching is locked until FundedFlow restarts, and that the active account should be checked after reopening. It must not invite the user to try again now. Example: "No answer came back, so the active account may have changed. Switching is locked until you restart FundedFlow; check the active account after reopening it."
 3. Keep definite-failure wording for definite failures.
 4. Tests: reject each with `FeatureDataError('uncertain-outcome')` → uncertain wording; with a definite failure → existing wording. For one active-account site and one account or trade site, also test the locked retry: after an uncertain result, a second attempt sends nothing (spy on the repository) and still shows the uncertain wording, never the definite one.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-021, TASK-022 (shared files merge order).
-- Likely shared-file conflicts: `LifecycleDialogs.tsx`, `AccountSwitcher.tsx`.
+- Likely shared-file conflicts: `LifecycleDialogs.tsx`, `AccountSwitcher.tsx`; `DailyReviewPage.tsx` with TASK-022.
 
 ## Acceptance criteria (pass/fail)
 - [ ] New tests pass; fail before.
 - [ ] All five active-account sites (`AccountSwitcher.tsx:45`, `AccountActions.tsx:37`, `AccountDetailPage.tsx:257`, `TodayPage.tsx:65`, `DailyReviewPage.tsx:155`) show the locked-until-restart wording on an uncertain result, and the definite wording otherwise.
 - [ ] Locked retry: a second attempt after an uncertain result sends nothing and shows the uncertain wording again.
+- [ ] After an uncertain archive whose write committed (account now archived), the message names the restart, not the Edit/Change status/Reset dialogs; a second Restore attempt sends nothing and shows the same uncertain wording.
+- [ ] Uncertain results shown as toasts use the `warning` tone; definite failures keep `error`.
 - [ ] Uncertain-writes journeys pass: `npm run test:journeys -w @fundedflow/desktop` → exit 0.
 - [ ] Full root checks → exit 0.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check (the Rust fixture tests rewrite tracked fixtures whenever the variable is set, to any value); never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
@@ -91,8 +94,12 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Account and trade wording names where the review that releases the lock appears. Reason: audit SHOULD.
 - Added a locked-retry test and criterion. Reason: audit SHOULD.
 - Listed the two other settings toasts (`AccountsOverview.tsx:31`, `SessionPrompt.tsx:31`) as out of scope. Reason: audit MUST asked to include or list them; Kyle's decision covered only the three switch toasts.
+- Step 2 and criteria: for an account that shows as archived (an uncertain archive that committed, or an uncertain restore that did not), no review dialog is reachable (`AccountActions.tsx:99-108`, `AccountDetailPage.tsx:288-289, 300`, `LifecycleDialogs.tsx:173-195`), so the wording says archive and restore are locked until FundedFlow restarts and to check after reopening; dialog guidance kept for non-archived accounts; criterion added. No review panel is added to `RestoreDialog` (independent review (review4), reviewer B blocking 1).
+- Step 2: trade guidance says "adding or editing" (`trades/hooks/trades.ts:10`); uncertain toasts use the `warning` tone, with a criterion (independent review (review4), reviewer B nits; audit NIT 5).
+- Conflicts: `DailyReviewPage.tsx` with TASK-022; out-of-scope wording simplified (independent review (review4), reviewer B nits).
 
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).
 Block 4 review (10 §8.3): nits only — applied in r3.
 Independent review r3 (2026-10-22): CHANGES on 012, 024, 026 (citations, test construction, scope lines); applied. READY.
+Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.

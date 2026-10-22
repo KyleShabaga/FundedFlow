@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r1; awaiting independent review) |
+| Status | Ready for Approval (r1) |
 | Type | Fix |
 | Audit priority | P1 (V1: TASK-009 decision 4 accepts retention only if it is disclosed) |
 | Roadmap lane | Unassigned (owner) |
@@ -51,7 +51,7 @@ Proposed wording (Kyle approves the final text; UI copy may be adjusted in revie
 ## Out of scope
 - Rust preview `warnings` and any wire change (fixture-pinned; `data-controls-wire.json` must not change).
 - Pruning or a "remove copies" action (ISSUE-018, V1.1).
-- `PRIVACY_SUMMARY` and `LICENSE_SUMMARY` (`apps/desktop/src/legal/index.ts:12-15, 18-25`), owned by TASK-025/026; flag to them if the summary's "permanently delete your data" needs a qualifier.
+- `PRIVACY_SUMMARY` and `LICENSE_SUMMARY` (`apps/desktop/src/legal/index.ts:12-15, 18-25`), owned by TASK-025 (taken verbatim from the owner-only package; TASK-025 r4 after review4); flag to it if the summary's "permanently delete your data" needs a qualifier.
 - `user-agreement.ts`.
 
 ## Legal versioning and re-acceptance (checked at 9430f2a)
@@ -61,7 +61,8 @@ Proposed wording (Kyle approves the final text; UI copy may be adjusted in revie
   - **(A) Recommended: after TASK-025.** Merge TASK-025 unchanged; this card then adds Kyle-approved paragraphs, bumps to the next owner-only version (for example `1.0.1-owner-only`, matching the `-owner-only` suffix TASK-025 makes the regex accept), and pins the new digest that Kyle approves. Users are re-prompted twice (025, then 044); for owner-only V1 that is only Kyle.
   - **(B) Fold into TASK-025.** Kyle amends the owner-only package text; TASK-025's pinned digest changes, so TASK-025 needs re-approval at a new revision, and this card keeps only the UI copy.
 - First check whether Kyle's approved owner-only privacy notice already covers restore safety copies and deleted-account retention. If it does, the privacy-notice part of this card is met by TASK-025 and only the UI copy remains (record that in the PR).
-- Digest rule (as TASK-025): the digest must equal the value of the text Kyle approved; a mismatch blocks the PR. Do not copy whatever the failing test prints without that check.
+- Digest rule (as TASK-025): the digest must equal the value of the text Kyle approved; a mismatch blocks the PR. Do not copy whatever the failing test prints without that check. Kyle approves text, not a digest: before coding, record the approved text and its digest in the execution log, computed with `documentText` (`legal/document.ts:28-40`) from the recorded text, not from a test's failure output; that recorded digest is the fixed reference for "digest equals the Kyle-approved value".
+- Under (A), this card replaces TASK-025's literal `privacyNotice.digest === "042bf1b9…"` assertion in `legal.test.ts` with the new approved literal, and leaves the `userAgreement.digest` literal unchanged.
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
@@ -77,7 +78,7 @@ Proposed wording (Kyle approves the final text; UI copy may be adjusted in revie
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-009 r3 approved (decision 4). Option (A): TASK-025 merged. Kyle's approved text.
 - Likely shared-file conflicts: `DeletionDialog.tsx` with TASK-015 (erase copy), TASK-016 (owner amendment: visible extra-files erase confirmation) and TASK-017 (renders missing-attachment warnings); `DataControlsPage.tsx` with TASK-015 (`:225`); `privacy-notice.ts`, `legal.test.ts` and `journeys/first-run.journey.test.tsx` with TASK-025; `docs/design/screens/15-settings-data-controls.md` with TASK-015/016/017. Merge after all of them.
-- Follow-up (not done here): disclosure lines in TASK-028/TASK-035 NA-7 (approved-task audit S1); add TASK-044 to 08 §A, the 09 waves and TASK-029's dependencies.
+- Follow-up (not done here): disclosure lines in TASK-028/TASK-035 NA-7 (approved-task audit S1); add TASK-044 to 08 §A and the 09 waves (TASK-029 r6 already names it).
 
 ## Acceptance criteria (pass/fail)
 - [ ] The account-deletion section and dialog state that recovery copies may keep the account's data and that erasing the entire journal removes them (tests; they fail before).
@@ -106,5 +107,10 @@ No journal data touched; `legal-acceptance.json` format unchanged; the re-prompt
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
+## Changes in r1
+- Legal versioning: under (A) this card replaces TASK-025's pinned privacy-notice digest literal and leaves the user-agreement literal unchanged; the approved text and its digest (computed with `documentText` from the recorded text) are recorded in the execution log before coding (independent review (review4), reviewer B nits).
+- Out of scope: `PRIVACY_SUMMARY`/`LICENSE_SUMMARY` are owned by TASK-025 alone, which now takes them from the package; follow-ups no longer list TASK-029's dependencies, already done in TASK-029 r6 (independent review (review4), reviewer B nit; TASK-025 change from reviewer C).
+
 ## Independent review notes
 Not yet reviewed. Created from the approved-task audit (TASK-009 MUST on decision 4). Open owner points: order (A) or (B); exact privacy-notice text; whether to give manual removal steps.
+Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r1.

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r6; awaiting independent review) |
+| Status | Ready for Approval (r6) |
 | Type | Verification |
 | Audit priority | Gate |
 | Roadmap lane | NA-2 / P0-06 |
@@ -97,6 +97,7 @@ Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE
 - Prerequisites: the TASK-023 dependency changed from an implicit "Verified" (via "All W1–W3 tasks Verified" and the Notion relation) to "TASK-023 Verified, closed Not Needed with evidence, or still Deferred with the window-close gap explicitly accepted by Kyle in TASK-036", because Kyle deferred TASK-023 pending TASK-011(a) and the board has no way to record "Not Needed" as Verified (approved-task audit, MUST, process item).
 - Acceptance: added a criterion recording TASK-023's state with the candidate (follows from the prerequisite change).
 - Prerequisites name TASK-042, TASK-043 and TASK-044 (V1 work created by TASK-009 r3).
+- Re-approval note: the "still Deferred, with the gap accepted by Kyle in TASK-036" route goes beyond the audit's "Verified or Not Needed with evidence" and lets a Release-Blocking: Yes task (TASK-023) stay unfixed for this build; Kyle should see this explicitly when he re-approves r6. Still open outside this card: the Notion 029→023 relation, 08 §A/§C.1 and 10a still say TASK-023 is expected (audit M3) (independent review (review4), reviewer C nits).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
@@ -104,3 +105,4 @@ Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: TASK-008/fmt prerequ
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r4.
 Independent review r5 (2026-10-22, owner-directed CI gate): CHANGES applied, re-check READY.
+Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r6.

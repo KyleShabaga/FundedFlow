@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r4; awaiting independent review) |
+| Status | Ready for Approval (r4) |
 | Type | Owner Decision |
 | Audit priority | Gate |
 | Roadmap lane | P0-18 (V1) |
@@ -16,7 +16,7 @@
 | Effort / risk | S / Low |
 | Verification platform | N/A |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | a7310fd (application source identical to 92e7980) |
+| Inspected source revision | 9430f2a (application source identical to 92e7980) |
 | Specification revision | r4 (2026-10-22; r3 + inputs from the approved-task audit fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
@@ -45,17 +45,17 @@ Decision only.
 1. Present the evidence register (TASK-035), open P1 items and waived gates. The inputs, each with its state and source:
    - Gate rows TASK-029..TASK-034 for the one candidate recorded by TASK-029 (TASK-034 is a kept gate: TASK-008 Option A).
    - Owner decisions TASK-001..TASK-011 as recorded.
-   - TASK-007 dispositions: P0-05 exporter/rule cohort **waived for owner-only V1** (no broad support claims); P0-09 existing reconciliation evidence linked in the register (TASK-035); P0-10 multi-user studies **deferred** until before external release; D5 **deferred** pending identification. None of these is a run/keep/adopt choice, so no TASK-007 follow-up task exists.
+   - TASK-007 dispositions: P0-05 exporter/rule cohort **waived for owner-only V1** (no broad support claims); P0-09 existing reconciliation evidence linked in the register (TASK-035); P0-10 multi-user studies **deferred** until before external release; D5 **closed for V1**: Kyle accepted the shared Card/Panel/SectionHeader/Separator classes as satisfying the contract, with no work (TASK-007 r4, Kyle's choice); P0-05 waiver conditional on the TASK-030 R1 real-format import (TASK-007 r4 proposed condition, once Kyle approves it). None of these is a run/keep/adopt choice, so no TASK-007 follow-up task exists.
    - TASK-002 follow-ups: TASK-037 (synthetic `Performance.csv` fixture and Rust tests), TASK-038 (remove two unreferenced real exports), TASK-039 (Git-history exposure assessment), Kyle's separate disposition of TASK-039's result and, if he chose option B (make private) or option C (rewrite history), the Verified state of its separate execution task; TASK-041 (value-level copies of real rows) with Kyle's ruling on it (remove, or accept as residual low-risk) and, if removal, its state.
    - TASK-008 follow-up: TASK-040 (`cargo fmt` formatting-only change and CI check).
    - TASK-010 outcome (whether ISSUE-002 was escalated to P0).
-   - TASK-030 step 4: the owner-run real-export import result (TASK-007 r4 condition on the P0-05 waiver).
+   - TASK-030 R1: the owner-run real-export import result, counts by kind only (TASK-007 r4 proposed condition on the P0-05 waiver, if Kyle approves it).
    - TASK-042 (fees-recorded flag), TASK-043 (rollback with an older safety copy) and TASK-044 (recovery-copy retention disclosure), each Verified (TASK-009 r3).
    - TASK-023 state: Verified, closed Not Needed with evidence, or still Deferred; if Deferred, Kyle explicitly accepts or rejects the window-close gap here (TASK-029 r6).
 2. Record Kyle's decision verbatim.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-035. Through TASK-029 this includes TASK-037, TASK-038 and TASK-039 resolved and TASK-040 Verified (TASK-002 and TASK-008 decisions; these four are r1 cards: Notion drafts with repository specifications `TASK-037…040-*.md`, awaiting approval), plus, if TASK-039 option B or C is chosen, its execution task Verified, and TASK-041 if Kyle chooses removal.
+- Prerequisites: TASK-035. Through TASK-029 this includes TASK-037, TASK-038 and TASK-039 resolved and TASK-040 Verified (TASK-002 and TASK-008 decisions; these four are r1 cards: Notion drafts with repository specifications `TASK-037…040-*.md`, awaiting approval), plus, if TASK-039 option B or C is chosen, its execution task Verified, and TASK-041 if Kyle chooses removal; also TASK-042, TASK-043 and TASK-044 Verified (TASK-009 r3, through TASK-029 r6).
 - Likely shared-file conflicts: None.
 
 ## Acceptance criteria (pass/fail)
@@ -83,7 +83,11 @@ Kyle's explicit choice recorded verbatim with date and source (trusted conversat
 
 ## Changes in r4
 - Inputs now include the TASK-030 real-export import result (TASK-007 r4), TASK-042/043/044 (TASK-009 r3) and the TASK-023 state with Kyle's explicit acceptance of the window-close gap if it stays Deferred (TASK-029 r6).
+- Step 1: D5 is now closed for V1 (TASK-007 r4, Kyle's choice), replacing the stale "deferred pending identification"; the P0-05 waiver is listed as conditional on TASK-030 R1 (independent review (review4), reviewer C blocking 1).
+- Step 1: "TASK-030 step 4" renamed "TASK-030 R1" to match TASK-030 (checklist step 4 is the first-run agreement) (independent review (review4), reviewer C blocking 2).
+- `Inspected source revision` bumped to 9430f2a; Prerequisites name TASK-042, 043 and 044 through TASK-029 (independent review (review4), reviewer C nits).
 
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r3.
+Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.

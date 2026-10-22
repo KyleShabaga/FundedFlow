@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r4; awaiting independent review) |
+| Status | Ready for Approval (r4) |
 | Type | Fix |
 | Audit priority | P1 (P0 if TASK-010 escalates) |
 | Roadmap lane | Unassigned (owner) |
@@ -37,13 +37,14 @@ Live-side token derived from a capped, fully materialised dump; the restore safe
 
 ## Out of scope
 Export-side caps (export at `archive.rs:231` stays capped) and archive format: TASK-009 decision (5) keeps archive v1 strict, and any format change is a separate versioned change.
+The in-memory `clone_db` used by the account simulation (`deletion.rs:82-92`; RAM use grows with the journal) and computing the hash inside one read transaction are not changed here (audit SHOULD and NIT); record them as a new Triage card.
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 2. Introduce a streaming, deterministic hash of live table contents covering the same tables as `dump` and including rowids, in the same table/row order, without the size cap.
-3. Use it for the restore `token`, the deletion preview tokens and the deletion simulation comparison (`deletion.rs:175`).
-4. Compute per-table and per-account counts (`deletion.rs:190-205`) with `count(*)` queries, not a full dump; `replacedEntities` output must stay byte-identical (`packages/domain/test/fixtures/data-controls-wire.json` unchanged).
-5. Restore safety copy (audit MUST, option (a)): the local pre-restore safety copy (`restore.rs:126`) is exempt from the archive entry cap, because it never enters an archive. Use an uncapped variant of `archive::snapshot`; keep everything else `snapshot` does (refuse an existing destination, `journal_mode=DELETE`, owner-only permissions on Unix, `sync_all`, and TASK-013's free-page removal of the temporary snapshot). Before taking it, check free space at the operation folder with `space()` (`filesystem.rs:110`) for twice the live journal's file size (the backup copies free pages before TASK-013's free-page removal runs, and that removal needs room for a second copy); a shortfall fails before `data-controls-pending.json` is written, leaving only the inert operation folder that any `prepare` failure leaves today (`restore.rs:112`). Export keeps the capped `snapshot` (TASK-009 decision (5)).
+3. Use it for the restore `token` and the deletion preview tokens.
+4. Compute per-table counts before and after the account simulation (`deletion.rs:133, 175-181`), the blocked-path per-account counts (`:190-205`) and the journal-scope counts (`:214-217`) with `count(*)` queries, not a full dump; `replacedEntities` output must stay byte-identical (`packages/domain/test/fixtures/data-controls-wire.json` unchanged).
+5. Restore safety copy (audit MUST, option (a)): the local pre-restore safety copy (`restore.rs:126`) is exempt from the archive entry cap, because it never enters an archive. Use an uncapped variant of `archive::snapshot`; keep everything else `snapshot` does (refuse an existing destination, `journal_mode=DELETE`, owner-only permissions on Unix, `sync_all`, and TASK-013's free-page removal of the temporary snapshot). Before taking it, check free space at the operation folder with `space()` (`filesystem.rs:110`) for twice `page_count × page_size` of the live journal, which also covers committed pages still in the WAL that the backup copies (the backup copies free pages before TASK-013's free-page removal runs, and that removal needs room for a second copy); a shortfall fails before `data-controls-pending.json` is written, leaving only the inert operation folder that any `prepare` failure leaves today (`restore.rs:112`). Export keeps the capped `snapshot` (TASK-009 decision (5)).
 6. Hash framing (audit SHOULD): the hash input is unambiguous: a domain tag (for example `live-content-v1`); per table, the table name and its column names; per row, a rowid-or-none marker; per cell, a type tag plus a length-prefixed value (so Integer `1` and Text `"1"` differ and no concatenation collides). Enumerate tables through one helper shared with `dump()`, so TASK-012's allow-list applies to both and cannot drift. Invalid UTF-8 text keeps `dump`'s `Integrity` result. The blocked-path `count(*)` keeps today's rule (`deletion.rs:191-200`): the first column named `account_id` or `owner_account_id`, Text equality with the account id.
 7. Tests: erase preview and restore inspect succeed on a journal over the dump cap; token changes when any row (incl. rowid-only change) changes; restore-over a journal whose **used** data exceeds `MAX_ENTRY` (for example large text in an existing column of a disposable journal): inspect → `prepare` succeeds and writes `safety.db` larger than `MAX_ENTRY`; `recover` installs; a separate run through `recover_failing` (`restore.rs:351-353`) rolls back and the live journal's content hash equals the pre-restore hash; export of the same journal still returns `LimitExceeded` (guard); `prepare` with insufficient space for the safety copy fails before writing `data-controls-pending.json`.
 
@@ -91,7 +92,11 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Step 6: unambiguous hash framing, one table enumerator shared with `dump()`, invalid UTF-8 → `Integrity`, and the blocked-path `account_id`/`owner_account_id` rule (audit SHOULD, hash framing; audit NIT on `deletion.rs:191-200`).
 - Conflicts: `archive.rs` `snapshot` shared with TASK-013 (follows from the MUST).
 - Fixture rule unchanged: `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`).
+- Steps 3-4: `deletion.rs:175` is a dump used only to count removed rows (`:176-181`), not a hash comparison; it moves to the `count(*)` step with the before/after (`:133, 175-181`), blocked-path (`:190-205`) and journal-scope (`:214-217`) counts (independent review (review4), reviewer A N1).
+- Step 5: the free-space check uses twice `page_count × page_size`, which covers WAL content, instead of the main file size (independent review (review4), reviewer A N2).
+- Out of scope: the skipped audit SHOULD on `clone_db` RAM use (`deletion.rs:82-92`) and NIT on hashing inside one read transaction are recorded for a Triage card (independent review (review4), reviewer A N3).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r3.
+Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.

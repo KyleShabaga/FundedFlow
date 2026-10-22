@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r4; awaiting independent review) |
+| Status | Ready for Approval (r4) |
 | Type | Fix |
 | Audit priority | Gate work (mandatory) |
 | Roadmap lane | P0-13 / NA-3 (V1, open) |
@@ -33,26 +33,27 @@ N/A (mandatory gate).
 Not yet integrated.
 
 ## Expected change scope
-`apps/desktop/src/legal/user-agreement.ts` (becomes the owner-use statement 1.0.1-owner-only; decide whether id `user-agreement` stays — keeping it avoids journey/record churn), `privacy-notice.ts` (1.0.0-owner-only), `legal/index.ts` (`PRIVACY_SUMMARY` wording incl. installer/WebView2 network accuracy), `legal/legal.test.ts` (draft assertions → final-state assertions; new digests), `journeys/first-run.journey.test.tsx:45,61-62,148`, draft-banner components `features/legal/components/LegalGate.tsx:33,63-65`, `PrivacyLegalSection.tsx:23-25`, `LegalDocuments.tsx:8-16` (dormant when draft=false), `docs/design/screens/16-first-run.md:7-8`. Rust `legal.rs` needs no change.
+`apps/desktop/src/legal/user-agreement.ts` (becomes the owner-use statement 1.0.1-owner-only; id `user-agreement` kept, decided on the Notion approval card; the pinned digests depend on it), `privacy-notice.ts` (1.0.0-owner-only), `legal/index.ts` (`PRIVACY_SUMMARY` and `LICENSE_SUMMARY`, `:12-25`, set verbatim from the package; today `:13` says "no internet connection", which the integrated notice contradicts), `legal/legal.test.ts` (draft assertions → final-state assertions; new digests), `journeys/first-run.journey.test.tsx:45, 57, 61-62, 66, 148, 227`, draft-banner components `features/legal/components/LegalGate.tsx:33,63-65`, `PrivacyLegalSection.tsx:23-25`, `LegalDocuments.tsx:8-16` (dormant when draft=false), `docs/design/screens/16-first-run.md:7-8, 22, 25`, `docs/design/README.md:40` (row 16 "Draft documents until counsel signs off"). Rust `legal.rs` needs no change.
 
 ## Out of scope
 Counsel review/external-user agreements (V2); third-party notices regeneration.
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
-2. Obtain the exact v1.1 texts from Kyle (owner-only package page) — do not paraphrase. Record Kyle's decision on keeping the `user-agreement` id.
+2. Take the exact v1.1 texts from the owner-only package page 4001bd4b6bde81e28d74f5e17bb56a16 (supplied by Kyle, effective 2026-10-22) — do not paraphrase. The `user-agreement` id is kept (decided on the Notion approval card); the pinned digests in step 4 depend on it.
 3. Update the version regex in `legal.test.ts:15` (`^\d+\.\d+\.\d+(-[0-9a-z.]+)?$` rejects `1.0.1-owner-only` because of the hyphenated suffix — it must accept `[0-9a-z.-]`).
 4. Replace texts, versions, `draft:false`, titles. Set each document's `digest` to the value pinned in the owner-only package manifest (page 4001bd4b6bde81e28d74f5e17bb56a16, "SHA-256" lines), **not** to whatever a failing test prints:
    - `user-agreement` (owner-use statement), version `1.0.1-owner-only`, effective `2026-10-22`: `ab5e539be811bef70e96115cb5fad9a5c6592c6d0079e1774738b019e3e08ead`
    - `privacy-notice`, version `1.0.0-owner-only`, effective `2026-10-22`: `042bf1b9e34c986f6c240f92ca20fcd4d2591a5144ec34202c01fc959a535a9a`
 
-   Field mapping that reproduces these digests through `documentText` (`legal/document.ts:28-40`), verified by the approved-task audit: `title` "Owner-use statement" / "Privacy notice — owner-only V1"; `summary` = the intro paragraph under the version line; `sections` = the `###` headings with their paragraphs; `effectiveDate` `2026-10-22`; `draft: false`. The `%APPDATA%\com.fundedflow.desktop\…` path is hashed with single backslashes, so it is written `\\` in a TS string literal. Run `npm run test -w @fundedflow/desktop -- src/legal`: if the computed digest of the integrated text differs from the pinned value, the PR is blocked until the text is made faithful to the package; never accept the printed digest. Reword the "copy the digest from this failure" guidance in `legal.test.ts:7` and the header comments of `user-agreement.ts:4` and `privacy-notice.ts:4-5` accordingly.
+   Field mapping that reproduces these digests through `documentText` (`legal/document.ts:28-40`), verified by the approved-task audit: `id` `user-agreement` / `privacy-notice` (hashed as `id: …`, `legal/document.ts:31`); `title` "Owner-use statement" / "Privacy notice — owner-only V1"; `summary` = the intro paragraph under the version line; `sections` = the `###` headings with their paragraphs; `effectiveDate` `2026-10-22`; `draft: false`. The `%APPDATA%\com.fundedflow.desktop\…` path is hashed with single backslashes, so it is written `\\` in a TS string literal. Run `npm run test -w @fundedflow/desktop -- src/legal`: if the computed digest of the integrated text differs from the pinned value, the PR is blocked until the text is made faithful to the package; never accept the printed digest. Reword the "copy the digest from this failure" guidance in `legal.test.ts:7` and the header comments of `user-agreement.ts:4` and `privacy-notice.ts:4-5` accordingly.
 5. Rewrite `legal.test.ts` draft assertions to final-state assertions (version pattern, no '(draft)', ids).
-6. Update first-run journey expectations and the spec; apply the `PRIVACY_SUMMARY` text agreed in TASK-026.
+6. Update first-run journey expectations and the spec; set `PRIVACY_SUMMARY` and `LICENSE_SUMMARY` (`legal/index.ts:12-25`) to the package's "Short notices for the app → First-run copy" text verbatim (owner-only package page 4001bd4b6bde81e28d74f5e17bb56a16).
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-001 decided — Option A, approved 2026-10-22 on the Notion approval board (keep 0BSD; no dependency change or notice regeneration, so nothing here is blocked by it); TASK-006 decided — Option A, approved 2026-10-22 on the Notion approval board (wording basis: the installer needs internet only when WebView2 is missing, the installed app works offline); TASK-026 (wording); v1.1 text supplied by Kyle (open); owner decision whether the `user-agreement` id stays (open).
-- Likely shared-file conflicts: `legal/index.ts` with TASK-026 wording.
+- Prerequisites: TASK-001 decided — Option A, approved 2026-10-22 on the Notion approval board (keep 0BSD; no dependency change or notice regeneration, so nothing here is blocked by it); TASK-006 decided — Option A, approved 2026-10-22 on the Notion approval board (wording basis: the installer needs internet only when WebView2 is missing, the installed app works offline); v1.1 text: owner-only package page 4001bd4b6bde81e28d74f5e17bb56a16, effective 2026-10-22 (supplied by Kyle; step 4 pins its digests); id `user-agreement` kept (decided on the Notion approval card; the pinned digests depend on it). TASK-026 is not a prerequisite: the summaries come from the package (step 6).
+- Later change: TASK-044 option (A) may replace the privacy-notice pin with a new Kyle-approved digest at `1.0.1-owner-only` (its scope); under its option (B), this card needs a new revision.
+- Likely shared-file conflicts: `legal/index.ts` with TASK-044 (out of scope there).
 
 ## Acceptance criteria (pass/fail)
 - [ ] `npm run test -w @fundedflow/desktop -- src/legal src/journeys/first-run.journey.test.tsx` → exit 0.
@@ -91,7 +92,11 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Acceptance: new criterion pinning the full digests `ab5e539b…08ead` (user-agreement) and `042bf1b9…a535a9a` (privacy-notice). The full values were read from the package page manifest on 2026-10-22 and match the audit's prefixes and suffixes; they are not stored anywhere in the repository at 9430f2a (approved-task audit, MUST).
 - Step 4 also notes the single-backslash rule for the `%APPDATA%` path (audit NIT, cheap) and the source comments that tell implementers to copy printed digests (`legal.test.ts:7`, `user-agreement.ts:4`, `privacy-notice.ts:4-5`).
 - Not applied (audit SHOULD items): sourcing `PRIVACY_SUMMARY`/`LICENSE_SUMMARY` verbatim from the package and dropping the TASK-026 wording dependency; extra scope lines (`first-run.journey.test.tsx:57, 66, 227`, `16-first-run.md:22, 25`, `docs/design/README.md:40`); refreshing the "open" prerequisites (package page and `user-agreement` id already decided on the board).
+- Step 6, scope and prerequisites: `PRIVACY_SUMMARY` and `LICENSE_SUMMARY` are taken verbatim from the package's first-run copy; the dependency on TASK-026 (whose scope produced no such wording, and which now waits on TASK-027) is dropped; conflicts now name TASK-044 (independent review (review4), reviewer C blocking 2; audit SHOULD previously skipped).
+- Step 4 mapping now includes `id` (`legal/document.ts:31` hashes it); scope, step 2 and prerequisites record the `user-agreement` id as kept and the v1.1 text as supplied in the package page, as this section already noted, instead of "open" (independent review (review4), reviewer C blocking 1).
+- Scope: added the stale draft lines `first-run.journey.test.tsx:57, 66, 227`, `16-first-run.md:22, 25` and `docs/design/README.md:40`; prerequisites note TASK-044's possible re-pin (independent review (review4), reviewer C nits).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r3.
+Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.

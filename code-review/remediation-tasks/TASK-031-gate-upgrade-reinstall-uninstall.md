@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r5; awaiting independent review) |
+| Status | Ready for Approval (r5) |
 | Type | Verification |
 | Audit priority | Gate |
 | Roadmap lane | NA-5 |
@@ -92,3 +92,4 @@ Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: pass rule; older EXE named with SHA and SHA-256; downgrade with pending cleanup follows TASK-015/016 declaration; legal re-prompt after upgrade expected; fixture rule unset (not 0).
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r4.
+Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r5.

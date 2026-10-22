@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r4; awaiting independent review) |
+| Status | Ready for Approval (r4) |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -45,7 +45,7 @@ New Rust command/DTO; batched overview (ISSUE-014, V1.1); freshness adapter rout
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 2. Change `currentAssignment(assignments, tradingDay)` to take a trading day; update callers to pass the Rust trading day.
 3. Badge: compare `snapshot.tradingDay` with the Rust trading day.
-4. Reset dialog (owner amendment, 2026-10-22): the `effectiveFrom` sent with an Assign decision is the Rust trading day for the **selected** `effectiveAt`, read through the existing freshness `asOf` support (`list_account_freshness(asOf = effectiveAt)`, `currentTradingDay` of this account's row); no TypeScript calendar maths. It is recomputed whenever `effectiveAt` (or the account) changes; a response for an earlier `effectiveAt` is ignored (key the read by `[accountId, asOf]`, separate from `accountFreshnessKey`). While the value is unresolved (loading, error, no row) or outdated (not for the current `effectiveAt`), submitting the Assign decision is blocked with the existing `Button disabledReason`; the unresolved state shows the existing `StatusIndicator status="unknown"`. Under TASK-020's strict equality, today's trading day is wrong for a backdated reset, so this is the only accepted source. The block applies only to the Assign decision: "Decide later" (`LifecycleDialogs.tsx:442`) sends no `effectiveFrom` and stays submittable while the day is unresolved.
+4. Reset dialog (owner amendment, 2026-10-22): the `effectiveFrom` sent with an Assign decision is the Rust trading day for the **selected** `effectiveAt`, read through the existing freshness `asOf` support (`list_account_freshness(asOf = effectiveAt)`, `currentTradingDay` of this account's row); no TypeScript calendar maths. It is recomputed whenever `effectiveAt` (or the account) changes; a response for an earlier `effectiveAt` is ignored (key the read by `[accountId, asOf]`, separate from `accountFreshnessKey`). While the value is unresolved (loading, error, no row) or outdated (not for the current `effectiveAt`), submitting the Assign decision is blocked with the existing `Button disabledReason`; the unresolved state shows the existing `StatusIndicator status="unknown"`. Under TASK-020's strict equality, today's trading day is wrong for a backdated reset, so this is the only accepted source. The block applies only to the Assign decision: "Decide later" (`LifecycleDialogs.tsx:442`) sends no `effectiveFrom` and stays submittable while the day is unresolved (recommended, because it sends no date; Kyle confirms it when re-approving this revision).
 5. Fake-clock tests at 2026-10-23T22:30Z (America/New_York, reset 17:00) and Saturday noon → assignment effective 2026-10-26 is 'in use'; no false badge.
 6. Fail closed: if the Rust trading day (freshness) is unavailable, show 'unknown' rather than falling back to `zonedDay`.
 6a. Boundary re-read: wherever the Rust trading day is used for 'in use', the badge or a default, re-read freshness at the row's `nextTradingDayStart` (a timer that does not depend on `nextChangeAt` or on `AccountSwitcher` being mounted), so an open window crosses the reset without a focus event.
@@ -108,3 +108,4 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: tests for reset-dialog boundary default, unknown state without freshness, no weekend dates in AssignDialog (G10); fixture rule unset (not 0).
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
+Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.
