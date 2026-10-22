@@ -232,3 +232,45 @@ A native account-summary command would scale better; see the proposed card in th
 Build 27.25).
 
 Screenshots (native debug build, synthetic UI Smoke test journal, before = main 8c3dd34, after = NA-4; 1280, 1024 and 800 px): [`02-accounts-na4/`](02-accounts-na4/).
+
+## Account freshness (P0-D06)
+
+Card: [P0-D06](https://app.notion.com/p/4001bd4b6bde81c18d7ed509d46cd8ba). Code: `features/accounts/freshness.ts`
+(policy and evaluator), `hooks/freshness.ts`, `components/AccountSwitcher.tsx`, Settings →
+`features/settings/components/FreshnessPolicySection.tsx`; Rust `store/freshness.rs` (`list_account_freshness`).
+
+**Header account menu.** The active account is the menu's checked choice (`menuitemradio`, `aria-checked`): a
+`flow-soft` ground, a `flow` accent bar and full-ink semibold text, distinct from hover/keyboard highlight (`bg-300`)
+and from disabled (faded). No checkmark; it is not disabled, and choosing it again only closes the menu. Every row,
+in both Live accounts and Finished attempts, starts with a `StatusDot` and has a second line naming the status and
+reason ("Fresh · updated Oct 21, 16:58 GMT-4"), with times in the display time zone (P0-D05). A note at the end says
+what green means under the active policy and that freshness isn't a live connection or a check of balances or rules.
+
+**What freshness means.** How recent an account's records are. It never claims a live broker connection, correct
+balances, account safety or rule compliance.
+
+| Signal | Proves | Use |
+|---|---|---|
+| Records updated: newest committed import (`completed_at`; duplicate-only included) or manually entered trade (`created_at`) | You brought data in then | Required |
+| Newest import attempt failed after that | The latest attempt didn't land | Needs attention |
+| Newest user-confirmed balance checkpoint in force (`observedAt`) | Balance compared with the firm then | Optional unless the policy requires it |
+| Last trade time, recalculating, re-rendering | Activity or a local computation only | Never used |
+
+**Default policy (decided in triage, 2026-10-21):** fresh when records were updated at or after the start of the
+previous trading day (Mon–Fri, the account's zone and reset time; Rust supplies the start instants). Settings also
+offers *Records within 3 days* (72 h elapsed) and *Records within 3 days and a firm checkpoint within 7 days*, and
+**Custom**: records within 1–9 trading days or 1–30 days, optionally a confirmed checkpoint within 1–90 days.
+Reset to default returns to the default. Stored as `freshness.policy`: `{ "mode": "default" | "three_days" |
+"with_checkpoint" }` or `{ "mode": "custom", "rules": { "records": { "unit", "count" }, "checkpoint": { "required",
+"maxDays"? } } }`. An unreadable saved policy falls back to the default and says so.
+
+| Result | When |
+|---|---|
+| Green: Fresh | Every required signal meets the policy |
+| Yellow: Needs attention | Records older than the policy, the newest import failed after the last update, or a required checkpoint is missing or too old. Every reason is listed; a newer unrelated event never hides a stale required one |
+| Grey: Unknown | No records yet (a checkpoint alone isn't a record), the inputs couldn't be read, or a finished attempt (passed, failed, closed: "no new data expected") |
+
+Paused attempts use the live policy. Boundaries: a trading-day rule is fresh at exactly the boundary instant; a day
+rule is fresh until exactly N × 24 h after the update. The menu reads `list_account_freshness` once for every account,
+again after any successful write in the app, on window focus or visibility, and when the earliest threshold passes. A
+policy or display-zone change re-evaluates without a read and never changes a result through the zone.

@@ -134,6 +134,7 @@ macro_rules! app_commands {
             commands::reopen_daily_review,
             commands::relink_daily_review_trades,
             commands::get_insights_dataset,
+            commands::list_account_freshness,
             legal::get_legal_acceptance,
             legal::record_legal_acceptance,
             $($extra),*

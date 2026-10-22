@@ -238,6 +238,26 @@ export function StatusIndicator({ status, label, detail, variant = "pill", class
   );
 }
 
+/* ---------- StatusDot (P0-D06) ---------- */
+
+export interface StatusDotProps {
+  /** success: green with a glow. caution: amber with a glow. unknown: a hollow grey ring, so it never reads as good. */
+  tone: "success" | "caution" | "unknown";
+  /** Accessible text when the dot stands alone. Omit when the text beside it says the status (then it is hidden). */
+  label?: string;
+  className?: string;
+}
+
+/**
+ * A small status dot with a static glow, for dense lists (the account menu). Colour is never the only signal: the
+ * unknown dot is a ring, and the row's text or `label` names the status.
+ */
+export function StatusDot({ tone, label, className }: StatusDotProps) {
+  return label
+    ? <span role="img" aria-label={label} className={cx("ds-dot", `ds-dot-${tone}`, className)} />
+    : <span aria-hidden="true" className={cx("ds-dot", `ds-dot-${tone}`, className)} />;
+}
+
 /* ---------- DiagnosticDetails (Build 26.5) ---------- */
 
 export interface DiagnosticDetailsProps {

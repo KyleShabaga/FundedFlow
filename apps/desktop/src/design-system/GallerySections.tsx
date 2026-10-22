@@ -22,6 +22,7 @@ import {
   Dialog,
   Drawer,
   DropdownMenu,
+  StatusDot,
   EmptyState,
   EquityCurve,
   ErrorState,
@@ -231,8 +232,31 @@ export function OverlaysSection() {
         <Tooltip content="Resets at 17:00 New York time">
           <Button variant="ghost">Hover or focus me</Button>
         </Tooltip>
+        <ChoiceMenuExample />
       </div>
     </Section>
+  );
+}
+
+/** P0-D06: a choice menu (the account selector): the current choice is checked, each row has a status dot and a line. */
+function ChoiceMenuExample() {
+  const [chosen, setChosen] = useState("a");
+  const rows = [
+    { id: "a", label: "Example account A", dot: "success" as const, line: "Fresh · updated Oct 21, 16:58 GMT-4" },
+    { id: "b", label: "Example account B", dot: "caution" as const, line: "Needs attention · last update Oct 16, 09:00 GMT-4" },
+    { id: "c", label: "Example account C", dot: "unknown" as const, line: "Unknown · no records yet" },
+  ];
+  return (
+    <DropdownMenu
+      align="start"
+      trigger={<Button>Choice menu</Button>}
+      items={[
+        { type: "label", label: "Choices" },
+        ...rows.map(r => ({ label: r.label, description: r.line, icon: <StatusDot tone={r.dot} />, checked: r.id === chosen, onSelect: () => setChosen(r.id) })),
+        { type: "separator" },
+        { type: "note", text: "A note explains what the dots mean. Colour is never the only signal." },
+      ]}
+    />
   );
 }
 

@@ -23,6 +23,7 @@ use crate::store::authoring::{self, DraftInput, SourceInput};
 use crate::store::offers::{self, OfferSelection, OfferSelectionInput};
 use crate::store::ledger::{self, LedgerEntry, LedgerEntryInput};
 use crate::store::settings::{self, Setting};
+use crate::store::freshness;
 use crate::store::risk_promotion;
 use crate::store::snapshots::{self, Snapshot, SnapshotInput};
 use crate::store::journal::{self, JournalEntry, JournalEntryInput};
@@ -673,6 +674,13 @@ pub async fn relink_daily_review_trades(db: State<'_, Runtime>, input: DailyRevi
 }
 
 use crate::store::insights::{self, InsightsDataset, InsightsQuery};
+
+/// P0-D06: the account freshness indicator's inputs (newest import, failed import, manual entry, confirmed
+/// checkpoint, trading-day starts) for every account, in one read. Read-only; computes no verdict.
+#[tauri::command]
+pub async fn list_account_freshness(db: State<'_, Runtime>, as_of: String) -> AppResult<Vec<freshness::AccountFreshnessInputs>> {
+    db.with(|c| freshness::list_at(c, &as_of))
+}
 
 /// Build 23: read-only Insights snapshot of exactly the requested attempts (archived included), with their active
 /// trades and review facts. Aggregation happens in the shared domain package.

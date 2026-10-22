@@ -90,8 +90,8 @@
 .acct-switch-empty { color: var(--flow); font-weight: 600; }
 .acct-switch-note { font-size: 12px; color: var(--ink-muted); }
 .acct-switch-placeholder { display: inline-block; height: 34px; }
-.acct-check { color: var(--flow); }
-.acct-check.is-hidden { visibility: hidden; }
+/* P0-D06: keeps the name aligned while a row's freshness is still being read (the dot is 8 px + 3 px margins). */
+.acct-dot-slot { flex: none; width: 14px; }
 
 /* Two-column page grids stack below 880 px of main column (docs/design/window-support.md). */
 @container ds-main (max-width: 879px) {

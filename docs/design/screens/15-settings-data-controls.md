@@ -9,7 +9,7 @@ The Settings page (sidebar **Settings**) opens on this page. Mockups: [`mockups/
 ## Layout
 
 One column, max 960 px. (NA-3 removed the static local-only notice that opened the
-page; its wording now lives once, in the **Privacy & legal** section.) Six `FormSection`s:
+page; its wording now lives once, in the **Privacy & legal** section.) Seven `FormSection`s:
 
 1. **Your data on this computer**: a `StatList` saying the journal is stored in FundedFlow's app-data folder for the
    Windows user; that the only automatic copy is the one FundedFlow saves in the same folder **before upgrading the
@@ -34,7 +34,13 @@ page; its wording now lives once, in the **Privacy & legal** section.) Six `Form
    shows the zone in effect and an example time. Description: "Changes displayed times. Account trading days and rule
    calculations use the account's time zone." A saved zone this runtime doesn't support (or an unreadable value)
    falls back to desktop time with a warning; a failed save shows an error and keeps the zone in effect.
-6. **Privacy & legal** (NA-3, [16 First run](16-first-run.md)): the privacy summary, a draft notice while the documents
+6. **Account freshness** (P0-D06, `FreshnessPolicySection.tsx`): the policy behind the account menu's dots.
+   `RadioGroup` Default (records updated since the previous trading day) / Records within 3 days / Records within 3
+   days and a firm checkpoint within 7 days / Custom. Presets save at once; Custom shows records within N (trading
+   days 1–9, or days 1–30) and an optional confirmed-checkpoint limit (1–90 days), validated, with "Save custom
+   policy". **Reset to default** appears whenever another policy is in use. A `StatList` says what green, yellow and
+   grey mean under the policy shown. Rules: [02 Accounts → Account freshness](02-accounts.md#account-freshness-p0-d06).
+7. **Privacy & legal** (NA-3, [16 First run](16-first-run.md)): the privacy summary, a draft notice while the documents
    are drafts, a `StatList` of each document's version and date and when this install accepted them, each document
    in a `Disclosure` (`DocumentView`), and the licence summary with third-party notices (Build 26.78, see
    [16 First run → Licence and third-party notices](16-first-run.md#licence-and-third-party-notices)).

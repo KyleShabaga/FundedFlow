@@ -253,7 +253,7 @@ describe("list, states and selection", () => {
     await screen.findByRole("heading", { name: "Apex · PA-48213", level: 2 });
     const switcher = await screen.findByRole("button", { name: /Apex · PA-48213/ });
     await user.click(switcher);
-    await user.click(await screen.findByRole("menuitem", { name: /A very long account name/ }));
+    await user.click(await screen.findByRole("menuitemradio", { name: /A very long account name/ }));
     await waitFor(() => expect(holder.store.settings.get(ACTIVE_ACCOUNT_SETTING)).toBe("c"));
     await waitFor(() => expect(screen.getByRole("button", { name: /A very long account name/ })).toBeTruthy());
     // Detail pages read their own account; the other account's trades never show.

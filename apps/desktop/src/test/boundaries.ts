@@ -23,6 +23,8 @@ export const boundary = {
   invocations: [] as string[],
   /** NA-3 per-install acceptance file: what `get_legal_acceptance` reads and `record_legal_acceptance` writes. */
   legal: { record: null as LegalAcceptance | null, writeError: null as Error | null, now: "2026-10-21T18:30:00.000Z" },
+  /** P0-D06 `list_account_freshness` rows (the Rust read is tested in Rust); none by default, so dots are unknown. */
+  freshness: [] as unknown[],
   /** Native save/open dialog answers: a path, null for Cancel, or an Error when the chooser can't open. */
   dialog: {
     save: [] as (string | null | Error)[],
@@ -38,6 +40,7 @@ export function resetBoundaries() {
   boundary.invocations = [];
   boundary.legal = { record: null, writeError: null, now: "2026-10-21T18:30:00.000Z" };
   boundary.dialog = { save: [], open: [], calls: [] };
+  boundary.freshness = [];
 }
 
 const take = <T,>(queue: T[]): T | undefined => (queue.length > 1 ? queue.shift() : queue[0]);
@@ -47,7 +50,7 @@ async function answer(value: Answer | undefined): Promise<RuntimeStatus> {
   return structuredClone(await value);
 }
 
-/** `@tauri-apps/api/core`: only the runtime and first-run acceptance commands go through invoke in these tests. */
+/** `@tauri-apps/api/core`: only the runtime, first-run acceptance and freshness commands go through invoke in these tests. */
 export const tauriCoreMock = {
   invoke: async (command: string, args?: Record<string, unknown>) => {
     boundary.invocations.push(command);
@@ -57,6 +60,7 @@ export const tauriCoreMock = {
       boundary.legal.record = { documents: structuredClone(args?.documents) as LegalAcceptance["documents"], acceptedAt: boundary.legal.now };
       return structuredClone(boundary.legal.record);
     }
+    if (command === "list_account_freshness") return structuredClone(boundary.freshness);
     if (command === "runtime_status") return answer(take(boundary.statusAnswers));
     if (command === "retry_runtime") {
       boundary.onRetry?.();
