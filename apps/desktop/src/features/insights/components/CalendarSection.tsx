@@ -2,7 +2,7 @@
 // MonthYearPicker, the Monday–Friday grid with week totals, the selected day or week, and yearly performance. Every
 // cell is a summary of the included trades of that stored trading day (each account's own day rule), and opens them.
 // A day with an unknown P&L shows a dash and no tint. Daily reviews (Build 22) are linked as process context only.
-import { addMoney, basisAmount, byPeriod, monthOf, summarize, type Group, type InsightsAccount } from "@fundedflow/domain";
+import { addMoney, basisAmount, byPeriod, monthOf, summarize, type Group, type InsightsAccount, type Summary } from "@fundedflow/domain";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -23,7 +23,7 @@ import {
 } from "../../../design-system";
 import { useDailyReviewIndex } from "../../daily-reviews/hooks/daily-reviews";
 import { dailyReviewPath } from "../../daily-reviews/view-models/daily-review";
-import { dayLabel, monthLabel, moneyView, rateView, tradesText } from "../view-models/insights";
+import { dayLabel, type MetricView, monthLabel, moneyView, rateView, tradesText } from "../view-models/insights";
 import { barValue, BASIS_LABEL, DrillButton, MetricText, type SectionProps } from "./shared";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -123,13 +123,29 @@ function PeriodPanel({ title, trades, day, selection, basis, currency, drill, sc
         { label: "Trades", value: { kind: "count", value: s.closed } },
         ...(s.unknownPnl ? [{ label: "Unknown P&L (not in the sum)", value: { kind: "count" as const, value: s.unknownPnl } }] : []),
         { label: "Win rate", value: <MetricText view={rateView(s.winRate)} /> },
+        { label: AVERAGE_LABEL[basis], value: <MetricText view={averageView(s, basis, currency)} /> },
         { label: "Fees", value: <MetricText view={moneyView(s.fees, currency, false)} /> },
         { label: accounts.length === 1 ? "Account" : "Accounts", value: accounts.map(a => a.name).join(", ") },
       ]} />
-      <DrillButton ids={s.tradeIds} title={title} basis={scope} drill={drill}>{`View ${tradesText(s.closed)}`}</DrillButton>
-      {day && accounts.map(a => <DayReviewLink key={a.id} account={a} day={day} />)}
+      <div className="in-period-actions">
+        <DrillButton ids={s.tradeIds} title={title} basis={scope} drill={drill}>{`View ${tradesText(s.closed)}`}</DrillButton>
+        {day && accounts.map(a => <DayReviewLink key={a.id} account={a} day={day} />)}
+      </div>
     </div>
   );
+}
+
+const AVERAGE_LABEL: Record<SectionProps["basis"], string> = { net: "Average net per trade", gross: "Average gross per trade" };
+
+/**
+ * P0-D17: the period's average result per trade, the same expectancy Insights shows everywhere (Breakdowns' Avg trade):
+ * the known net (after fees) or gross results over the trades with a known P&L, withheld below the minimum sample.
+ * With a value, the note says what it was averaged over; until MetricCard's info pop-up exists, this is the plain text.
+ */
+function averageView(s: Summary, basis: SectionProps["basis"], currency: string | null): MetricView {
+  const view = moneyView(basis === "net" ? s.expectancy : s.expectancyGross, currency);
+  if (view.reason !== null) return view;
+  return { ...view, reason: s.unknownPnl ? `Over ${s.eligible} of ${tradesText(s.closed)}; ${s.unknownPnl} with an unknown P&L left out` : `Over ${tradesText(s.eligible)} with a known P&L` };
 }
 
 /** The day in the Journal's daily review for one attempt, with its review status (process context, Build 22). */
