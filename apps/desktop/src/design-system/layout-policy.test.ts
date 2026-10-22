@@ -10,7 +10,8 @@ const sheets: Record<string, string> = Object.fromEntries(
   (readdirSync(src, { recursive: true }) as string[])
     .map(f => f.replace(/\\/g, "/"))
     .filter(f => f.endsWith(".css") && !f.endsWith("DataModelPanel.css"))
-    .map(f => [f, readFileSync(new URL(f, src), "utf8") as string]),
+    // Line endings as in the repository, whatever the checkout converted them to.
+    .map(f => [f, (readFileSync(new URL(f, src), "utf8") as string).replace(/\r\n/g, "\n")]),
 );
 const sheet = (suffix: string) => {
   const key = Object.keys(sheets).find(k => k.endsWith(suffix));
