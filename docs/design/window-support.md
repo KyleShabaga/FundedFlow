@@ -59,7 +59,7 @@ Nothing uses CSS `zoom`, transforms or a global font-size change to fill space.
 |---|---|---|
 | < 640 px | Gutter `space-4`; header and body vertical padding `space-4` | `design-system.css`, `shell.css` |
 | < 880 px | Gutter `space-6`. Two-column page grids stack: account detail, journal trade detail, Insights calendar with its day panel, the import wizard's two panels | feature CSS |
-| ≥ 1280 px | Today: freshness (5 of 12 columns) beside the panel that follows it in reading order: Active accounts, or, with one active account, the account summary with the risk estimate under it. CSS placement only; nothing is reordered or remounted | `today.css` |
+| ≥ 1280 px | Today: freshness (5 of 12 columns, with Check again right-aligned above it) beside the panel that follows it in reading order: Active accounts, or, with one active account, the account summary with the risk estimate under it. CSS placement only; nothing is reordered or remounted | `today.css` |
 
 880 px is content-driven: the narrowest two-column page grid needs a main column of about 480 px plus a 320 px side
 panel and a gap, which is 816 px of content plus 2 × 32 px gutters. 1280 px is where Today's 5 : 7 split gives the

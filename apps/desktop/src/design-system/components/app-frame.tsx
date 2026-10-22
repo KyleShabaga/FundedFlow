@@ -36,7 +36,7 @@ export function AppFrame({ collapsed, sidebar, sidebarEdge, header, children }: 
 /**
  * The shared content frame (P0-D29): the page header and the page body each wrap their content in one, so title,
  * account selector, header actions and body share the same left and right edges. It is centred in the main column
- * (beside the sidebar, not in the window), grows to `--ds-frame-max` and then stops; its gutters step down with the
+ * (beside the sidebar, not in the window), grows to `--frame-max` and then stops; its gutters step down with the
  * column's width. Inner caps for text and forms stay with the content (docs/design/window-support.md).
  */
 export function ContentFrame({ className, children, ...rest }: HTMLAttributes<HTMLDivElement>) {

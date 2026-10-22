@@ -179,6 +179,6 @@ no route, command or state is added. Where a board proposes a change to the buil
 4. Fixed-width compare tables and +/−/~/= change marks.
 5. Dashed simulation frame for Preview.
 
-### Open questions
-- Should the readiness strip count "None" and "Off" rules as calculated (they are stated values) or apart? The board
-  counts them apart from "can be calculated".
+### Decided
+- The readiness strip counts "None" and "Off" rules apart from "can be calculated", as drawn (owner decision
+  2026-10-21, [NA-1](https://app.notion.com/p/4001bd4b6bde8176b254e307bd204933); [p0-design-reconciliation.md](../p0-design-reconciliation.md) §8).

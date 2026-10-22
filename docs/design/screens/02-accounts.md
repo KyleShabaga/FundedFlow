@@ -56,8 +56,9 @@ Footer: count, "n archived" link (shows archived accounts), rows per page, pager
 - An account can be saved without a rulebook (Build 6): it shows Needs setup and Unknown risk, never Safe.
 - A reset attempt is a new account with its own basis; link to the predecessor, never reuse its values.
 
-## Open questions
-- Account size label ("$100K"): `account_size_micros` exists in the schema but no command returns it yet.
+## Post-V1
+- Account size label ("$100K"): `account_size_micros` exists in the schema but no command returns it. Post-V1 (owner
+  decision 2026-10-21, [NA-1](https://app.notion.com/p/4001bd4b6bde8176b254e307bd204933)); tracked on the [P1 boards card](https://app.notion.com/p/4001bd4b6bde813da4f3c258bc18bc74).
 
 ## Build 15 implementation (2026-10-21)
 
