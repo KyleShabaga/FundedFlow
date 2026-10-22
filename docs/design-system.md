@@ -271,9 +271,13 @@ Policy, numbers and rationale: [design/window-support.md](design/window-support.
 Policy and decisions: [design/window-support.md](design/window-support.md).
 
 - `SegmentedControl` `overflow` (`"menu"` default, `"scroll"`): when the buttons' natural width no longer fits the width
-  the parent can give them, "menu" renders a `Select` (size `sm`) with the group's label shown beside it, the same
+  the row it sits in can give them (the nearest ancestor whose width doesn't depend on its content), "menu" renders a `Select` (size `sm`) with the group's label shown beside it, the same
   options with counts as "Errors (1)" and the caller's value; focus on the buttons moves to the dropdown. It is wrapped
-  in `.ds-seg-fit`. Without layout (jsdom, a hidden tab) it keeps the buttons. Tests: `segmented.test.tsx`.
+  in `.ds-seg-fit`; while folded an inert, hidden copy of the buttons (`.ds-seg-measure`) keeps the measurement
+  current, so count changes don't unfold or remount it. Without layout (jsdom, a hidden tab) it keeps the buttons.
+  Tests: `segmented.test.tsx`.
+- Light theme: control borders (`line-200`) are 3:1 on every surface (light value now `#7a859b`); the selected
+  segment's count uses `ink-muted`. `tokens.test.ts` also checks that the OS-light block matches `[data-theme="light"]`.
 - `TradeTable` scrolls inside a named, focusable region ("{label}, scrolls sideways"), like `DataTable`.
 - `forced-colors.css`: Windows contrast themes. System colours only (`Canvas`, `CanvasText`, `Highlight`,
   `HighlightText`, `ButtonText`, `ButtonBorder`, `GrayText`): one focus ring, selected states filled with `Highlight`,

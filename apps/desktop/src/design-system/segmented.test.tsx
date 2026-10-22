@@ -25,7 +25,9 @@ beforeEach(() => {
     return this.classList.contains("ds-seg") ? needed : 0;
   });
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
-    return this.dataset.testid === "toolbar" ? available : 0;
+    if (this.dataset.testid === "toolbar") return available;
+    // The content-sized tools box is never wider than what it holds; its width must not decide anything.
+    return this.dataset.testid === "tools" ? 150 : 0;
   });
   vi.stubGlobal("ResizeObserver", class {
     constructor(callback: (entries: unknown[]) => void) { observers.push(callback); }
@@ -43,12 +45,16 @@ const OPTIONS: SegmentOption<Row>[] = [
   { value: "errors", label: "Errors", count: 1 },
 ];
 
-function Filter({ overflow, onChange }: { overflow?: "menu" | "scroll"; onChange?: (v: Row) => void }) {
+function Filter({ overflow, onChange, errors = 1, nested = false }: { overflow?: "menu" | "scroll"; onChange?: (v: Row) => void; errors?: number; nested?: boolean }) {
   const [value, setValue] = useState<Row>("dupes");
+  const control = (
+    <SegmentedControl<Row> label="Show rows" options={OPTIONS.map(o => (o.value === "errors" ? { ...o, count: errors } : o))} value={value}
+      overflow={overflow} onValueChange={v => { setValue(v); onChange?.(v); }} />
+  );
   return (
-    <div data-testid="toolbar">
-      <SegmentedControl<Row> label="Show rows" options={OPTIONS} value={value} overflow={overflow}
-        onValueChange={v => { setValue(v); onChange?.(v); }} />
+    <div data-testid="toolbar" style={nested ? { display: "flex" } : undefined}>
+      {/* A DataTable-style tools box: a flex item that doesn't grow, so it is only as wide as what it holds. */}
+      {nested ? <div data-testid="tools" style={{ display: "flex" }}>{control}</div> : control}
       <p>Showing {value}</p>
     </div>
   );
@@ -94,6 +100,28 @@ describe("SegmentedControl at narrow widths", () => {
     screen.getByRole("button", { name: "All 120" }).focus();
     narrow(300);
     expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "Show rows" }));
+  });
+
+  it("measures the row a content-sized toolbar sits in, so it unfolds again when the window widens", () => {
+    render(<Filter nested />);
+    narrow(300);
+    expect(screen.getByRole("combobox", { name: "Show rows" })).toBeTruthy();
+    narrow(1600);
+    expect(screen.getByRole("group", { name: "Show rows" })).toBeTruthy();
+    expect(screen.queryByRole("combobox")).toBeNull();
+  });
+
+  it("keeps the same dropdown and its focus when the counts change while folded", () => {
+    const { rerender } = render(<Filter errors={1} />);
+    narrow(300);
+    const select = screen.getByRole("combobox", { name: "Show rows" });
+    select.focus();
+    rerender(<Filter errors={7} />);
+    expect(screen.getByRole("combobox", { name: "Show rows" })).toBe(select);
+    expect(document.activeElement).toBe(select);
+    // The measuring copy is out of reach: no extra buttons, nothing focusable.
+    expect(screen.queryAllByRole("button", { name: /Errors/ })).toHaveLength(0);
+    expect(document.querySelector(".ds-seg-measure")!.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("keeps the buttons and scrolls sideways when the caller asks for scroll", () => {

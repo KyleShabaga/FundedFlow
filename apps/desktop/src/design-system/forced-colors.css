@@ -23,6 +23,8 @@
     forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight;
   }
   .ds-tab[data-state="active"] .ds-tab-count, .ds-tab[aria-pressed="true"] .ds-tab-count { color: HighlightText; }
+  .ds-pager-page.is-on { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+  .ds-dt tbody tr.is-on > *, .ds-table tbody tr.is-on > * { border-block: 2px solid Highlight; }
   .ds-cal-day.is-selected, .ds-cal-week.is-selected, .ds-bars-row.is-selected, .ds-myp-month.is-on, .ds-aoc.is-selected,
   .ds-radio-group.is-cards .ds-check:has(.ds-radio-input:checked) { outline: 3px solid Highlight; outline-offset: 1px; }
 

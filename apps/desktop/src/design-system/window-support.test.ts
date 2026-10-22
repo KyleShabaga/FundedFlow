@@ -63,6 +63,8 @@ describe("Windows contrast themes", () => {
     expect(css).toMatch(/:focus-visible \{ outline: 2px solid Highlight/);
     expect(css).toMatch(/\.ds-tab\[aria-pressed="true"\][^{]*\{\s*forced-color-adjust: none; background: Highlight; color: HighlightText;/);
     expect(css).toMatch(/\.ds-cal-day\.is-selected[^{]*\{ outline: 3px solid Highlight/);
+    expect(css).toContain(".ds-pager-page.is-on { forced-color-adjust: none; background: Highlight;");
+    expect(css).toContain(".ds-dt tbody tr.is-on > *, .ds-table tbody tr.is-on > * { border-block: 2px solid Highlight; }");
     expect(css).toMatch(/\.ds-dialog, \.ds-drawer \{ border: 2px solid CanvasText; \}/);
     expect(css).toMatch(/\.ds-rule-fill, \.ds-mini-fill, \.ds-pmeter-fill, \.ds-bars-bar \{ forced-color-adjust: none; background: CanvasText; \}/);
     expect(css).toMatch(/\.ds-status-pill\.ds-status-unknown \{ border-style: dashed; \}/);
