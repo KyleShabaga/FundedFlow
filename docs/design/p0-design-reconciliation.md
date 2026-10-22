@@ -91,21 +91,25 @@ navigation. See [components.md](components.md#p0-design-patterns-build-251).
 
 | Item | Needed for | Owner |
 |---|---|---|
-| Export history (more than the last export) | Settings export history | Backend (Build 24 follow-up) |
-| Local data folder path | Settings "Stored" fact | Backend |
-| Per-account status in archive manifest | Restore preview account list | Backend |
-| Undo for a whole import | Import details | Backend |
-| `/import/history/:batchId` route | Deep links to one import | Frontend routing (new route) |
-| Account size label (`account_size_micros`) | Account identity line | Backend |
-| Per-account totals command | Account detail and Accounts list at scale | Backend |
+| Export history (more than the last export) | Settings export history | Accepted V1 limitation (P0-17, 2026-10-21) |
+| Local data folder path | Settings "Stored" fact | Accepted V1 limitation (P0-17, 2026-10-21) |
+| Per-account status in archive manifest | Restore preview account list | Accepted V1 limitation (P0-17, 2026-10-21) |
+| Undo for a whole import | Import details | Post-V1 (NA-6, 2026-10-21) |
+| `/import/history/:batchId` route | Deep links to one import | Post-V1 (NA-6, 2026-10-21) |
+| Account size label (`account_size_micros`) | Account identity line | Post-V1 (NA-6, 2026-10-21) |
+| Per-account totals command | Account detail and Accounts list at scale | Post-V1 (NA-6, 2026-10-21) |
 
-## 8. Open questions
+Implementing the #64 boards is post-V1 (owner decision 2026-10-21, NA-6).
 
-1. Breadcrumbs replace the back links on nested pages: approve as a shell change?
-2. Rulebook readiness strip: count None/Off rules apart from "can be calculated" (as drawn)?
-3. Daily review "Missed" in warn, never loss (as drawn)?
-4. Import history "All accounts" view: worth the per-account reads, or wait for a summary command?
-5. Settings "App" group: show planned items now (dimmed) or hide until built?
+## 8. Decisions
+
+All five decided 2026-10-21, as drawn (owner decision, NA-6):
+
+1. Breadcrumbs replace the back links on nested pages; approved as a shell change.
+2. The rulebook readiness strip counts None/Off rules apart from "can be calculated".
+3. Daily review "Missed" uses the amber warning tone, never the red loss tone.
+4. Import history "All accounts" ships, built from per-account `list_csv_imports`, with an Account column.
+5. The Settings "App" group shows planned items greyed with a "Planned" badge.
 
 ## 9. Not completed
 
