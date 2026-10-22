@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Ready for Approval |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -17,7 +17,8 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22) |
+| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
@@ -32,17 +33,18 @@ Crash or power loss shortly after adding a screenshot.
 `src-tauri/src/data_controls/restore.rs:212-255` (`managed_files`/`validate_managed`/`copy_managed`), `deletion.rs:211-213`; `src-tauri/src/store/attachments.rs:200-291` produces strays.
 
 ## Expected change scope
-`restore.rs` (`validate_managed`, `copy_managed`, `prepare`), `deletion.rs` (`preview`), `data_controls/mod.rs` (`Code` enum: new distinct code), TS `apps/desktop/src/features/data-controls/api/data-controls.ts` (message) and `packages/domain` data-controls contracts (new code), domain wire fixture `packages/domain/test/fixtures/data-controls-wire.json` only if the error-code list is fixture-pinned (name it in the PR); tests.
+`restore.rs` (`validate_managed`, `copy_managed`, `prepare`), `deletion.rs` (`preview`, `Cleanup` marker — new fields `#[serde(default)]` so old markers parse), `data_controls/mod.rs` (`Code` enum: new distinct code), `packages/domain/src/contracts/data-controls.ts` (new code + `DeletionPreview` extras field), `apps/desktop/src/features/data-controls/api/data-controls.ts` (message); `packages/domain/test/fixtures/data-controls-wire.json` regeneration is **mandatory** (DeletionPreview changes) and its diff is reviewed in the PR; tests.
 
 ## Out of scope
 Startup sweep of orphans (optional later); attachment write ordering change.
 
 ## Implementation approach
-1. Classify unreferenced files under `attachments/`: names matching `screenshots/<uuid>.<ext>` or `.<uuid>.part` are 'unowned managed extras'; anything else stays UnsafePath.
-2. Restore prepare: copy extras into the safety copy (`safety-attachments/`) so no bytes are lost; do not install them into the restored journal.
-3. Whole-journal erase preview: list extras in the preview and remove them on confirm (bytes are being erased anyway).
-4. Add a distinct error code/message for genuinely ambiguous ownership; replace the 'shared history' wording.
-5. Tests: plant `attachments/screenshots/<uuid>.png` and `.<uuid>.part`; restore prepare succeeds with the extra preserved in the safety copy; erase preview lists it.
+1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
+2. Classify unreferenced files under `attachments/`: names matching `screenshots/<uuid>.<ext>` or the temp name `screenshots/.<uuid>.part` (`store/attachments.rs:205`) are 'unowned managed extras'; anything else stays UnsafePath.
+3. Restore prepare: copy extras into the safety copy (`safety-attachments/`) so no bytes are lost; do not install them into the restored journal.
+4. Whole-journal erase preview: list extras in the preview and remove them on confirm (bytes are being erased anyway).
+5. Add a distinct error code/message for genuinely ambiguous ownership; replace the 'shared history' wording.
+6. Tests: plant `attachments/screenshots/<uuid>.png` and `.<uuid>.part`; restore prepare succeeds with the extra preserved in the safety copy; erase preview lists it.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-015.
@@ -52,6 +54,8 @@ Startup sweep of orphans (optional later); attachment write ordering change.
 - [ ] New tests pass and fail before the change.
 - [ ] `data_controls/tests.rs:198, 450, 520, 748` and `store/journal_review_tests.rs:493` pass.
 - [ ] Root `npm test` passes (TS mapping) and full Rust checks → exit 0.
+- [ ] After restore commit and after rollback, the extra exists in `safety-attachments/` and is not reinstated into `attachments/`.
+- [ ] `packages/domain/test/fixtures/data-controls-wire.json` diff limited to the new preview field/code.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` unset for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
 ## Verification plan
@@ -71,3 +75,6 @@ Use only disposable test journals and temporary directories created by tests. Ne
 
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
+
+## Independent review notes
+Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.

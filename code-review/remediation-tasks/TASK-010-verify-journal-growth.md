@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Ready for Approval |
 | Type | Verification |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -17,7 +17,8 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22) |
+| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
@@ -32,7 +33,7 @@ Normal use over months.
 Frozen inputs + no VACUUM + page_count cap.
 
 ## Expected change scope
-A disposable measurement (no repository change), e.g. a temporary test or the existing `cargo run --example seed-demo-journal` against an isolated directory, recording `page_count`, `freelist_count` and file size after N trades × K calculations. Any helper code stays out of the repository unless a later task adopts it.
+A disposable measurement (no repository change). Seed with `cargo run --offline --locked --example seed-demo-journal -- --data-dir <tempdir>/com.fundedflow.desktop` (run in `apps/desktop/src-tauri`; `<tempdir>` is a fresh temporary directory, never `%APPDATA%`). The seeder creates no risk calculations, so calculations are driven by a scratch harness kept outside the repository (or in an uncommitted working copy discarded afterwards) — it must never be committed. Record `page_count`, `freelist_count` and file size after N trades × K calculations.
 
 ## Out of scope
 Fixing the cap (TASK-013/014).
@@ -50,6 +51,7 @@ Fixing the cap (TASK-013/014).
 ## Acceptance criteria (pass/fail)
 - [ ] Measurement table recorded with SHA and environment.
 - [ ] Escalation decision for ISSUE-002 (P0 if ≤12 months) recorded and reflected in TASK-013 priority.
+- [ ] If ISSUE-002 escalates to P0: a new task (D-ARCH / ISSUE-002c frozen-input redesign) is created and proposed for approval; TASK-013/014 priorities updated.
 
 ## Verification plan
 Recorded results only.
@@ -59,3 +61,6 @@ Use only disposable test journals and temporary directories created by tests. Ne
 
 ## Definition of done
 Results recorded in `code-review/11-remediation-execution-log.md` with tester, date, source SHA (and installer EXE SHA-256 where applicable), environment and raw observations; the linked decision/escalation is updated. No code change is implied.
+
+## Independent review notes
+Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.

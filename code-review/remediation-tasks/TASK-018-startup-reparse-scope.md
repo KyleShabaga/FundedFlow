@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Ready for Approval |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -17,7 +17,8 @@
 | Verification platform | Windows only (+ Any OS for regression) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22) |
+| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
@@ -32,16 +33,17 @@ Profile or `C:\Users` relocated via junction; redirected Roaming; mount point; p
 `src-tauri/src/data_controls/filesystem.rs:89-109` (walk from `components()` incl. bare prefix), `data_controls/mod.rs:155-168`, `runtime.rs:330-335, 130`.
 
 ## Expected change scope
-`filesystem.rs` (new function checking only components at/below the app data folder; reparse-tag-aware check for symlink/junction/mount-point via a Windows helper), `data_controls/mod.rs::filesystem_ownership`, `runtime.rs` (distinct non-retry 'unsafe directory' category/message), `Cargo.toml` (declare `windows-sys` directly — **dependency change requires explicit approval in this task's approval scope**; it is already in `Cargo.lock` transitively), Windows-gated tests.
+`filesystem.rs` (root-anchored check), all **22 app-owned** `no_symlink_components` call sites switched to the root-anchored check (inventory them in the PR; e.g. `recover_cleanup` at `deletion.rs:323` runs at startup) — user-chosen export/restore paths keep the old check; `data_controls/mod.rs::filesystem_ownership`; `runtime.rs` and `apps/desktop/src/lib/data/runtime.ts` (`failureCategories` + stage map: new non-retry category — contract change), UI copy and docs; Windows-gated tests. First evaluate std `FileType::is_symlink()` / `symlink_metadata` on Windows (may cover junctions without a new dependency); only if insufficient declare `windows-sys` in `Cargo.toml` — **dependency change requires explicit approval**, plus `npm run check:notices` and a `Cargo.lock` diff check.
 
 ## Out of scope
-Export/restore user-path validation (TR-007/WIN-002, V1.1); hard-link checks (TASK-V1.1 ISSUE-024).
+Export/restore user-path validation (TR-007/WIN-002, V1.1); hard-link checks (ISSUE-024, V1.1; no task).
 
 ## Implementation approach
-1. Split the check: trust the OS-resolved `app_data_dir()` prefix; apply link checks only to the app folder and paths beneath it.
-2. On Windows, read the reparse tag and reject only IO_REPARSE_TAG_SYMLINK / MOUNT_POINT (junction) for app-owned components; keep current behaviour on Unix.
-3. Add a distinct failure category/message ('The data folder is behind a link FundedFlow does not trust') that does not suggest retry.
-4. `cfg(windows)` tests: app root under a junctioned parent → Ready; app root itself a junction → refused with the new category.
+1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
+2. Split the check: trust the OS-resolved `app_data_dir()` prefix; apply link checks only to the app folder and paths beneath it.
+3. On Windows, read the reparse tag and reject only IO_REPARSE_TAG_SYMLINK / MOUNT_POINT (junction) for app-owned components; keep current behaviour on Unix.
+4. Add a distinct failure category/message ('The data folder is behind a link FundedFlow does not trust') that does not suggest retry.
+5. `cfg(windows)` tests: app root under a junctioned parent → Ready; app root itself a junction → refused with the new category.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-017 (merge order on data_controls); TASK-011 (b) results to confirm cases; approval of the `windows-sys` declaration.
@@ -51,10 +53,13 @@ Export/restore user-path validation (TR-007/WIN-002, V1.1); hard-link checks (TA
 - [ ] Windows CI: `cargo test --offline --locked` (windows-latest) runs the new `cfg(windows)` tests → pass.
 - [ ] Manual Windows check (owner/VM, recorded): junctioned profile layout starts Ready; standard profile unaffected.
 - [ ] Full Rust and root checks → exit 0.
+- [ ] All 22 app-owned call sites listed in the PR and each uses the root-anchored check; user-path call sites unchanged.
+- [ ] `runtime.ts` failure-category tests updated deliberately; root `npm run typecheck` and `npm test` → exit 0.
+- [ ] If a dependency is declared: `npm run check:notices` → exit 0 and the `Cargo.lock` diff is limited to the declaration.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` unset for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
 ## Verification plan
-Windows only for the reparse cases; Linux CI still runs Unix tests.
+Windows only for the reparse cases (note: CI runs plain `cargo test`, so the new tests must not depend on `--locked`/offline flags to be picked up); Linux CI still runs Unix tests.
 
 Standard checks (run serially, frontend build before Rust):
 - Repository root: `npm run check:boundaries -w @fundedflow/domain` → exit 0
@@ -70,3 +75,6 @@ Use only disposable test journals and temporary directories created by tests. Ne
 
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
+
+## Independent review notes
+Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Ready for Approval |
 | Type | Verification |
 | Audit priority | Gate |
 | Roadmap lane | NA-5 |
@@ -17,13 +17,14 @@
 | Verification platform | Windows only |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22) |
+| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
 
 ## Purpose / risk
-Confirm data survives upgrade/reinstall, downgrade shows the NewerSchema message, and the uninstall checkbox removes exactly what TASK-026 documents.
+Confirm data survives upgrade/reinstall, record what a downgrade does (no migration exists between candidates, so the older build is expected to open normally; NewerSchema appears only across a schema change), record NSIS's own downgrade prompt behaviour, and confirm the uninstall checkbox removes exactly what TASK-026 documents.
 
 ## Trigger / reproduction
 N/A.
@@ -41,7 +42,7 @@ Real journal.
 1. Install previous candidate, create synthetic data and screenshots, export an archive outside %APPDATA%.
 2. Upgrade to the candidate; verify data.
 3. Reinstall same version; verify.
-4. Install an older build over newer; record message.
+4. Install an older build over newer; record the NSIS prompt (if any) and whether the app opens normally.
 5. Uninstall unticked → data remains; uninstall ticked → list remaining folders.
 
 ## Prerequisites, dependencies and conflicts
@@ -59,3 +60,6 @@ Synthetic data on disposable VMs.
 
 ## Definition of done
 Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE SHA-256, environment (Windows build, WebView2 version), tester, date and evidence. A planning document or inferred result is not a pass.
+
+## Independent review notes
+Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.

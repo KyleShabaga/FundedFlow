@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Ready for Approval |
 | Type | Documentation |
 | Audit priority | Gate work |
 | Roadmap lane | NA-2 / NA-5 / NA-7 |
@@ -17,7 +17,8 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22) |
+| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
@@ -48,6 +49,7 @@ Running the gates (TASK-030..033).
 
 ## Acceptance criteria (pass/fail)
 - [ ] Checklist reviewed against current app behaviour and source; every step has an expected result and evidence fields.
+- [ ] Export to junction/OneDrive targets has expected result 'known limitation (V1.1)' unless TASK-011(b) shows it works.
 
 ## Verification plan
 Reviewer.
@@ -57,3 +59,6 @@ Docs only.
 
 ## Definition of done
 Documents updated; every factual statement checked against the cited source (file:line/workflow line) at the recorded SHA; reviewed.
+
+## Independent review notes
+Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.

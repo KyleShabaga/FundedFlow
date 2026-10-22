@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Ready for Approval |
 | Type | Fix |
 | Audit priority | P1 (P0 if TASK-010 escalates) |
 | Roadmap lane | Unassigned (owner) |
@@ -17,7 +17,8 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22) |
+| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
@@ -32,16 +33,17 @@ Large or never-vacuumed journal (growth from frozen calculation inputs).
 `src-tauri/src/data_controls/archive.rs:72-76` uses `page_count` without subtracting `freelist_count`; the error does not identify the component.
 
 ## Expected change scope
-`src-tauri/src/data_controls/archive.rs` (`dump` size check, error detail); `src-tauri/src/data_controls/mod.rs` (error message/code detail if needed); TS `apps/desktop/src/features/data-controls/api/data-controls.ts` message mapping (label path as uncertain until inspected); tests in `src-tauri/src/data_controls/tests.rs`.
+`src-tauri/src/data_controls/archive.rs` (`dump` size check, error detail); export and restore-prepare snapshot copies (they copy free pages through the backup API, so either `VACUUM` the snapshot/temporary copy before the size check, or limit acceptance to the live-side checks — decide in the PR and record); Contract change (named): add an optional `detail` field to the Rust `ControlError` (`src-tauri/src/data_controls/mod.rs`, today `{code, message}`), to the Zod schema in `packages/domain/src/contracts/data-controls.ts`, and render it in `apps/desktop/src/features/data-controls/api/data-controls.ts` (today only `CODE_COPY[code]`); update `packages/domain/test/fixtures/data-controls-wire.json` deliberately in the same PR with the diff reviewed (this card authorises that one fixture). Tests in `src-tauri/src/data_controls/tests.rs` and the TS data-controls tests.
 
 ## Out of scope
 Raising archive caps or changing archive format (owner decision TASK-009 D-ARCH); stream hashing (TASK-014); frozen-input redesign (depends on TASK-003, V1.1).
 
 ## Implementation approach
-1. Compute used bytes as `(page_count − freelist_count) × page_size` for the live-side size check.
-2. When any cap is exceeded, return the existing code with a detail naming the component (database pages / rows / data.json / total archive / entry count) and the measured value.
-3. Map the detail to user-facing copy that says which limit was exceeded.
-4. Tests: a journal with >64 MiB free pages but small live data → erase preview and export succeed; a journal over a real cap → error names the component.
+1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
+2. Compute used bytes as `(page_count − freelist_count) × page_size` for the live-side size check; VACUUM the temporary snapshot (never the live journal) where a snapshot is checked.
+3. When any cap is exceeded, return the existing code with `detail` naming the component (database pages / rows / data.json / total archive / entry count) and the measured value.
+4. Render the detail in user-facing copy that says which limit was exceeded.
+5. Tests: a journal with >64 MiB free pages but small live data → erase preview and export succeed; a journal over a real cap → error detail names the component.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-012 (same file, merge order); TASK-010 result (priority).
@@ -71,3 +73,6 @@ Use only disposable test journals and temporary directories created by tests. Ne
 
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
+
+## Independent review notes
+Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.

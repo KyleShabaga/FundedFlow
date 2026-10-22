@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Ready for Approval |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -17,7 +17,8 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22) |
+| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
@@ -38,10 +39,13 @@ Those files; source the day from the existing `list_account_freshness` `currentT
 New Rust command/DTO; batched overview (ISSUE-014, V1.1); freshness adapter routing (ISSUE-016, V1.1).
 
 ## Implementation approach
-1. Change `currentAssignment(assignments, tradingDay)` to take a trading day; update callers to pass the Rust trading day.
-2. Badge: compare `snapshot.tradingDay` with the Rust trading day.
-3. Reset dialog: derive default `effectiveFrom` from the Rust trading day (or let TASK-020's validation message guide the user).
-4. Fake-clock tests at 2026-10-23T22:30Z (America/New_York, reset 17:00) and Saturday noon → assignment effective 2026-10-26 is 'in use'; no false badge.
+1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
+2. Change `currentAssignment(assignments, tradingDay)` to take a trading day; update callers to pass the Rust trading day.
+3. Badge: compare `snapshot.tradingDay` with the Rust trading day.
+4. Reset dialog: derive default `effectiveFrom` from the Rust trading day (or let TASK-020's validation message guide the user).
+5. Fake-clock tests at 2026-10-23T22:30Z (America/New_York, reset 17:00) and Saturday noon → assignment effective 2026-10-26 is 'in use'; no false badge.
+6. Fail closed: if the Rust trading day (freshness) is unavailable, show 'unknown' rather than falling back to `zonedDay`.
+7. AssignDialog stops offering Saturday/Sunday effective dates.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-020.
@@ -49,7 +53,7 @@ New Rust command/DTO; batched overview (ISSUE-014, V1.1); freshness adapter rout
 
 ## Acceptance criteria (pass/fail)
 - [ ] New tests pass; fail before.
-- [ ] `apps/desktop`: `npm run test -w @fundedflow/desktop -- src/features/rulebooks` → exit 0.
+- [ ] Repository root: `npm run test -w @fundedflow/desktop -- src/features/rulebooks src/features/accounts` → exit 0.
 - [ ] Full root checks → exit 0.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` unset for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
@@ -70,3 +74,6 @@ UI-only; no data writes beyond existing commands.
 
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
+
+## Independent review notes
+Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.

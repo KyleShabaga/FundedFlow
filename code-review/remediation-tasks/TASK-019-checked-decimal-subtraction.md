@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Ready for Approval |
 | Type | Fix |
 | Audit priority | P2 (recommended pull-in to W1) |
 | Roadmap lane | Unassigned (owner) |
@@ -17,7 +17,8 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22) |
+| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
@@ -38,8 +39,9 @@ Unchecked rust_decimal `Sub`.
 Bounded price validation (behaviour change for CSV imports; V1.1).
 
 ## Implementation approach
-1. Use `checked_sub`; on overflow return `None` (risk) or the existing 'P&L is too large to store' error (trade).
-2. Tests: review saved with entry `79228162514264337593543950335`, stop `-1` → `get_trade_review` returns `risk: None`, no panic; trade create with such prices → validation error.
+1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
+2. Use `checked_sub`; on overflow return `None` (risk) or the existing 'P&L is too large to store' error (trade).
+3. Tests: review saved with entry `79228162514264337593543950335`, stop `-1` → `get_trade_review` returns `risk: None`, no panic; trade create with such prices → validation error.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: None (independent; recommended alongside W1).
@@ -67,3 +69,6 @@ Use only disposable test journals and temporary directories created by tests. Ne
 
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
+
+## Independent review notes
+Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Ready for Approval |
 | Type | Test |
 | Audit priority | Gate (if kept) / P2 test safety |
 | Roadmap lane | Build 10.5 gate |
@@ -17,7 +17,8 @@
 | Verification platform | Any OS (test) + Windows (owner run) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22) |
+| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
@@ -38,8 +39,10 @@ Test design.
 Running against the live `%APPDATA%` path while the app is open.
 
 ## Implementation approach
-1. Implement the safety changes (only if TASK-008 keeps the gate).
-2. Kyle runs it on an offline copy with the app closed; record counts only.
+1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
+2. Implement the safety changes (only if TASK-008 keeps the gate): redact output to counts only; refuse a held lock.
+3. Kyle makes a folder copy of the journal (with -wal/-shm) with the app closed — the test never touches the live path or takes its lock.
+4. Run in `apps/desktop/src-tauri`: `cargo test --offline --locked --lib upgrade_copy -- --ignored` against the copy; add `--nocapture` only after redaction is verified. Record both the source SHA and the copy's SHA-256.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-008 (keep), TASK-029.
@@ -68,3 +71,6 @@ Source is copied first; the real journal is only read for copying; app must be c
 
 ## Definition of done
 Tests merged after review; they fail against a deliberately broken variant or the pre-fix code where stated, and pass on the final code; results recorded.
+
+## Independent review notes
+Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.

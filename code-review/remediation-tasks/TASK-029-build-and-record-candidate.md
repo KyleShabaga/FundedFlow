@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Ready for Approval |
 | Type | Verification |
 | Audit priority | Gate |
 | Roadmap lane | NA-2 / P0-06 |
@@ -17,7 +17,8 @@
 | Verification platform | GitHub Actions + Windows (hash check) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22) |
+| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
@@ -45,7 +46,7 @@ Installing (TASK-030).
 5. Record all fields in the evidence register.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: All W1–W3 tasks Verified; TASK-001, TASK-002, TASK-005 decided.
+- Prerequisites: All W1–W3 tasks Verified (incl. TASK-025, TASK-026, TASK-027); TASK-001, TASK-002, TASK-005, TASK-006 decided.
 - Likely shared-file conflicts: None.
 
 ## Acceptance criteria (pass/fail)
@@ -59,3 +60,6 @@ No user data.
 
 ## Definition of done
 Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE SHA-256, environment (Windows build, WebView2 version), tester, date and evidence. A planning document or inferred result is not a pass.
+
+## Independent review notes
+Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.

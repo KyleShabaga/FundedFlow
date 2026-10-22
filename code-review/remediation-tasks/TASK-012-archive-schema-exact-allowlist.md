@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Ready for Approval |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -17,7 +17,8 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22) |
+| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
@@ -32,16 +33,17 @@ Owner restores an archive built or modified by someone else.
 `src-tauri/src/data_controls/archive.rs:466` (`schema()`) and `:77` (`dump()`) filter with LIKE; restore candidate opened via `db::open_file` with `trusted_schema` ON (`src-tauri/src/data_controls/restore.rs:73, 116`).
 
 ## Expected change scope
-`src-tauri/src/data_controls/archive.rs` (`schema`, `dump`); `src-tauri/src/data_controls/restore.rs` (candidate open: set `trusted_schema=OFF` before migration); `src-tauri/src/data_controls/security_tests.rs` (new cases). Optional (separate commit, same task): `trusted_schema=OFF` in `src-tauri/src/db/mod.rs::configure` for the live connection.
+`src-tauri/src/data_controls/archive.rs` (`schema`, `dump`); `src-tauri/src/data_controls/restore.rs` and `src-tauri/src/db/mod.rs` (`open_file` migrates internally, so `trusted_schema=OFF` must be set inside `configure`/`open_file` for the candidate path, or via a new open variant used only by restore); `src-tauri/src/data_controls/security_tests.rs` (new cases). The live-connection `trusted_schema=OFF` change is a **separate PR** (own approval) and must run `db/upgrade_tests.rs` on the v3/v4/v8 fixtures.
 
 ## Out of scope
 Archive format changes; dump format changes; cap changes (TASK-013).
 
 ## Implementation approach
-1. Replace the LIKE filter with: exclude exactly `sqlite_sequence`, `sqlite_stat1`, `sqlite_stat4` and `sqlite_autoindex_%` rows whose `sql IS NULL`; any other name beginning case-insensitively with `sqlite` (including `sqlite_` objects with non-NULL sql) makes validation fail with `Integrity`.
-2. Apply the same rule in `dump()` so hidden tables cannot escape `data.json` equality; keep `sqlite_sequence`/`sqlite_stat*` excluded so existing v1 archives still match.
-3. Set `PRAGMA trusted_schema=OFF` on the restore candidate connection before migrating.
-4. Add security tests: archives containing `CREATE TRIGGER sqlitex_evil`, `CREATE TABLE SQLITE1(x)`, `CREATE VIEW sqliteA AS SELECT 1` → `Integrity`; an untouched current export still restores.
+1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
+2. Replace the LIKE filter with an exact allow-list by `(type, name)`: tables `sqlite_sequence`, `sqlite_stat1`, `sqlite_stat4`; indexes whose name starts with `sqlite_autoindex_` and whose `sql IS NULL`. Any other object whose name begins case-insensitively with `sqlite` fails validation with `Integrity`.
+3. Apply the same rule in `dump()` so hidden tables cannot escape `data.json` equality; existing v1 archives must still match.
+4. Ensure the restore candidate connection has `PRAGMA trusted_schema=OFF` before any migration runs (inside `open_file`/`configure` or a dedicated open variant).
+5. Security tests: archives with `CREATE TRIGGER sqlitex_evil`, `CREATE TABLE SQLITE1(x)`, `CREATE VIEW sqliteA AS SELECT 1`, and a `sqlite_x` trigger planted via `PRAGMA writable_schema` → `Integrity`; a journal with a non-empty `sqlite_sequence`, and one with `sqlite_stat1` after `ANALYZE`, still export and restore.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: None (first in W1).
@@ -70,3 +72,6 @@ Use only disposable test journals and temporary directories created by tests. Ne
 
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
+
+## Independent review notes
+Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.

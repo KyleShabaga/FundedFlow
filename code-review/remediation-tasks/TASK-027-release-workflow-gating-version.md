@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Ready for Approval |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | NA-2 / P0-06 (release) |
@@ -17,7 +17,8 @@
 | Verification platform | Any OS (CI) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22) |
+| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
@@ -32,16 +33,17 @@ Building a candidate from an untested SHA; downgrade testing.
 Workflow design; fixed version.
 
 ## Expected change scope
-`.github/workflows/release-installer.yml` (require a successful `ci.yml` run on the same SHA or run the CI steps in-job; widen PR paths; log rustc/node/npm/@tauri-apps/cli versions to the summary), version fields `apps/desktop/src-tauri/tauri.conf.json:4`, `apps/desktop/src-tauri/Cargo.toml:3`, root/workspace `package.json` versions as decided in TASK-005; third-party summary `appVersion` regenerated only if the notices task scope allows (record).
+`.github/workflows/release-installer.yml` (require a successful `ci.yml` run on the same SHA or run the CI steps in-job; widen PR paths; log rustc/node/npm/@tauri-apps/cli versions to the summary), version fields `apps/desktop/src-tauri/tauri.conf.json:4`, `apps/desktop/src-tauri/Cargo.toml:3`, root/workspace `package.json` versions as decided in TASK-005; third-party summary `appVersion` regenerated only if the notices task scope allows (record). Full version knock-on (all in the same PR): `Cargo.lock`, `package-lock.json`, `npm run notices` (cargo-about 0.9.2; regenerates the notices `appVersion`), `producerVersion` in `packages/domain/test/fixtures/data-controls-wire.json` (reviewed diff). TEST-010 `check:engine-runtimes`: explicitly deferred to V1.1 (not in this card).
 
 ## Out of scope
 Signing; updater; pinning actions by SHA (optional, V1.1).
 
 ## Implementation approach
-1. Implement the CI gate (e.g. `workflow_run`/`needs` or a pre-check using the GitHub API for the SHA) — choose the simplest that works with `contents: read`.
-2. Widen PR paths to `apps/desktop/**` and `packages/**`.
-3. Add a summary step printing toolchain versions.
-4. Apply TASK-005's version scheme; keep the tag-equals-version check.
+1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
+2. Implement the CI gate (e.g. `workflow_run`/`needs` or a pre-check using the GitHub API for the SHA) — choose the simplest that works with `contents: read`.
+3. Widen PR paths to `apps/desktop/**` and `packages/**`.
+4. Add a summary step printing toolchain versions.
+5. Apply TASK-005's version scheme; keep the tag-equals-version check.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-005.
@@ -51,6 +53,7 @@ Signing; updater; pinning actions by SHA (optional, V1.1).
 - [ ] Workflow lint/dry run: a PR changing only `apps/desktop/src/**` triggers the installer build (observed in Actions).
 - [ ] A dispatch on a SHA without green CI fails with a clear message (observed).
 - [ ] Summary shows toolchain versions; SHA256SUMS.txt still contains the EXE hash.
+- [ ] Root standard checks and `npm run check:notices` → exit 0 after the version bump; `Cargo.lock`/`package-lock.json` diffs limited to the version fields.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` unset for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
 ## Verification plan
@@ -70,3 +73,6 @@ No user data.
 
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
+
+## Independent review notes
+Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.
