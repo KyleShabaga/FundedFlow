@@ -2,7 +2,7 @@
 // Build 18 wizard and history through the real pages, Build 13 components and Build 14 hooks. Accounts come
 // from the Build 15 in-memory test store; previews and batches replay the Rust-generated Build 17 golden
 // fixture (test_csvimport/build17/normalization-v1.json). Synthetic data only.
-import { RepositoryError, type CsvPreview, type ImportBatch } from "@fundedflow/domain";
+import { RepositoryError, type CsvImportRequest, type CsvPreview, type ImportBatch } from "@fundedflow/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -185,6 +185,110 @@ describe("mapping and review", () => {
     const table = await screen.findByRole("table", { name: "Rows in the file" });
     expect(within(table).getByText("Warning")).toBeTruthy();
     expect(within(table).getByText("Short")).toBeTruthy();
+  });
+
+  describe("column match statuses (P0-D09)", () => {
+    const matches = () => screen.getByRole("table", { name: "Column matches" });
+    const row = (field: RegExp) => within(matches()).getByRole("row", { name: field });
+    const announced = () => matches().closest(".imp-map")!.querySelector('[role="status"]')!.textContent;
+
+    it("puts each CSV column beside its field with Rust's status and reason, and keeps rows a separate check", async () => {
+      const user = userEvent.setup();
+      renderAt();
+      await screen.findByRole("combobox", { name: "Import into" });
+      await choose(user, csvFile(byName("mapping-status-alias-ambiguous-optional")));
+      await checkFile(user);
+      await screen.findByRole("heading", { name: "Match columns" });
+      expect(within(matches()).getAllByRole("columnheader").map(h => h.textContent)).toEqual(["FundedFlow field", "CSV column", "Status"]);
+      // Aliases match: Ticker is a known name for Symbol, and the select sits in the same row as its field.
+      const symbol = row(/^Symbol/);
+      expect(within(symbol).getByRole("combobox", { name: "Symbol" }).textContent).toContain("Ticker");
+      expect(within(symbol).getByText("Matched")).toBeTruthy();
+      expect(within(symbol).getByText("A known alternative header.")).toBeTruthy();
+      // Another unused column also fits: needs review, never blocks.
+      const pnl = row(/^P&L in the file/);
+      expect(within(pnl).getByText("Needs review")).toBeTruthy();
+      expect(within(pnl).getByText(/'Profit' also fits this field/)).toBeTruthy();
+      // An optional field with no column is neutral, not an error.
+      const fees = row(/^Fees/);
+      expect(within(fees).getByText("Not mapped")).toBeTruthy();
+      expect(within(fees).getByText("Optional; no matching column.")).toBeTruthy();
+      expect(within(matches()).queryByText("Action required")).toBeNull();
+      // The status is text with an icon, not colour alone.
+      expect(within(symbol).getByText("Matched").closest(".ds-status")!.querySelector("svg")).toBeTruthy();
+      // Matched columns don't promise valid rows: Review rows still shows the bad quantity.
+      await user.click(screen.getByRole("button", { name: "Review rows" }));
+      const table = await screen.findByRole("table", { name: "Rows in the file" });
+      expect(within(table).getByText(/'x' is not a number/)).toBeTruthy();
+    });
+
+    it("checks the file again after a mapping edit and never shows the old status meanwhile", async () => {
+      const user = userEvent.setup();
+      renderAt();
+      await screen.findByRole("combobox", { name: "Import into" });
+      const c = byName("mapping-status-alias-ambiguous-optional");
+      await choose(user, csvFile(c));
+      await checkFile(user);
+      await screen.findByRole("heading", { name: "Match columns" });
+      // Hold the re-check so the in-between state can be seen.
+      let release!: () => void;
+      const held = new Promise<void>(resolve => { release = resolve; });
+      const shared = byName("mapping-status-shared-column").expected.preview as CsvPreview;
+      // The fake backend awaits whatever an override returns, so a held promise works here.
+      imports.overrides.set(c.request.fileName, (req: CsvImportRequest) =>
+        (req.columns ? held.then(() => structuredClone(shared)) : structuredClone(c.expected.preview)) as unknown as CsvPreview);
+      await user.click(within(row(/^Fees/)).getByRole("combobox", { name: "Fees" }));
+      await user.click(await screen.findByRole("option", { name: "P&L" }));
+      // Sent at once, as an explicit mapping; the table stays, with no status until Rust answers.
+      await waitFor(() => expect(last(imports.previews).columns).toMatchObject({ fees: "P&L", realizedPnl: "P&L", symbol: "Ticker" }));
+      expect(screen.getByRole("heading", { name: "Match columns" })).toBeTruthy();
+      expect(within(matches()).queryByText("Matched")).toBeNull();
+      expect(within(matches()).getAllByText("Checking…").length).toBe(c.expected.preview.mapping.length);
+      expect(announced()).toBe("Checking the columns");
+      await act(async () => release());
+      // One column for two fields: both need review; it doesn't block.
+      await waitFor(() => expect(within(row(/^Fees/)).getByText("Needs review")).toBeTruthy());
+      expect(within(row(/^P&L in the file/)).getByText("Column 'P&L' is used for more than one field.")).toBeTruthy();
+      expect(within(row(/^Symbol/)).getByText("Matched")).toBeTruthy();
+      expect(announced()).toBe("7 matched, 2 need review, 2 not mapped");
+      expect((screen.getByRole("button", { name: "Review rows" }) as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it("blocks Review rows while a required field needs action, with Rust's reason", async () => {
+      const user = userEvent.setup();
+      renderAt();
+      await screen.findByRole("combobox", { name: "Import into" });
+      await choose(user, csvFile(byName("mapping-status-missing-required")));
+      await checkFile(user);
+      await screen.findByRole("heading", { name: "Match columns" });
+      const side = row(/^Side/);
+      expect(within(side).getByText("Action required")).toBeTruthy();
+      expect(within(side).getByText(/^No column found \(looked for: side, action/)).toBeTruthy();
+      expect(within(side).getByText("Required")).toBeTruthy();
+      // The same Rust issue blocks the commit, so the wizard won't move on to rows.
+      const next = screen.getByRole("button", { name: "Review rows" });
+      expect(next.getAttribute("aria-disabled")).toBe("true");
+      expect(screen.getByText("Fix the columns marked Action required first")).toBeTruthy();
+      const sent = imports.previews.length;
+      await user.click(next);
+      expect(screen.getByRole("heading", { name: "Match columns" })).toBeTruthy();
+      expect(screen.queryByRole("table", { name: "Rows in the file" })).toBeNull();
+      expect(imports.previews.length).toBe(sent);
+    });
+
+    it("lists a recognized export's fixed columns beside their fields, read-only", async () => {
+      const user = userEvent.setup();
+      renderAt();
+      await screen.findByRole("combobox", { name: "Import into" });
+      await choose(user, csvFile(byName("paired-short-warning")));
+      await checkFile(user);
+      await screen.findByRole("heading", { name: "Match columns" });
+      const quantity = row(/^Quantity/);
+      expect(within(quantity).getByText("qty")).toBeTruthy();
+      expect(within(quantity).getByText("Matched")).toBeTruthy();
+      expect(within(quantity).getByText("A known alternative header.")).toBeTruthy();
+      expect(within(matches()).queryByRole("combobox")).toBeNull();
+    });
   });
 
   it("asks for the date order on ambiguous dates and never guesses", async () => {

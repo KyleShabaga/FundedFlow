@@ -82,6 +82,33 @@ Open dependencies: Build 17's fill-pair ID delimiter collision (two different pa
 and the request schema counting the 10 MiB limit in UTF-16 units rather than UTF-8 bytes are tracked as Triage
 cards; the UI checks bytes itself and shows whatever Rust decides.
 
+## P0-D09: Match columns statuses
+
+Step 2 is a three-column table: **FundedFlow field** (with Required / Optional), **CSV column** (a `Select` for a
+generic file, plain text for a recognized performance export, whose columns are fixed) and **Status**. The column
+sits beside its field rather than at the panel's far edge. Each status is a `StatusIndicator` (icon shape and text,
+not colour alone) with Rust's reason as visible text underneath:
+
+| Rust `mapping[].status` | Shown | Meaning (`detect.rs`) |
+|---|---|---|
+| `matched` | Matched (success) | A column is mapped and nothing about the mapping is in question. Reason: same name, a known alias (`qty` → Quantity, `pnl` → P&L) or the column the trader chose |
+| `review` | Needs review (caution) | Mapped, but another unused column also fits the field, or one column feeds two fields. Never blocks |
+| `error` | Action required (danger) | Required field with no column, a chosen column not in the file, a header repeated in several columns, or the exit time/price pair rule. Always backed by a blocking `columns.*` file issue |
+| `notMapped` | Not mapped (neutral) | Optional field left out ("Optional; no matching column." or "Optional; not used.") |
+
+- **Rust owns the rules.** The wizard no longer checks the mapping itself (the old `checkMapping` is gone). The
+  "same column for two fields" warning moved into Rust as `review`.
+- **Every edit is checked again.** Changing a column sends the whole mapping as explicit `columns` at once. The table
+  stays on screen, its statuses read "Checking…" until Rust answers, and a polite live region announces the new
+  counts. If the check can't run, they read "Not checked" beside "Check the file again", so an earlier Matched never
+  stands for a changed mapping.
+- **Continue rules.** Review rows is disabled ("Fix the columns marked Action required first") while any field is
+  `error`, the same issue that blocks the commit. Review rows from a stale mapping checks it first and stays on Match
+  columns if Rust then reports an error.
+- **Matched is not row validity.** The note above the table says so, and Review rows still checks every row, e.g. a
+  recognized Quantity column with a value `x` is an Error row in step 3.
+- Direction (long/short) is never inferred from headers. Date order and time zone behave as before.
+
 ## Build 18.5: drop fix and Quick import
 
 **Drop.** Dropped and browsed files take one path (`useCsvFileChoice` → `readCsvFile`): one CSV per operation, the

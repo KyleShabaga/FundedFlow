@@ -184,29 +184,3 @@ export function mappingFromPreview(mapping: { field: string; header: string | nu
     notes: value("notes"),
   };
 }
-
-export interface MappingCheck {
-  /** Blocking: the same rules Rust applies (required fields, exit time and price together). */
-  errors: Partial<Record<keyof ColumnMapping, string>>;
-  /** Not blocking: Rust accepts one column for two fields, but it is rarely intended. */
-  warnings: Partial<Record<keyof ColumnMapping, string>>;
-}
-
-/** Mapping problems the form can show before asking Rust again. Rust's preview stays authoritative. */
-export function checkMapping(columns: ColumnMapping): MappingCheck {
-  const errors: MappingCheck["errors"] = {};
-  const warnings: MappingCheck["warnings"] = {};
-  const used = new Map<string, keyof ColumnMapping>();
-  for (const { field, required } of GENERIC_FIELDS) {
-    const header = columns[field];
-    if (!header) {
-      if (required) errors[field] = "Choose the column for this required field";
-      continue;
-    }
-    const other = used.get(header);
-    if (other) warnings[field] = `"${header}" is also used for ${GENERIC_FIELDS.find(f => f.field === other)!.label.toLowerCase()}`;
-    else used.set(header, field);
-  }
-  if (Boolean(columns.exitTime) !== Boolean(columns.exitPrice)) errors.exitPrice = "Map exit time and exit price together, or neither";
-  return { errors, warnings };
-}
