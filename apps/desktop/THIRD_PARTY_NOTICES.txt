@@ -1311,7 +1311,7 @@ Licence: Unicode-3.0
 Copyright © 2020-2024 Unicode, Inc.
 Licence text: [T37] Unicode-3.0
 
-tokio 1.54.0
+tokio 1.54.1
 ------------
 
 Licence: MIT
