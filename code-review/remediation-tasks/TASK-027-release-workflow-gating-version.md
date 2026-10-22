@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r5; awaiting independent review) |
+| Status | Ready for Approval (r5) |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | NA-2 / P0-06 (release) |
@@ -58,7 +58,7 @@ Signing; updater; pinning actions by SHA (optional, V1.1).
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-005 decided — Option A, approved 2026-10-22 on the Notion approval board; TASK-006 decided — Option A, approved 2026-10-22 on the Notion approval board (no config change follows from it).
 - Merge order: after TASK-017 (the last W1 wire-fixture edit; 013 → 015 (option B only) → 016 → 017 → 027 on `data-controls-wire.json`) and before TASK-029 (candidate).
-- Likely shared-file conflicts: `.github/workflows/ci.yml` with TASK-040 (its `cargo fmt --check` step and `rustfmt` component; TASK-040 merges first, so this card moves that step into `checks.yml`); version files with TASK-029 (candidate); `packages/domain/test/fixtures/data-controls-wire.json` with TASK-013, 015 (option B), 016, 017.
+- Likely shared-file conflicts: `.github/workflows/ci.yml` with TASK-040 (its `cargo fmt --check` step and `rustfmt` component; if TASK-040 merges first (recommended), this card moves its step into `checks.yml`; otherwise TASK-040 adds it to `checks.yml`, step 2g); version files with TASK-029 (candidate); `packages/domain/test/fixtures/data-controls-wire.json` with TASK-013, 015 (option B), 016, 017.
 
 ## Acceptance criteria (pass/fail)
 - [ ] Domain package version rule: `packages/domain/package.json:3` and the pin `apps/desktop/package.json:22` either both stay `0.1.0` or both become `0.1.1`; the PR records which.
@@ -124,3 +124,4 @@ Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANG
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: `recovery.journey.test.tsx:66` knock-on (G13); TASK-006 `webviewInstallMode` scope and prerequisite (G4); `producerVersion` normalize option (G13); merge after 017 and before 029; fixture rule unset (not 0).
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r4.
+Independent review r5 (2026-10-22, owner-directed CI gate): CHANGES applied, re-check READY.

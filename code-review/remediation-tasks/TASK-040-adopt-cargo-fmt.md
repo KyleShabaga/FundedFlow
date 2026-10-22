@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r2; awaiting independent review) |
+| Status | Ready for Approval (r2) |
 | Type | Fix |
 | Audit priority | Gate |
 | Roadmap lane | Build 10.5 gates (historical, V1) |
@@ -38,7 +38,7 @@ Read-only facts at 1012d63:
 
 ## Expected change scope
 - Commit 1 (formatting only): output of `cargo fmt` in `apps/desktop/src-tauri` over the crate's Rust files. Nothing else.
-- Commit 2 (CI): `.github/workflows/ci.yml` — add `rustfmt` to the toolchain step's `components` (`clippy, rustfmt`) and a step `cargo fmt --check` with `working-directory: apps/desktop/src-tauri`, placed after `Swatinem/rust-cache` and before `cargo test` so it fails fast.
+- Commit 2 (CI): `.github/workflows/ci.yml` (or `.github/workflows/checks.yml` if TASK-027 r5 has merged) — add `rustfmt` to the toolchain step's `components` (`clippy, rustfmt`) and a step `cargo fmt --check` with `working-directory: apps/desktop/src-tauri`, placed after `Swatinem/rust-cache` and before `cargo test` so it fails fast.
 
 ## Out of scope
 `rustfmt.toml` or any style option; pinning the toolchain; `.git-blame-ignore-revs`; adding fmt to `CLAUDE.md`/`README.md` check lists (record as Triage cards if wanted); editing `release-installer.yml` (TASK-027 owns it; through TASK-027 r5 the installer runs the same `checks.yml`, so the fmt check reaches packaging without a separate edit); behaviour, schema, dependency, fixture or refactoring changes; formatting `.rs.txt` generators.
@@ -47,7 +47,7 @@ Read-only facts at 1012d63:
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 2. Confirm no other open branch touches Rust (see merge order). Record `rustc --version` and `rustfmt --version`; use the current `stable` that CI will install.
 3. In `apps/desktop/src-tauri`: `cargo fmt`, then `cargo fmt --check` → exit 0. Commit only the formatter output; record the file count (`git diff --stat`).
-4. Edit `ci.yml` as above in a second commit.
+4. Edit `ci.yml` (or `checks.yml` if TASK-027 r5 has merged) as above in a second commit.
 5. Run the standard checks on the final commit; push; confirm the PR's CI run shows the new step green.
 6. Reviewer determinism check: in a disposable worktree at the base SHA, run `cargo fmt` with the same rustfmt and `git diff --exit-code` against the PR's Rust files → identical, proving the Rust diff is formatter output only.
 
@@ -58,7 +58,7 @@ Read-only facts at 1012d63:
 - Dependants: TASK-029 (Blocked until this is Verified; verification resolves only this blocker).
 
 ## Acceptance criteria (pass/fail)
-- [ ] The Rust diff is formatter output only (reviewer determinism check in step 6 passes); the only other change is the reviewed `ci.yml` edit.
+- [ ] The Rust diff is formatter output only (reviewer determinism check in step 6 passes); the only other change is the reviewed `ci.yml` edit (or `checks.yml` edit, per merge order).
 - [ ] `apps/desktop/src-tauri`: `cargo fmt --check` → exit 0 on the final commit (record rustfmt version).
 - [ ] Standard checks → exit 0 on the same commit.
 - [ ] CI on the PR (and on the merge commit on `main`) includes the `cargo fmt --check` step → green.
@@ -95,3 +95,4 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 Not yet reviewed. r1 written from the Notion draft; command scope made concrete from source (single crate, `cargo fmt --check` in `apps/desktop/src-tauri`, add `rustfmt` component). Reviewer to confirm the "merge first" order against the actual state of W1 branches at approval time.
 Independent review r1 (review3_B, 2026-10-22): READY; merge-first order sound. Nits applied (see "Changes in r1 (after independent review)"). Status stays Proposed until approval. Open index nit: `08-…index.md:35` and the 09 waves table do not yet show TASK-040 merging first (not edited here).
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r1.
+Independent review r2 (2026-10-22, owner-directed CI gate): CHANGES applied, re-check READY.
