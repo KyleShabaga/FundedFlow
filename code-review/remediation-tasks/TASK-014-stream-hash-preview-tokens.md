@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r3) |
+| Status | Proposed (r4; awaiting independent review) |
 | Type | Fix |
 | Audit priority | P1 (P0 if TASK-010 escalates) |
 | Roadmap lane | Unassigned (owner) |
@@ -16,41 +16,48 @@
 | Effort / risk | M / High (destructive flows' safety token) |
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r3 (2026-10-22; r2 + currency update for approved decisions) |
+| Inspected source revision | 9430f2a (application source identical to 92e7980) |
+| Specification revision | r4 (2026-10-22; r3 + approved-task audit fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
 
 ## Purpose / risk
-Restore inspect (`src-tauri/src/data_controls/restore.rs:56-67, 77`) and deletion preview (`deletion.rs:133`) call `archive::dump(live)` and inherit its caps, so a large journal cannot be erased or restored over.
+Restore inspect (`src-tauri/src/data_controls/restore.rs:56-67, 77`) and deletion preview (`deletion.rs:133`) call `archive::dump(live)` and inherit its caps, so a large journal cannot be erased or restored over. Restore-over has a second cap on the confirm path: `prepare` takes the local safety copy with `archive::snapshot(c, safety.db)` (`restore.rs:126`), which refuses a file over `MAX_ENTRY` (`archive.rs:196-198`). Fixing only the token would let inspect return a valid preview and token that confirm then rejects with `LimitExceeded` (the preview-passes, confirm-fails pattern of ISSUE-003).
 
 ## Trigger / reproduction
 Large live journal.
 
 ## Root cause / evidence
-Live-side token derived from a capped, fully materialised dump.
+Live-side token derived from a capped, fully materialised dump; the restore safety copy reuses the export snapshot and its archive entry cap.
 
 ## Expected change scope
-`src-tauri/src/data_controls/restore.rs` (`content_hash`, `counts`), `src-tauri/src/data_controls/deletion.rs` (`preview`), possibly a streaming hash helper in `archive.rs`; tests. Also replace `archive::dump(&simulation)` at `deletion.rs:175` and the per-account counts at `deletion.rs:190-205`.
+`src-tauri/src/data_controls/restore.rs` (`content_hash`, `counts`), `src-tauri/src/data_controls/deletion.rs` (`preview`), possibly a streaming hash helper in `archive.rs`; tests. Also replace `archive::dump(&simulation)` at `deletion.rs:175` and the per-account counts at `deletion.rs:190-205`. Restore safety copy: `archive.rs` `snapshot` (`:174-200`) gains an uncapped local variant (for example a size-limit parameter, `None` for the local safety copy) used only by `restore.rs::prepare` (`:126`); export (`archive.rs:231`) keeps the capped call unchanged.
 
 ## Out of scope
-Export-side caps and archive format: TASK-009 decision (5) keeps archive v1 strict, and any format change is a separate versioned change.
+Export-side caps (export at `archive.rs:231` stays capped) and archive format: TASK-009 decision (5) keeps archive v1 strict, and any format change is a separate versioned change.
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 2. Introduce a streaming, deterministic hash of live table contents covering the same tables as `dump` and including rowids, in the same table/row order, without the size cap.
 3. Use it for the restore `token`, the deletion preview tokens and the deletion simulation comparison (`deletion.rs:175`).
 4. Compute per-table and per-account counts (`deletion.rs:190-205`) with `count(*)` queries, not a full dump; `replacedEntities` output must stay byte-identical (`packages/domain/test/fixtures/data-controls-wire.json` unchanged).
-5. Tests: erase preview and restore inspect succeed on a journal over the dump cap; token changes when any row (incl. rowid-only change) changes.
+5. Restore safety copy (audit MUST, option (a)): the local pre-restore safety copy (`restore.rs:126`) is exempt from the archive entry cap, because it never enters an archive. Use an uncapped variant of `archive::snapshot`; keep everything else `snapshot` does (refuse an existing destination, `journal_mode=DELETE`, owner-only permissions on Unix, `sync_all`, and TASK-013's free-page removal of the temporary snapshot). Before taking it, check free space at the operation folder with `space()` (`filesystem.rs:110`) for twice the live journal's file size (the backup copies free pages before TASK-013's free-page removal runs, and that removal needs room for a second copy); a shortfall fails before `data-controls-pending.json` is written, leaving only the inert operation folder that any `prepare` failure leaves today (`restore.rs:112`). Export keeps the capped `snapshot` (TASK-009 decision (5)).
+6. Hash framing (audit SHOULD): the hash input is unambiguous: a domain tag (for example `live-content-v1`); per table, the table name and its column names; per row, a rowid-or-none marker; per cell, a type tag plus a length-prefixed value (so Integer `1` and Text `"1"` differ and no concatenation collides). Enumerate tables through one helper shared with `dump()`, so TASK-012's allow-list applies to both and cannot drift. Invalid UTF-8 text keeps `dump`'s `Integrity` result. The blocked-path `count(*)` keeps today's rule (`deletion.rs:191-200`): the first column named `account_id` or `owner_account_id`, Text equality with the account id.
+7. Tests: erase preview and restore inspect succeed on a journal over the dump cap; token changes when any row (incl. rowid-only change) changes; restore-over a journal whose **used** data exceeds `MAX_ENTRY` (for example large text in an existing column of a disposable journal): inspect → `prepare` succeeds and writes `safety.db` larger than `MAX_ENTRY`; `recover` installs; a separate run through `recover_failing` (`restore.rs:351-353`) rolls back and the live journal's content hash equals the pre-restore hash; export of the same journal still returns `LimitExceeded` (guard); `prepare` with insufficient space for the safety copy fails before writing `data-controls-pending.json`.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-013; TASK-010 result (priority).
-- Likely shared-file conflicts: `restore.rs`/`deletion.rs` with TASK-015/016/017.
+- Likely shared-file conflicts: `restore.rs`/`deletion.rs` with TASK-015/016/017; `archive.rs` `snapshot` with TASK-013.
+- TASK-013 coordination: TASK-013 r4 VACUUMs the temporary snapshot before the size check at `archive.rs:196-198`. That removes free pages only, so it does **not** cover this case: a journal whose used data exceeds 64 MiB still fails there. This card's uncapped variant keeps whatever free-page removal TASK-013 lands (VACUUM of the temporary snapshot, or `VACUUM INTO`).
 
 ## Acceptance criteria (pass/fail)
 - [ ] New over-cap preview tests pass; fail before.
+- [ ] Restore-over test: a live journal with used data over `MAX_ENTRY` → inspect, `prepare` and `recover` succeed; the rollback run restores it with an unchanged content hash. The test fails before the change (`prepare` returns `LimitExceeded`).
+- [ ] Guard test: export of that journal still returns `LimitExceeded`.
+- [ ] Test: `prepare` with too little free space for the safety copy fails before any pending-restore marker is written.
+- [ ] Hash test: Integer `1` and Text `"1"` in the same cell give different tokens; moving a value between adjacent cells changes the token.
 - [ ] Stale-token tests still pass (`data_controls/tests.rs` stale-preview cases).
 - [ ] Full Rust and root checks → exit 0.
 - [ ] `replacedEntities` and `packages/domain/test/fixtures/data-controls-wire.json` are byte-identical to before (fixture test passes without regeneration).
@@ -78,6 +85,12 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Audit priority: "P1" → "P1 (P0 if TASK-010 escalates)", and TASK-010 result (priority) added to prerequisites: the approved TASK-010 decision says that if 64 MiB is reachable within 12 months ISSUE-002 escalates to P0 and the TASK-013/014 priorities are updated (TASK-013 already carried this; TASK-014 did not).
 - Out of scope: replaced "archive format, owner decision" with the approved TASK-009 decision (5): archive v1 stays strict; a format change is a separate versioned change.
 - Fixture rule: "unset" → "unset (not `0`)" per 10 §8.3 ("Fixture rule on all cards"), because `wire_tests.rs:90` rewrites the fixture whenever the variable is set; this card's byte-identical fixture criterion depends on it.
+
+## Changes in r4
+- Purpose, root cause, scope, step 5, tests and criteria: the local restore safety copy (`restore.rs:126` → `archive::snapshot`, capped at `archive.rs:196-198`) is exempt from the archive entry cap, with a `space()` check and an over-cap prepare + recover + rollback test (audit MUST, TASK-014; option (a), which keeps the card's purpose; option (b) would narrow it). TASK-013 r4 does not cover this: its VACUUM removes free pages only. Export stays capped.
+- Step 6: unambiguous hash framing, one table enumerator shared with `dump()`, invalid UTF-8 → `Integrity`, and the blocked-path `account_id`/`owner_account_id` rule (audit SHOULD, hash framing; audit NIT on `deletion.rs:191-200`).
+- Conflicts: `archive.rs` `snapshot` shared with TASK-013 (follows from the MUST).
+- Fixture rule unchanged: `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r3) |
+| Status | Proposed (r4; awaiting independent review) |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -16,8 +16,8 @@
 | Effort / risk | M–L / High (startup) |
 | Verification platform | Windows only (+ Any OS for regression) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | b01e2b9 (application source identical to 92e7980) |
-| Specification revision | r3 (2026-10-22; r2 + Block 4 corrections from 10 §8.2/§8.3) |
+| Inspected source revision | 9430f2a (application source identical to 92e7980) |
+| Specification revision | r4 (2026-10-22; r3 + approved-task audit fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -33,7 +33,14 @@ Profile or `C:\Users` relocated via junction; redirected Roaming; mount point; p
 `src-tauri/src/data_controls/filesystem.rs:89-109` (walk from `components()` incl. bare prefix), `data_controls/mod.rs:155-168`, `runtime.rs:330-335, 130`.
 
 ## Expected change scope
-`filesystem.rs` (root-anchored check), all app-owned `no_symlink_components` call sites (21 of 24 non-test sites at a7310fd; user paths `archive.rs:223, 331, 552` keep the old check) switched to the root-anchored check (inventory them in the PR; e.g. `recover_cleanup` at `deletion.rs:323` runs at startup) — user-chosen export/restore paths keep the old check; `data_controls/mod.rs::filesystem_ownership`; `runtime.rs` (`FailureCategory`/`failure()`, `runtime.rs:126-135`) and `apps/desktop/src/lib/data/runtime.ts` (`failureCategories` + stage map: new non-retry category — contract change), UI copy and docs; Windows-gated tests. App-owned paths are the data root and everything FundedFlow creates beneath it: `fundedflow.db` (+ `-wal`/`-shm`/`-journal`), `fundedflow.lock`, `legal-acceptance.json`, `attachments/`, `data-controls/`, `data-controls-cleanup/`, `data-controls-work/`, `data-controls-pending.json`, `data-controls-quarantine/` (added by TASK-015) and `fundedflow.db.before-v*.bak`.
+`filesystem.rs` (root-anchored check), all app-owned `no_symlink_components` call sites (21 of 24 non-test sites at a7310fd; user paths `archive.rs:223, 331, 552` keep the old check) switched to the root-anchored check (inventory them in the PR; e.g. `recover_cleanup` at `deletion.rs:323` runs at startup) — user-chosen export/restore paths keep the old check; `data_controls/mod.rs::filesystem_ownership`; `runtime.rs` (`FailureCategory`/`failure()`, `runtime.rs:126-135`) and `apps/desktop/src/lib/data/runtime.ts` (`failureCategories` + stage map: new non-retry category — contract change), UI copy and docs; Windows-gated tests. App-owned paths are the data root and everything FundedFlow creates beneath it: `fundedflow.db` (+ `-wal`/`-shm`/`-journal`), `fundedflow.lock`, `legal-acceptance.json`, `attachments/`, `data-controls/`, `data-controls-cleanup/`, `data-controls-work/`, `data-controls-pending.json`, `data-controls-quarantine/` (added by TASK-015) and `fundedflow.db.before-v*.bak`. This list classifies paths; the change itself switches only the **existing** `no_symlink_components` call sites on app-owned paths (the data root and `fundedflow.lock` via `data_controls/mod.rs:157, 159`, and the `data-controls*` paths in `deletion.rs`, `restore.rs`, `archive.rs:163` and `filesystem.rs:117, 153`).
+
+**Explicitly out of scope in r4 (no `no_symlink_components` call today; follow-up note below):**
+- `fundedflow.db` and its `-wal`/`-shm`/`-journal` files: SQLite opens and creates them itself, and the WAL/SHM files cannot be checked before SQLite creates them.
+- Pre-upgrade backups: `fundedflow.db.before-v*.bak` (`db/mod.rs:245-246`, written by `VACUUM INTO` at `:283`) and the retained `previous-*.bak` copy (`db/mod.rs:273`).
+- `legal-acceptance.json`: has its own `fs::symlink_metadata` check (`legal.rs:84`).
+- `attachments/`: screenshot writes and status checks use their own `fs::symlink_metadata` calls (`store/attachments.rs:200-206` `write_new`, called at `:262`; `file_status` at `:302`).
+These paths are still protected by the anchored check on the data root at startup (`data_controls/mod.rs:157`), but a link created at or below them is not checked by this card. Follow-up: record a Triage card ("apply the root-anchored link check to the database, backup, legal-record and attachment paths") with its own tests; do not widen this card to cover them.
 
 Runtime-contract consumers of the new category (each updated and named in the PR): `apps/desktop/src/lib/data/runtime.ts:12-18` (`failureCategories`) and `:61` (stage map); `apps/desktop/src/test/runtime-fixtures.ts:11-22` (`failed()` with its own stage map at `:12`; failed-status body `:14-17`); `apps/desktop/src/lib/diagnostics.ts:65`; `apps/desktop/src/components/RuntimeGate.tsx:9-22` (`TITLES`/`GUIDANCE`, exhaustive per category); `apps/desktop/src/design-system/GallerySections.tsx:312` (runtime diagnostic sample); `apps/desktop/src/app/RuntimeProvider.tsx:60` (category routing: decide whether the new non-retry category maps to `unavailable` or its own state); journeys `apps/desktop/src/journeys/recovery.journey.test.tsx:40-50, 57` (own stage map and category list), `first-run.journey.test.tsx:129`, `data-controls.journey.test.tsx:198`; tests `lib/data/runtime.test.ts`, `app/RuntimeProvider.test.tsx`, `app/RuntimeRecovery.test.tsx`, `components/RuntimeGate.test.tsx`. First evaluate std `FileType::is_symlink()` / `symlink_metadata` on Windows (may cover junctions without a new dependency); only if insufficient declare `windows-sys` in `Cargo.toml` — **dependency change requires explicit approval**, plus `npm run check:notices` and a `Cargo.lock` diff check.
 
@@ -54,7 +61,7 @@ Export/restore user-path validation (TR-007/WIN-002, V1.1); hard-link checks (IS
 ## Acceptance criteria (pass/fail)
 - [ ] Windows CI: the `ci.yml` `cargo test` step (windows-latest, `ci.yml:69`) runs the new `cfg(windows)` tests → pass.
 - [ ] Manual Windows check (owner/VM, recorded): junctioned profile layout starts Ready; standard profile unaffected. Record per case: tester; date; Windows edition and build; WebView2 version; tested source SHA; installer EXE SHA-256 (release EXE, `FUNDEDFLOW_DEV_DATA_DIR` unset); case (standard profile / junctioned profile or `C:\Users` / redirected Roaming / mount point / Windows Sandbox / junction at the app folder itself); the link setup (command used, link path → target); the resolved data folder path; observed runtime state and failure category; expected vs observed; pass/fail; screenshot or log reference.
-- [ ] Every app-owned path listed in the scope, including `data-controls-quarantine/`, uses the root-anchored check.
+- [ ] Every **existing** `no_symlink_components` call site on an app-owned path (including the one for `data-controls-quarantine/` added by TASK-015) uses the root-anchored check. The paths listed as out of scope (database and WAL/SHM/journal files, `before-v*`/`previous-*` backups, `legal-acceptance.json`, `attachments/`) are not required to use it, and the follow-up Triage card for them is recorded in the execution log.
 - [ ] Every runtime-contract consumer listed in the scope is updated and named in the PR.
 - [ ] Full Rust and root checks → exit 0.
 - [ ] All app-owned call sites (21 of 24 at a7310fd) listed in the PR and each uses the root-anchored check; user-path call sites unchanged.
@@ -87,6 +94,11 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - 10 §8.2 TASK-018 (G14): listed the manual record fields.
 - 10 §8.3 fixture rule: `FUNDEDFLOW_UPDATE_FIXTURES` must be unset (not `0`).
 - r3 review fix: added `RuntimeProvider.tsx:60` so the consumer list matches TASK-015 (independent r3 review).
+
+## Changes in r4
+- Acceptance criterion reworded from "every app-owned path listed in the scope uses the root-anchored check" to "every existing `no_symlink_components` call site on an app-owned path": the database and its `-wal`/`-shm`/`-journal` files, the pre-upgrade backups (`db/mod.rs:245-246, 273`), `legal-acceptance.json` (`legal.rs:84`) and `attachments/` (`store/attachments.rs:200-206, 262, 302`) never go through `no_symlink_components`, so the old criterion could only be met by unreviewed new checks on a High-risk startup task (approved-task audit, MUST). Call sites re-counted at 9430f2a: 24 non-test calls.
+- Scope: those paths listed explicitly as out of scope, with a follow-up Triage-card note (approved-task audit, MUST).
+- Not applied (audit SHOULD items, design changes outside this fix brief): separate anchored and full-walk `write_new` functions (S-018-1), name-surrogate rule via std `is_symlink()` (S-018-2), cloud/sync-folder policy (S-018-3), fail-closed anchor (S-018-4), link-inside-data-folder tests and `mklink /J` recipe (S-018-5), TASK-011(b) as input rather than blocker (S-018-6).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r3) |
+| Status | Proposed (r4; awaiting independent review) |
 | Type | Fix |
 | Audit priority | P1 (wording only) |
 | Roadmap lane | Unassigned (owner); P0-03 rule (merged) |
@@ -16,33 +16,40 @@
 | Effort / risk | S / Low |
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | 4d4e66d (application source identical to 92e7980) |
-| Specification revision | r3 (2026-10-22; r2 + Block 4 nits from 10 §8.3) |
+| Inspected source revision | 9430f2a (application source identical to 92e7980) |
+| Specification revision | r4 (2026-10-22; r3 + approved-task audit fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 4d4e66d (HEAD at r3; application source unchanged). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
 
 ## Purpose / risk
-Toasts/dialogs say 'wasn't archived', 'wasn't restored', 'The trade wasn't restored', 'The active account wasn't changed' even when the error category is `uncertain-outcome`, contradicting the merged P0-03 rule.
+Toasts/dialogs say 'wasn't archived', 'wasn't restored', 'The trade wasn't restored', 'The active account wasn't changed', 'The account wasn't switched' even when the error category is `uncertain-outcome`, contradicting the merged P0-03 rule.
 
 ## Trigger / reproduction
 Timeout/`database`-kind error on those writes.
 
 ## Root cause / evidence
-`apps/desktop/src/features/accounts/components/LifecycleDialogs.tsx:166,191`; `journal/components/TradeLogView.tsx:146`; `TradeDetailPage.tsx:270`; `accounts/components/AccountSwitcher.tsx:45`; `AccountActions.tsx:37`.
+`apps/desktop/src/features/accounts/components/LifecycleDialogs.tsx:166,191`; `journal/components/TradeLogView.tsx:146`; `TradeDetailPage.tsx:270`; `accounts/components/AccountSwitcher.tsx:45`; `AccountActions.tsx:37`; and three more active-account switches with the same `active.select()` call: `accounts/components/AccountDetailPage.tsx:257`, `today/components/TodayPage.tsx:65`, `daily-reviews/components/DailyReviewPage.tsx:155` ("The account wasn't switched").
+
+Why "check before trying again" is not enough:
+- Settings (all five active-account sites): `select` is a settings write (`useSetSetting`, `features/accounts/active-account.ts:42,55`). An uncertain result leaves the setting's scope locked (`features/shared/submissions.ts:40`), every later submit is rejected at once with `uncertain-outcome` and sends nothing (`shared/hooks/use-feature-mutation.ts:41-42`, `submissions.ts:23-24`), settings have no acknowledge path (out of scope), and the lock is in memory, so it lasts until FundedFlow restarts.
+- Accounts and trades: `["account", id]` is shared by archive, restore, edit, status and reset (`accounts/hooks/accounts.ts:14-20`) and is released only by the `AccountWriteReview` in the Edit, Change status and Reset dialogs (`AccountFormDialog.tsx:280`, `LifecycleDialogs.tsx:128,400`); `["trades", accountId]` (`trades/hooks/trades.ts:8,21`) is released only by the `TradeWriteReview` in the trade form (`journal/components/TradeFormDialog.tsx:239`).
 
 ## Expected change scope
-Those files; reuse the pattern in `journal/components/LibraryView.tsx:287-293` / `Screenshots.tsx:163`.
+Those files, including `AccountDetailPage.tsx`, `TodayPage.tsx` and `DailyReviewPage.tsx` (owner decision, 2026-10-22); reuse the pattern in `journal/components/LibraryView.tsx:287-293` / `Screenshots.tsx:163`. A small shared helper for the five active-account sites is allowed.
 
 ## Out of scope
-Settings auto-acknowledge and daily-review acknowledge flow (ISSUE-011 rest, V1.1).
+Settings auto-acknowledge and daily-review acknowledge flow (ISSUE-011 rest, V1.1); invalidate-on-uncertain changes to the lock or caches.
+- The other settings toasts, `today/components/AccountsOverview.tsx:31` ("The layout wasn't saved") and `today/components/SessionPrompt.tsx:31` ("That choice wasn't saved"): their description ("It applies until you close FundedFlow") is still true, and Kyle's decision widened scope only to the three account-switch toasts. Record any change to them as a new Triage card.
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
-2. Branch on `error.category === 'uncertain-outcome'`: show 'may have been archived/restored/changed — check before trying again' and say where to check (the page or list that shows the record), as `journal/components/LibraryView.tsx:287-293` does ("check the library on this page"). No link to the record is added; that is out of scope.
+2. Branch on `error.category === 'uncertain-outcome'`:
+   - Account and trade writes (archive, restore, trade restore): show 'may have been archived/restored — check before trying again', say where to check (the page or list that shows the record), as `journal/components/LibraryView.tsx:287-293` does ("check the library on this page"), and say where the review that releases the lock appears (accounts: the Edit, Change status or Reset dialog of that account; trades: editing a trade of that account). No link to the record is added; that is out of scope.
+   - Active-account switches (all five sites; owner decision, 2026-10-22): the wording must say that no answer came back so the active account may have changed, that switching is locked until FundedFlow restarts, and that the active account should be checked after reopening. It must not invite the user to try again now. Example: "No answer came back, so the active account may have changed. Switching is locked until you restart FundedFlow; check the active account after reopening it."
 3. Keep definite-failure wording for definite failures.
-4. Tests: reject each with `FeatureDataError('uncertain-outcome')` → uncertain wording; with a definite failure → existing wording.
+4. Tests: reject each with `FeatureDataError('uncertain-outcome')` → uncertain wording; with a definite failure → existing wording. For one active-account site and one account or trade site, also test the locked retry: after an uncertain result, a second attempt sends nothing (spy on the repository) and still shows the uncertain wording, never the definite one.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-021, TASK-022 (shared files merge order).
@@ -50,6 +57,8 @@ Settings auto-acknowledge and daily-review acknowledge flow (ISSUE-011 rest, V1.
 
 ## Acceptance criteria (pass/fail)
 - [ ] New tests pass; fail before.
+- [ ] All five active-account sites (`AccountSwitcher.tsx:45`, `AccountActions.tsx:37`, `AccountDetailPage.tsx:257`, `TodayPage.tsx:65`, `DailyReviewPage.tsx:155`) show the locked-until-restart wording on an uncertain result, and the definite wording otherwise.
+- [ ] Locked retry: a second attempt after an uncertain result sends nothing and shows the uncertain wording again.
 - [ ] Uncertain-writes journeys pass: `npm run test:journeys -w @fundedflow/desktop` → exit 0.
 - [ ] Full root checks → exit 0.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check (the Rust fixture tests rewrite tracked fixtures whenever the variable is set, to any value); never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
@@ -75,6 +84,13 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 ## Changes in r3
 - Dropped "with a link to the affected record": the message says where to check, following the existing `LibraryView.tsx:287-293` wording; a record link is out of scope (10 §8.3 TASK-024).
 - Fixture rule: `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`) (10 §8.3).
+
+## Changes in r4
+- Widened scope to the three "account wasn't switched" toasts (`AccountDetailPage.tsx:257`, `TodayPage.tsx:65`, `DailyReviewPage.tsx:155`). Reason: audit MUST; Kyle's decision (2026-10-22): "widen the scope to the three 'account wasn't switched' toasts".
+- Active-account (settings) wording now says the setting is locked until the app restarts and should be checked after reopening, instead of "check before trying again". Reason: audit MUST (an uncertain settings write locks the scope for the session with no acknowledge path); Kyle's decision (2026-10-22): "the wording must say that the setting is locked until the app restarts and should be checked after reopening".
+- Account and trade wording names where the review that releases the lock appears. Reason: audit SHOULD.
+- Added a locked-retry test and criterion. Reason: audit SHOULD.
+- Listed the two other settings toasts (`AccountsOverview.tsx:31`, `SessionPrompt.tsx:31`) as out of scope. Reason: audit MUST asked to include or list them; Kyle's decision covered only the three switch toasts.
 
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).
