@@ -38,7 +38,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `components/charts.tsx` | `WinGauge`, `Sparkline`, `EquityCurve` |
 | `components/journal.tsx` | `PnlCalendar`, `monthWeeks`, `DayCard`, `TradeTable`, `tradeResult` |
 | `components/forms.tsx` | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select` (Radix), `FieldGroup`, `FormSection`, `FieldError`, `ValidationSummary`, `focusFirstInvalid`, `focusFirstInvalidWhenShown` (Build 26), `FileDropzone`, `dragHasFiles`, `useWindowFileDropGuard`, `formatFileSize` |
-| `components/overlays.tsx` | `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `OverlayClose`, `DropdownMenu`, `Tooltip` (Radix Dialog, Dropdown Menu, Tooltip) |
+| `components/overlays.tsx` | `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `OverlayClose`, `DropdownMenu`, `ActionPill` (P0-D12), `Tooltip` (Radix Dialog, Dropdown Menu, Tooltip) |
 | `components/feedback.tsx` | `InlineNotice`, `ToastProvider` + `useToast`, `StatusIndicator` |
 | `components/async-states.tsx` | `AsyncState`, `StateBoundary`, `Skeleton`, `LoadingState`, `EmptyState`, `ErrorState`, `UnavailableState`, `StaleDataNotice`, `RefreshingIndicator`, `MutationState`, `MutationFeedback`, `isMutationBusy`, `hasData` |
 | `components/data.tsx` | `DataTable`, `MetricCard`, `MetricValue` + `MetricValueView`, `MoneyCell`, `UnknownValue`, `LabeledValue`, `StatList`, `Stepper`, `MonthYearPicker` |
@@ -139,6 +139,12 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
 - `Popover` (non-modal, anchored by CSS) for the month picker, column chooser and similar; `DropdownMenu` for
   actions on one object; `Tooltip` names or explains a focusable control and is never the only place for
   essential information.
+- `ActionPill` (P0-D12) is one item of a managed list (a library tag): its name (wrapping when long), an optional
+  badge and meta ("Used in 47 reviews"), and one menu button at its end that opens a `DropdownMenu` of that item's
+  actions. The pill itself is not a control, so no button sits inside another; `actionsLabel` names the button and
+  the menu ("Actions for tag ORB"). `muted` draws an archived item with a dashed edge. Put archive or restore in
+  the menu as words, never as an X, which reads as "remove". A dialog opened from the menu returns focus to the
+  menu button; a dialog the page unmounts on close must return focus itself (see the Library tags).
 
 ### Which message to use
 

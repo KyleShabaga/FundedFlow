@@ -11,7 +11,7 @@
 
   /* Edges: cards, panels, pills and badges keep a border so they read as shapes. */
   .ds-card, .ds-metric, .ds-aoc, .ds-notice, .ds-dt-card, .ds-pop, .ds-menu, .ds-dialog, .ds-drawer, .ds-tooltip,
-  .ds-status-pill, .ds-badge, .ds-chip, .ds-step, .ds-cal-day, .ds-cal-week, .ds-day { border-color: CanvasText; }
+  .ds-status-pill, .ds-badge, .ds-chip, .ds-action-pill, .ds-step, .ds-cal-day, .ds-cal-week, .ds-day { border-color: CanvasText; }
   .ds-status-pill, .ds-badge { border-style: solid; border-width: 1px; }
   .ds-status-pill.ds-status-unknown { border-style: dashed; }
   .ds-dialog, .ds-drawer { border: 2px solid CanvasText; }
@@ -37,7 +37,7 @@
   .ds-switch-input:checked::after { background: HighlightText; }
 
   /* Buttons keep their border; disabled reads as GrayText rather than faded colour. */
-  .ds-btn, .ds-icon-btn, .ds-tab { border: 1px solid ButtonBorder; }
+  .ds-btn, .ds-icon-btn, .ds-tab, .ds-action-pill-menu { border: 1px solid ButtonBorder; }
   .ds-btn:disabled, .ds-icon-btn:disabled, .ds-tab:disabled { color: GrayText; border-color: GrayText; opacity: 1; }
   .ds-skel { border: 1px dashed GrayText; }
 }

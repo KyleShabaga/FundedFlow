@@ -5,6 +5,7 @@ import { useState } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
+  ActionPill,
   Button,
   ConfirmDialog,
   DiagnosticDetails,
@@ -162,6 +163,30 @@ describe("DropdownMenu", () => {
     expect(archive).toHaveBeenCalledTimes(1);
     expect(remove).not.toHaveBeenCalled();
     await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+});
+
+describe("ActionPill", () => {
+  it("is not itself a control: its one button opens the item's menu by keyboard and returns focus", async () => {
+    const rename = vi.fn();
+    render(<ActionPill label="ORB" meta="Used in 3 reviews" actionsLabel="Actions for tag ORB" actions={[{ label: "Rename…", onSelect: rename }, { label: "Archive…", onSelect: () => {} }]} />);
+    expect(screen.getByText("Used in 3 reviews")).toBeTruthy();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    const trigger = screen.getByRole("button", { name: "Actions for tag ORB" });
+    expect(trigger.getAttribute("aria-haspopup")).toBe("menu");
+    trigger.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(await screen.findByRole("menu", { name: "Actions for tag ORB" })).toBeTruthy();
+    await waitFor(() => expect(document.activeElement?.textContent).toBe("Rename…"));
+    await userEvent.keyboard("{Enter}");
+    expect(rename).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it("marks a muted item and shows its badge", () => {
+    const { container } = render(<ActionPill label="FOMO" badge={<span>Archived</span>} muted actionsLabel="Actions for tag FOMO" actions={[{ label: "Restore", onSelect: () => {} }]} />);
+    expect(container.querySelector(".ds-action-pill.is-muted")).toBeTruthy();
+    expect(screen.getByText("Archived")).toBeTruthy();
   });
 });
 

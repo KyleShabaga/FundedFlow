@@ -108,6 +108,15 @@
 .ds-chip:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-faint); }
 .ds-chip:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
 .ds-chip:disabled { opacity: .45; cursor: not-allowed; }
+/* ActionPill: a managed item with its own menu button (the pill itself is not interactive). */
+.ds-action-pill { display: inline-flex; align-items: center; gap: var(--space-1); max-width: 100%; min-height: 32px; padding: 2px 3px 2px 12px; border: 1px solid var(--line-200); border-radius: 16px; background: var(--bg-200); color: var(--ink); font: 500 13px/18px var(--font-sans); }
+.ds-action-pill.is-muted { background: transparent; border-style: dashed; color: var(--ink-muted); }
+.ds-action-pill-text { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-2); min-width: 0; padding-block: 2px; }
+.ds-action-pill-label { min-width: 0; overflow-wrap: anywhere; }
+.ds-action-pill-meta { color: var(--ink-faint); font-size: 12px; white-space: nowrap; }
+.ds-action-pill-menu { display: grid; place-items: center; flex: none; width: 26px; height: 26px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-muted); cursor: pointer; padding: 0; }
+.ds-action-pill-menu:hover, .ds-action-pill-menu[data-state="open"] { background: var(--bg-300); color: var(--ink); }
+.ds-action-pill-menu:focus-visible { outline: 2px solid var(--flow); outline-offset: 1px; }
 /* Selected (P0-D25): filled ground plus a doubled border, no checkmark, so the label stays centred and the pill
    keeps its size. aria-pressed carries the state for assistive technology. */
 .ds-chip.is-on { background: var(--flow-soft); border-color: var(--flow); color: var(--flow); box-shadow: inset 0 0 0 1px var(--flow); }
