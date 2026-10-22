@@ -8,6 +8,19 @@
 .jr-sub strong { color: var(--ink); }
 .jr-head-actions, .jr-row { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 .jr-note { margin: 0; }
+/* P0-D15: views first, then the viewed account's summary with the list actions beside it (not inside it). */
+.jr-tabs { display: grid; gap: var(--space-4); min-width: 0; }
+.jr-tabs > .ds-tabs { justify-self: start; }
+.jr-tabs > .ds-tab-panel { padding-top: 0; }
+.jr-context { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; min-width: 0; }
+.jr-account { flex: 1 1 420px; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-6); flex-wrap: wrap; padding: var(--space-3) var(--space-4); }
+.jr-account-id { display: grid; gap: 2px; min-width: 0; }
+.jr-account-name { margin: 0; font: 600 15px/22px var(--font-display); overflow-wrap: anywhere; }
+.jr-account-meta { margin: 0; display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; color: var(--ink-muted); font-size: 12.5px; }
+.jr-account-facts { margin: 0; display: flex; gap: var(--space-2) var(--space-6); flex-wrap: wrap; }
+.jr-account-facts > div { display: grid; gap: 2px; min-width: 0; }
+.jr-account-facts dt { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-muted); }
+.jr-account-facts dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
 .jr-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--flow); cursor: pointer; }
 .jr-link:hover { text-decoration: underline; }
 .jr-link:focus-visible, .jr-day-toggle:focus-visible, .jr-shot-open:focus-visible, .jr-paste:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; border-radius: var(--radius-sm); }

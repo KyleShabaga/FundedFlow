@@ -3,6 +3,9 @@
  * tokens.css and the components from the design system. Same page rhythm as the Journal (jr-page).
  */
 .in-page { display: grid; gap: var(--space-4); max-width: 1600px; min-width: 0; grid-template-columns: minmax(0, 1fr); font-family: var(--font-sans); color: var(--ink); }
+/* P0-D16: the section tabs lead the page (the Tabs root is .in-page), above account, basis and filters. */
+.in-page > .ds-tabs { justify-self: start; max-width: 100%; flex-wrap: wrap; }
+.in-body .ds-tab-panel { padding-top: 0; }
 .in-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; }
 .in-head-actions { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 .in-body, .in-section { display: grid; gap: var(--space-4); min-width: 0; }

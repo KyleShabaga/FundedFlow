@@ -28,6 +28,10 @@ No account, needs setup, unknown rulebook, no trades, import processing, partial
 discrepancy with the firm dashboard, calculation error, mixed multi-account state, valid zero headroom.
 
 ## Rules
+- P0-D21: the general note ("Estimate. Verify with your firm's dashboard. Today reads only what is saved on this
+  computer; it is not connected to your broker or firm.") is the page footer, after every section (also on the
+  no-account page). **Check again** stays at the top, right-aligned above the freshness panel. Figure-specific
+  Unknown, stale and setup notices stay with their figures.
 - Estimates only: "Estimate. Verify with your firm's dashboard." No language implying permission to trade or
   compliance.
 - Unrealized P&L, live peak equity and intraday trailing drawdown are Unknown without that data; never inferred

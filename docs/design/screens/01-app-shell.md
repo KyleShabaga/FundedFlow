@@ -22,10 +22,11 @@ panel and Design system gallery stay reachable from Settings › Developer in de
   on narrow windows. Active item: `flow-soft` ground, `aria-current="page"`.
 - Brand row (P0-D01): `BrandLogo`, the FundedFlow mark (32 px box, decorative) beside "Funded" in `ink` and "Flow" in
   `flow`; the collapsed rail shows the mark alone. The row's text still reads "FundedFlow".
-- Toggle (Build 18.5, restyled P0-D01): a quiet 28 px rounded-square button with the panel-left-close /
-  panel-left-open outline icon (hairline `line-100` border, no accent ring), immediately right of the FundedFlow logo,
-  centred on the sidebar's right border (`AppFrame` `sidebarEdge`), level with the logo mark, in both widths. Its 44 px
-  hit area overlaps neither the logo nor the header. `aria-label` and tooltip "Collapse sidebar" / "Expand sidebar"
+- Toggle (Build 18.5, restyled P0-D01, placed P0-D08): a 32 px rounded-square button with the panel-left-close /
+  panel-left-open outline icon and a control-contrast `line-200` border, inside the sidebar header (`AppFrame`
+  `sidebarEdge`), never on the border: top-right beside the logo when expanded (12 px from the edge, level with the
+  mark), centred under the mark in the 72 px rail. Its 44 px hit area overlaps neither the logo nor the links. Toggling
+  keeps focus on the button. `aria-label` and tooltip "Collapse sidebar" / "Expand sidebar"
   (tooltip adds "(Ctrl+B)"), `aria-expanded`, `aria-controls="primary-navigation"`, `aria-keyshortcuts`. First in the
   sidebar's tab order.
 - Submenus (P0-D01): only views a section already serves at its own URL. Journal: By day (`/journal`), Trade log

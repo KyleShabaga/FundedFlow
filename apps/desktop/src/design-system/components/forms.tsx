@@ -309,18 +309,23 @@ export interface RadioGroupProps<V extends string = string> {
   disabled?: boolean;
   /** Lay options in a row (two or three short choices). */
   inline?: boolean;
+  /**
+   * Show each option as a bordered card with its description (P0-D20): for a few consequential choices whose
+   * descriptions need room. Cards sit side by side when they fit and stack otherwise; the chosen one is outlined.
+   */
+  cards?: boolean;
   className?: string;
 }
 
 /** One choice of a few. Native radios: arrow keys move and select, Tab leaves the group. */
-export function RadioGroup<V extends string>({ label, name, options, value, defaultValue, onValueChange, description, error, required, disabled, inline, className }: RadioGroupProps<V>) {
+export function RadioGroup<V extends string>({ label, name, options, value, defaultValue, onValueChange, description, error, required, disabled, inline, cards, className }: RadioGroupProps<V>) {
   const ids = useFieldIds(undefined);
   const groupName = name ?? ids.control;
   return (
     <fieldset
       // radiogroup, not the fieldset's implicit group role: only radiogroup supports aria-required (axe aria-allowed-attr).
       role="radiogroup"
-      className={cx("ds-fieldset", "ds-radio-group", inline && "is-inline", error && "is-invalid", className)}
+      className={cx("ds-fieldset", "ds-radio-group", inline && "is-inline", cards && "is-cards", error && "is-invalid", className)}
       aria-describedby={describedBy(ids, description, error)}
       aria-invalid={error ? true : undefined}
       aria-required={required || undefined}
@@ -435,7 +440,6 @@ export function ChipGroup<V extends string>({ label, options, value, onValueChan
                 title={o.note}
                 onClick={() => toggle(o.value)}
               >
-                {on && <Check size={12} aria-hidden="true" />}
                 {o.label}
                 {o.note && <span className="ds-sr-only">, {o.note}</span>}
               </button>

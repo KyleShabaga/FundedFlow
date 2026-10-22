@@ -18,6 +18,9 @@ page; its wording now lives once, in the **Privacy & legal** section.) Five `For
 2. **Export**: `RadioGroup` Full backup (`.ffj.zip`, restorable) vs Trade CSV (not a backup); for CSV a `Select`
    of All accounts or one account (archived ones marked); the plaintext `Checkbox`; one primary button
    "Choose location and export…" that opens the native save dialog. Success shows the file name, size and SHA-256.
+   P0-D20: one column (max 820 px) in this order: the two formats as `RadioGroup cards` (side by side when each has
+   280 px, else stacked), the CSV account choice, the acknowledgement in its own inset box, then the button with its
+   error or success notice directly beneath it.
 3. **Restore from a full backup**: "Choose backup to restore…" opens the native open dialog, then the restore
    dialog.
 4. **Delete data permanently**: a bordered danger area with two rows, each with its own button:

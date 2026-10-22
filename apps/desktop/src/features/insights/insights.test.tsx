@@ -151,6 +151,22 @@ describe("Insights", () => {
     expect(document.activeElement).toBe(open);
   });
 
+  it("leads with the section tabs, above the account, basis and filters, and keeps the URL in charge (P0-D16)", async () => {
+    const user = userEvent.setup();
+    renderAt("/insights?basis=gross&section=calendar");
+    const tabs = await screen.findByRole("tablist", { name: "Insights sections" });
+    const filters = await screen.findByRole("region", { name: "Filters" });
+    const basis = screen.getByRole("group", { name: "P&L basis" });
+    expect(tabs.compareDocumentPosition(basis) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(tabs.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole("tablist", { name: "Insights sections" })).toHaveLength(1);
+    expect(within(tabs).getByRole("tab", { name: "Calendar" }).getAttribute("aria-selected")).toBe("true");
+    await user.click(within(tabs).getByRole("tab", { name: "Attempts" }));
+    // The section changes; the basis and other choices stay in the URL.
+    expect(location).toContain("section=attempts");
+    expect(location).toContain("basis=gross");
+  });
+
   it("switches to gross P&L and keeps the choice in the URL", async () => {
     const user = userEvent.setup();
     renderAt("/insights");

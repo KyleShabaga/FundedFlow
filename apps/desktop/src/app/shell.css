@@ -1,14 +1,14 @@
 /* Sidebar motion (P0-D01): 200 ms ease-out, no bounce; prefers-reduced-motion turns it off below. */
 :root { --shell-motion: 200ms ease-out; }
-/* Brand row: the mark is level with the edge toggle, which AppFrame centres on the sidebar border. The right
-   padding keeps the name clear of the half of the toggle that overlaps the sidebar. */
-.shell-brand { display: flex; align-items: center; min-height: 32px; padding: var(--space-6) var(--space-8) var(--space-6) var(--space-6); transition: padding var(--shell-motion); }
-/* Collapsed: the mark sits left of centre so the edge toggle (and its focus ring) keeps clear of it. */
-.is-collapsed .shell-brand { justify-content: flex-start; padding-inline: var(--space-3); }
-/* A quiet 28 px square: no ring or accent border, just the panel icon. ::before extends the hit area to 44 px
-   without covering the logo. Its fill hides the sidebar border it straddles. */
-.shell-toggle { position: relative; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border-radius: var(--radius-md); border: 1px solid var(--line-100); background: var(--bg-100); color: var(--ink-muted); box-shadow: none; cursor: pointer; transition: color 120ms ease-out, background-color 120ms ease-out; }
-.shell-toggle::before { content: ""; position: absolute; inset: -8px; border-radius: inherit; }
+/* Sidebar header (P0-D08): the collapse toggle sits inside it, never on the border. Expanded: brand left, toggle
+   top-right, level with the 32 px mark. Collapsed: the mark centred in the 72 px rail, the toggle centred below it.
+   AppFrame reads these offsets for its edge slot. */
+.ds-app-frame { --ds-app-edge-top: var(--space-6); --ds-app-edge-inset: var(--space-3); --ds-app-edge-top-collapsed: calc(var(--space-6) + 32px + var(--space-2)); }
+.shell-brand { display: flex; align-items: center; min-height: 32px; padding: var(--space-6) 56px var(--space-6) var(--space-6); transition: padding var(--shell-motion); }
+.is-collapsed .shell-brand { justify-content: center; padding: var(--space-6) 20px calc(var(--space-2) + 32px + var(--space-4)); }
+/* 32 px visible, 44 px hit area (::before) clear of the logo; a control-contrast border (line-200, 3:1). */
+.shell-toggle { position: relative; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border-radius: var(--radius-md); border: 1px solid var(--line-200); background: var(--bg-100); color: var(--ink-muted); box-shadow: none; cursor: pointer; transition: color 120ms ease-out, background-color 120ms ease-out; }
+.shell-toggle::before { content: ""; position: absolute; inset: -6px; border-radius: inherit; }
 .shell-toggle:hover:not(:disabled) { color: var(--ink); background: var(--bg-300); }
 .shell-toggle:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
 .shell-toggle:disabled { cursor: not-allowed; opacity: .55; }

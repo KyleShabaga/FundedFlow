@@ -136,6 +136,14 @@ describe("the selected account", () => {
     await within(fresh).findByText("2026-10-21");
     // Setup is named, never treated as complete.
     expect(screen.getByText("Setup needed for limits")).toBeTruthy();
+    // P0-D21: the general estimate note is the page's last element, once, with its wording intact; Check again stays
+    // above the freshness panel, and figure-specific states stay in their sections.
+    const page = fresh.closest(".td-page")!;
+    const note = screen.getByText(/Today reads only what is saved on this computer/).closest("footer")!;
+    expect(page.lastElementChild).toBe(note);
+    expect(note.textContent).toBe("Estimate. Verify with your firm's dashboard. Today reads only what is saved on this computer; it is not connected to your broker or firm.");
+    expect(screen.getAllByText(/Today reads only what is saved on this computer/)).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Check again" }).compareDocumentPosition(fresh) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("shows a current estimate with its figures; each opens its explanation and its trades link to the same account's Journal", async () => {

@@ -12,8 +12,13 @@
 .dr-fact { display: grid; gap: 4px; align-content: start; min-width: 0; }
 .dr-disclaimer { grid-column: 1 / -1; margin: 0; font-size: 12.5px; }
 .dr-form { display: grid; gap: var(--space-4); min-width: 0; }
-.dr-body { display: grid; gap: var(--space-4); min-width: 0; border: 0; padding: 0; margin: 0; }
-.dr-body > section { padding: var(--space-4); border: 1px solid var(--line-100); border-radius: var(--radius-md); background: var(--bg-100); }
+.dr-body { display: grid; gap: var(--space-4); min-width: 0; border: 0; padding: 0; margin: 0; container-type: inline-size; }
+/* Each section is its own card. The section class is repeated so this inset beats FormSection's
+   ":first-of-type { padding-top: 0 }", which left the first card's heading against its border (P0-D26). */
+.dr-body > section.ds-form-section { padding: var(--space-6); border: 1px solid var(--line-100); border-radius: var(--radius-md); background: var(--bg-100); }
+.dr-plan-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-6); align-items: start; }
+@container (max-width: 640px) { .dr-plan-grid { grid-template-columns: minmax(0, 1fr); } }
+.dr-body > section.ds-form-section .ds-form-section-head .ds-field-desc { margin-top: var(--space-1); }
 .dr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-3); align-items: start; }
 .dr-status { margin: 0; color: var(--ink-muted); font-size: 12.5px; }
 .dr-status:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; border-radius: var(--radius-sm); }

@@ -7,6 +7,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button, EmptyState, InlineNotice, LoadingState, StateBoundary, TabPanel, Tabs } from "../../../design-system";
+import { ACCOUNT_TYPE_LABELS, AccountStatus } from "../../accounts/components/presentation";
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import { useDailyReviewIndex } from "../../daily-reviews/hooks/daily-reviews";
 import { useReviewSummaries } from "../../reviews/hooks/reviews";
@@ -54,14 +55,14 @@ function AccountJournal({ account }: { account: AccountViewModel }) {
 
   return (
     <div className="jr-page">
-      <div className="jr-head">
-        <p className="jr-sub">
-          <strong>{account.name}</strong> · times in {zoneLabel(account.timezone)} · trading days start at {account.tradingDayResetTime}
-        </p>
-        <div className="jr-head-actions">{view !== "library" && <>{importButton}{addButton}</>}</div>
-      </div>
-      <Tabs label="Journal views" value={view} onValueChange={setView}
+      {/* P0-D15: the views come first, directly under the page title; the account they show sits in a summary below.
+          The header's selector stays the only way to change the account. */}
+      <Tabs label="Journal views" value={view} onValueChange={setView} className="jr-tabs"
         items={[{ value: "day", label: "By day" }, { value: "log", label: "Trade log", count: trades.data?.length }, { value: "library", label: "Library" }]}>
+        <div className="jr-context">
+          <AccountSummary account={account} />
+          {view !== "library" && <div className="jr-head-actions">{importButton}{addButton}</div>}
+        </div>
         <TabPanel value="day" heading="By day">
           {trades.data?.length === 0 && (dailyReviews.data?.reviews.length ?? 0) > 0 ? (
             // No trades yet, but reviewed days (no-trade days, or trades not imported yet) still list here.
@@ -83,6 +84,24 @@ function AccountJournal({ account }: { account: AccountViewModel }) {
       </Tabs>
       <TradeFormDialog account={account} open={adding} onOpenChange={setAdding} onSaved={t => navigate(tradePath(t.id))} />
     </div>
+  );
+}
+
+/** The viewed account as a compact, labelled summary (existing account fields only; no figures). */
+function AccountSummary({ account }: { account: AccountViewModel }) {
+  const details = [account.propFirm, ACCOUNT_TYPE_LABELS[account.accountType], account.currency].filter(Boolean).join(" · ");
+  return (
+    <section className="ds-card jr-account" aria-label="Viewing account">
+      <div className="jr-account-id">
+        <span className="ds-label">Viewing</span>
+        <p className="jr-account-name">{account.name}</p>
+        <p className="jr-account-meta">{details}<AccountStatus account={account} /></p>
+      </div>
+      <dl className="jr-account-facts">
+        <div><dt>Time zone</dt><dd>{zoneLabel(account.timezone)}</dd></div>
+        <div><dt>Trading day starts</dt><dd className="ds-mono">{account.tradingDayResetTime}</dd></div>
+      </dl>
+    </section>
   );
 }
 

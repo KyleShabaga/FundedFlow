@@ -70,8 +70,8 @@ function useSidebar() {
 }
 
 /**
- * Collapse/expand control. AppFrame anchors it on the sidebar's right edge, level with the logo, outside the
- * sidebar's scroll area so it is never clipped and stays reachable in both widths.
+ * Collapse/expand control (P0-D08). AppFrame places it inside the sidebar header: beside the logo when expanded,
+ * under the mark in the icon rail. It sits outside the sidebar's scroll area, so it stays visible in both widths.
  */
 export function SidebarToggle({ collapsed, narrow, toggle }: { collapsed: boolean; narrow: boolean; toggle: () => void }) {
   const label = narrow ? "Sidebar collapsed for narrow window" : collapsed ? "Expand sidebar" : "Collapse sidebar";
