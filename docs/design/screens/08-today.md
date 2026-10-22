@@ -23,6 +23,16 @@ default route; there is no separate Home.
    clearly realized-only section; `EquityCurve` of closed trades with the drawdown floor only when the engine
    supplies it; recent days (`DayCard`).
 
+## Responsive layout (P0-D29)
+Today fills the shared content frame ([window-support.md](../window-support.md)); nothing is reordered.
+- From 1280 px of main column, freshness (5 of 12 columns) sits beside the panel after it in reading order: Active
+  accounts, or, with one active attempt, the account summary with the risk estimate under it. CSS placement only:
+  nothing is reordered or remounted. Below that everything stacks.
+- The freshness list shows two columns of label/value rows when each gets 420 px, so values stay near their labels.
+- Active accounts: 1 to 4 columns by the section's own width (from 560, 880 and 1200 px); cards stay about
+  270–560 px wide.
+- Freshness disclosure and a Cards/List view are separate cards; this layout leaves room for both.
+
 ## States (all distinct)
 No account, needs setup, unknown rulebook, no trades, import processing, partially supported rule, stale input,
 discrepancy with the firm dashboard, calculation error, mixed multi-account state, valid zero headroom.

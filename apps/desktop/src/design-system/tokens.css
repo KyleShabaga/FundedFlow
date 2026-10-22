@@ -137,6 +137,9 @@
   --space-4: 16px;
   --space-6: 24px;
   --space-8: 32px;
+  /* Content frame (P0-D29, docs/design/window-support.md): the widest a page's content grows before it stops and
+     centres in the main column. Gutters are spacing tokens, chosen in design-system.css by the column's width. */
+  --frame-max: 1600px;
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;

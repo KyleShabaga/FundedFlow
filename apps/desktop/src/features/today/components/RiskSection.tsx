@@ -41,7 +41,7 @@ export function RiskSection({ account, today, current }: {
   const recorded = truth.kind === "current" || truth.kind === "stale" || truth.kind === "check-failed" ? truth : null;
   const snapshot = today.snapshot.data ?? null;
   return (
-    <section className="ds-card td-panel" aria-labelledby="td-risk-title">
+    <section className="ds-card td-panel td-risk" aria-labelledby="td-risk-title">
       <div className="td-panel-head">
         <h2 id="td-risk-title" className="ds-title">Risk estimate</h2>
         <div className="td-actions">

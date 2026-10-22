@@ -177,8 +177,10 @@ status…, Mark failed…, Start new attempt…, Archive…, Delete permanently�
 25 deletion dialog ([15](15-settings-data-controls.md)).
 
 ### Keyboard and narrow windows
-Tabs, menu and dialogs are the design-system components. Below 1100 px the figures are 2×2 and the rail moves under
-the main column; at 720 px "Import history" moves into the ⋯ menu and tables scroll inside their cards.
+Tabs, menu and dialogs are the design-system components. Below 880 px of main column (P0-D29,
+[window-support.md](../window-support.md); was 900 px of window) the rail moves under the main column; the figures fold
+by their own width. Mockup proposal, not built: in a narrow window "Import history" moves into the ⋯ menu and tables
+scroll inside their cards (compact patterns: Build 26.85).
 
 ### Changes proposed for the built screen (UI only)
 Header breadcrumb; figures row and Rules and risk card (reusing the overview-card view model); recent trades and

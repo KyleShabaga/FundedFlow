@@ -39,6 +39,8 @@ specification). When a spec and a card disagree, the card wins; fix the spec in 
 | [15 Settings: your data](screens/15-settings-data-controls.md) | 25 Data-control screens (backend 24) | P0 | Export, restore, permanent deletion; mockups `mockups/p0/` 3A–3E |
 | [16 First run](screens/16-first-run.md) | NA-3 First-run privacy notice and agreement (Final Push P0-12) | P0 | Draft documents until counsel signs off; Settings → Privacy & legal |
 
+Window sizes, the content frame and the breakpoint set: [window-support.md](window-support.md) (P0-D29, Build 26.85).
+
 Shared patterns ([components.md](components.md)) belong to **Build 13**; their visual specification to **Build 7**.
 
 ### Not on the board yet (proposed as Triage cards)

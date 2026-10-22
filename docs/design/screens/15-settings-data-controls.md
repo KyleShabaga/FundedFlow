@@ -110,7 +110,9 @@ command is added.
 ### Keyboard and narrow windows
 - Section links are in-page anchors; the current section carries `aria-current`. Dialogs trap focus; Escape closes
   except while running.
-- Below 900 px the section list becomes a horizontally scrolling row above the content.
+- Mockup proposal (section list as a scrolling row in narrow windows); any breakpoint follows
+  [window-support.md](../window-support.md) (P0-D29). Settings content is capped at 960 px and starts on the content
+  frame's left edge.
 
 ### Changes proposed for the built screen (UI only)
 1. Settings section navigation and the reserved "App" group.

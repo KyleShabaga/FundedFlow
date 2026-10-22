@@ -3,7 +3,7 @@ import { lazy, type RefObject, Suspense, useCallback, useEffect, useLayoutEffect
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { RuntimeRecoveryNotice } from "../components/RuntimeGate";
-import { AppFrame, BrandLogo, Button, DropdownMenu, Tooltip, useWindowFileDropGuard } from "../design-system";
+import { AppFrame, BrandLogo, Button, ContentFrame, DropdownMenu, Tooltip, useWindowFileDropGuard } from "../design-system";
 import { AccountSwitcher } from "../features/accounts/components/AccountSwitcher";
 import "./shell.css";
 
@@ -204,20 +204,23 @@ export function PageHeader({ title }: { title: string }) {
   }, [pathname]);
   return (
     <header className="shell-header">
-      <div className="shell-header-context">
-        <h1 ref={heading} tabIndex={-1}>{title}</h1>
-        {/* Account selector (Build 15). It reads accounts through the feature hooks only. */}
-        <div className="shell-account-context"><AccountSwitcher /></div>
-      </div>
-      <div className="shell-import">
-        {/* Quick import (Build 18.5) or the full wizard (Build 18); each shows its own runtime and account states. */}
-        <DropdownMenu label="Import" trigger={
-          <Button variant="ghost" aria-current={pathname === "/import" || pathname === "/import/quick" ? "page" : undefined}>Import</Button>
-        } items={[
-          { label: "Quick import: check and import a CSV in one step", icon: <Zap size={16} aria-hidden="true" />, onSelect: () => navigate("/import/quick") },
-          { label: "Full wizard: first-time or custom files", icon: <Workflow size={16} aria-hidden="true" />, onSelect: () => navigate("/import") },
-        ]} />
-      </div>
+      {/* Same frame as the page body (P0-D29), so Import ends where the content ends. */}
+      <ContentFrame className="shell-header-frame">
+        <div className="shell-header-context">
+          <h1 ref={heading} tabIndex={-1}>{title}</h1>
+          {/* Account selector (Build 15). It reads accounts through the feature hooks only. */}
+          <div className="shell-account-context"><AccountSwitcher /></div>
+        </div>
+        <div className="shell-import">
+          {/* Quick import (Build 18.5) or the full wizard (Build 18); each shows its own runtime and account states. */}
+          <DropdownMenu label="Import" trigger={
+            <Button variant="ghost" aria-current={pathname === "/import" || pathname === "/import/quick" ? "page" : undefined}>Import</Button>
+          } items={[
+            { label: "Quick import: check and import a CSV in one step", icon: <Zap size={16} aria-hidden="true" />, onSelect: () => navigate("/import/quick") },
+            { label: "Full wizard: first-time or custom files", icon: <Workflow size={16} aria-hidden="true" />, onSelect: () => navigate("/import") },
+          ]} />
+        </div>
+      </ContentFrame>
     </header>
   );
 }
@@ -247,8 +250,10 @@ export function AppShell() {
       <AppFrame collapsed={sidebar.collapsed} sidebar={<SidebarNav collapsed={sidebar.collapsed} />} sidebarEdge={<SidebarToggle {...sidebar} />}
         header={<PageHeader title={title} />}>
         <main id="main-content" tabIndex={-1} className="shell-content">
-          <RuntimeRecoveryNotice />
-          <Outlet />
+          <ContentFrame>
+            <RuntimeRecoveryNotice />
+            <Outlet />
+          </ContentFrame>
         </main>
       </AppFrame>
     </>

@@ -47,6 +47,9 @@ panel and Design system gallery stay reachable from Settings › Developer in de
   ([`docs/development/dev-tools.md`](../../development/dev-tools.md)).
 
 ## Header
+- Header contents and the page body sit on the same **content frame** (P0-D29, `ContentFrame`): centred in the
+  main column beside the sidebar, up to 1600 px of content, gutters from spacing tokens. The header's divider spans the
+  column. Policy and breakpoints: [window-support.md](../window-support.md).
 - Left: page title; reserved space for the **AccountContextBar** (account selector and filters; behaviour owned
   by feature cards and Build 14).
 - Account selector sits `space-3` below the title (P0-D03).

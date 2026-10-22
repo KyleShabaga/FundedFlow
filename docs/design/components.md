@@ -64,6 +64,7 @@ behaviour. Build 12, Triage and P2 patterns remain with their cards.
 
 ### Header (Build 12)
 Page title, reserved AccountContextBar (account selector, filters), text-only **Import** menu. Wraps when narrow.
+The header's contents and the page body share one `ContentFrame` (P0-D29; [window-support.md](window-support.md)).
 Search, feedback, notifications, theme switching, DayTimer and SessionClock are **not** Build 12: see the table
 in [screens/01-app-shell.md](screens/01-app-shell.md#not-in-build-12-do-not-build-here).
 

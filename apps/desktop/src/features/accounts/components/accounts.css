@@ -3,7 +3,7 @@
  * page head with subtitle and actions, KPI row, DataTable or AccountCard grid, footnote.
  * Every value comes from tokens.css; components come from the design system.
  */
-.acct-page { display: grid; gap: var(--space-4); max-width: 1600px; min-width: 0; grid-template-columns: minmax(0, 1fr); font-family: var(--font-sans); color: var(--ink); }
+.acct-page { display: grid; gap: var(--space-4); min-width: 0; grid-template-columns: minmax(0, 1fr); font-family: var(--font-sans); color: var(--ink); }
 .acct-page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; }
 .acct-sub { margin: 0; color: var(--ink-muted); max-width: 70ch; }
 .acct-head-actions { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
@@ -93,6 +93,7 @@
 .acct-check { color: var(--flow); }
 .acct-check.is-hidden { visibility: hidden; }
 
-@media (max-width: 900px) {
+/* Two-column page grids stack below 880 px of main column (docs/design/window-support.md). */
+@container ds-main (max-width: 879px) {
   .acct-detail-grid { grid-template-columns: minmax(0, 1fr); }
 }

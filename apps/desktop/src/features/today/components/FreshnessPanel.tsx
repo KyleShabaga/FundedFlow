@@ -90,7 +90,7 @@ export function FreshnessPanel({ account, today, imports, importing, checkedAt }
   ];
 
   return (
-    <section className="ds-card td-panel" aria-labelledby="td-fresh-title">
+    <section className="ds-card td-panel td-fresh" aria-labelledby="td-fresh-title">
       <div className="td-panel-head">
         <h2 id="td-fresh-title" className="ds-title">How fresh this is</h2>
         <span className="ds-faint">Checked against your records at {formatInstant(checkedAt, { timeZone: tz, zoneName: true })}</span>
