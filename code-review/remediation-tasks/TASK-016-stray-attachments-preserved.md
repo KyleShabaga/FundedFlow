@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval |
+| Status | Proposed (r3; awaiting independent review) |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -16,8 +16,8 @@
 | Effort / risk | M / High |
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Inspected source revision | b01e2b9 (application source identical to 92e7980) |
+| Specification revision | r3 (2026-10-22; r2 + Block 4 corrections from 10 §8.2/§8.3) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -33,7 +33,7 @@ Crash or power loss shortly after adding a screenshot.
 `src-tauri/src/data_controls/restore.rs:212-255` (`managed_files`/`validate_managed`/`copy_managed`), `deletion.rs:211-213`; `src-tauri/src/store/attachments.rs:200-291` produces strays.
 
 ## Expected change scope
-`restore.rs` (`validate_managed`, `copy_managed`, `prepare`), `deletion.rs` (`preview`, `Cleanup` marker — new fields `#[serde(default)]` so old markers parse), `data_controls/mod.rs` (`Code` enum: new distinct code), `packages/domain/src/contracts/data-controls.ts` (new code + `DeletionPreview` extras field), `apps/desktop/src/features/data-controls/api/data-controls.ts` (message); `packages/domain/test/fixtures/data-controls-wire.json` regeneration is **mandatory** (DeletionPreview changes) and its diff is reviewed in the PR; tests.
+`restore.rs` (`validate_managed`, `copy_managed`, `prepare`), `deletion.rs` (`preview`; `recover_cleanup` re-derives extras for a completed whole-journal erase — the `Cleanup` marker struct, `deletion.rs:49-56`, is **not** changed: no new field, see the 015/016 declaration), `data_controls/mod.rs` (`Code` enum: new distinct code), `packages/domain/src/contracts/data-controls.ts` (new code + one new `DeletionPreview` extras field, proposed `extraFiles`: storage keys of unowned managed extras), `apps/desktop/src/features/data-controls/api/data-controls.ts` (message); `packages/domain/test/fixtures/data-controls-wire.json` regeneration is **mandatory** (DeletionPreview changes) and its diff is reviewed in the PR; tests. This card does not change `DeletionPreview.warnings` or `RestorePreview.warnings`; TASK-017 carries missing ids in those existing `warnings` and adds no field.
 
 ## Out of scope
 Startup sweep of orphans (optional later); attachment write ordering change.
@@ -41,22 +41,23 @@ Startup sweep of orphans (optional later); attachment write ordering change.
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 2. Classify unreferenced files under `attachments/`: names matching `screenshots/<uuid>.<ext>` or the temp name `screenshots/.<uuid>.part` (`store/attachments.rs:205`) are 'unowned managed extras'; anything else stays UnsafePath.
-3. Restore prepare: copy extras into the safety copy (`safety-attachments/`) so no bytes are lost; do not install them into the restored journal.
-4. Whole-journal erase preview: list extras in the preview and remove them on confirm (bytes are being erased anyway).
+3. Restore prepare: copy extras into the safety copy (`safety-attachments/`) so no bytes are lost; do not install them into the restored journal. Rollback restores only the files listed in `safety-inventory.json`: `rollback` (`restore.rs:345-349`) → `replace_attachments` (`restore.rs:273-281`, which removes `attachments/` at `:276-278`) → `copy_inventory` (`restore.rs:178-202`, listed files only). So after rollback the extras are **not** reinstated into `attachments/`; they survive in the operation folder `data-controls/<op>/safety-attachments/`.
+4. Whole-journal erase preview: list extras in the new extras field and remove them on confirm (bytes are being erased anyway). Do not record extras in the `Cleanup` marker: after the commit, `recover_cleanup` (`deletion.rs:321-386`), when completing a whole-journal marker whose `operationId` equals `app_meta` `data_controls.erase_operation`, removes unreferenced files under `attachments/` that match the step 2 managed-extra names (the owned-row check still applies), so a pending cleanup retries them without a marker field.
 5. Add a distinct error code/message for genuinely ambiguous ownership; replace the 'shared history' wording.
-6. Tests: plant `attachments/screenshots/<uuid>.png` and `.<uuid>.part`; restore prepare succeeds with the extra preserved in the safety copy; erase preview lists it.
+6. Tests: plant `attachments/screenshots/<uuid>.png` and `.<uuid>.part`; restore prepare succeeds with the extra preserved in the safety copy; erase preview lists it; after a rollback (installing phase) the extra is absent from `attachments/` and present in `data-controls/<op>/safety-attachments/`; an interrupted whole-journal cleanup removes the extra on retry.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-015.
+- Prerequisites: TASK-015; Kyle confirms the 015/016 downgrade declaration (runbook 10 §9, row "Downgrade with a pending cleanup").
 - Likely shared-file conflicts: `restore.rs`/`deletion.rs` with TASK-014/015/017; `mod.rs` Code enum with TASK-017.
 
 ## Acceptance criteria (pass/fail)
 - [ ] New tests pass and fail before the change.
 - [ ] `data_controls/tests.rs:198, 450, 520, 748` and `store/journal_review_tests.rs:493` pass.
 - [ ] Root `npm test` passes (TS mapping) and full Rust checks → exit 0.
-- [ ] After restore commit and after rollback, the extra exists in `safety-attachments/` and is not reinstated into `attachments/`.
-- [ ] `packages/domain/test/fixtures/data-controls-wire.json` diff limited to the new preview field/code.
-- [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` unset for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
+- [ ] After restore commit and after rollback, the extra exists in `data-controls/<op>/safety-attachments/` and is not reinstated into `attachments/` (rollback test required).
+- [ ] Downgrade compatibility test: a whole-journal marker written when extras exist deserializes with a test-only copy of the 92e7980 `Cleanup` struct (`deny_unknown_fields`, `deletion.rs:50`) and contains no extras.
+- [ ] `packages/domain/test/fixtures/data-controls-wire.json` diff limited to the new preview field/code (`warnings` entries unchanged).
+- [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
 ## Verification plan
 Contract change: if the TS error-code union changes, run `npm run typecheck` and the data-controls wire tests.
@@ -71,10 +72,19 @@ Standard checks (run serially, frontend build before Rust):
 - `apps/desktop/src-tauri`: `cargo clippy --offline --locked --all-targets -- -D warnings` → exit 0
 
 ## Safety, rollback and side effects
-Use only disposable test journals and temporary directories created by tests. Never open, migrate, copy, seed or reset the real `%APPDATA%\com.fundedflow.desktop` journal. Do not edit shipped migrations, `test_csvimport/Performance.csv` or `src-tauri/src/db/fixtures/*.db`. Extras are preserved in the safety copy before anything is replaced.
+Use only disposable test journals and temporary directories created by tests. Never open, migrate, copy, seed or reset the real `%APPDATA%\com.fundedflow.desktop` journal. Do not edit shipped migrations, `test_csvimport/Performance.csv` or `src-tauri/src/db/fixtures/*.db`. Extras are preserved in the safety copy before anything is replaced, and remain in the operation folder after rollback.
+
+**015/016 declaration (downgrade with a pending cleanup): supported, by keeping the old marker schema.** TASK-015 and TASK-016 add no field to the `Cleanup` marker (`deletion.rs:49-56`, `deny_unknown_fields` at `deletion.rs:50`) and no key to the `recovery_copies` allow-list (`deletion.rs:361-365`); the temporary marker file is created in the data root and only the finished marker is renamed into `data-controls-cleanup/`. `data-controls-quarantine/` (TASK-015) and unowned managed extras (TASK-016) are never written into a marker: the new build removes them itself when it completes a whole-journal marker whose `operationId` equals `app_meta` `data_controls.erase_operation`. A build with the 92e7980 marker code therefore parses and completes every marker a new build writes, and ignores `data-controls-quarantine/` (its only data-root scan, `deletion.rs:110-118`, matches `fundedflow.db.before-v*.bak` only). Known limit: if such an older build completes a whole-journal cleanup, `data-controls-quarantine/` and any managed extras stay on disk (no bytes lost, startup not blocked; the older build's restore/erase may refuse the extras as strays, as it does today) until a later whole-journal erase by a new build. Kyle confirms this choice (runbook 10 §9, row "Downgrade with a pending cleanup"); TASK-031 tests downgrade against it.
 
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
+## Changes in r3
+- 10 §8.2 TASK-016 (G8): `Cleanup` has `deny_unknown_fields` (`deletion.rs:50`); chose to keep extras out of the marker (no new field; `recover_cleanup` re-derives them for a completed whole-journal erase) instead of declaring downgrade unsupported; added the 015/016 declaration (identical in TASK-015), Kyle's confirmation as a prerequisite, and a compatibility test. TASK-031 references it as "the 015/016 declaration".
+- 10 §8.2 TASK-016 (G12): stated that rollback restores only inventory files, so extras survive in `data-controls/<op>/safety-attachments/` and are not reinstated; added a rollback test. §8.2 cites `restore.rs:262-270`, which is inside `replace_database` (WAL/SHM removal); the rollback path is `restore.rs:345-349` → `replace_attachments` `:273-281` → `copy_inventory` `:178-202`.
+- 10 §8.2 TASK-017 / G12 consistency: this card adds one extras field and leaves `warnings` unchanged; TASK-017 uses `warnings` with no new field.
+- 10 §8.3 fixture rule: `FUNDEDFLOW_UPDATE_FIXTURES` must be unset (not `0`).
+
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
+Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: extras kept out of the `Cleanup` marker and 015/016 downgrade declaration (G8); rollback semantics of extras stated and tested, citation corrected to `restore.rs:345-349`/`273-281` (G12); `warnings` left to TASK-017; fixture rule "unset (not `0`)".
