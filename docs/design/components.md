@@ -32,6 +32,7 @@ Build 13 added the patterns below; props and usage are in [`../design-system.md`
 | `StateBoundary` and the async-state set | Every data view |
 | `DataTable`, `MiniMeter` | Accounts, Journal trade log, Import review, Insights |
 | `MetricCard`, `LabeledValue`, `StatList` | Today, Insights, selected-day panel, Trade detail |
+| `MetricCard` `info` (an `InfoTip` after the label) | Insights headline metrics: how each is worked out, in place of a basis footer (P0-D14) |
 | `Stepper`, `FileDropzone` | Import |
 | `MonthYearPicker` | Insights calendar |
 | `RuleStateBadge`, `RulebookLine` | Accounts, Today rules |

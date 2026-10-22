@@ -345,3 +345,53 @@ describe("Insights", () => {
     expect(screen.queryByText("$0.00")).toBeNull();
   });
 });
+
+describe("Insights metric info (P0-D14)", () => {
+  const card = async (label: string) => (await screen.findByText(label, { selector: ".ds-label" })).closest(".ds-metric") as HTMLElement;
+  const info = async (user: ReturnType<typeof userEvent.setup>, label: string) => {
+    await user.click(within(await card(label)).getByRole("button", { name: `About ${label}` }));
+    return screen.findByRole("dialog", { name: `About ${label}` });
+  };
+
+  it("puts each headline explanation behind an info button and drops the empty footers", async () => {
+    const user = userEvent.setup();
+    renderAt("/insights");
+    for (const label of ["Net P&L", "Win rate", "Expectancy", "Profit factor", "Average R"]) {
+      expect(within(await card(label)).getByRole("button", { name: `About ${label}` })).toBeTruthy();
+    }
+    for (const label of ["Win rate", "Expectancy", "Profit factor", "Average R"]) expect((await card(label)).querySelector(".ds-metric-foot")).toBeNull();
+
+    expect((await info(user, "Win rate")).textContent).toBe("About Win rateWins ÷ trades with a known result (break-evens count), as in the Journal");
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(within(await card("Win rate")).getByRole("button", { name: "About Win rate" }));
+
+    expect((await info(user, "Expectancy")).textContent).toContain("Net P&L ÷ trades with a known result · needs 5");
+    await user.keyboard("{Escape}");
+    expect((await info(user, "Profit factor")).textContent).toContain("Net P&L · needs 5 trades and a loss");
+    await user.keyboard("{Escape}");
+    expect((await info(user, "Average R")).textContent).toContain("Net P&L ÷ the review's planned risk (1R), only where recorded");
+    await user.keyboard("{Escape}");
+    // The reason for N/A stays on the card, not only in the popup.
+    expect(within(await card("Average R")).getByText("No trade here has a planned risk in its review")).toBeTruthy();
+  });
+
+  it("keeps partial coverage visible on the Net P&L card and repeats it in the info", async () => {
+    const user = userEvent.setup();
+    renderAt("/insights");
+    const net = await card("Net P&L");
+    expect(within(net.querySelector(".ds-metric-foot") as HTMLElement).getByText("3 of 4 closed trades with a known P&L")).toBeTruthy();
+    expect((await info(user, "Net P&L")).textContent).toContain("3 of 4 closed trades with a known P&L");
+  });
+
+  it("drops the Net P&L footer when every trade has a known P&L, keeping the count in the info", async () => {
+    const user = userEvent.setup();
+    renderAt(`/insights?accounts=${A2}`);
+    const net = await card("Net P&L");
+    await waitFor(() => expect(within(net).getByText("+$350.00")).toBeTruthy());
+    expect(net.querySelector(".ds-metric-foot")).toBeNull();
+    expect((await info(user, "Net P&L")).textContent).toContain("2 trades, all with a known P&L");
+    await user.click(within(screen.getByRole("group", { name: "P&L basis" })).getByRole("button", { name: "Gross P&L" }));
+    expect((await info(user, "Expectancy")).textContent).toContain("Gross P&L ÷ trades with a known result");
+  });
+});

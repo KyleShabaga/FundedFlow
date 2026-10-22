@@ -6,8 +6,8 @@
 import * as RadixDialog from "@radix-ui/react-dialog";
 import * as RadixMenu from "@radix-ui/react-dropdown-menu";
 import * as RadixTooltip from "@radix-ui/react-tooltip";
-import { X } from "lucide-react";
-import { type ReactElement, type ReactNode, useRef, useState } from "react";
+import { Info, X } from "lucide-react";
+import { type ReactElement, type ReactNode, useEffect, useId, useRef, useState } from "react";
 
 import { cx } from "./cx";
 import { Button } from "./primitives";
@@ -390,5 +390,93 @@ export function Tooltip({ content, children, side = "top", delayMs = 400 }: Tool
         </RadixTooltip.Portal>
       </RadixTooltip.Root>
     </RadixTooltip.Provider>
+  );
+}
+
+/* ---------- InfoTip ---------- */
+
+export interface InfoTipProps {
+  /** Accessible name of the button and the popup ("About Net P&L"). */
+  label: string;
+  /** The explanation. Plain text or short paragraphs; never the only place for an unavailable-state reason. */
+  children: ReactNode;
+  /** Largest width in px; shorter text gives a narrower popup, and it shrinks to the window. Default 280. */
+  width?: number;
+}
+
+const HOVER_OPEN_MS = 120;
+const HOVER_CLOSE_MS = 200;
+
+/**
+ * A small "i" button that explains the thing it sits beside. Hover and keyboard focus show the explanation; a click
+ * or tap pins it open until Escape, a click outside or another click on the button. The pointer can move into the
+ * popup. Focus stays on the button, so closing never loses it. It opens toward the side of the window with more
+ * room. Built on the same non-modal Radix Dialog as Popover, without a portal, so it scrolls with its card.
+ */
+export function InfoTip({ label, children, width = 280 }: InfoTipProps) {
+  const [open, setOpen] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const [align, setAlign] = useState<"start" | "end">("start");
+  const trigger = useRef<HTMLButtonElement>(null);
+  const timer = useRef<number | undefined>(undefined);
+  const contentId = useId();
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const show = (pin: boolean) => {
+    window.clearTimeout(timer.current);
+    const box = trigger.current?.getBoundingClientRect();
+    if (box) setAlign(box.left + width > window.innerWidth - 8 && box.right > width ? "end" : "start");
+    setOpen(true);
+    if (pin) setPinned(true);
+  };
+  const close = () => {
+    window.clearTimeout(timer.current);
+    setOpen(false);
+    setPinned(false);
+  };
+  const later = (fn: () => void, ms: number) => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(fn, ms);
+  };
+  return (
+    <RadixDialog.Root modal={false} open={open} onOpenChange={(next) => (next ? show(true) : close())}>
+      <span
+        className="ds-popover-anchor ds-infotip"
+        onPointerEnter={(e) => {
+          if (e.pointerType !== "mouse") return;
+          // Back over the button or into the popup (across the gap between them): cancel a pending close.
+          if (open) window.clearTimeout(timer.current);
+          else later(() => show(false), HOVER_OPEN_MS);
+        }}
+        onPointerLeave={(e) => e.pointerType === "mouse" && !pinned && later(close, HOVER_CLOSE_MS)}
+      >
+        <button
+          ref={trigger}
+          type="button"
+          className="ds-infotip-btn"
+          aria-label={label}
+          aria-expanded={open}
+          aria-controls={open ? contentId : undefined}
+          onClick={() => (open && pinned ? close() : show(true))}
+          onFocus={(e) => e.currentTarget.matches(":focus-visible") && show(false)}
+          onBlur={() => !pinned && close()}
+        >
+          <Info aria-hidden="true" />
+        </button>
+        <RadixDialog.Content
+          id={contentId}
+          aria-label={label}
+          aria-describedby={undefined}
+          className={cx("ds-pop", "ds-popover", `ds-popover-${align}`, "ds-infotip-pop")}
+          style={{ maxWidth: `min(${width}px, calc(100vw - 32px))` }}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => trigger.current?.contains(e.target as Node) && e.preventDefault()}
+          onFocusOutside={(e) => e.preventDefault()}
+        >
+          <RadixDialog.Title className="ds-sr-only">{label}</RadixDialog.Title>
+          {children}
+        </RadixDialog.Content>
+      </span>
+    </RadixDialog.Root>
   );
 }

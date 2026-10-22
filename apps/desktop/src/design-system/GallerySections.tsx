@@ -38,6 +38,7 @@ import {
   InlineNotice,
   LabeledValue,
   LoadingState,
+  InfoTip,
   MetricCard,
   MiniMeter,
   MoneyCell,
@@ -237,6 +238,29 @@ export function OverlaysSection() {
         <Tooltip content="Resets at 17:00 New York time">
           <Button variant="ghost">Hover or focus me</Button>
         </Tooltip>
+      </div>
+    </Section>
+  );
+}
+
+/* ---------- Metric info (P0-D14) ---------- */
+
+export function MetricInfoSection() {
+  return (
+    <Section title="Metric info" note="MetricCard's info slot: an InfoTip after the label in place of a basis footer. Hover or keyboard focus shows it; a click or tap pins it until Escape, a click outside or another click. Reasons the value needs stay visible.">
+      <div className="dsg-grid-4">
+        <MetricCard label="Win rate" value={{ kind: "text", text: "52.5%" }} sub="31 W · 28 L · 0 BE"
+          info={<p>Wins ÷ trades with a known result (break-evens count). Example text.</p>} />
+        <MetricCard label="Average R" value={{ kind: "unavailable", reason: "No trade here has a planned risk in its review" }}
+          info={<p>Net P&amp;L ÷ the review&apos;s planned risk (1R), only where recorded. Example text.</p>} />
+        <MetricCard label="Net P&L" value={{ kind: "money", amount: "537.9" }} sub="After $206.60 in fees" basis="52 of 59 closed trades with a known P&L"
+          info={<><p>52 of 59 closed trades with a known P&amp;L.</p><p>The partial-data line also stays visible under the card. Example text.</p></>} />
+        <MetricCard label="Profit factor" value={{ kind: "text", text: "1.5" }} sub="Winning ÷ losing net P&L"
+          info={<p>Net P&amp;L · needs 5 trades and a loss. A long explanation wraps inside the popup, which stays within the window and opens toward the side with more room. Example text.</p>} />
+      </div>
+      <div className="dsg-row">
+        <span className="ds-label">Standalone</span>
+        <InfoTip label="About trading days">Trading days run Monday to Friday; weekend activity counts toward Monday.</InfoTip>
       </div>
     </Section>
   );
