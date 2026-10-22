@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r3) |
+| Status | Proposed (r4; awaiting independent review) |
 | Type | Verification |
 | Audit priority | Gate |
 | Roadmap lane | NA-5 |
@@ -17,7 +17,7 @@
 | Verification platform | Windows only |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | b01e2b9 (application source identical to 92e7980) |
-| Specification revision | r3 (2026-10-22; r2 + Block 4 corrections from 10 §8.2/§8.3) |
+| Specification revision | r4 (2026-10-22; r3 + currency update for approved decisions) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -38,7 +38,7 @@ VM procedure with a synthetic journal; results only.
 ## Out of scope
 Real journal.
 
-**Older EXE (r3, G6).** The previous build is the recorded 0.1.0 artifact: `fundedflow-0.1.0-7679edc-windows-nsis`, installer `FundedFlow_0.1.0_x64-setup.exe`, source SHA `7679edc1ac117944ae31d81b6c6a29142b61a0fe`, SHA-256 `041983f565c7f6b41dba2388c2f21bc8c4c7402c94e442ed0f75d00938e0787f`, release run 39691474111 — recorded in `docs/build-26.75-evidence.md:105-111`. The artifact expires 2026-11-20 (line 109): download it before then, check `Get-FileHash` against the recorded SHA-256, and keep the copy for this gate. If it has expired with no kept copy, the older build must be rebuilt from a named older SHA (approval required) and its source SHA and EXE SHA-256 recorded in the execution log before use; the gate is Blocked until then. The candidate must carry a higher version than 0.1.0 (TASK-005/TASK-027) so NSIS treats step 2 as an upgrade. No migration was added between `7679edc` and `92e7980` (no change under `src-tauri/migrations` or the schema), so the downgrade in step 4 is expected to open normally unless a remediation task adds one. `src-tauri/src/data_controls/` is also identical between `7679edc` and `92e7980`, so the cleanup-marker schema this EXE reads is the one the TASK-015/016 declaration is tested against.
+**Older EXE (r3, G6).** The previous build is the recorded 0.1.0 artifact: `fundedflow-0.1.0-7679edc-windows-nsis`, installer `FundedFlow_0.1.0_x64-setup.exe`, source SHA `7679edc1ac117944ae31d81b6c6a29142b61a0fe`, SHA-256 `041983f565c7f6b41dba2388c2f21bc8c4c7402c94e442ed0f75d00938e0787f`, release run 39691474111 — recorded in `docs/build-26.75-evidence.md:105-111`. The artifact expires 2026-11-20 (line 109): download it before then, check `Get-FileHash` against the recorded SHA-256, and keep the copy for this gate. If it has expired with no kept copy, the older build must be rebuilt from a named older SHA (approval required) and its source SHA and EXE SHA-256 recorded in the execution log before use; the gate is Blocked until then. **Newer EXE.** The candidate recorded by TASK-029 carries version `0.1.1` or later (TASK-005 Option A: `0.1.1`, then `0.1.2`…, set by TASK-027), so it is higher than the `0.1.0` artifact and NSIS treats step 2 as an upgrade and step 4 as a downgrade. Record both versions with the step results. If a later candidate replaces this one, it carries a new, higher version and this gate is re-run on it; the older EXE stays the `0.1.0` artifact. No migration was added between `7679edc` and `92e7980` (no change under `src-tauri/migrations` or the schema), so the downgrade in step 4 is expected to open normally unless a remediation task adds one. `src-tauri/src/data_controls/` is also identical between `7679edc` and `92e7980`, so the cleanup-marker schema this EXE reads is the one the TASK-015/016 declaration is tested against.
 
 ## Implementation approach
 1. Install the older EXE named above (verify its SHA-256 first), create synthetic data and screenshots, export an archive outside %APPDATA%.
@@ -51,12 +51,13 @@ Real journal.
 **Pass rule (r3, G9).** The gate is **Passed** if and only if: (a) the synthetic data (account, trades, screenshots) is intact after the upgrade (step 2) and after the same-version reinstall (step 3); (b) an unticked uninstall keeps `%APPDATA%\com.fundedflow.desktop`; and (c) a ticked uninstall removes exactly the list documented by TASK-026 (no listed folder left, nothing unlisted removed apart from the program folder, shortcuts and uninstall entry that every uninstall removes; the exported archive outside `%APPDATA%` remains). Any of (a)–(c) false gives **Failed**; any not run gives **Not Run** or **Blocked**. The downgrade (steps 4 and 4a) is recorded and does not decide Passed, with one exception: if step 4a is run and any of its expected results (i)–(iii) is false, the gate is **Failed**, because the TASK-015/016 declaration is then wrong. Step 4a recorded as Not Run (with reason) does not block the gate. Kyle may make step 4a mandatory when confirming the declaration (runbook 10 §9).
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-029; TASK-027 unique versions; the older EXE above available with its recorded SHA and SHA-256; TASK-015/016 downgrade declaration recorded (Kyle confirms it, runbook 10 §9 row "Downgrade with a pending cleanup").
+- Prerequisites: TASK-029 (candidate version `0.1.1` or later, TASK-005 = A); TASK-027 unique versions; the older EXE above available with its recorded SHA and SHA-256; TASK-015/016 downgrade declaration recorded (Kyle confirms it, runbook 10 §9 row "Downgrade with a pending cleanup").
 - Likely shared-file conflicts: None.
 
 ## Acceptance criteria (pass/fail)
 - [ ] Each step recorded with SHA/EXE hash/environment; uninstall result compared to TASK-026 text.
 - [ ] The older EXE is recorded by name, source SHA and SHA-256, and its `Get-FileHash` matches the recorded value.
+- [ ] The record shows the older version `0.1.0` and the candidate version (`0.1.1` or later, equal to TASK-029's record).
 - [ ] Gate state set by the pass rule above.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
@@ -77,6 +78,10 @@ Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE
 - Expect the legal re-prompt after the upgrade (10 §8.3 TASK-030/031 nit; G9).
 - No V-023 claim on this card; V-023 is owned by TASK-028 (10 §8.1 §D; G2).
 - Fixture rule: `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`) (10 §8.3 fixture nit).
+
+## Changes in r4
+- Versions: the candidate is stated as `0.1.1` or later per TASK-005 Option A (approved r2), against the `0.1.0` artifact as the older build; replaced the open "higher version than 0.1.0 (TASK-005/TASK-027)" wording; a replacement candidate gets a new, higher version and this gate is re-run (TASK-005 A: each candidate a new increasing version).
+- Prerequisites and acceptance: candidate version `0.1.1` or later; record both versions (same reason).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.

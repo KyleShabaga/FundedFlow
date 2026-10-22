@@ -1,12 +1,12 @@
-# TASK-034 — Gate (conditional): real-journal-copy upgrade with a safe procedure
+# TASK-034 — Gate: real-journal-copy upgrade with a safe procedure
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r3) |
+| Status | Proposed (r4; awaiting independent review) |
 | Type | Test |
-| Audit priority | Gate (if kept) / P2 test safety |
+| Audit priority | Gate (kept, TASK-008 = A) / P2 test safety |
 | Roadmap lane | Build 10.5 gate |
-| Mandatory gate | Yes if TASK-008 keeps it — ISSUE-052 |
+| Mandatory gate | Yes — ISSUE-052 (kept by TASK-008 = A) |
 | Severity | Medium |
 | Confidence | Medium |
 | Canonical issue | ISSUE-052, ISSUE-038 (see `code-review/remediation-findings-ledger.md`) |
@@ -17,7 +17,7 @@
 | Verification platform | Any OS (test) + Windows (owner run) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | b01e2b9 (application source identical to 92e7980) |
-| Specification revision | r3 (2026-10-22; r2 + Block 4 corrections from 10 §8.2/§8.3) |
+| Specification revision | r4 (2026-10-22; r3 + currency update for approved decisions) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -42,14 +42,14 @@ Running against the live `%APPDATA%` path while the app is open.
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 
 Code change (W3c, merged before TASK-029):
-2. Implement the safety changes (only if TASK-008 keeps the gate): redact output to counts only; refuse a held lock; rewrite the `upgrade_tests.rs:428` doc comment to point `FUNDEDFLOW_UPGRADE_DB` at the copied `fundedflow.db`, never the live `%APPDATA%` path.
+2. Implement the safety changes: redact output to counts only; refuse a held lock; rewrite the `upgrade_tests.rs:428` doc comment to point `FUNDEDFLOW_UPGRADE_DB` at the copied `fundedflow.db`, never the live `%APPDATA%` path.
 
 Owner run (W5, after TASK-029 is recorded):
 3. Kyle makes a folder copy of the journal (with -wal/-shm) with the app closed — the test never touches the live path or takes its lock.
 4. Set `FUNDEDFLOW_UPGRADE_DB` to the copied `fundedflow.db` (read at `upgrade_tests.rs:432`), never the live `%APPDATA%` path, then run in `apps/desktop/src-tauri`: `cargo test --offline --locked --lib upgrade_copy -- --ignored` against the copy; add `--nocapture` only after redaction is verified. Record both the source SHA and the copy's SHA-256.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites (code change, W3c): TASK-008 decided with the gate kept. Must merge before TASK-029 builds the candidate (09 G7); independent of W1 and W2.
+- Prerequisites (code change, W3c): none beyond approval (TASK-008 r3 approved Option A: gate kept). Must merge before TASK-029 builds the candidate (09 G7); independent of W1 and W2.
 - Prerequisites (owner run, W5): the code change merged; TASK-029 recorded (the run uses the candidate SHA).
 - Likely shared-file conflicts: None.
 
@@ -88,6 +88,9 @@ Tests merged after review; they fail against a deliberately broken variant or th
 - r3 review fix: the identical live-path command in `docs/data-model.md:572` is corrected with the doc comment (independent r3 review).
 - Source re-check at b01e2b9: test span corrected from `upgrade_tests.rs:426-457` to `426-459`.
 - 10 §8.3 fixture rule: fixture line says `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`).
+
+## Changes in r4
+- Gate is unconditional: title, Audit priority, Mandatory gate, step 2 and the code-change prerequisite no longer say "conditional" / "if kept" / "only if TASK-008 keeps the gate", because TASK-008 r3 was approved with Option A (keep the real-journal-copy upgrade gate). The W3c code / W5 owner-run split is unchanged.
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.

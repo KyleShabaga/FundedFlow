@@ -17,7 +17,7 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Specification revision | r3 (2026-10-22; r2 + currency update for approved decisions) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -36,7 +36,7 @@ Live-side token derived from a capped, fully materialised dump.
 `src-tauri/src/data_controls/restore.rs` (`content_hash`, `counts`), `src-tauri/src/data_controls/deletion.rs` (`preview`), possibly a streaming hash helper in `archive.rs`; tests. Also replace `archive::dump(&simulation)` at `deletion.rs:175` and the per-account counts at `deletion.rs:190-205`.
 
 ## Out of scope
-Export-side caps (archive format, owner decision).
+Export-side caps and archive format: TASK-009 decision (5) keeps archive v1 strict, and any format change is a separate versioned change.
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
@@ -46,7 +46,7 @@ Export-side caps (archive format, owner decision).
 5. Tests: erase preview and restore inspect succeed on a journal over the dump cap; token changes when any row (incl. rowid-only change) changes.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-013.
+- Prerequisites: TASK-013; TASK-010 result (priority).
 - Likely shared-file conflicts: `restore.rs`/`deletion.rs` with TASK-015/016/017.
 
 ## Acceptance criteria (pass/fail)
@@ -54,7 +54,7 @@ Export-side caps (archive format, owner decision).
 - [ ] Stale-token tests still pass (`data_controls/tests.rs` stale-preview cases).
 - [ ] Full Rust and root checks → exit 0.
 - [ ] `replacedEntities` and `packages/domain/test/fixtures/data-controls-wire.json` are byte-identical to before (fixture test passes without regeneration).
-- [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` unset for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
+- [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check (the wire test rewrites the fixture whenever the variable is set, to any value: `src-tauri/src/data_controls/wire_tests.rs:90`); never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
 ## Verification plan
 Existing stale-preview and erase tests in `data_controls/tests.rs`; `current_schema_tests.rs`.
@@ -73,6 +73,11 @@ Use only disposable test journals and temporary directories created by tests. Ne
 
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
+
+## Changes in r3
+- Audit priority: "P1" → "P1 (P0 if TASK-010 escalates)", and TASK-010 result (priority) added to prerequisites: the approved TASK-010 decision says that if 64 MiB is reachable within 12 months ISSUE-002 escalates to P0 and the TASK-013/014 priorities are updated (TASK-013 already carried this; TASK-014 did not).
+- Out of scope: replaced "archive format, owner decision" with the approved TASK-009 decision (5): archive v1 stays strict; a format change is a separate versioned change.
+- Fixture rule: "unset" → "unset (not `0`)" per 10 §8.3 ("Fixture rule on all cards"), because `wire_tests.rs:90` rewrites the fixture whenever the variable is set; this card's byte-identical fixture criterion depends on it.
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.

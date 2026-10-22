@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval |
+| Status | Proposed (r3; awaiting independent review) |
 | Type | Fix |
 | Audit priority | Gate work (mandatory) |
 | Roadmap lane | P0-13 / NA-3 (V1, open) |
@@ -17,7 +17,7 @@
 | Verification platform | Any OS (+ packaged check in TASK-030) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Specification revision | r3 (2026-10-22; r2 + currency update for approved decisions) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -47,7 +47,7 @@ Counsel review/external-user agreements (V2); third-party notices regeneration.
 6. Update first-run journey expectations and the spec; apply the `PRIVACY_SUMMARY` text agreed in TASK-026.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-001 (0BSD), TASK-006 (wording basis), TASK-026 (wording), v1.1 text supplied by Kyle; owner decision whether the `user-agreement` id stays.
+- Prerequisites: TASK-001 decided — Option A, approved 2026-10-22 on the Notion approval board (keep 0BSD; no dependency change or notice regeneration, so nothing here is blocked by it); TASK-006 decided — Option A, approved 2026-10-22 on the Notion approval board (wording basis: the installer needs internet only when WebView2 is missing, the installed app works offline); TASK-026 (wording); v1.1 text supplied by Kyle (open); owner decision whether the `user-agreement` id stays (open).
 - Likely shared-file conflicts: `legal/index.ts` with TASK-026 wording.
 
 ## Acceptance criteria (pass/fail)
@@ -74,6 +74,11 @@ No journal data touched; `legal-acceptance.json` format unchanged.
 
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
+
+## Changes in r3
+- TASK-001 approved as Option A (keep 0BSD; no notice regeneration): prerequisite now records the decision and that no follow-up blocks this card (TASK-001's Option B follow-up branch no longer applies); consistent with "third-party notices regeneration" being out of scope.
+- TASK-006 approved as Option A (keep `downloadBootstrapper`): prerequisite now states the decided wording basis for `PRIVACY_SUMMARY`, matching TASK-026 r3 step 2.
+- The two remaining prerequisites (Kyle's v1.1 texts; the `user-agreement` id decision) are marked open; they are not decided here.
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
