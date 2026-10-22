@@ -76,3 +76,21 @@
 .in-cal-filters[hidden] { display: none; }
 /* In flow, so date pickers and select menus have room; the bar's own title is replaced by the button. */
 .in-cal-filters .in-filters { margin: 0; }
+
+/* ---------- P0-D17: calendar proportions and a full-height day panel (Calendar session) ---------- */
+/* A narrower month next to a slightly wider panel, and the two cards share one row height while side by side. */
+.in-cal { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); align-items: stretch; }
+/* The month keeps its rows at their own height when the panel is the taller card. */
+.in-cal .ds-cal { align-content: start; }
+/* Day cells follow their width (5:4) between a readable floor and a cap, so 4- and 5-row months keep their text. */
+.in-cal .ds-cal-day { aspect-ratio: 5 / 4; min-height: 76px; max-height: 128px; height: auto; padding: var(--space-2); }
+.in-cal .ds-cal-week { min-height: 76px; padding: var(--space-2); }
+.in-cal .ds-cal-pnl { font-size: 14px; }
+/* The panel fills the card: date and statistics at the top, links in one action area at the bottom. */
+.in-cal-side { display: flex; flex-direction: column; }
+.in-cal-side > .in-period { flex: 1 1 auto; display: flex; flex-direction: column; gap: var(--space-3); }
+/* The average's value with its "i" after it, aligned like the other values. */
+.in-avg { display: inline-flex; align-items: flex-start; gap: 4px; }
+.in-period-actions { display: grid; gap: var(--space-2); justify-items: start; margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--line-100); }
+/* Stacked below 880 px of main column (P0-D29): restated here, after the wider columns above. */
+@container ds-main (max-width: 879px) { .in-cal { grid-template-columns: minmax(0, 1fr); align-items: start; } }

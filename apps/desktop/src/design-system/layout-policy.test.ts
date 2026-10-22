@@ -80,10 +80,49 @@ describe("Today", () => {
 
   it("lays the active accounts out in 1 to 4 columns by the section's own width", () => {
     expect(rule(css, ".td-overview")).toContain("container: td-overview / inline-size");
-    expect(rule(css, ".td-cards")).toContain("grid-template-columns: minmax(0, 1fr)");
-    expect(css).toContain("@container td-overview (min-width: 560px) { .td-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }");
-    expect(css).toContain("@container td-overview (min-width: 880px) { .td-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }");
-    expect(css).toContain("@container td-overview (min-width: 1200px) { .td-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }");
+    expect(rule(css, ".td-cards")).toContain("grid-template-columns: repeat(12, minmax(0, 1fr))");
+    expect(rule(css, ".td-cards > li")).toContain("grid-column: span 12");
+    expect(css).toContain("@container td-overview (min-width: 560px) { .td-cards > li { grid-column: span 6; } }");
+    expect(css).toContain("@container td-overview (min-width: 880px) { .td-cards > li { grid-column: span 4; } }");
+    expect(css).toContain("@container td-overview (min-width: 1130px) {\n  .td-cards > li { grid-column: span 3; }");
+  });
+
+  it("never leaves one card alone on the last row with 3 or 4 across (P0-D31)", () => {
+    // 3 across: 3n + 1 cards end two by two (4 → 2 + 2, 7 → 3 + 2 + 2).
+    expect(css).toContain("@container td-overview (min-width: 880px) and (max-width: 1129px) {\n"
+      + "  .td-cards:has(> li:nth-child(4)):has(> li:nth-child(3n + 1):last-child) > li:nth-last-child(-n + 4) { grid-column: span 6; }");
+    // 4 across: 4n + 1 cards end three then two (5 → 3 + 2, 9 → 4 + 3 + 2).
+    expect(css).toContain(".td-cards:has(> li:nth-child(5)):has(> li:nth-child(4n + 1):last-child) > li:nth-last-child(-n + 5) { grid-column: span 4; }");
+
+    // The same rules as arithmetic: per section width and count, the cards per row and their widths.
+    const GAP = 12;
+    const spans = (width: number, n: number): number[] => {
+      const base = width >= 1130 ? 3 : width >= 880 ? 4 : width >= 560 ? 6 : 12;
+      return Array.from({ length: n }, (_, i) => {
+        const fromEnd = n - i;
+        if (base === 4 && n >= 4 && n % 3 === 1 && fromEnd <= 4) return 6;
+        if (base === 3 && n >= 5 && n % 4 === 1 && fromEnd <= 5) return 4;
+        return base;
+      });
+    };
+    const cardWidth = (width: number, span: number) => (width - 11 * GAP) / 12 * span + (span - 1) * GAP;
+    // Section widths measured in the preview at 1280, 1920 and 3440 px windows (stacked at 1280; beside freshness at
+    // the others), the 1280 px window with the sidebar collapsed, and both ends of the 3- and 4-across ranges.
+    for (const width of [953, 968, 923, 927, 1144, 880, 1129, 1130, 1600]) {
+      for (let n = 1; n <= 8; n++) {
+        const s = spans(width, n);
+        // Cards per row, filling 12 tracks in order as the grid does.
+        const counts: number[] = [];
+        let used = 12;
+        for (const span of s) { if (used + span > 12) { counts.push(1); used = span; } else { counts[counts.length - 1]++; used += span; } }
+        if (n > 1) expect(counts.includes(1), `${width} px, ${n} cards: ${counts.join(" + ")}`).toBe(false);
+        for (const span of s) {
+          const w = cardWidth(width, span);
+          expect(w, `${width} px, ${n} cards, span ${span}`).toBeGreaterThanOrEqual(270);
+          expect(w, `${width} px, ${n} cards, span ${span}`).toBeLessThanOrEqual(560);
+        }
+      }
+    }
   });
 
   it("lays List rows out as four aligned groups from 880 px of the section's own width, wrapping below that (P0-D23)", () => {
