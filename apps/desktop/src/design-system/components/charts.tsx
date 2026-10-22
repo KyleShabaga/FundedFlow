@@ -77,11 +77,12 @@ export interface EquityCurveProps {
 
 export function EquityCurve({ points, floor, target, height = 200, step = true, floorLabel = "Max DD", targetLabel = "Target", label }: EquityCurveProps) {
   const W = 640;
-  const padR = 64;
   const padY = 12;
   const pts = points.map(moneyToNumberForDisplay).map((x) => x ?? 0);
   const floorArr = floor == null ? null : (Array.isArray(floor) ? floor : pts.map(() => floor)).map((x) => moneyToNumberForDisplay(x) ?? 0);
   const tgt = target == null ? null : moneyToNumberForDisplay(target);
+  // The right gutter holds the floor and target labels; without them the line runs to the edge.
+  const padR = floorArr || tgt != null ? 64 : 0;
   if (pts.length === 0) return null;
   const all = [...pts, ...(floorArr ?? []), ...(tgt == null ? [] : [tgt])];
   let lo = Math.min(...all);

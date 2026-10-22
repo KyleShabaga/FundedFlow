@@ -4,7 +4,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AccountCard, AccountOverviewCard, AppFrame, BrandLogo, ContentFrame, OverviewFigure, BrandMark, meterFraction, Pnl, PnlBars, PnlCalendar, ProgressMeter, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
+import { AccountCard, AccountOverviewCard, AppFrame, BrandLogo, ContentFrame, EquityCurve, OverviewFigure, BrandMark, meterFraction, Pnl, PnlBars, PnlCalendar, ProgressMeter, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
 import { monthWeeks } from "./components/journal";
 import { expectNoAxeViolations } from "../test/axe";
 
@@ -148,6 +148,25 @@ describe("PnlCalendar", () => {
     rerender(<PnlCalendar year={2026} month={10} days={days} display="trades" onSelectDay={() => {}} title={<span>Custom title</span>} />);
     expect(screen.getByText("Custom title")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Mon Oct 5/ }).querySelector(".ds-cal-pnl")?.textContent).toBe("3");
+  });
+});
+
+describe("EquityCurve", () => {
+  const lineEnd = (container: HTMLElement) => {
+    const d = container.querySelector(".ds-eq-line")?.getAttribute("d") ?? "";
+    return Number(/H([\d.]+)V[\d.-]+$/.exec(d)?.[1]);
+  };
+
+  it("runs the line to the right edge when there is no floor or target label (P0-D30)", () => {
+    const { container } = render(<EquityCurve points={["0", "10", "-5", "20"]} label="Curve" />);
+    expect(lineEnd(container)).toBe(640);
+    expect(container.querySelector<HTMLElement>(".ds-eq-dot")?.style.left).toBe("100%");
+  });
+
+  it("keeps the label gutter on the right when a floor or target is drawn", () => {
+    const { container } = render(<EquityCurve points={["0", "10", "-5", "20"]} floor="-50" target="100" label="Curve" />);
+    expect(lineEnd(container)).toBe(576);
+    expect(container.querySelector(".ds-eq-lbl-loss")).not.toBeNull();
   });
 });
 
