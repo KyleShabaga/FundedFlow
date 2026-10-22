@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval |
+| Status | Proposed (r3; awaiting independent review) |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -16,8 +16,8 @@
 | Effort / risk | M / Medium |
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Inspected source revision | b01e2b9 (application source identical to 92e7980) |
+| Specification revision | r3 (2026-10-22; r2 + Block 4 corrections from 10 §8.2/§8.3) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -53,9 +53,12 @@ New Rust command/DTO; batched overview (ISSUE-014, V1.1); freshness adapter rout
 
 ## Acceptance criteria (pass/fail)
 - [ ] New tests pass; fail before.
+- [ ] Reset dialog default at the boundary (fake clock, America/New_York, reset 17:00): at 2026-10-23T22:30Z (Friday after reset) the default `effectiveFrom` is the Rust trading day 2026-10-26, not 2026-10-23; just before the reset it is 2026-10-23.
+- [ ] Freshness unavailable (`list_account_freshness` errors or has no entry for the account): 'in use', the badge and the reset default show the 'unknown' state; a test asserts no `zonedDay` fallback value is rendered.
+- [ ] AssignDialog offers no Saturday or Sunday effective date: a fake-clock test on a Saturday asserts the default and every offered date is Monday to Friday.
 - [ ] Repository root: `npm run test -w @fundedflow/desktop -- src/features/rulebooks src/features/accounts` → exit 0.
 - [ ] Full root checks → exit 0.
-- [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` unset for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
+- [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
 ## Verification plan
 Existing `rulebooks.test.tsx:443`.
@@ -75,5 +78,10 @@ UI-only; no data writes beyond existing commands.
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
+## Changes in r3
+- 10 §8.2 TASK-021 (G10): added acceptance tests for the reset-dialog default at the reset boundary (step 4), the 'unknown' state when freshness is unavailable (step 6) and no weekend dates in AssignDialog (step 7).
+- 10 §8.3 fixture rule: fixture line says `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`).
+
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
+Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: tests for reset-dialog boundary default, unknown state without freshness, no weekend dates in AssignDialog (G10); fixture rule unset (not 0).
