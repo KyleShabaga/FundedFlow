@@ -2,9 +2,9 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval |
+| Status | Proposed (r3; awaiting independent review) |
 | Type | Fix |
-| Audit priority | P1 |
+| Audit priority | P1 (P0 if TASK-010 escalates) |
 | Roadmap lane | Unassigned (owner) |
 | Mandatory gate | No |
 | Severity | Medium |

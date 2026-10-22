@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r3) |
+| Status | Proposed (r4; awaiting independent review) |
 | Type | Documentation |
 | Audit priority | Gate work |
 | Roadmap lane | NA-2 / NA-5 / NA-7 |
@@ -17,7 +17,7 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | b01e2b9 (application source identical to 92e7980) |
-| Specification revision | r3 (2026-10-22; r2 + Block 4 corrections from 10 §8.2/§8.3) |
+| Specification revision | r4 (2026-10-22; r3 + currency update for approved decisions) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -35,7 +35,7 @@ Running the smoke on a current artifact.
 Stale checklist.
 
 ## Expected change scope
-Target file (r3): `docs/build-26.75-evidence.md` only — the "Clean-machine smoke checklist" section (lines 117-145: header table 121-128, steps 130-143, evidence line 145) and the NA-7 draft "Install and verify (for the NA-7 release notes)" (lines 147-166). Lines 145-166 belong to this card, not TASK-026 (TASK-026 is limited to lines 51-70). Record fields for SHA, EXE SHA-256, Windows build, WebView2 version, tester, date.
+Target file (r3): `docs/build-26.75-evidence.md` only — the "Clean-machine smoke checklist" section (lines 117-145: header table 121-128, steps 130-143, evidence line 145) and the NA-7 draft "Install and verify (for the NA-7 release notes)" (lines 147-166). Lines 145-166 belong to this card, not TASK-026 (TASK-026 is limited to lines 51-71). Record fields for SHA, EXE SHA-256, Windows build, WebView2 version, tester, date.
 
 ## Out of scope
 Running the gates (TASK-030..033).
@@ -52,20 +52,20 @@ Running the gates (TASK-030..033).
 | B4 | Ticked uninstall after an export: export an archive to a folder outside `%APPDATA%` and `%LOCALAPPDATA%`, then uninstall with "Delete the application data" ticked. (Part of V-023.) | Removes exactly the folders listed by TASK-026 (`%APPDATA%\com.fundedflow.desktop` and `%LOCALAPPDATA%\com.fundedflow.desktop`) plus the program folder, shortcuts and uninstall entry; the exported archive remains. | `dir` of `%LOCALAPPDATA%\FundedFlow`, `%APPDATA%\com.fundedflow.desktop`, `%LOCALAPPDATA%\com.fundedflow.desktop` before and after; `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall` entry before/after; archive path still present; any leftover listed exactly. | Yes |
 | B5 | Second instance: with the app open, launch it again from the Start menu. | Known limitation (V1.1, ISSUE-031/WIN-012): the second window may show a failure screen; the first instance keeps working and the journal opens normally on the next launch. Any data loss is a Fail. | Screenshots of both windows; message text; first instance still saves; next-launch result. | Yes |
 | B6 | Windows scaling 125%, 150% and 200% (first-run agreement, Today, Settings). | Every primary action reachable, nothing clipped that blocks a task; the full matrix is TASK-033. | Scaling, physical resolution, screenshots per scaling. | Yes |
-| B7 | Install without WebView2, online and offline (V-023): on a Windows image whose Installed apps lists no "Microsoft Edge WebView2 Runtime", run the installer (a) with the network on, (b) on a fresh copy of the image with the network off. | Per the TASK-006 decision, as documented by TASK-026. Option A (`downloadBootstrapper`, `tauri.conf.json:49-52` today): (a) the installer downloads the runtime from Microsoft and the app launches; (b) the runtime cannot be fetched — pass if the installer stops with a message or the app reports that WebView2 is missing, no journal is created or changed, and the behaviour matches the NA-7 "needs internet when WebView2 is missing" sentence; record the exact message. Options B/C: both (a) and (b) install and launch without network. | Windows edition and build; proof that WebView2 was absent before (Installed apps screenshot); network state; installer screens/messages; WebView2 version after install (or "absent"); first-launch result. | Yes |
+| B7 | Install without WebView2, online and offline (V-023): on a Windows image whose Installed apps lists no "Microsoft Edge WebView2 Runtime", run the installer (a) with the network on, (b) on a fresh copy of the image with the network off. | TASK-006 decided Option A (keep `downloadBootstrapper`, `src-tauri/tauri.conf.json:49-52`), as documented by TASK-026: (a) the installer downloads the runtime from Microsoft and the app launches; (b) the runtime cannot be fetched — pass if the installer stops with a message or the app reports that WebView2 is missing, no journal is created or changed, and the behaviour matches the NA-7 "needs internet when WebView2 is missing" sentence; record the exact message. | Windows edition and build; proof that WebView2 was absent before (Installed apps screenshot); network state; installer screens/messages; WebView2 version after install (or "absent"); first-launch result. | Yes |
 
-3. Refresh the NA-7 draft (lines 147-166) so it is consistent with TASK-026 (uninstall list, WebView2/network wording per TASK-006) and with the corrected step 4 (first-run agreement).
+3. Refresh the NA-7 draft (lines 147-166) so it is consistent with TASK-026 (uninstall list; WebView2/network wording per TASK-006 Option A: an internet connection is needed during install when WebView2 is missing) and with the corrected step 4 (first-run agreement).
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-025, TASK-026, TASK-011 (results recorded: (a) sets the B3 expected result, (b) the B1/B2 expected results).
-- Likely shared-file conflicts: Same doc as TASK-026 (TASK-026 owns lines 51-70; this card owns 117-166).
+- Likely shared-file conflicts: Same doc as TASK-026 (TASK-026 owns lines 51-71; this card owns 117-166).
 
 ## Acceptance criteria (pass/fail)
 - [ ] Checklist reviewed against current app behaviour and source; every step has an expected result and evidence fields.
 - [ ] Each added step B1–B7 is in `docs/build-26.75-evidence.md` with its expected result, its evidence fields and a "Mandatory: Yes/No" marker as in the table above.
 - [ ] Export to junction/OneDrive targets has expected result 'known limitation (V1.1)' unless TASK-011(b) shows it works.
 - [ ] V-023 is covered: B4 (ticked uninstall) and B7 (install without WebView2, online and offline) are present and marked mandatory.
-- [ ] NA-7 draft (lines 147-166): the WebView2/network sentence matches the TASK-006 decision and the TASK-026 wording; the "Uninstalling" sentence matches the TASK-026 removal list; it is still labelled a draft (final text is TASK-035); every statement cites a checked source line at the merge SHA.
+- [ ] NA-7 draft (lines 147-166): the WebView2/network sentence states the TASK-006 Option A behaviour (the installer downloads WebView2 from Microsoft when it is missing, so that install needs internet) and matches the TASK-026 wording; the "Uninstalling" sentence matches the TASK-026 removal list; it is still labelled a draft (final text is TASK-035); every statement cites a checked source line at the merge SHA.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
 ## Verification plan
@@ -86,6 +86,11 @@ Documents updated; every factual statement checked against the cited source (fil
 - V-023 ownership made explicit: this card owns it; TASK-030 executes it; TASK-030/031/033 do not claim it (10 §8.1 §D; G2).
 - Source-card citation corrected from `:111-166` to `:117-166` (lines 111-116 are the CI-evidence table, not the checklist).
 - Fixture rule: `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`) (10 §8.3 fixture nit).
+
+## Changes in r4
+- Step B7 expected result: states only the Option A (`downloadBootstrapper`) expectation; the "Options B/C" branch is removed, because TASK-006 r2 was approved with Option A (decisions 2026-10-22). Config re-checked at `src-tauri/tauri.conf.json:49-52` (`downloadBootstrapper`, `silent: true`).
+- Step 3 and the NA-7 acceptance criterion: "per the TASK-006 decision" replaced with the decided Option A wording (WebView2 downloaded when missing; install then needs internet) (TASK-006 = A).
+- TASK-026 line range corrected from 51-70 to 51-71 (scope and conflicts lines), to match TASK-026 r3, which owns `docs/build-26.75-evidence.md:51-71`.
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r3) |
+| Status | Proposed (r4; awaiting independent review) |
 | Type | Fix |
 | Audit priority | P1 (P0 if TASK-010 escalates) |
 | Roadmap lane | Unassigned (owner) |
@@ -17,7 +17,7 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | b01e2b9 (application source identical to 92e7980) |
-| Specification revision | r3 (2026-10-22; r2 + Block 4 corrections from 10 §8.2/§8.3) |
+| Specification revision | r4 (2026-10-22; r3 + currency update for approved decisions) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -36,7 +36,7 @@ Large or never-vacuumed journal (growth from frozen calculation inputs).
 `src-tauri/src/data_controls/archive.rs` (`dump` size check, error detail); export and restore-prepare snapshot copies: `archive::snapshot` (`archive.rs:174-200`, used by export at `archive.rs:231` and restore prepare at `restore.rs:126`) copies free pages through the backup API, so it **must** run `VACUUM` on the temporary snapshot (the `target` connection, after the backup step and before the file-size check at `archive.rs:196-198`) — never on the live journal. Contract change (named): add an optional `detail` field to the Rust `ControlError` (`src-tauri/src/data_controls/mod.rs:40-43`, today `{code, message}`) as `detail: Option<String>` with `#[serde(skip_serializing_if = "Option::is_none")]`, so errors without detail serialize exactly as today; add `detail: z.string().optional()` to `dataControlErrorSchema` in `packages/domain/src/contracts/data-controls.ts:20-23`; `DataControlProblem` (`apps/desktop/src/features/data-controls/api/data-controls.ts:56-61`, constructed in `native()` at `:67-74`, today only `CODE_COPY[code]`) must carry `detail` and render it; update `packages/domain/test/fixtures/data-controls-wire.json` deliberately in the same PR with the diff reviewed and limited to `detail` (this card authorises that one fixture). Tests in `src-tauri/src/data_controls/tests.rs` and the TS data-controls tests (`apps/desktop/src/features/data-controls/data-controls.test.tsx`).
 
 ## Out of scope
-Raising archive caps or changing archive format (owner decision TASK-009 D-ARCH); stream hashing (TASK-014); frozen-input redesign (depends on TASK-003, V1.1).
+Raising archive caps or changing archive format: TASK-009 decision (5) keeps archive v1 strict, and any format change is a separate versioned change; stream hashing (TASK-014); frozen-input redesign (ISSUE-002c): TASK-003 Option A requires a separate review before frozen trade copies are redesigned, and if TASK-010 escalates ISSUE-002 to P0 it proposes that redesign as a separate task.
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
@@ -84,6 +84,10 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - 10 §8.2 TASK-013 (G10): added the criterion that `npm run test -w @fundedflow/desktop -- src/features/data-controls` asserts the detail text and that the wire fixture diff is limited to `detail`.
 - 10 §8.2 TASK-013 (G3): specified `#[serde(skip_serializing_if = "Option::is_none")]` on Rust `detail` and `.optional()` on the Zod schema; `DataControlProblem` must carry `detail` (class at `api/data-controls.ts:56-61`, built in `native()` at `:67-74`).
 - 10 §8.3 fixture rule: `FUNDEDFLOW_UPDATE_FIXTURES` must be unset (not `0`).
+
+## Changes in r4
+- Out of scope: replaced "owner decision TASK-009 D-ARCH" with the approved TASK-009 decision (5): archive v1 stays strict; a format change is a separate versioned change.
+- Out of scope: replaced "frozen-input redesign (depends on TASK-003, V1.1)" with the approved TASK-003 Option A (a separate review before frozen trade copies are redesigned) and the approved TASK-010 escalation path (a separate redesign task if ISSUE-002 becomes P0).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.
