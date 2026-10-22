@@ -119,14 +119,14 @@
 .ds-gauge-legend { display: flex; gap: var(--space-3); font: 500 11px/14px var(--font-mono); color: var(--ink-muted); }
 
 /* EquityCurve */
-.ds-eq svg { display: block; overflow: visible; }
+.ds-eq svg { display: block; overflow: visible; width: calc(100% - var(--ds-eq-gutter, 0px)); }
 .ds-eq-line { fill: none; stroke: var(--chart-1); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .ds-eq-area { fill: var(--flow-soft); }
 .ds-eq-floor { fill: none; stroke: var(--loss); stroke-width: 1.5; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
 .ds-eq-target { stroke: var(--profit); stroke-width: 1.5; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
 .ds-eq-dot { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: var(--chart-1); border: 2px solid var(--bg-100); transform: translate(-50%, -50%); }
 .ds-eq { position: relative; }
-.ds-eq-lbl { position: absolute; right: 0; width: calc(64 / 640 * 100% - 6px); transform: translateY(-50%); font: 600 11px/14px var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ds-eq-lbl { position: absolute; right: 0; width: calc(var(--ds-eq-gutter, 0px) - 6px); transform: translateY(-50%); font: 600 11px/14px var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ds-eq-lbl-loss { color: var(--loss); }
 .ds-eq-lbl-profit { color: var(--profit); }
 
