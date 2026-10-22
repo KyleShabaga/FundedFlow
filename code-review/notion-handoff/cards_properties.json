@@ -454,7 +454,7 @@
  {
   "id": "012",
   "slug": "TASK-012-archive-schema-exact-allowlist.md",
-  "sha256": "810752a613c1823b39cfe4e6b239e2340731d0379b324842defdde21d78e0a9b",
+  "sha256": "1da592311694d6b9d1f18f4f7a30681947cf2c28a553e9ed2a4f6d3a5480ad03",
   "props": {
    "Name": "TASK-012 \u2014 Fix: archive schema validation uses an exact allow-list for sqlite internal objects",
    "Task ID": "TASK-012",
@@ -468,29 +468,29 @@
    "Roadmap Lane": "Unassigned (owner)",
    "Wave": "W1a",
    "Approval": "Pending Review",
-   "Spec Readiness": "Ready for Approval (r2)",
+   "Spec Readiness": "Ready for Approval (r3)",
    "Execution Status": "Not Started",
    "Finding Verification": "Confirmed",
    "Release Blocking": "Yes",
    "Gate State": "N/A",
    "Source Card": "Stage 1 audit 2026-10-22 (02 TR-001; 05 F-05)",
-   "Specification Revision": "r2 \u00b7 sha256 810752a613c1823b",
-   "Evidence Revision": "source 92e7980 (= HEAD b01e2b9 app source); cards 295c89f",
-   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-012 at spec r2 (sha256 810752a613c1), scope exactly as the card; prerequisites must be complete.",
+   "Specification Revision": "r3 \u00b7 sha256 1da592311694d6b9",
+   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD 1012d63); cards 1012d63",
+   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-012 at spec r3 (sha256 1da592311694), scope exactly as the card; prerequisites must be complete.",
    "Effort": "S\u2013M",
    "Risk": "Medium (all restore paths)",
    "Verification Platform": "Any OS",
    "Proposed First Batch": "__YES__",
    "Needs Owner Decision": "__NO__",
-   "Decision Notes": ""
+   "Decision Notes": "Moved from r2 to r3 by Claude at Kyle's request (Block 4 nits, independently reviewed, 2026-10-22). Not an approval."
   },
   "corr": [],
   "nits": [
    "- **TASK-012:** add a test that a previous-version safety copy (installing phase) still rolls back (`restore.rs:318, 346`)."
   ],
   "ready": true,
-  "r3": false,
-  "rev": "r2",
+  "r3": true,
+  "rev": "r3",
   "deps": []
  },
  {
@@ -886,7 +886,7 @@
  {
   "id": "022",
   "slug": "TASK-022-leave-guard-history-navigation.md",
-  "sha256": "2e897d7c37e3c668a9c537963576fbece0afb82cc3d0db91d0a626781f727662",
+  "sha256": "5ae03e628ccb1c5f0df5230462f04aaf21587ba022db7e986b55cf7e0763120d",
   "props": {
    "Name": "TASK-022 \u2014 Fix: unsaved-changes guard covers history navigation and programmatic navigate()",
    "Task ID": "TASK-022",
@@ -900,29 +900,29 @@
    "Roadmap Lane": "Unassigned (owner)",
    "Wave": "W2b",
    "Approval": "Pending Review",
-   "Spec Readiness": "Ready for Approval (r2)",
+   "Spec Readiness": "Ready for Approval (r3)",
    "Execution Status": "Not Started",
    "Finding Verification": "Confirmed",
    "Release Blocking": "Yes",
    "Gate State": "N/A",
    "Source Card": "Stage 1 audit 2026-10-22; specs docs/design/screens/13-rulebook.md:63, 14-daily-review.md:62-63",
-   "Specification Revision": "r2 \u00b7 sha256 2e897d7c37e3c668",
-   "Evidence Revision": "source 92e7980 (= HEAD b01e2b9 app source); cards 295c89f",
-   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-022 at spec r2 (sha256 2e897d7c37e3), scope exactly as the card; prerequisites must be complete. Excludes the unstable_HistoryRouter fallback (separate approval).",
+   "Specification Revision": "r3 \u00b7 sha256 5ae03e628ccb1c5f",
+   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD 1012d63); cards 1012d63",
+   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-022 at spec r3 (sha256 5ae03e628ccb), scope exactly as the card; prerequisites must be complete. Excludes the unstable_HistoryRouter fallback (separate approval).",
    "Effort": "M",
    "Risk": "Medium",
    "Verification Platform": "Any OS",
    "Proposed First Batch": "__YES__",
    "Needs Owner Decision": "__NO__",
-   "Decision Notes": ""
+   "Decision Notes": "Moved from r2 to r3 by Claude at Kyle's request (Block 4 nits, independently reviewed, 2026-10-22). Not an approval."
   },
   "corr": [],
   "nits": [
    "- **TASK-022:** the fallback router migration needs separate approval. Batch 1 already excludes it."
   ],
   "ready": true,
-  "r3": false,
-  "rev": "r2",
+  "r3": true,
+  "rev": "r3",
   "deps": []
  },
  {
@@ -973,7 +973,7 @@
  {
   "id": "024",
   "slug": "TASK-024-uncertain-outcome-wording.md",
-  "sha256": "c5a51a6b2fbbe9b3dd432c7bbfafdf38ce5d777d2cc77d42d2bbf441fba8d505",
+  "sha256": "10fc7814ed914d3204cd4f9dca4e0a6312551e4833694090817a2e3bef936453",
   "props": {
    "Name": "TASK-024 \u2014 Fix: uncertain write outcomes are not reported as definite failures",
    "Task ID": "TASK-024",
@@ -987,29 +987,29 @@
    "Roadmap Lane": "Unassigned (owner); P0-03 rule (merged)",
    "Wave": "W2c",
    "Approval": "Pending Review",
-   "Spec Readiness": "Ready for Approval (r2)",
+   "Spec Readiness": "Ready for Approval (r3)",
    "Execution Status": "Not Started",
    "Finding Verification": "Confirmed",
    "Release Blocking": "Yes",
    "Gate State": "N/A",
    "Source Card": "Stage 1 audit 2026-10-22 (03; 06 \u00a73)",
-   "Specification Revision": "r2 \u00b7 sha256 c5a51a6b2fbbe9b3",
-   "Evidence Revision": "source 92e7980 (= HEAD b01e2b9 app source); cards 295c89f",
-   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-024 at spec r2 (sha256 c5a51a6b2fbb), scope exactly as the card; prerequisites must be complete.",
+   "Specification Revision": "r3 \u00b7 sha256 10fc7814ed914d32",
+   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD 1012d63); cards 1012d63",
+   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-024 at spec r3 (sha256 10fc7814ed91), scope exactly as the card; prerequisites must be complete.",
    "Effort": "S",
    "Risk": "Low",
    "Verification Platform": "Any OS",
    "Proposed First Batch": "__NO__",
    "Needs Owner Decision": "__NO__",
-   "Decision Notes": ""
+   "Decision Notes": "Moved from r2 to r3 by Claude at Kyle's request (Block 4 nits, independently reviewed, 2026-10-22). Not an approval."
   },
   "corr": [],
   "nits": [
    "- **TASK-024:** drop \"with a link to the affected record\", or name it in scope. Batch 2 approval should state which."
   ],
   "ready": true,
-  "r3": false,
-  "rev": "r2",
+  "r3": true,
+  "rev": "r3",
   "deps": [
    "021",
    "022"
@@ -1062,7 +1062,7 @@
  {
   "id": "026",
   "slug": "TASK-026-install-uninstall-webview2-docs.md",
-  "sha256": "b65ac388357561ea8b474e5af0c6134602c89cfa97325aef3bdd6846246a0b82",
+  "sha256": "c9a4e05f8908a826207316cf06a8bbe1f4584a660b39d4e7b8551ea5c571e16b",
   "props": {
    "Name": "TASK-026 \u2014 Documentation: uninstall scope, WebView2/offline wording and workflow facts",
    "Task ID": "TASK-026",
@@ -1076,29 +1076,29 @@
    "Roadmap Lane": "NA-7 / P0-13 (V1)",
    "Wave": "W3a",
    "Approval": "Pending Review",
-   "Spec Readiness": "Ready for Approval (r2)",
+   "Spec Readiness": "Ready for Approval (r3)",
    "Execution Status": "Not Started",
    "Finding Verification": "Mixed",
    "Release Blocking": "Yes",
    "Gate State": "N/A",
    "Source Card": "docs/build-26.75-evidence.md; README.md; Stage 1 2026-10-22",
-   "Specification Revision": "r2 \u00b7 sha256 b65ac388357561ea",
-   "Evidence Revision": "source 92e7980 (= HEAD b01e2b9 app source); cards 295c89f",
-   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-026 at spec r2 (sha256 b65ac3883575), scope exactly as the card; prerequisites must be complete.",
+   "Specification Revision": "r3 \u00b7 sha256 c9a4e05f8908a826",
+   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD 1012d63); cards 1012d63",
+   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-026 at spec r3 (sha256 c9a4e05f8908), scope exactly as the card; prerequisites must be complete.",
    "Effort": "S",
    "Risk": "Low",
    "Verification Platform": "Any OS",
    "Proposed First Batch": "__NO__",
    "Needs Owner Decision": "__NO__",
-   "Decision Notes": ""
+   "Decision Notes": "Moved from r2 to r3 by Claude at Kyle's request (Block 4 nits, independently reviewed, 2026-10-22). Not an approval."
   },
   "corr": [],
   "nits": [
    "- **TASK-026:** limit it to `build-26.75-evidence.md:51-70`; replace \"reviewer verifies\" with a per-statement source-line checklist."
   ],
   "ready": true,
-  "r3": false,
-  "rev": "r2",
+  "r3": true,
+  "rev": "r3",
   "deps": [
    "006"
   ]
@@ -1490,7 +1490,7 @@
  {
   "id": "035",
   "slug": "TASK-035-evidence-register-na7-final.md",
-  "sha256": "580a9a135e2850b724bcd8d1380e17e1db1ebd5d89cb008b7c9a447c8aade855",
+  "sha256": "48ae21d0e38195fbae3cf84863ff9d541740d2ae731afe9ca4f96df9df851f6d",
   "props": {
    "Name": "TASK-035 \u2014 Documentation/gate: final evidence register and NA-7 release notes",
    "Task ID": "TASK-035",
@@ -1504,29 +1504,29 @@
    "Roadmap Lane": "NA-7",
    "Wave": "W6",
    "Approval": "Pending Review",
-   "Spec Readiness": "Ready for Approval (r2)",
+   "Spec Readiness": "Ready for Approval (r3)",
    "Execution Status": "Not Started",
    "Finding Verification": "N/A (gate/decision)",
    "Release Blocking": "Yes",
    "Gate State": "Not Run",
    "Source Card": "Final Push V1 \u2014 https://app.notion.com/p/4001bd4b6bde8044ab04f75d167950cd; docs/build-26.75-evidence.md:145-166",
-   "Specification Revision": "r2 \u00b7 sha256 580a9a135e2850b7",
-   "Evidence Revision": "source 92e7980 (= HEAD b01e2b9 app source); cards 295c89f",
-   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-035 at spec r2 (sha256 580a9a135e28), scope exactly as the card; prerequisites must be complete.",
+   "Specification Revision": "r3 \u00b7 sha256 48ae21d0e38195fb",
+   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD 1012d63); cards 1012d63",
+   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-035 at spec r3 (sha256 48ae21d0e381), scope exactly as the card; prerequisites must be complete.",
    "Effort": "S",
    "Risk": "Low",
    "Verification Platform": "Any OS",
    "Proposed First Batch": "__NO__",
    "Needs Owner Decision": "__NO__",
-   "Decision Notes": ""
+   "Decision Notes": "Moved from r2 to r3 by Claude at Kyle's request (Block 4 nits, independently reviewed, 2026-10-22). Not an approval."
   },
   "corr": [],
   "nits": [
    "- **TASK-033, 035:** add the SHA and EXE hash to acceptance."
   ],
   "ready": true,
-  "r3": false,
-  "rev": "r2",
+  "r3": true,
+  "rev": "r3",
   "deps": [
    "029",
    "030",
