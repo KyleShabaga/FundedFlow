@@ -122,9 +122,12 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
         ]} />
       </FormSection>
 
-      <FormSection headingLevel={2} title="Export" description="Save a copy of your data to a location you choose.">
+      {/* P0-D20: one column in reading order: choose the format, acknowledge the file is unencrypted, then export.
+          Feedback for the export sits directly under its button. */}
+      <FormSection headingLevel={2} title="Export" description="Save a copy of your data to a location you choose." className="dc-export">
         <RadioGroup<api.ExportKind>
           label="What to export"
+          cards
           value={kind}
           onValueChange={next => { setKind(next); setExported(null); }}
           disabled={disabled}
@@ -134,31 +137,37 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
           ]}
         />
         {kind === "csv" && (
-          <Select
-            label="Accounts"
-            value={csvScope}
-            onValueChange={setCsvScope}
+          <div className="dc-export-scope">
+            <Select
+              label="Accounts"
+              value={csvScope}
+              onValueChange={setCsvScope}
+              disabled={disabled}
+              options={[{ value: ALL, label: "All accounts" }, ...list.map(a => ({ value: a.id, label: `${accountLabel(a)}${a.archivedAt ? " (archived)" : ""}` }))]}
+            />
+          </div>
+        )}
+        <div className="dc-privacy">
+          <Checkbox
+            label="I understand this file is not encrypted"
+            description="Keep it somewhere only you can open. FundedFlow never overwrites an existing file."
+            checked={acknowledged}
+            onChange={event => setAcknowledged(event.target.checked)}
             disabled={disabled}
-            options={[{ value: ALL, label: "All accounts" }, ...list.map(a => ({ value: a.id, label: `${accountLabel(a)}${a.archivedAt ? " (archived)" : ""}` }))]}
           />
-        )}
-        <Checkbox
-          label="I understand this file is not encrypted"
-          description="Keep it somewhere only you can open. FundedFlow never overwrites an existing file."
-          checked={acknowledged}
-          onChange={event => setAcknowledged(event.target.checked)}
-          disabled={disabled}
-        />
-        {exportProblem && <InlineNotice tone="error" title="Nothing was exported">{exportProblem}</InlineNotice>}
-        {exported && (
-          <InlineNotice tone="success" title={`Saved ${exported.file}`}>
-            {formatBytes(exported.result.bytes)} · SHA-256 <code className="dc-id">{exported.result.sha256}</code>
-          </InlineNotice>
-        )}
-        <div className="dc-actions">
-          <Button variant="primary" icon={<Download size={16} aria-hidden="true" />} onClick={() => void runExport()} loading={op.busy === "export"} disabled={disabled}>
-            {op.busy === "export" ? "Exporting…" : "Choose location and export…"}
-          </Button>
+        </div>
+        <div className="dc-export-action">
+          <div className="dc-actions">
+            <Button variant="primary" icon={<Download size={16} aria-hidden="true" />} onClick={() => void runExport()} loading={op.busy === "export"} disabled={disabled}>
+              {op.busy === "export" ? "Exporting…" : "Choose location and export…"}
+            </Button>
+          </div>
+          {exportProblem && <InlineNotice tone="error" title="Nothing was exported">{exportProblem}</InlineNotice>}
+          {exported && (
+            <InlineNotice tone="success" title={`Saved ${exported.file}`}>
+              {formatBytes(exported.result.bytes)} · SHA-256 <code className="dc-id">{exported.result.sha256}</code>
+            </InlineNotice>
+          )}
         </div>
       </FormSection>
 

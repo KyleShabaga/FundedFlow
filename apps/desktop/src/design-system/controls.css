@@ -84,6 +84,13 @@
 .ds-fieldset > legend + * { clear: both; }
 .ds-radio-options { display: grid; gap: var(--space-2); }
 .ds-radio-group.is-inline .ds-radio-options { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
+/* Cards (P0-D20): bordered options with room for their descriptions; side by side when each gets 280 px, else stacked.
+   The chosen card is outlined in flow (border and ground, never colour alone: the radio dot shows it too). */
+.ds-radio-group.is-cards .ds-radio-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: var(--space-3); }
+.ds-radio-group.is-cards .ds-check { align-content: start; gap: var(--space-1); padding: var(--space-3) var(--space-4); border: 1px solid var(--line-200); border-radius: var(--radius-md); background: var(--bg-100); }
+.ds-radio-group.is-cards .ds-check:has(.ds-radio-input:checked) { border-color: var(--flow); background: var(--flow-soft); box-shadow: inset 0 0 0 1px var(--flow); }
+.ds-radio-group.is-cards .ds-check-row { display: flex; }
+.ds-radio-group.is-cards .ds-check-label { flex: 1; font-weight: 600; }
 .ds-fieldgroup-body { display: grid; gap: var(--space-3); }
 .ds-fieldgroup-body.is-inline { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: start; }
 

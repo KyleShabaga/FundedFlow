@@ -16,6 +16,9 @@ Review trading day by day, with notes, and browse every trade in one table.
   only; no figures. The header's account selector stays the only control that changes the account.
 - **Import trades** (the full wizard with this account preselected) and **Add trade** sit beside the summary, outside
   it; they stack under it in narrow windows. Library shows no list actions.
+- Import placement (P0-D11, reviewed): the header's **Import** menu is global (Quick import or Full wizard, no account
+  carried); the Journal's **Import trades** is contextual (wizard with the viewed account). Different entry points,
+  not duplicates in one toolbar, so both stay.
 
 ## By day (default)
 - One collapsible card per trading day, newest first; the latest day expanded, others collapsed. "Collapse all".

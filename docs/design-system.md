@@ -109,6 +109,9 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
   the submit handler, so a microtask is too early (Build 26).
 - `RadioGroup` is a `fieldset` with `role="radiogroup"`, the role that allows `aria-required` (Build 26, axe
   `aria-allowed-attr`). Query it as `radiogroup` in tests.
+- `RadioGroup cards` (P0-D20) shows each option as a bordered card with its description, side by side when each gets
+  280 px and stacked otherwise; the chosen card is outlined (border, ground and the radio dot). For a few
+  consequential choices, such as the export format.
 - `Button loading` keeps focus and ignores clicks, so one click is one write. `disabledReason` keeps a disabled
   button focusable and reads the reason.
 - `FileDropzone` only hands `File` objects (or an `onBrowse` request for a native dialog) to the caller. Reading,

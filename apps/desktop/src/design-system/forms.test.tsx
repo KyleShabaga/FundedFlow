@@ -187,6 +187,18 @@ describe("Checkbox, Switch and RadioGroup", () => {
     expect(onValueChange).toHaveBeenLastCalledWith("short");
     expect((screen.getByRole("radio", { name: "Short" }) as HTMLInputElement).checked).toBe(true);
   });
+  it("lays options out as cards with their descriptions linked, keeping native radio behaviour", async () => {
+    const onValueChange = vi.fn();
+    render(<RadioGroup label="What to export" cards defaultValue="archive" onValueChange={onValueChange}
+      options={[{ value: "archive", label: "Full backup", description: "Restorable." }, { value: "csv", label: "Trade CSV", description: "Not a backup." }]} />);
+    const group = screen.getByRole("radiogroup", { name: "What to export" });
+    expect(group.classList.contains("is-cards")).toBe(true);
+    const csv = screen.getByRole("radio", { name: "Trade CSV" });
+    expect(csv.getAttribute("aria-describedby")).toBeTruthy();
+    expect(document.getElementById(csv.getAttribute("aria-describedby")!)?.textContent).toBe("Not a backup.");
+    await userEvent.click(screen.getByText("Trade CSV"));
+    expect(onValueChange).toHaveBeenLastCalledWith("csv");
+  });
 });
 
 describe("ChipGroup", () => {

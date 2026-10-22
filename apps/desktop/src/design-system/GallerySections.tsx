@@ -142,6 +142,10 @@ export function FormsSection() {
           </FieldGroup>
           <Switch label="Follow the OS theme" description="Applies at once." defaultChecked />
           <RadioGroup label="Side" inline value={side} onValueChange={setSide} options={[{ value: "long", label: "Long" }, { value: "short", label: "Short" }]} />
+          <RadioGroup label="What to export (cards)" cards defaultValue="archive" options={[
+            { value: "archive", label: "Full backup (.ffj.zip)", description: "Example: everything in the journal. The file you restore from." },
+            { value: "csv", label: "Trade CSV", description: "Example: trades for a spreadsheet. Not a backup." },
+          ]} />
           <ChipGroup label="Setup" value={setups} onValueChange={setSetups} options={[{ value: "orb", label: "Opening range" }, { value: "vwap", label: "VWAP pullback" }, { value: "old", label: "Retired setup", note: "Archived: kept on past reviews", disabled: true }]} />
           <ChipGroup label="Mistakes" tone="warn" value={mistakes} onValueChange={setMistakes} options={[{ value: "chased", label: "Chased entry" }, { value: "stop", label: "Moved stop" }]} empty="No mistake tags yet." />
           <Select label="Import into" placeholder="Choose an account" options={[{ value: "a", label: "Apex $100K · Example" }, { value: "b", label: "Topstep $50K · Example (archived)", disabled: true }, { value: "c", label: "A very long account name that has to truncate inside the trigger without pushing anything" }]} />

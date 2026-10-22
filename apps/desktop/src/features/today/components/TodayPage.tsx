@@ -49,6 +49,7 @@ export function TodayPage() {
             description="Today estimates each prop-firm account's room left from the trades, checkpoints and rulebook you record. Nothing is shown until there is an account."
             action={<Button variant="primary" icon={<Plus size={16} aria-hidden="true" />} onClick={() => navigate("/accounts")}>Add account</Button>} />
         </div>
+        <TodayFootnote />
       </div>
     );
   }
@@ -69,8 +70,8 @@ export function TodayPage() {
 
   return (
     <div className="td-page">
+      {/* P0-D21: Check again stays at the top, beside the freshness it refreshes; the general note is the page footer. */}
       <div className="td-intro">
-        <p className="td-disclaimer-lead"><strong>{DISCLAIMER}</strong> Today reads only what is saved on this computer; it is not connected to your broker or firm.</p>
         <Button size="sm" variant="ghost" icon={<RefreshCw size={16} aria-hidden="true" />} onClick={recheck}>Check again</Button>
       </div>
       {selected && live.some(a => a.id === selected.id)
@@ -91,7 +92,17 @@ export function TodayPage() {
           </>
         )}
       <HistoryList history={history} archived={archived} />
+      <TodayFootnote />
     </div>
+  );
+}
+
+/** The general estimate note, at the end of the page in normal flow. Metric-specific states stay with their figures. */
+function TodayFootnote() {
+  return (
+    <footer className="td-footnote">
+      <p><strong>{DISCLAIMER}</strong> Today reads only what is saved on this computer; it is not connected to your broker or firm.</p>
+    </footer>
   );
 }
 
