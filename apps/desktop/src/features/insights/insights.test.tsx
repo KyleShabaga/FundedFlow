@@ -348,7 +348,7 @@ describe("Insights closed-trade curve (P0-D13)", () => {
 
     await user.click(within(screen.getByRole("group", { name: "Show the curve as" })).getByRole("button", { name: "Table" }));
     const rows = within(screen.getByRole("table", { name: "Closed-trade net P&L by trade" })).getAllByRole("row").slice(1);
-    expect(rows.map(r => within(r).getAllByRole("cell").at(-1)?.textContent)).toEqual(["+$96.00", "+$42.00", "+$68.00"]);
+    expect(rows.map(r => { const cells = within(r).getAllByRole("cell"); return cells[cells.length - 1].textContent; })).toEqual(["+$96.00", "+$42.00", "+$68.00"]);
     expect(screen.queryByRole("group", { name: "Line style" })).toBeNull();
   });
 });
