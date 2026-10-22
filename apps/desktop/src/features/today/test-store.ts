@@ -73,7 +73,9 @@ export function createTodayStore(seed: Account[], options: { syntheticOpening?: 
     reconciliations: async (accountId: string) => { guard("reconciliations"); return structuredClone(reconciliations.filter(r => r.accountId === accountId)); },
     resolutions: async () => [],
   };
-  const daily = createDailyReviewFake({ account: id => base.accounts.get(id), trades: id => base.trades.get(id) ?? [] }, { currentDay: "2026-10-21" });
+  /** Rust's current trading day for every account; tests move it to cross a day boundary. */
+  const day = { current: "2026-10-21" };
+  const daily = createDailyReviewFake({ account: id => base.accounts.get(id), trades: id => base.trades.get(id) ?? [] }, { currentDay: () => day.current });
   const repository = {
     ...base.repository,
     evidence,
@@ -116,7 +118,7 @@ export function createTodayStore(seed: Account[], options: { syntheticOpening?: 
     });
   }
 
-  return { ...base, repository, observations, reconciliations, imports, failing, saveEstimate, daily, promotions: promotion.promotions };
+  return { ...base, repository, observations, reconciliations, imports, failing, saveEstimate, daily, day, promotions: promotion.promotions };
 }
 
 /** A Build 16-shaped drawdown outcome for fixtures: the values are what the screen must show, never compute. */
