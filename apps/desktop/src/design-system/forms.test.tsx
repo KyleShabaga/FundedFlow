@@ -237,6 +237,98 @@ describe("Checkbox, Switch and RadioGroup", () => {
   });
 });
 
+// P0-D24: a segmented scale (execution rating) and a tile checkbox (Reviewed) keep native controls and their names.
+describe("Segmented RadioGroup and tile Checkbox (P0-D24)", () => {
+  const scale = ["1", "2", "3", "4", "5"].map(n => ({ value: n, label: n, description: `Option ${n} detail` }));
+  function Rating({ onValueChange }: { onValueChange: (v: string) => void }) {
+    const [v, setV] = useState<string | null>(null);
+    return (
+      <>
+        <button type="button">Before</button>
+        <RadioGroup label="Execution rating" segmented value={v} description="1 (poor) to 5 (excellent)"
+          onValueChange={next => { setV(next); onValueChange(next); }} options={scale} />
+      </>
+    );
+  }
+  const radios = () => screen.getAllByRole("radio") as HTMLInputElement[];
+
+  it("renders five named native radios as segments, none checked while unrated", () => {
+    render(<Rating onValueChange={vi.fn()} />);
+    const group = screen.getByRole("radiogroup", { name: "Execution rating" });
+    expect(group.classList.contains("is-segmented")).toBe(true);
+    expect(radios().map(r => r.getAttribute("type"))).toEqual(Array(5).fill("radio"));
+    for (const n of ["1", "2", "3", "4", "5"]) expect(screen.getByRole("radio", { name: n })).toBeTruthy();
+    expect(radios().some(r => r.checked)).toBe(false);
+    expect(radios().every(r => r.classList.contains("ds-radio-input"))).toBe(true);
+  });
+
+  it("links the group description but neither renders nor links option descriptions", () => {
+    render(<Rating onValueChange={vi.fn()} />);
+    const group = screen.getByRole("radiogroup", { name: "Execution rating" });
+    const describedBy = group.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy!)?.textContent).toBe("1 (poor) to 5 (excellent)");
+    expect(screen.queryByText(/Option \d detail/)).toBeNull();
+    expect(radios().every(r => r.getAttribute("aria-describedby") === null)).toBe(true);
+  });
+
+  it("selects on click", async () => {
+    const onValueChange = vi.fn();
+    render(<Rating onValueChange={onValueChange} />);
+    await userEvent.click(screen.getByText("3"));
+    expect(onValueChange).toHaveBeenLastCalledWith("3");
+    expect((screen.getByRole("radio", { name: "3" }) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("takes focus from Tab without choosing a value, then arrows move and select", async () => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+    render(<Rating onValueChange={onValueChange} />);
+    screen.getByRole("button", { name: "Before" }).focus();
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole("radio", { name: "1" }));
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(radios().some(r => r.checked)).toBe(false);
+    await user.keyboard("{ArrowRight}");
+    expect(onValueChange).toHaveBeenLastCalledWith("2");
+    expect((screen.getByRole("radio", { name: "2" }) as HTMLInputElement).checked).toBe(true);
+    await user.keyboard("{ArrowRight}");
+    expect(onValueChange).toHaveBeenLastCalledWith("3");
+    await user.keyboard("{ArrowLeft}");
+    expect(onValueChange).toHaveBeenLastCalledWith("2");
+    expect((screen.getByRole("radio", { name: "2" }) as HTMLInputElement).checked).toBe(true);
+    expect(radios().filter(r => r.checked)).toHaveLength(1);
+  });
+
+  it("selects the focused segment with Space", async () => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+    render(<Rating onValueChange={onValueChange} />);
+    screen.getByRole("radio", { name: "4" }).focus();
+    expect(onValueChange).not.toHaveBeenCalled();
+    await user.keyboard(" ");
+    expect(onValueChange).toHaveBeenLastCalledWith("4");
+  });
+
+  it("tile checkbox: a native checkbox with its description linked, toggled from its label", async () => {
+    const onChange = vi.fn();
+    render(<Checkbox tile label="Reviewed" description="Mark when done." onChange={onChange} />);
+    const box = screen.getByRole("checkbox", { name: "Reviewed" }) as HTMLInputElement;
+    expect(box.closest(".ds-check")?.classList.contains("is-tile")).toBe(true);
+    expect(document.getElementById(box.getAttribute("aria-describedby")!)?.textContent).toBe("Mark when done.");
+    await userEvent.click(screen.getByText("Reviewed"));
+    expect(box.checked).toBe(true);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByText("Reviewed"));
+    expect(box.checked).toBe(false);
+  });
+
+  it("plain checkbox has no tile class", () => {
+    render(<Checkbox label="Plain" />);
+    expect(screen.getByRole("checkbox", { name: "Plain" }).closest(".ds-check")?.classList.contains("is-tile")).toBe(false);
+  });
+});
+
 describe("ChipGroup", () => {
   it("is a labelled group of pressed/unpressed buttons that toggles values by keyboard", async () => {
     function Demo() {

@@ -17,6 +17,7 @@ import {
   ChipGroup,
   ConfirmDialog,
   ErrorState,
+  FieldGroup,
   focusFirstInvalid,
   focusFirstInvalidWhenShown,
   formatInstant,
@@ -326,12 +327,26 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
         ) : !uncertain && feedback.status !== "idle" && feedback.status !== "submitting" && feedback.status !== "success" && <MutationFeedback state={feedback} />}
 
         <fieldset className="ds-fieldset jr-review-body" disabled={readOnly} aria-label="Review fields">
-          <div className="jr-form-row">
-            <Checkbox label="Reviewed" description="Mark when you have finished reviewing this trade." checked={values.reviewed} onChange={e => set("reviewed", e.target.checked)} />
-            <RadioGroup label={FIELD_LABELS.executionRating} inline value={values.rating || null} onValueChange={v => set("rating", v)} error={server.executionRating}
-              options={["1", "2", "3", "4", "5"].map(n => ({ value: n, label: n }))} description="How well you executed your plan, 1 (poor) to 5 (excellent)." />
+          {/* P0-D24: status and rating as two balanced groups. Both are drafts until Save; neither follows the P&L. */}
+          <div className="jr-form-row jr-review-marks">
+            <FieldGroup label="Review status" description="Mark when you have finished reviewing this trade." className="jr-review-status">
+              <Checkbox tile label="Reviewed" checked={values.reviewed} onChange={e => set("reviewed", e.target.checked)}
+                aria-describedby={values.reviewed === baseline.values.reviewed ? undefined : fid(base, "reviewed-draft")} />
+              {values.reviewed !== baseline.values.reviewed && (
+                <p id={fid(base, "reviewed-draft")} className="ds-faint jr-draft-note">
+                  Not saved yet. Save the review to {values.reviewed ? "mark it reviewed" : "clear Reviewed"}.
+                </p>
+              )}
+            </FieldGroup>
+            <div className="jr-rating">
+              <RadioGroup label={FIELD_LABELS.executionRating} segmented value={values.rating || null} onValueChange={v => set("rating", v)} error={server.executionRating}
+                options={["1", "2", "3", "4", "5"].map(n => ({ value: n, label: n }))} description="How well you followed your plan, 1 (poor) to 5 (excellent); not the trade's result." />
+              {values.rating
+                // Clearing removes this button, so focus goes back to the scale (focus never chooses a score).
+                ? <Button size="sm" variant="ghost" onClick={() => { set("rating", ""); form.current?.querySelector<HTMLInputElement>(".jr-rating input[type=radio]")?.focus(); }}>Clear rating</Button>
+                : <span className="ds-faint jr-unrated">Not rated</span>}
+            </div>
           </div>
-          {values.rating && <Button size="sm" variant="ghost" onClick={() => set("rating", "")}>Clear rating</Button>}
 
           <div className="jr-form-row">
             <Select id={fid(base, "strategyId")} label={FIELD_LABELS.strategyId} placeholder="No strategy" value={values.strategyId ?? "__none"}

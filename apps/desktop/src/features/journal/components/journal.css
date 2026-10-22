@@ -127,3 +127,10 @@
 @container ds-main (max-width: 879px) {
   .jr-detail-grid { grid-template-columns: minmax(0, 1fr); }
 }
+/* P0-D24: Review status and Execution rating side by side from 2 × 240 px, stacked below; the rating's Clear (or
+   "Not rated") sits under the segments so choosing a score never moves the layout. */
+.jr-review-marks { grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); }
+.jr-rating { display: grid; gap: var(--space-1); justify-items: start; align-content: start; }
+.jr-review-status .ds-fieldgroup-body { gap: var(--space-1); }
+.jr-review-status .ds-check.is-tile { max-width: 320px; }
+.jr-unrated, .jr-draft-note { margin: 0; font-size: 13px; line-height: 20px; padding: 4px 2px; }

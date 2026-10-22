@@ -125,6 +125,7 @@ function ValidationDemo() {
 export function FormsSection() {
   const [q, setQ] = useState("");
   const [side, setSide] = useState<"long" | "short">("long");
+  const [rating, setRating] = useState<string | null>(null);
   const [setups, setSetups] = useState<string[]>(["orb"]);
   const [mistakes, setMistakes] = useState<string[]>([]);
   const [file, setFile] = useState<{ name: string; size: number } | null>(null);
@@ -148,6 +149,9 @@ export function FormsSection() {
           </FieldGroup>
           <Switch label="Follow the OS theme" description="Applies at once." defaultChecked />
           <RadioGroup label="Side" inline value={side} onValueChange={setSide} options={[{ value: "long", label: "Long" }, { value: "short", label: "Short" }]} />
+          <Checkbox tile label="Reviewed (tile)" description="Example: a status saved with the form. The whole tile toggles." />
+          <RadioGroup label="Execution rating (segmented)" segmented value={rating} onValueChange={setRating} description="Example: 1 (poor) to 5 (excellent). Starts unrated; focus alone never chooses."
+            options={["1", "2", "3", "4", "5"].map(n => ({ value: n, label: n }))} />
           <RadioGroup label="What to export (cards)" cards defaultValue="archive" options={[
             { value: "archive", label: "Full backup (.ffj.zip)", description: "Example: everything in the journal. The file you restore from." },
             { value: "csv", label: "Trade CSV", description: "Example: trades for a spreadsheet. Not a backup." },

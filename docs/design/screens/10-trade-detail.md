@@ -7,8 +7,9 @@ Mockup: `TradeDetail.dc.html`. References: `ts-trade-detail.png`, `tw-trade-hist
 
 ## Layout
 - Breadcrumb (Journal / day / trade n), symbol, side and result badges, net P&L; previous/next within the day.
-- Left: Review card: process (checklist adherence), outcome (net P&L) and R-multiple shown apart; Reviewed; execution
-  rating (1–5 radio group); strategy and checklist with per-item Followed/Missed/Not applicable; setup, mistake,
+- Left: Review card: process (checklist adherence), outcome (net P&L) and R-multiple shown apart; Review status (a
+  `Checkbox tile` "Reviewed", with "Not saved yet" while the draft differs from the saved review) beside execution
+  rating (`RadioGroup segmented` 1–5, unrated until chosen, with Clear rating; P0-D24); strategy and checklist with per-item Followed/Missed/Not applicable; setup, mistake,
   mindset and other tag chips (`ChipGroup`); planned entry, stop, target and risk; plan/thesis and notes/reflection;
   then Screenshots. No price chart in V1 (see Decisions).
 - Right: Summary `StatList` (account, trading day, quantity, entry → exit, hold, gross, fees, net, P&L source),

@@ -99,6 +99,27 @@
 .ds-radio-group.is-cards .ds-check:has(.ds-radio-input:checked) { border-color: var(--flow); background: var(--flow-soft); box-shadow: inset 0 0 0 1px var(--flow); }
 .ds-radio-group.is-cards .ds-check-row { display: flex; }
 .ds-radio-group.is-cards .ds-check-label { flex: 1; font-weight: 600; }
+/* Segmented (P0-D24): equal-width segments in one 36 px track, for a short ordered scale. The native radio stays in
+   each segment, visually hidden but focusable, so arrows and Space work and focus alone never chooses. Chosen is a
+   flow border, ground and bold label; focus is its own ring outside the segment; hover only lifts the ground. */
+.ds-radio-group.is-segmented .ds-radio-options { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; padding: 2px; border: 1px solid var(--line-200); border-radius: var(--radius-md); background: var(--bg-200); max-width: 320px; }
+.ds-radio-group.is-segmented .ds-check { position: relative; display: block; }
+.ds-radio-group.is-segmented .ds-check-row { display: flex; min-height: 0; }
+.ds-radio-group.is-segmented .ds-radio-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; }
+.ds-radio-group.is-segmented .ds-check-label { flex: 1; display: grid; place-items: center; min-height: 30px; padding: 0 var(--space-2); border: 1px solid transparent; border-radius: calc(var(--radius-md) - 2px); color: var(--ink-muted); font-family: var(--font-mono); font-size: 14px; }
+.ds-radio-group.is-segmented .ds-check:hover .ds-radio-input:not(:disabled):not(:checked) + .ds-check-label { background: var(--bg-300); color: var(--ink); }
+.ds-radio-group.is-segmented .ds-radio-input:checked + .ds-check-label { border-color: var(--flow); background: var(--flow-soft); color: var(--ink); font-weight: 700; box-shadow: inset 0 0 0 1px var(--flow); }
+.ds-radio-group.is-segmented .ds-radio-input:focus-visible { outline: none; }
+.ds-radio-group.is-segmented .ds-radio-input:focus-visible + .ds-check-label { outline: 2px solid var(--flow); outline-offset: 2px; }
+.ds-radio-group.is-segmented.is-invalid .ds-radio-options { border-color: var(--loss); }
+/* Checkbox tile (P0-D24): a bordered status the height of a button; the label stretches over the whole tile. */
+.ds-check.is-tile { position: relative; align-content: center; min-height: 36px; padding: 5px var(--space-3); border: 1px solid var(--line-200); border-radius: var(--radius-md); background: var(--bg-200); }
+.ds-check.is-tile .ds-check-label { font-weight: 600; }
+.ds-check.is-tile .ds-check-label::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.ds-check.is-tile:hover:not(:has(.ds-check-input:disabled)) { background: var(--bg-300); }
+.ds-check.is-tile:has(.ds-check-input:checked) { border-color: var(--flow); background: var(--flow-soft); box-shadow: inset 0 0 0 1px var(--flow); }
+.ds-check.is-tile .ds-check-input { width: 18px; height: 18px; }
+.ds-check.is-tile .ds-check-desc, .ds-check.is-tile .ds-field-error { padding-left: 26px; }
 .ds-fieldgroup-body { display: grid; gap: var(--space-3); }
 .ds-fieldgroup-body.is-inline { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: start; }
 
