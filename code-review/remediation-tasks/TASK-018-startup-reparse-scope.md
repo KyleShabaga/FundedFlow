@@ -16,8 +16,8 @@
 | Effort / risk | M–L / High (startup) |
 | Verification platform | Windows only (+ Any OS for regression) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Inspected source revision | b01e2b9 (application source identical to 92e7980) |
+| Specification revision | r3 (2026-10-22; r2 + Block 4 corrections from 10 §8.2/§8.3) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -33,7 +33,9 @@ Profile or `C:\Users` relocated via junction; redirected Roaming; mount point; p
 `src-tauri/src/data_controls/filesystem.rs:89-109` (walk from `components()` incl. bare prefix), `data_controls/mod.rs:155-168`, `runtime.rs:330-335, 130`.
 
 ## Expected change scope
-`filesystem.rs` (root-anchored check), all app-owned `no_symlink_components` call sites (21 of 24 non-test sites at a7310fd; user paths `archive.rs:223, 331, 552` keep the old check) switched to the root-anchored check (inventory them in the PR; e.g. `recover_cleanup` at `deletion.rs:323` runs at startup) — user-chosen export/restore paths keep the old check; `data_controls/mod.rs::filesystem_ownership`; `runtime.rs` and `apps/desktop/src/lib/data/runtime.ts` (`failureCategories` + stage map: new non-retry category — contract change), UI copy and docs; Windows-gated tests. First evaluate std `FileType::is_symlink()` / `symlink_metadata` on Windows (may cover junctions without a new dependency); only if insufficient declare `windows-sys` in `Cargo.toml` — **dependency change requires explicit approval**, plus `npm run check:notices` and a `Cargo.lock` diff check.
+`filesystem.rs` (root-anchored check), all app-owned `no_symlink_components` call sites (21 of 24 non-test sites at a7310fd; user paths `archive.rs:223, 331, 552` keep the old check) switched to the root-anchored check (inventory them in the PR; e.g. `recover_cleanup` at `deletion.rs:323` runs at startup) — user-chosen export/restore paths keep the old check; `data_controls/mod.rs::filesystem_ownership`; `runtime.rs` (`FailureCategory`/`failure()`, `runtime.rs:126-135`) and `apps/desktop/src/lib/data/runtime.ts` (`failureCategories` + stage map: new non-retry category — contract change), UI copy and docs; Windows-gated tests. App-owned paths are the data root and everything FundedFlow creates beneath it: `fundedflow.db` (+ `-wal`/`-shm`/`-journal`), `fundedflow.lock`, `legal-acceptance.json`, `attachments/`, `data-controls/`, `data-controls-cleanup/`, `data-controls-work/`, `data-controls-pending.json`, `data-controls-quarantine/` (added by TASK-015) and `fundedflow.db.before-v*.bak`.
+
+Runtime-contract consumers of the new category (each updated and named in the PR): `apps/desktop/src/lib/data/runtime.ts:12-18` (`failureCategories`) and `:61` (stage map); `apps/desktop/src/test/runtime-fixtures.ts:11-22` (`failed()` with its own stage map at `:12`; failed-status body `:14-17`); `apps/desktop/src/lib/diagnostics.ts:65`; `apps/desktop/src/components/RuntimeGate.tsx:9-22` (`TITLES`/`GUIDANCE`, exhaustive per category); `apps/desktop/src/design-system/GallerySections.tsx:312` (runtime diagnostic sample); journeys `apps/desktop/src/journeys/recovery.journey.test.tsx:40-50, 57` (own stage map and category list), `first-run.journey.test.tsx:129`, `data-controls.journey.test.tsx:198`; tests `lib/data/runtime.test.ts`, `app/RuntimeProvider.test.tsx`, `app/RuntimeRecovery.test.tsx`, `components/RuntimeGate.test.tsx`. First evaluate std `FileType::is_symlink()` / `symlink_metadata` on Windows (may cover junctions without a new dependency); only if insufficient declare `windows-sys` in `Cargo.toml` — **dependency change requires explicit approval**, plus `npm run check:notices` and a `Cargo.lock` diff check.
 
 ## Out of scope
 Export/restore user-path validation (TR-007/WIN-002, V1.1); hard-link checks (ISSUE-024, unassigned; record a Triage card).
@@ -47,19 +49,21 @@ Export/restore user-path validation (TR-007/WIN-002, V1.1); hard-link checks (IS
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-017 (merge order on data_controls); TASK-011 (b) results to confirm cases; approval of the `windows-sys` declaration only if std `is_symlink` proves insufficient.
-- Likely shared-file conflicts: `filesystem.rs` shared with TASK-015; `runtime.rs` with TASK-015.
+- Likely shared-file conflicts: `filesystem.rs` shared with TASK-015; `runtime.rs` and `apps/desktop/src/lib/data/runtime.ts` with TASK-015.
 
 ## Acceptance criteria (pass/fail)
 - [ ] Windows CI: the `ci.yml` `cargo test` step (windows-latest, `ci.yml:69`) runs the new `cfg(windows)` tests → pass.
-- [ ] Manual Windows check (owner/VM, recorded): junctioned profile layout starts Ready; standard profile unaffected.
+- [ ] Manual Windows check (owner/VM, recorded): junctioned profile layout starts Ready; standard profile unaffected. Record per case: tester; date; Windows edition and build; WebView2 version; tested source SHA; installer EXE SHA-256 (release EXE, `FUNDEDFLOW_DEV_DATA_DIR` unset); case (standard profile / junctioned profile or `C:\Users` / redirected Roaming / mount point / Windows Sandbox / junction at the app folder itself); the link setup (command used, link path → target); the resolved data folder path; observed runtime state and failure category; expected vs observed; pass/fail; screenshot or log reference.
+- [ ] Every app-owned path listed in the scope, including `data-controls-quarantine/`, uses the root-anchored check.
+- [ ] Every runtime-contract consumer listed in the scope is updated and named in the PR.
 - [ ] Full Rust and root checks → exit 0.
 - [ ] All app-owned call sites (21 of 24 at a7310fd) listed in the PR and each uses the root-anchored check; user-path call sites unchanged.
 - [ ] `runtime.ts` failure-category tests updated deliberately; root `npm run typecheck` and `npm test` → exit 0.
 - [ ] If a dependency is declared: `npm run check:notices` → exit 0 and the `Cargo.lock` diff is limited to the declaration.
-- [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` unset for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
+- [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
 ## Verification plan
-Windows only for the reparse cases (note: CI runs plain `cargo test`, so the new tests must not depend on `--locked`/offline flags to be picked up); Linux CI still runs Unix tests.
+Windows only for the reparse cases (note: CI runs plain `cargo test`, so the new tests must not depend on `--locked`/offline flags to be picked up). CI is Windows-only (`ci.yml:25`); Unix tests run locally.
 
 Standard checks (run serially, frontend build before Rust):
 - Repository root: `npm run check:boundaries -w @fundedflow/domain` → exit 0
@@ -76,5 +80,13 @@ Use only disposable test journals and temporary directories created by tests. Ne
 ## Definition of done
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
+## Changes in r3
+- 10 §8.2 TASK-018 (G14): replaced "Linux CI still runs Unix tests" with "CI is Windows-only (`ci.yml:25`); Unix tests run locally".
+- 10 §8.2 TASK-018 (G11): named the runtime-contract consumers as in TASK-015 (`runtime.ts:12-18, 61`, `test/runtime-fixtures.ts`, `lib/diagnostics.ts:65`, `RuntimeGate.tsx:9-22`, `GallerySections.tsx:312`, journeys, runtime unit tests) and added a matching criterion; added `runtime.ts` to the TASK-015 conflict.
+- 10 §8.2 TASK-018 (G11): listed the app-owned paths, including `data-controls-quarantine/`, with a matching criterion.
+- 10 §8.2 TASK-018 (G14): listed the manual record fields.
+- 10 §8.3 fixture rule: `FUNDEDFLOW_UPDATE_FIXTURES` must be unset (not `0`).
+
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.
+Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: Windows-only CI wording (G14); runtime-contract consumers named (G11); `data-controls-quarantine/` among app-owned paths (G11); manual record fields (G14); fixture rule "unset (not `0`)".
