@@ -1,0 +1,62 @@
+# TASK-011 — Verification: Windows baseline measurements on a throwaway build (close, junction, write timing)
+
+| Field | Value |
+|---|---|
+| Status | Proposed |
+| Type | Verification |
+| Audit priority | P1 |
+| Roadmap lane | Unassigned (owner) |
+| Mandatory gate | No (results do not count toward gates) |
+| Severity | Medium |
+| Confidence | Medium |
+| Canonical issue | ISSUE-009, ISSUE-006, ISSUE-010 (see `code-review/remediation-findings-ledger.md`) |
+| Original Stage 1 finding IDs | DATA-008, UI-005, WIN-001, WIN-002, DATA-006, DATA-007 |
+| Source card / date | Stage 1 audit 2026-10-22; 07 §G.1 (V-006, V-009, V-010) |
+| Wave | W0 |
+| Effort / risk | M / Low |
+| Verification platform | Windows only |
+| Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
+| Inspected source revision | a7310fd (application source identical to 92e7980) |
+| Specification revision | r1 (2026-10-22) |
+| Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
+| Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
+| Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
+
+## Purpose / risk
+Answer three Windows-only questions that size fixes: (a) does title-bar close show any prompt with unsaved review text under WebView2? (b) does the app start when the profile or Roaming is behind a junction, and in Windows Sandbox? does export to OneDrive Documents work? (c) how long do a 50k-row CSV commit and a large export take?
+
+## Trigger / reproduction
+See purpose.
+
+## Root cause / evidence
+See linked findings.
+
+## Expected change scope
+Owner-executed on a disposable Windows VM/profile using a debug or release build of the current SHA, isolated from the real journal (a separate Windows user profile or VM). No repository change.
+
+## Out of scope
+Fixes; counting results toward gates.
+
+## Implementation approach
+1. Build from the current SHA (CI workflow_dispatch or local `npm run tauri build`).
+2. On a disposable VM/profile: dirty a trade review and a daily review, click the title-bar X; record behaviour.
+3. Create a junction for `%APPDATA%` (or relocated profile) on a test account; launch; record runtime status. Repeat in Windows Sandbox.
+4. Export to OneDrive\Documents (Files On-Demand on) and to a junctioned folder; record result.
+5. Import a synthetic 50k-row CSV and export a large synthetic journal; time both.
+
+## Prerequisites, dependencies and conflicts
+- Prerequisites: Approval; a Windows VM. Synthetic CSV must not contain real trades.
+- Likely shared-file conflicts: None.
+
+## Acceptance criteria (pass/fail)
+- [ ] Each of (a)–(c) recorded with SHA, Windows build, WebView2 version, tester, date.
+- [ ] TASK-023 scope confirmed or reduced from (a); TASK-018 test cases from (b); ISSUE-010 escalation from (c) recorded.
+
+## Verification plan
+Recorded results.
+
+## Safety, rollback and side effects
+Disposable VM/profile only; never the real journal.
+
+## Definition of done
+Results recorded in `code-review/11-remediation-execution-log.md` with tester, date, source SHA (and installer EXE SHA-256 where applicable), environment and raw observations; the linked decision/escalation is updated. No code change is implied.
