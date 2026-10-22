@@ -10,6 +10,8 @@ Mockup: `Import.dc.html`. Backend: `preview_csv_import`, `commit_csv_import`, `l
 Review every row of a CSV before anything is saved, then import it in one step.
 
 ## Layout
+The wizard's two panels sit side by side from 880 px of main column and stack below (P0-D29; was 900 px of window).
+
 1. `Stepper`: Choose file → Match columns → Review rows → Import.
 2. File card: name, rows, size, "read on this computer"; detected format (`performance` / `generic`) with the
    entry rule for performance exports; account select; date order (from `dateFormat`; if both M/D and D/M fit,

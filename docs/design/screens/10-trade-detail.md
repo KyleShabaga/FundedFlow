@@ -15,6 +15,8 @@ Mockup: `TradeDetail.dc.html`. References: `ts-trade-detail.png`, `tw-trade-hist
   Import source (file, line, original CSV row), Source fills (round-trip IDs, timestamps exactly as exported, which
   fill opened the trade, tick size; read only), Correction history.
 - Actions: previous/next trade (the account's trades in entry order), Correct trade, Delete (Undo; kept with its review).
+- Width (P0-D29): Left and Right sit side by side from 880 px of main column and stack below (was 1080 px of window);
+  [window-support.md](../window-support.md).
 
 ## Data
 - Trade: `get_trade_detail(accountId, id)` (provenance, original CSV cells, corrections, neighbours).

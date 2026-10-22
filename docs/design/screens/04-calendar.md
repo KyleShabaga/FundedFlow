@@ -14,7 +14,8 @@ See P&L by trading day, week, month and year, and jump to any of them.
    "n trades · n trading days" on the right.
 3. Grid: Monday–Friday plus a Week column. Each day: date, compact P&L, trade count; tinted `profit-soft` /
    `loss-soft` with a matching border; today ringed in `flow`; selected day ringed and shown in the side panel.
-4. Selected-day panel (`StatList`): date, P&L, trades, account, notes; "Open in journal".
+4. Selected-day panel (`StatList`): date, P&L, trades, account, notes; "Open in journal". Beside the month; under it
+   below 880 px of main column (P0-D29).
 5. Yearly performance: a row per year, a cell per month (P&L, trades) plus a year total; click a month to jump.
 
 ## MonthYearPicker

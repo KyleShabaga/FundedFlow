@@ -4,11 +4,30 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AccountCard, AccountOverviewCard, BrandLogo, OverviewFigure, BrandMark, meterFraction, Pnl, PnlBars, PnlCalendar, ProgressMeter, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
+import { AccountCard, AccountOverviewCard, AppFrame, BrandLogo, ContentFrame, OverviewFigure, BrandMark, meterFraction, Pnl, PnlBars, PnlCalendar, ProgressMeter, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
 import { monthWeeks } from "./components/journal";
 import { expectNoAxeViolations } from "../test/axe";
 
 afterEach(cleanup);
+
+describe("ContentFrame", () => {
+  it("adds the shared frame to a header and a body inside the main column, and passes attributes through", async () => {
+    const { container } = render(
+      <AppFrame collapsed={false} sidebar={<nav aria-label="Primary">Links</nav>}
+        header={<header><ContentFrame className="host-header" data-testid="head"><h1>Today</h1><button type="button">Import</button></ContentFrame></header>}>
+        <main><ContentFrame id="body-frame"><p>Body</p></ContentFrame></main>
+      </AppFrame>,
+    );
+    const head = screen.getByTestId("head");
+    expect(head.className).toBe("ds-content-frame host-header");
+    expect(container.querySelector("#body-frame")!.className).toBe("ds-content-frame");
+    // Both frames are in the main column (the ds-main container), not around the sidebar.
+    const column = container.querySelector(".ds-app-column")!;
+    expect(column.querySelectorAll(".ds-content-frame")).toHaveLength(2);
+    expect(within(head).getByRole("button", { name: "Import" })).toBeTruthy();
+    await expectNoAxeViolations({ root: container });
+  });
+});
 
 describe("BrandLogo", () => {
   it("reads FundedFlow, with Flow in the accent and a decorative mark", () => {

@@ -17,6 +17,8 @@ Learn from traceable evidence: every metric resolves to the exact trades that pr
   (historical and reset-attempt comparison, added by the Build 23 card's history section).
 - Overview: best, worst and average month; two `StatList`s (trades; days and months); weekday breakdown;
   setups and mistakes table.
+- Width (P0-D29): the shared content frame, up to 1600 px; the calendar's day panel moves under the month below
+  880 px of main column (was 1100 px of window). [window-support.md](../window-support.md).
 - Every number, bar and row is clickable and opens the contributing trades (drill-down to Build 20).
 
 ## Metric rules (from Build 23)

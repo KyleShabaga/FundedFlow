@@ -551,3 +551,29 @@ describe("P0-02: the current result", () => {
     await waitFor(async () => expect(await headlineText()).toContain("Stop"));
   });
 });
+
+describe("layout (P0-D29)", () => {
+  const follows = (a: Element, b: Element) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+  it("keeps freshness first, then all accounts, then the selected account, whatever the arrangement", async () => {
+    renderToday();
+    const fresh = await screen.findByRole("region", { name: "How fresh this is" });
+    const overview = screen.getByRole("region", { name: "Active accounts" });
+    const summary = screen.getByRole("region", { name: "Example · Eval A" });
+    // On a wide main column the lead row puts freshness beside the overview; reading and Tab order don't change.
+    const lead = fresh.parentElement!;
+    expect(lead.classList.contains("td-lead")).toBe(true);
+    expect([...lead.children]).toEqual([fresh, overview]);
+    expect(follows(fresh, overview) && follows(overview, summary)).toBe(true);
+    expect(follows(summary, riskSection())).toBe(true);
+  });
+
+  it("with one active account, freshness shares the lead row with that account's summary", async () => {
+    seed([makeAccount({ id: A, name: "Eval A", propFirm: "Example" })]);
+    renderToday();
+    const fresh = await screen.findByRole("region", { name: "How fresh this is" });
+    expect(screen.queryByRole("region", { name: "Active accounts" })).toBeNull();
+    expect([...fresh.parentElement!.children]).toEqual([fresh, screen.getByRole("region", { name: "Example · Eval A" })]);
+    expect(follows(fresh.parentElement!, riskSection())).toBe(true);
+  });
+});

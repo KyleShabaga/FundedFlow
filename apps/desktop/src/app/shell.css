@@ -41,13 +41,15 @@
 .shell-subnav-link[aria-current="true"] { color: var(--flow); font-weight: 600; }
 .shell-local { display: flex; justify-content: center; white-space: nowrap; align-items: center; gap: var(--space-2); font-size: 12px; color: var(--ink-muted); }
 .shell-local > span:first-child { color: var(--flow); }
-.shell-header { min-height: 96px; padding: var(--space-6) var(--space-8); border-bottom: 1px solid var(--line-100); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4); }
+/* The header's rule spans the main column; its contents sit on the shared content frame, like the body (P0-D29). */
+.shell-header { display: flex; align-items: center; min-height: 96px; box-sizing: border-box; padding: var(--space-6) 0; border-bottom: 1px solid var(--line-100); }
+.shell-header-frame { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4); }
 .shell-header h1 { margin: 0; font: 600 24px/32px var(--font-display); overflow-wrap: anywhere; }
 .shell-header-context { flex: 1 1 200px; min-width: 0; }
 /* Room between the page title and the account selector (or its "No account yet" prompt). */
 .shell-account-context { min-height: var(--space-2); margin-top: var(--space-3); }
 .shell-import { display: grid; gap: var(--space-1); justify-items: start; }
-.shell-content { padding: var(--space-8); }
+.shell-content { padding: var(--space-8) 0; }
 .shell-placeholder { max-width: 720px; }
 .shell-placeholder h2 { margin-top: 0; font: 600 18px/26px var(--font-display); }
 .shell-placeholder p { color: var(--ink-muted); }
@@ -59,6 +61,7 @@
   .shell-brand, .shell-toggle, .shell-nav-link, .shell-nav-indicator.is-sliding, .shell-nav-expand svg { transition: none; }
   .ds-app-frame:not(.is-collapsed) .shell-nav-label, .ds-app-frame:not(.is-collapsed) .shell-brand .ds-brand-name { animation: none; }
 }
-@media (max-width: 759px) {
-  .shell-header, .shell-content { padding: var(--space-4); }
+/* Inline gutters come from the content frame; only the vertical padding tightens in a narrow main column. */
+@container ds-main (max-width: 639px) {
+  .shell-header, .shell-content { padding-block: var(--space-4); }
 }

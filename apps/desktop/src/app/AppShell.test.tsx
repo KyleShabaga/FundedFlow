@@ -10,7 +10,8 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("../features/accounts/components/AccountsPage", () => ({ AccountsPage: () => <h2>Accounts is not built yet</h2> }));
 vi.mock("../features/journal/components/JournalPage", () => ({ JournalPage: () => <h2>Journal is not built yet</h2> }));
 vi.mock("../features/daily-reviews/components/DailyReviewPage", () => ({ DailyReviewPage: () => <h2>Daily review stub</h2> }));
-vi.mock("../features/today/components/TodayPage", () => ({ TodayPage: () => <h2>Today is not built yet</h2> }));
+// The Today stub carries an uncontrolled field, so the layout tests can see that a layout change never remounts the page.
+vi.mock("../features/today/components/TodayPage", () => ({ TodayPage: () => <><h2>Today is not built yet</h2><input aria-label="Draft note" /></> }));
 vi.mock("../features/insights/components/InsightsPage", () => ({ InsightsPage: () => <h2>Insights is not built yet</h2> }));
 vi.mock("../features/accounts/components/AccountSwitcher", () => ({ AccountSwitcher: () => null }));
 vi.mock("../features/data-controls/components/DataControlsPage", () => ({ DataControlsPage: () => <h2>Settings is not built yet</h2> }));
@@ -167,6 +168,36 @@ it("keeps navigation and Settings available when runtime fails and never enables
   await userEvent.setup().click(screen.getByRole("link", { name: "Settings" }));
   await screen.findByRole("heading", { name: "Settings is not built yet" });
   await waitFor(() => expect(invoke.mock.calls).toEqual([["runtime_status"]]));
+});
+
+it("puts the header and the page body on one shared content frame (P0-D29)", async () => {
+  render(<App />);
+  await screen.findByRole("heading", { name: "Today is not built yet" });
+  const header = screen.getByRole("banner");
+  const main = screen.getByRole("main");
+  const headerFrame = header.querySelector(":scope > .ds-content-frame")!;
+  const bodyFrame = main.querySelector(":scope > .ds-content-frame")!;
+  // Title, account selector and Import all sit inside the header's frame; the route content inside the body's.
+  expect(within(headerFrame as HTMLElement).getByRole("heading", { level: 1, name: "Today" })).toBeTruthy();
+  expect(within(headerFrame as HTMLElement).getByRole("button", { name: "Import" })).toBeTruthy();
+  expect(within(bodyFrame as HTMLElement).getByRole("heading", { name: "Today is not built yet" })).toBeTruthy();
+  // Both frames live in the main column beside the sidebar (the ds-main container), never around the sidebar.
+  const column = document.querySelector(".ds-app-column")!;
+  expect(column.contains(headerFrame) && column.contains(bodyFrame)).toBe(true);
+  expect(screen.getByRole("complementary").querySelector(".ds-content-frame")).toBeNull();
+});
+
+it("keeps page state through sidebar collapse and narrow-window changes", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  const field = await screen.findByRole("textbox", { name: "Draft note" });
+  await user.type(field, "keep me");
+  await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+  act(() => { narrow = true; change?.(); });
+  act(() => { narrow = false; change?.(); });
+  await user.click(screen.getByRole("button", { name: "Expand sidebar" }));
+  expect(screen.getByRole("textbox", { name: "Draft note" })).toBe(field);
+  expect((field as HTMLInputElement).value).toBe("keep me");
 });
 
 it("renders the shared frame without a router or runtime host", () => {

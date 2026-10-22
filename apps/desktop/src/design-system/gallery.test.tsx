@@ -25,6 +25,11 @@ describe("DesignSystemGallery", () => {
     }
     expect(screen.getByRole("table", { name: "Example accounts" })).toBeTruthy();
   });
+  it("shows the content frame section with a header row and a body on the same frame", () => {
+    render(<DesignSystemGallery />);
+    const section = screen.getByRole("heading", { name: "Content frame" }).closest("section")!;
+    expect(section.querySelectorAll(".ds-content-frame")).toHaveLength(2);
+  });
   it("shows the brand mark and logo section", () => {
     render(<DesignSystemGallery />);
     const section = screen.getByRole("heading", { name: "Brand mark and logo" }).closest("section")!;

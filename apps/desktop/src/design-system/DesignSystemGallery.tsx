@@ -8,6 +8,7 @@ import { useState } from "react";
 import {
   AccountCard,
   AppFrame,
+  ContentFrame,
   Badge,
   BrandLogo,
   BrandMark,
@@ -109,6 +110,12 @@ export function DesignSystemGallery() {
             <AppFrame collapsed={false} sidebar={<p>Navigation slot</p>} sidebarEdge={<span className="dsg-edge-dot" aria-hidden="true" />} header={<h3>Header slot</h3>}>
               <p>Route content slot</p>
             </AppFrame>
+          </div>
+        </Section>
+        <Section title="Content frame" note="ContentFrame (P0-D29): the page header and the page body each wrap their content in one, so they share left and right edges. Centred in the main column beside the sidebar; grows to --frame-max (1600 px) and stops. Gutters: space-8, then space-6 below 880 px and space-4 below 640 px of main column. Inner caps for text and forms stay with the content.">
+          <div className="dsg-frame-demo">
+            <ContentFrame className="dsg-frame-demo-row"><strong>Page title</strong><span>Header action</span></ContentFrame>
+            <ContentFrame><p>Body content starts and ends on the same edges as the header.</p></ContentFrame>
           </div>
         </Section>
         <Section title="Brand mark and logo" note="BrandLogo: the mark beside &quot;Funded&quot; in ink and &quot;Flow&quot; in flow blue; showName={false} for the icon rail. The mark is decorative and takes its gradient from the brand-mark tokens, so it follows the theme. Files for other uses are in docs/brand.">

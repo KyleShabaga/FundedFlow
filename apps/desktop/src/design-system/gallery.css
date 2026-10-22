@@ -17,3 +17,6 @@
 .dsg-aoc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr)); gap: var(--space-4); }
 .dsg-edge-dot { width: 24px; height: 24px; border-radius: var(--radius-pill); border: 1px solid var(--line-200); background: var(--bg-100); }
 .dsg-frame-preview .ds-app-sidebar { height: auto; min-height: 120px; }
+.dsg-frame-demo { display: grid; gap: var(--space-2); padding-block: var(--space-3); border: 1px dashed var(--line-200); border-radius: var(--radius-md); container: ds-main / inline-size; }
+.dsg-frame-demo .ds-content-frame { outline: 1px dashed var(--flow); outline-offset: -1px; }
+.dsg-frame-demo-row { display: flex; justify-content: space-between; gap: var(--space-4); }

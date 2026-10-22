@@ -25,11 +25,11 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 
 | File | Contents |
 |---|---|
-| `tokens.css` | Colour tokens per theme (with the role of each), spacing, radii, font stacks |
+| `tokens.css` | Colour tokens per theme (with the role of each), spacing, the content-frame cap (`--frame-max`), radii, font stacks |
 | `tokens.test.ts` | Fails if any text/background pair drops below 4.5:1, or control borders below 3:1, in either theme |
 | `format.ts` | Money, compact money, percentage, byte size (`formatBytes`), trading-day and instant (`formatInstant`) formatting; exact money sums |
 | `components/primitives.tsx` | `Button`, `Badge`, `Pnl`, `StatTile`, `Tabs` + `TabPanel` (Radix Tabs; `keepMounted` keeps a panel's form state while another tab shows, Build 19) |
-| `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots and a `sidebarEdge` slot in the sidebar header (Build 18.5, placed P0-D08); Build 12 supplies navigation and routing |
+| `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots and a `sidebarEdge` slot in the sidebar header (Build 18.5, placed P0-D08); `ContentFrame`, the shared content frame (P0-D29); Build 12 supplies navigation and routing |
 | `components/brand.tsx` | `BrandMark` (the swept-F mark, decorative) and `BrandLogo` (mark + "FundedFlow" wordmark; `showName={false}` for the icon rail) (P0-D01) |
 | `components/rules.tsx` | `RuleMeter`, `ruleState`, `AccountCard` |
 | `components/account-overview.tsx` | `AccountOverviewCard`, `ProgressMeter`, `meterFraction` (Build 18.5) |
@@ -47,6 +47,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | Build 23 additions | `PnlBars` (charts.tsx); `PnlCalendar` `selectedDay`, `onSelectWeek`/`selectedWeek`, `display`, `title`/`summary` (journal.tsx) |
 | `design-system.css`, `controls.css`, `states.css`, `data.css` | Component styles (Build 7 components; controls, overlays and feedback; async states; data display) |
 | `*.test.tsx` | Component tests (Vitest + Testing Library, jsdom) |
+| `layout-policy.test.ts` | Reads every stylesheet: the frame, its gutters, the one breakpoint set and Today's columns (P0-D29) |
 | `DesignSystemGallery.tsx`, `GallerySections.tsx`, `gallery.css` | The reference page |
 
 ## Rules the components follow
@@ -248,6 +249,21 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
 - `OverviewFigure` (NA-4) is the card's figure block on its own: label, `MetricValue`, optional provenance badge and
   note, `primary` for the larger value. The account detail page's Risk section uses it so a figure reads the same on
   the card and the page; the page lays the figures out itself. Gallery: under the overview card section.
+
+## P0-D29: content frame and the responsive breakpoint set
+
+Policy, numbers and rationale: [design/window-support.md](design/window-support.md).
+
+- `AppFrame`'s main column (`.ds-app-column`) is the size container **`ds-main`**. Page layouts respond with
+  `@container ds-main (…)` to the width left beside the sidebar; page CSS has no window-width media queries.
+- `ContentFrame` (`.ds-content-frame`, passes through `className` and other `div` attributes) is the shared content
+  frame. The host wraps the page header's contents in one and the page body in another, so title, account selector,
+  header actions and body share both edges. It centres in `ds-main`, grows to `--frame-max` (1600 px) and stops. Its
+  gutter (`--ds-frame-gutter`) is `space-8`, `space-6` below 880 px of main column and `space-4` below 640 px.
+- The allowed `ds-main` breakpoints are **640, 880 and 1280 px**; `layout-policy.test.ts` fails on any other, on a
+  window-width media query in page CSS, and on a page re-adding its own 1600 px cap. Narrower caps for forms and
+  reading pages stay with those pages and start on the frame's left edge.
+- Gallery: "Content frame", after "Application frame".
 
 ## P0-D01: brand mark and logo
 

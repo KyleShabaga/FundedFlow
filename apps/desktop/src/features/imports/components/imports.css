@@ -2,7 +2,7 @@
  * Import wizard and history (Build 18). Layout follows docs/design/mockups/Import.dc.html: stepper, file and
  * account cards, KPI row, row table with a segmented filter, and a sticky confirm bar. Tokens only.
  */
-.imp-page { display: grid; gap: var(--space-4); max-width: 1600px; min-width: 0; grid-template-columns: minmax(0, 1fr); font-family: var(--font-sans); color: var(--ink); padding-bottom: var(--space-2); }
+.imp-page { display: grid; gap: var(--space-4); min-width: 0; grid-template-columns: minmax(0, 1fr); font-family: var(--font-sans); color: var(--ink); padding-bottom: var(--space-2); }
 .imp-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; }
 .imp-sub { margin: 0; color: var(--ink-muted); }
 .imp-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
@@ -31,6 +31,7 @@
 .imp-history-target { max-width: 720px; }
 .imp-quick-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: var(--space-4); align-items: start; }
 
-@media (max-width: 900px) {
+/* Two-column page grids stack below 880 px of main column (docs/design/window-support.md). */
+@container ds-main (max-width: 879px) {
   .imp-grid { grid-template-columns: minmax(0, 1fr); }
 }
