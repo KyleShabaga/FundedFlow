@@ -11,6 +11,7 @@ import { Button, Checkbox, formatBytes, formatInstant, FormSection, InlineNotice
 import { useAccounts } from "../../accounts/hooks/accounts";
 import { accountLabel } from "../../accounts/components/presentation";
 import { PrivacyLegalSection } from "../../legal/components/PrivacyLegalSection";
+import { DisplayTimeZoneSection } from "../../settings/components/DisplayTimeZoneSection";
 import { useSetSetting, useSetting } from "../../settings/hooks/settings";
 import * as api from "../api/data-controls";
 import { useDataControlOperation } from "../hooks/data-controls";
@@ -210,6 +211,8 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
           </div>
         </div>
       </FormSection>
+
+      <DisplayTimeZoneSection />
 
       <PrivacyLegalSection />
 

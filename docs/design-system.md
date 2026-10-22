@@ -28,7 +28,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `tokens.css` | Colour tokens per theme (with the role of each), spacing, the content-frame cap (`--frame-max`), radii, font stacks |
 | `forced-colors.css` | Windows contrast themes: system-colour focus, selection, edges and meters (Build 26.85) |
 | `tokens.test.ts` | Fails if any text/background pair drops below 4.5:1, or control borders below 3:1, in either theme |
-| `format.ts` | Money, compact money, percentage, byte size (`formatBytes`), trading-day and instant (`formatInstant`) formatting; exact money sums |
+| `format.ts` | Money, compact money, percentage, byte size (`formatBytes`), trading-day and instant (`formatInstant`) formatting; exact money sums; display time zones (`desktopTimeZone`, `isSupportedTimeZone`, `supportedTimeZones`, `timeZoneDisplayName`, `zoneOffsetLabel`, P0-D05) |
 | `components/primitives.tsx` | `Button`, `Badge`, `Pnl`, `StatTile`, `Tabs` + `TabPanel` (Radix Tabs; `keepMounted` keeps a panel's form state while another tab shows, Build 19) |
 | `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots and a `sidebarEdge` slot in the sidebar header (Build 18.5, placed P0-D08); `ContentFrame`, the shared content frame (P0-D29); Build 12 supplies navigation and routing |
 | `components/brand.tsx` | `BrandMark` (the swept-F mark, decorative) and `BrandLogo` (mark + "FundedFlow" wordmark; `showName={false}` for the icon rail) (P0-D01) |
@@ -69,6 +69,8 @@ from the developer panel's `ff-` classes. The product root does not define anoth
   ([data-model.md#trading-day](data-model.md#trading-day)), so `PnlCalendar` hides weekends unless
   `showWeekends` is set. Day labels come from the `tradingDay` string, not from a `Date` in local time.
 - **Times show in the account's zone.** `TradeTable` takes `timeZone` (the account's IANA zone) for entry times.
+  P0-D05: a time shown in the display zone instead uses `formatInstant(…, { zoneName: "offset" })`, which labels it
+  with that instant's own offset ("GMT+1", "GMT+5:30"; a zero offset is always "GMT"), never an abbreviation alone.
 - **TradeTable takes `Trade` from `@fundedflow/domain` unchanged**, including `pnlStatus` (`open`,
   `reported`, `missing_instrument`, `currency_mismatch` show as a note badge).
 - **Rule meters are not connected to persisted rules yet.** `RuleMeter` and the rules on `AccountCard`

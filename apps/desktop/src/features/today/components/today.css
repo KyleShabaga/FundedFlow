@@ -78,3 +78,6 @@
 .td-history summary { cursor: pointer; font-weight: 600; }
 .td-history summary:focus-visible, .td-page a:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; border-radius: var(--radius-sm); }
 .td-page a { color: var(--flow); font-weight: 600; }
+
+/* ---- P0-D05 / D22 / D06 (ui-freshness session): freshness panel display zone ---- */
+.td-fresh-zone { margin: var(--space-3) 0 0; font-size: 12px; line-height: 18px; }

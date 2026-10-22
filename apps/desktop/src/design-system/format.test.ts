@@ -15,6 +15,10 @@ import {
   zonedDay,
   zonedWallTime,
   zonedWallTimeToInstant,
+  isSupportedTimeZone,
+  supportedTimeZones,
+  timeZoneDisplayName,
+  zoneOffsetLabel,
 } from "./format";
 
 describe("formatMoney", () => {
@@ -121,6 +125,50 @@ describe("formatInstant", () => {
   it("treats missing and malformed instants as unknown", () => {
     expect(formatInstant(null)).toBe("—");
     expect(formatInstant("yesterday")).toBe("—");
+  });
+});
+
+describe("display time zones (P0-D05)", () => {
+  it("converts the whole instant, date included, when the zone crosses midnight", () => {
+    // 23:13 UTC on Oct 21 is already Oct 22 in London (BST) and still Oct 21 in New York.
+    expect(formatInstant("2026-10-21T23:13:00.000Z", { timeZone: "Europe/London", year: true, zoneName: "offset" })).toBe("Oct 22, 2026, 00:13 GMT+1");
+    expect(formatInstant("2026-10-21T23:13:00.000Z", { timeZone: "America/New_York", year: true, zoneName: "offset" })).toBe("Oct 21, 2026, 19:13 GMT-4");
+    expect(formatInstant("2026-10-21T23:13:00.000Z", { timeZone: "UTC", year: true, zoneName: "offset" })).toBe("Oct 21, 2026, 23:13 GMT");
+  });
+  it("uses each instant's own daylight-saving offset, across the transition itself", () => {
+    expect(zoneOffsetLabel("2026-01-15T12:00:00.000Z", "Europe/London")).toBe("GMT");
+    expect(zoneOffsetLabel("2026-07-15T12:00:00.000Z", "Europe/London")).toBe("GMT+1");
+    // London springs forward at 01:00 UTC on 2026-03-29.
+    expect(formatInstant("2026-03-29T00:59:00.000Z", { timeZone: "Europe/London", zoneName: "offset" })).toBe("Mar 29, 00:59 GMT");
+    expect(formatInstant("2026-03-29T01:00:00.000Z", { timeZone: "Europe/London", zoneName: "offset" })).toBe("Mar 29, 02:00 GMT+1");
+    // New York falls back at 06:00 UTC on 2026-11-01: 01:30 happens twice, with different offsets.
+    expect(formatInstant("2026-11-01T05:30:00.000Z", { timeZone: "America/New_York", zoneName: "offset" })).toBe("Nov 1, 01:30 GMT-4");
+    expect(formatInstant("2026-11-01T06:30:00.000Z", { timeZone: "America/New_York", zoneName: "offset" })).toBe("Nov 1, 01:30 GMT-5");
+  });
+  it("formats fractional-hour zones", () => {
+    expect(formatInstant("2026-10-21T20:00:00.000Z", { timeZone: "Asia/Kolkata", year: true, zoneName: "offset" })).toBe("Oct 22, 2026, 01:30 GMT+5:30");
+    expect(zoneOffsetLabel("2026-10-21T20:00:00.000Z", "Asia/Kathmandu")).toBe("GMT+5:45");
+    expect(zoneOffsetLabel("bad", "UTC")).toBe("—");
+  });
+  it("accepts named zones only", () => {
+    expect(isSupportedTimeZone("Europe/London")).toBe(true);
+    expect(isSupportedTimeZone("UTC")).toBe(true);
+    expect(isSupportedTimeZone("Mars/Olympus_Mons")).toBe(false);
+    expect(isSupportedTimeZone("+01:00")).toBe(false);
+    expect(isSupportedTimeZone("")).toBe(false);
+    expect(isSupportedTimeZone(42)).toBe(false);
+  });
+  it("names zones as people read them, with IANA's current names", () => {
+    expect(timeZoneDisplayName("America/New_York")).toBe("America/New York");
+    expect(timeZoneDisplayName("Asia/Calcutta")).toBe("Asia/Kolkata");
+    expect(timeZoneDisplayName("Europe/Kiev")).toBe("Europe/Kyiv");
+  });
+  it("lists supported zones, sorted and including UTC", () => {
+    const zones = supportedTimeZones();
+    expect(zones).toContain("UTC");
+    expect(zones).toContain("Europe/London");
+    expect([...zones].sort()).toEqual(zones);
+    expect(zones.every(isSupportedTimeZone)).toBe(true);
   });
 });
 

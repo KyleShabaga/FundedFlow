@@ -235,13 +235,67 @@ export function zonedWallTimeToInstant(local: string, timeZone: string): string 
   return new Date(instant).toISOString();
 }
 
+// Display time zones (P0-D05). A display zone changes how an instant reads, never the instant itself.
+
+/** The computer's IANA zone as the runtime reports it now ("Europe/London"), or null when it reports none. */
+export function desktopTimeZone(): string | null {
+  const zone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return typeof zone === "string" && zone !== "" ? zone : null;
+}
+
+/** True when this runtime can format in `zone`, a named IANA zone. Fixed offsets ("+01:00") are not named zones. */
+export function isSupportedTimeZone(zone: unknown): zone is string {
+  if (typeof zone !== "string" || !/^[A-Za-z][A-Za-z0-9_+\-/]*$/.test(zone)) return false;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: zone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** The named zones this runtime supports, sorted; always includes UTC. */
+export function supportedTimeZones(): string[] {
+  const list = (Intl as { supportedValuesOf?: (key: "timeZone") => string[] }).supportedValuesOf;
+  const listed = typeof list === "function" ? list("timeZone") : [];
+  return [...new Set([...listed, "UTC"])].sort();
+}
+
+// ICU still lists some zones under names IANA has since replaced; show (and search) the current name.
+const RENAMED_ZONES: Record<string, string> = {
+  "Africa/Asmera": "Africa/Asmara", "America/Godthab": "America/Nuuk", "Asia/Calcutta": "Asia/Kolkata", "Asia/Katmandu": "Asia/Kathmandu",
+  "Asia/Rangoon": "Asia/Yangon", "Asia/Saigon": "Asia/Ho_Chi_Minh", "Atlantic/Faeroe": "Atlantic/Faroe", "Europe/Kiev": "Europe/Kyiv",
+  "Pacific/Enderbury": "Pacific/Kanton", "Pacific/Ponape": "Pacific/Pohnpei", "Pacific/Truk": "Pacific/Chuuk",
+};
+
+/** "America/New York", "Asia/Kolkata": a zone id as people read it (current name, spaces for underscores). */
+export function timeZoneDisplayName(zone: string): string {
+  return (RENAMED_ZONES[zone] ?? zone).replace(/_/g, " ");
+}
+
+// "shortOffset" is ES2021; the project's lib is ES2020. WebView2 and Node both support it.
+const SHORT_OFFSET = "shortOffset" as Intl.DateTimeFormatOptions["timeZoneName"];
+
+/** "GMT+1", "GMT+5:30", "GMT": the offset `timeZone` has at `instant`, with that date's daylight-saving rules. */
+export function zoneOffsetLabel(instant: string | number, timeZone: string | undefined): string {
+  const ms = typeof instant === "number" ? instant : Date.parse(instant);
+  if (Number.isNaN(ms)) return UNKNOWN;
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: SHORT_OFFSET }).formatToParts(new Date(ms));
+  const label = parts.find(p => p.type === "timeZoneName")?.value;
+  // ICU versions differ on a zero offset ("GMT", "GMT+0", "UTC"); show one spelling.
+  return label === undefined ? UNKNOWN : /^(GMT[+-]0|UTC)$/.test(label) ? "GMT" : label;
+}
+
 export interface InstantOptions {
   /** IANA zone to show the time in: the account's zone. Default: the computer's. */
   timeZone?: string;
   /** Adds the year ("Oct 19, 2026, 16:12"). */
   year?: boolean;
-  /** Adds the zone's short name ("EDT") so a time cannot be read in the wrong zone. */
-  zoneName?: boolean;
+  /**
+   * Adds the zone so a time cannot be read in the wrong zone: `true` its short name ("EDT"), `"offset"` its
+   * offset at that instant ("GMT+1", "GMT+5:30"), which no two zones share by accident.
+   */
+  zoneName?: boolean | "offset";
 }
 
 /**
@@ -251,7 +305,7 @@ export interface InstantOptions {
 export function formatInstant(instant: string | null | undefined, options: InstantOptions = {}): string {
   const ms = instant == null ? NaN : Date.parse(instant);
   if (Number.isNaN(ms)) return UNKNOWN;
-  return new Intl.DateTimeFormat("en-US", {
+  const text = new Intl.DateTimeFormat("en-US", {
     timeZone: options.timeZone,
     month: "short",
     day: "numeric",
@@ -259,6 +313,7 @@ export function formatInstant(instant: string | null | undefined, options: Insta
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
-    timeZoneName: options.zoneName ? "short" : undefined,
+    timeZoneName: options.zoneName === true ? "short" : undefined,
   }).format(new Date(ms));
+  return options.zoneName === "offset" ? `${text} ${zoneOffsetLabel(ms, options.timeZone)}` : text;
 }
