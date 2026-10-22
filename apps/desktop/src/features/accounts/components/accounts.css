@@ -20,14 +20,18 @@
 .acct-badges { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .acct-badge-icon { margin-right: 4px; }
 .acct-active-pill { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: var(--radius-pill); border: 1px solid var(--flow); color: var(--flow); font: 600 10.5px/1 var(--font-sans); letter-spacing: .3px; text-transform: none; white-space: nowrap; }
-.acct-pnl { display: inline-grid; justify-items: end; }
+.acct-pnl, .acct-balance { display: inline-grid; justify-items: end; }
 .acct-cell-note { font: 500 11px/14px var(--font-sans); color: var(--ink-faint); }
 .acct-rulebook-cell { display: inline-flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .acct-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--flow); cursor: pointer; box-shadow: none; }
 .acct-link:hover { text-decoration: underline; }
 .acct-link:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; border-radius: var(--radius-sm); }
 
-.acct-card-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-width: 0; }
+.acct-card-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-3); min-width: 0; }
+.acct-card-toolbar .ds-search { flex: 1 1 200px; max-width: 320px; margin-left: auto; }
+/* Status filter left, search right on one row; when the row is too narrow the search wraps to its own line, right-aligned. */
+.acct-table .ds-dt-toolbar > .ds-dt-tools:last-child { flex: 1 1 200px; justify-content: flex-end; }
+.acct-table .ds-dt-toolbar .ds-search { width: min(320px, 100%); }
 .acct-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr)); gap: var(--space-4); align-items: stretch; }
 .acct-card-wrap { display: grid; min-width: 0; }
 .acct-footnote { margin: 0; max-width: 100ch; }

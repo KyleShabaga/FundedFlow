@@ -26,6 +26,10 @@ Learn from traceable evidence: every metric resolves to the exact trades that pr
   Smooth control (Stepped by default) is saved in settings as `insights.curve_style`. Smooth is a monotone cubic
   through the same points, so it never rises above or dips below the two trades it joins; a note under the chart
   says positions between points are not results. Unknown-P&L trades are left out, as before, never bridged as zero.
+- Headline metric explanations (P0-D14): Net P&L, Win rate, Expectancy, Profit factor and Average R put how they are
+  worked out behind an "i" after the label (`MetricCard` `info`, an `InfoTip`: hover, keyboard focus or click/tap;
+  Escape and outside click close it). No basis footer, except Net P&L keeps its "x of y closed trades with a known
+  P&L" line visible while some P&L is unknown. Unavailable reasons stay in the card's sub line.
 - Every number, bar and row is clickable and opens the contributing trades (drill-down to Build 20).
 
 ## Metric rules (from Build 23)

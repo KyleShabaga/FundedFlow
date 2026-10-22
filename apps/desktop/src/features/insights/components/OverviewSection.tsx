@@ -39,6 +39,8 @@ export function OverviewSection(props: SectionProps) {
   const r = numberView(s.averageR, "R");
   const wr = rateView(s.winRate);
   const view = (n: number) => `View ${tradesText(n)}`;
+  // Coverage of the headline sums (P0-D14): in the Net P&L card's "i", and also visible while some P&L is unknown.
+  const coverage = s.unknownPnl ? `${s.eligible} of ${s.closed} closed trades with a known P&L` : `${tradesText(s.closed)}, all with a known P&L`;
   const groupDrill = (g: Group | null, what: string, describe: (k: string) => string) =>
     g ? <DrillButton ids={g.summary.tradeIds} title={`${what}: ${describe(g.key)}`} basis={scope} drill={drill}>{describe(g.key)}</DrillButton> : null;
 
@@ -46,19 +48,19 @@ export function OverviewSection(props: SectionProps) {
     <div className="in-section">
       <div className="in-kpis">
         <MetricCard label={label} value={pnl.value} sub={pnl.reason ?? (basis === "net" ? <>After {fmtFees(s, currency)} in fees</> : "Before fees")}
-          basis={s.unknownPnl ? `${s.eligible} of ${s.closed} closed trades with a known P&L` : `${tradesText(s.closed)}, all with a known P&L`}
+          info={<p>{coverage}</p>} basis={s.unknownPnl ? coverage : undefined}
           action={<DrillButton ids={s.eligibleIds} title={label} basis={scope} drill={drill}>{view(s.eligible)}</DrillButton>} />
         <MetricCard label="Win rate" value={wr.value} sub={s.eligible ? `${s.wins} W · ${s.losses} L · ${s.breakevens} BE` : wr.reason}
-          basis="Wins ÷ trades with a known result (break-evens count), as in the Journal"
+          info={<p>Wins ÷ trades with a known result (break-evens count), as in the Journal</p>}
           action={<DrillButton ids={s.eligibleIds} title="Win rate" basis="Wins, losses and break-evens by net P&L" drill={drill}>{view(s.eligible)}</DrillButton>} />
         <MetricCard label="Expectancy" value={expectancy.value} sub={expectancy.reason ?? "Average result per trade"}
-          basis={`${label} ÷ trades with a known result · needs ${INSIGHTS_MIN_SAMPLE}`}
+          info={<p>{label} ÷ trades with a known result · needs {INSIGHTS_MIN_SAMPLE}</p>}
           action={<DrillButton ids={s.eligibleIds} title="Expectancy" basis={scope} drill={drill}>{view(s.eligible)}</DrillButton>} />
         <MetricCard label="Profit factor" value={pf.value} sub={pf.reason ?? "Winning ÷ losing net P&L"}
-          basis={`Net P&L · needs ${INSIGHTS_MIN_SAMPLE} trades and a loss`}
+          info={<p>Net P&L · needs {INSIGHTS_MIN_SAMPLE} trades and a loss</p>}
           action={<DrillButton ids={[...s.winIds, ...s.lossIds]} title="Profit factor" basis="Winning and losing trades by net P&L" drill={drill}>{view(s.wins + s.losses)}</DrillButton>} />
         <MetricCard label="Average R" value={r.value} sub={r.reason ?? `${s.rIds.length} of ${s.eligible} trades have a planned risk`}
-          basis="Net P&L ÷ the review's planned risk (1R), only where recorded"
+          info={<p>Net P&L ÷ the review's planned risk (1R), only where recorded</p>}
           action={<DrillButton ids={s.rIds} title="Average R" basis="Trades whose review records a planned risk" drill={drill}>{view(s.rIds.length)}</DrillButton>} />
       </div>
 

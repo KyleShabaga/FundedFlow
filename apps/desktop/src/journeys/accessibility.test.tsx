@@ -148,7 +148,7 @@ describe("keyboard: shell", () => {
     // Development builds add the Build 26.9 developer actions directly above Settings.
     const devTools = import.meta.env.DEV ? ["Add Fake Data", "Reset All Data"] : [];
     // Each submenu's chevron follows its section link.
-    const expected = ["Today", "Journal", "Journal views", "Insights", "Insights views", "Accounts", ...devTools, "Settings"];
+    const expected = ["Today", "Journal", "Journal views", "Insights", "Insights views", "Accounts", "Import Wizard", ...devTools, "Settings"];
     const order: string[] = [];
     for (let i = 0; i < expected.length; i++) { await user.tab(); order.push(document.activeElement?.getAttribute("aria-label") ?? ""); }
     expect(order).toEqual(expected);

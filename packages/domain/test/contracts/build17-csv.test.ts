@@ -28,6 +28,20 @@ describe.each(fixture.cases)("CSV Rust baseline: $name", c => {
     }
   });
 
+  it("backs every mapping error with a blocking columns issue, and gives every field a reason (P0-D09)", () => {
+    const preview = csvPreviewSchema.parse(c.expected.preview);
+    for (const m of preview.mapping) {
+      expect(m.reason.length).toBeGreaterThan(0);
+      const issue = preview.fileIssues.find(i => i.field === `columns.${m.field}`);
+      // The exit pair rule is one issue on columns.exitPrice; the status marks whichever half is missing.
+      const pair = m.field === "exitTime" || m.field === "exitPrice";
+      if (issue && !pair) expect(m.status).toBe("error");
+      if (m.status === "error" && !pair) expect(issue).toBeDefined();
+      if (m.status === "matched" || m.status === "review") expect(m.header).not.toBeNull();
+      if (m.status === "notMapped") expect(m.required).toBe(false);
+    }
+  });
+
   it("preserves canonical precision and nullable financial values without re-normalizing CSV", () => {
     for (const row of csvPreviewSchema.parse(c.expected.preview).rows) {
       const trade = row.trade;
