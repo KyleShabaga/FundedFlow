@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r4) |
+| Status | Proposed (r5; awaiting independent review) |
 | Type | Verification |
 | Audit priority | Gate |
 | Roadmap lane | NA-5 |
@@ -16,8 +16,8 @@
 | Effort / risk | M / Low |
 | Verification platform | Windows only |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | b01e2b9 (application source identical to 92e7980) |
-| Specification revision | r4 (2026-10-22; r3 + currency update for approved decisions) |
+| Inspected source revision | 9430f2a (application source identical to 92e7980) |
+| Specification revision | r5 (2026-10-22; r4 + owner confirmation of the 015/016 downgrade declaration recorded) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -48,10 +48,10 @@ Real journal.
 4a. Pending-cleanup downgrade (TASK-015/016 declaration: supported, old marker schema kept). On the candidate, with synthetic data: first run a restore so that a recovery copy `data-controls/<uuid>/` exists (or use a screenshot under `attachments/`); hold one file in it open with no sharing (for example PowerShell `[IO.File]::Open(path,'Open','Read','None')`); run a whole-journal erase, so its cleanup cannot finish and the marker stays in `data-controls-cleanup/`; confirm the marker file exists. Close FundedFlow and **release the lock**, then install the older EXE over the candidate and launch it. Expected: (i) the older build reaches Ready; (ii) on that first start it completes the marker (removes the listed copies and screenshots, then the marker); (iii) the journal and the remaining data are intact; (iv) `data-controls-quarantine/` and any managed extras may remain on disk (the declared known limit). Optional extra run with the lock still held: the older build stops with OpenFailed "Pending deletion cleanup could not finish" (`runtime.rs:352-356`, identical in 7679edc); record it as expected, not as a failure. Evidence: marker file name and contents before the downgrade, screenshots of Ready, the `data-controls-cleanup/` and `data-controls/` listings after, tester, date, Windows build. If no pending marker can be produced on the VM, record step 4a as **Not Run** with the reason; the TASK-015/016 compatibility unit tests then remain the evidence.
 5. Uninstall unticked → data remains; uninstall ticked → list remaining folders.
 
-**Pass rule (r3, G9).** The gate is **Passed** if and only if: (a) the synthetic data (account, trades, screenshots) is intact after the upgrade (step 2) and after the same-version reinstall (step 3); (b) an unticked uninstall keeps `%APPDATA%\com.fundedflow.desktop`; and (c) a ticked uninstall removes exactly the list documented by TASK-026 (no listed folder left, nothing unlisted removed apart from the program folder, shortcuts and uninstall entry that every uninstall removes; the exported archive outside `%APPDATA%` remains). Any of (a)–(c) false gives **Failed**; any not run gives **Not Run** or **Blocked**. The downgrade (steps 4 and 4a) is recorded and does not decide Passed, with one exception: if step 4a is run and any of its expected results (i)–(iii) is false, the gate is **Failed**, because the TASK-015/016 declaration is then wrong. Step 4a recorded as Not Run (with reason) does not block the gate. Kyle may make step 4a mandatory when confirming the declaration (runbook 10 §9).
+**Pass rule (r3, G9).** The gate is **Passed** if and only if: (a) the synthetic data (account, trades, screenshots) is intact after the upgrade (step 2) and after the same-version reinstall (step 3); (b) an unticked uninstall keeps `%APPDATA%\com.fundedflow.desktop`; and (c) a ticked uninstall removes exactly the list documented by TASK-026 (no listed folder left, nothing unlisted removed apart from the program folder, shortcuts and uninstall entry that every uninstall removes; the exported archive outside `%APPDATA%` remains). Any of (a)–(c) false gives **Failed**; any not run gives **Not Run** or **Blocked**. The downgrade (steps 4 and 4a) is recorded and does not decide Passed, with one exception: if step 4a is run and any of its expected results (i)–(iii) is false, the gate is **Failed**, because the TASK-015/016 declaration is then wrong. Step 4a recorded as Not Run (with reason) does not block the gate. Kyle's confirmation of the declaration (Notion TASK-015 Decision Notes, 2026-10-22) does not make step 4a mandatory; Kyle may still make it mandatory when approving this revision.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-029 (candidate version `0.1.1` or later, TASK-005 = A); TASK-027 unique versions; the older EXE above available with its recorded SHA and SHA-256; TASK-015/016 downgrade declaration recorded (Kyle confirms it, runbook 10 §9 row "Downgrade with a pending cleanup").
+- Prerequisites: TASK-029 (candidate version `0.1.1` or later, TASK-005 = A); TASK-027 unique versions; the older EXE above available with its recorded SHA and SHA-256; TASK-015/016 downgrade declaration (runbook 10 §9 row "Downgrade with a pending cleanup") confirmed by Kyle. Record: Notion board, TASK-015 Decision Notes, 2026-10-22: Kyle approved TASK-015 r3 Option A ("Approve option A") in reply to the recommendation that disclosed the 015/016 downgrade limitation; the note states "This confirms the shared downgrade declaration".
 - Likely shared-file conflicts: None.
 
 ## Acceptance criteria (pass/fail)
@@ -82,6 +82,10 @@ Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE
 ## Changes in r4
 - Versions: the candidate is stated as `0.1.1` or later per TASK-005 Option A (approved r2), against the `0.1.0` artifact as the older build; replaced the open "higher version than 0.1.0 (TASK-005/TASK-027)" wording; a replacement candidate gets a new, higher version and this gate is re-run (TASK-005 A: each candidate a new increasing version).
 - Prerequisites and acceptance: candidate version `0.1.1` or later; record both versions (same reason).
+
+## Changes in r5
+- Prerequisites and pass rule: the 015/016 downgrade declaration is recorded as confirmed by Kyle (Notion TASK-015 Decision Notes, 2026-10-22: "Approve option A", "This confirms the shared downgrade declaration") instead of pending; step 4a stays optional unless Kyle makes it mandatory when approving r5 (independent review (review4), reviewer A B2, applied to the cards that depend on the declaration).
+- Status, revision and inspected source revision updated for r5; this revision needs Kyle's re-approval.
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.

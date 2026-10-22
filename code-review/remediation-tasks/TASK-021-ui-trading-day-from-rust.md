@@ -20,7 +20,7 @@
 | Specification revision | r4 (2026-10-22; r3 + approved-task audit fixes + owner amendment folded in) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
-| Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
+| Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 9430f2a (HEAD at r4; application source unchanged). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
 
 ## Purpose / risk
@@ -45,7 +45,7 @@ New Rust command/DTO; batched overview (ISSUE-014, V1.1); freshness adapter rout
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 2. Change `currentAssignment(assignments, tradingDay)` to take a trading day; update callers to pass the Rust trading day.
 3. Badge: compare `snapshot.tradingDay` with the Rust trading day.
-4. Reset dialog (owner amendment, 2026-10-22): the `effectiveFrom` sent with an Assign decision is the Rust trading day for the **selected** `effectiveAt`, read through the existing freshness `asOf` support (`list_account_freshness(asOf = effectiveAt)`, `currentTradingDay` of this account's row); no TypeScript calendar maths. It is recomputed whenever `effectiveAt` (or the account) changes; a response for an earlier `effectiveAt` is ignored (key the read by `[accountId, asOf]`, separate from `accountFreshnessKey`). While the value is unresolved (loading, error, no row) or outdated (not for the current `effectiveAt`), submitting the Assign decision is blocked with the existing `Button disabledReason`; the unresolved state shows the existing `StatusIndicator status="unknown"`. Under TASK-020's strict equality, today's trading day is wrong for a backdated reset, so this is the only accepted source.
+4. Reset dialog (owner amendment, 2026-10-22): the `effectiveFrom` sent with an Assign decision is the Rust trading day for the **selected** `effectiveAt`, read through the existing freshness `asOf` support (`list_account_freshness(asOf = effectiveAt)`, `currentTradingDay` of this account's row); no TypeScript calendar maths. It is recomputed whenever `effectiveAt` (or the account) changes; a response for an earlier `effectiveAt` is ignored (key the read by `[accountId, asOf]`, separate from `accountFreshnessKey`). While the value is unresolved (loading, error, no row) or outdated (not for the current `effectiveAt`), submitting the Assign decision is blocked with the existing `Button disabledReason`; the unresolved state shows the existing `StatusIndicator status="unknown"`. Under TASK-020's strict equality, today's trading day is wrong for a backdated reset, so this is the only accepted source. The block applies only to the Assign decision: "Decide later" (`LifecycleDialogs.tsx:442`) sends no `effectiveFrom` and stays submittable while the day is unresolved.
 5. Fake-clock tests at 2026-10-23T22:30Z (America/New_York, reset 17:00) and Saturday noon → assignment effective 2026-10-26 is 'in use'; no false badge.
 6. Fail closed: if the Rust trading day (freshness) is unavailable, show 'unknown' rather than falling back to `zonedDay`.
 6a. Boundary re-read: wherever the Rust trading day is used for 'in use', the badge or a default, re-read freshness at the row's `nextTradingDayStart` (a timer that does not depend on `nextChangeAt` or on `AccountSwitcher` being mounted), so an open window crosses the reset without a focus event.
@@ -101,6 +101,8 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Added a re-read at `nextTradingDayStart` (step 6a) with a fake-clock criterion that needs no focus event. Reason: audit SHOULD (`hooks/freshness.ts:37`, `features/accounts/freshness.ts:126,147-150`).
 - Added `features/accounts/components/presentation.tsx:73` to root cause and scope, and `src/features/today` to the targeted test command. Reason: audit SHOULD.
 - Noted the shared-file risks with TASK-015 (`test/boundaries.ts`) and TASK-022/024 (freshness hook). Reason: audit cross-task note.
+- Baseline row: stale `a7310fd (HEAD)` replaced with `9430f2a (HEAD at r4; application source unchanged)` (independent review (review4), reviewer B nit).
+- Step 4: stated that "Decide later" stays submittable while the trading day is unresolved (independent review (review4), reviewer B nit; audit NIT).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
