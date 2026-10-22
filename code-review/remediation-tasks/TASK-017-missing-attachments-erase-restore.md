@@ -33,7 +33,7 @@ AV quarantine, AppData tidying, disk damage.
 `src-tauri/src/data_controls/archive.rs:154-173`; callers `restore.rs:127`, `deletion.rs:211`.
 
 ## Expected change scope
-`restore.rs` (`prepare`: keep `safety-inventory.json` present-only and record missing/changed files in a separate `safety-missing.json`; relax `validate_managed` in `copy_managed` (`restore.rs:129`) for recorded-missing files; `rollback`), `deletion.rs` (`preview`), `archive.rs` (an inventory variant that reports rather than fails), `mod.rs`. Contract change (named): add an optional `detail` field to the Rust `ControlError` (`src-tauri/src/data_controls/mod.rs`, today `{code, message}`), to the Zod schema in `packages/domain/src/contracts/data-controls.ts`, and render it in `apps/desktop/src/features/data-controls/api/data-controls.ts` (today only `CODE_COPY[code]`); update `packages/domain/test/fixtures/data-controls-wire.json` deliberately in the same PR with the diff reviewed (this card authorises that one fixture). Export keeps strict behaviour, so `data_controls/tests.rs:49` (export) must not change; add restore and erase tests instead.
+`restore.rs` (`prepare`: keep `safety-inventory.json` present-only and record missing/changed files in a separate `safety-missing.json`; relax `validate_managed` in `copy_managed` (`restore.rs:129`) for recorded-missing files; `rollback`), `deletion.rs` (`preview`), `archive.rs` (an inventory variant that reports rather than fails), `mod.rs`. Reuse the optional `detail` field added by TASK-013; update `packages/domain/test/fixtures/data-controls-wire.json` only if a new detail example is added (reviewed diff). Export keeps strict behaviour, so `data_controls/tests.rs:49` (export) must not change; add restore and erase tests instead.
 
 ## Out of scope
 **Export** without missing attachments (needs archive format decision TASK-009 D-ARCH; V1.1). Repair command (V1.1).
@@ -75,4 +75,4 @@ Use only disposable test journals and temporary directories created by tests. Ne
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
 ## Independent review notes
-Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.
+Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.

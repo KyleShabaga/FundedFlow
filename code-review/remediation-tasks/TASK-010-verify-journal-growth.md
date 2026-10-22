@@ -40,7 +40,7 @@ Fixing the cap (TASK-013/014).
 
 ## Implementation approach
 1. Create an isolated directory (never `%APPDATA%`).
-2. Seed a journal with realistic trade counts (e.g. 500, 2,000, 10,000 trades).
+2. Seed with the command in scope (optionally `--preset stress`); the scratch harness adds trades to reach N (e.g. 500, 2,000, 10,000).
 3. Run K calculations (e.g. 1, 50, 250) through the existing capture/promote path in a test harness.
 4. Record DB size, page_count, freelist_count; extrapolate to 12 months of expected use; record whether 64 MiB is reachable.
 
@@ -63,4 +63,4 @@ Use only disposable test journals and temporary directories created by tests. Ne
 Results recorded in `code-review/11-remediation-execution-log.md` with tester, date, source SHA (and installer EXE SHA-256 where applicable), environment and raw observations; the linked decision/escalation is updated. No code change is implied.
 
 ## Independent review notes
-Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.
+Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.

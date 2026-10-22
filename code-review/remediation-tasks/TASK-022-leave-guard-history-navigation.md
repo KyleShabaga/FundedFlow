@@ -50,7 +50,7 @@ Native window close (TASK-023); migrating to a data router.
 
 ## Acceptance criteria (pass/fail)
 - [ ] New tests pass; fail before.
-- [ ] `npm run test -w @fundedflow/desktop -- src/features/journal src/features/daily-reviews src/features/rulebooks` → exit 0.
+- [ ] `npm run test -w @fundedflow/desktop -- src/features/journal src/features/daily-reviews src/features/rulebooks src/features/shared src/features/accounts src/app` → exit 0.
 - [ ] Full root checks → exit 0.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` unset for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
@@ -73,4 +73,4 @@ UI-only.
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
 ## Independent review notes
-Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.
+Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.

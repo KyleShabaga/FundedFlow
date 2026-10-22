@@ -41,7 +41,7 @@ Recovery-copy pruning (V1.1, TASK-009 D-RET); restore marker semantics (installi
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 2. Write cleanup markers via NamedTempFile + sync + persist in the queue directory.
-3. In `recover_cleanup`, move an unparseable/oversized/non-regular marker to a sibling `data-controls-quarantine/` in the data root (NOT inside `data-controls-cleanup/`, whose non-regular entries are rejected at `deletion.rs:327-330`, and NOT inside `data-controls/`, see `deletion.rs:104`); add `data-controls-quarantine` to the data-root key allow-list in `recover_cleanup` (`deletion.rs:361-366`); never delete it. Whole-journal erase also removes this directory and the preview says so.
+3. In `recover_cleanup`, move an unparseable/oversized/non-regular marker to a sibling `data-controls-quarantine/` in the data root (NOT inside `data-controls-cleanup/`, whose non-regular entries are rejected at `deletion.rs:327-330`, and NOT inside `data-controls/`, see `deletion.rs:104`); add `data-controls-quarantine` to the data-root key allow-list in `recover_cleanup` (`deletion.rs:361-366`); never delete it. Whole-journal erase also removes this directory and the preview says so (copy text only; no DeletionPreview/wire change).
 4. Make the pending/quarantined state observable without breaking the Ready contract: `runtime.ts` superRefine requires `failure: null` when Ready, so either add a new status field (Rust `runtime.rs` + `apps/desktop/src/lib/data/runtime.ts` schema + UI + docs, named in the PR) or surface it through the existing `retry_data_cleanup` path. Choose one in the PR and record it.
 5. Treat per-file removal failure as a recorded pending cleanup; `Runtime::open` returns Ready.
 6. Keep the owned-row check: never remove a file any row references. Note: a quarantined marker means its listed files remain as strays (handled by TASK-016 classification).
@@ -79,4 +79,4 @@ Use only disposable test journals and temporary directories created by tests. Ne
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
 ## Independent review notes
-Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.
+Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.

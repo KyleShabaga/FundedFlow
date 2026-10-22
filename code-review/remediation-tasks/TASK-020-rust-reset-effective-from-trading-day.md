@@ -33,7 +33,7 @@ Attempt reset after the reset time or at a weekend.
 `apps/desktop/src/features/accounts/components/LifecycleDialogs.tsx:282-293`; `src-tauri/src/store/rulebooks.rs:829-835` (`assign_in`), `src-tauri/src/store/attempts.rs:262`.
 
 ## Expected change scope
-`src-tauri/src/store/rulebooks.rs`, `src-tauri/src/store/attempts.rs`; Rust tests. **No wire change** (option b: reject a mismatched `effective_from`). Deliberate, reviewed edits to existing data that becomes invalid: `db/rulebook_tests.rs:266-270` (Saturday 2026-10-10) and `:296` (Sunday 2026-11-01), and the dev-tools seed `seed.rs:528`.
+`src-tauri/src/store/rulebooks.rs`, `src-tauri/src/store/attempts.rs`; Rust tests. **No wire change** (option b: reject a mismatched `effective_from`). Deliberate, reviewed edits to existing data that becomes invalid: `db/rulebook_tests.rs:266-270` (Saturday 2026-10-10) and `:296` (Sunday 2026-11-01), and the dev-tools seed `seed.rs:527-531` (`effective_from` at :531).
 
 ## Out of scope
 Changing the `RulebookDecision` contract (option a); UI changes (TASK-021).
@@ -52,7 +52,7 @@ Changing the `RulebookDecision` contract (option a); UI changes (TASK-021).
 - [ ] New tests pass; fail before.
 - [ ] Existing rulebook/attempt tests pass (`store/attempt_tests.rs`, `db/rulebook_editor_tests.rs`).
 - [ ] Full Rust checks → exit 0.
-- [ ] The edits to `db/rulebook_tests.rs:266-270, 296` and `seed.rs:528` are listed in the PR as deliberate and reviewed.
+- [ ] The edits to `db/rulebook_tests.rs:266-270, 296` and `seed.rs:531` are listed in the PR as deliberate and reviewed.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` unset for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
 ## Verification plan
@@ -74,4 +74,4 @@ Use only disposable test journals and temporary directories created by tests. Ne
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
 ## Independent review notes
-Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.
+Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.

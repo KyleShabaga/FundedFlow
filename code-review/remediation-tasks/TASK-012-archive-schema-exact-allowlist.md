@@ -33,7 +33,7 @@ Owner restores an archive built or modified by someone else.
 `src-tauri/src/data_controls/archive.rs:466` (`schema()`) and `:77` (`dump()`) filter with LIKE; restore candidate opened via `db::open_file` with `trusted_schema` ON (`src-tauri/src/data_controls/restore.rs:73, 116`).
 
 ## Expected change scope
-`src-tauri/src/data_controls/archive.rs` (`schema`, `dump`); `src-tauri/src/data_controls/restore.rs` and `src-tauri/src/db/mod.rs` (`open_file` migrates internally, so `trusted_schema=OFF` must be set inside `configure`/`open_file` for the candidate path, or via a new open variant used only by restore); `src-tauri/src/data_controls/security_tests.rs` (new cases). The live-connection `trusted_schema=OFF` change is a **separate PR** (own approval) and must run `db/upgrade_tests.rs` on the v3/v4/v8 fixtures.
+`src-tauri/src/data_controls/archive.rs` (`schema`, `dump`); `src-tauri/src/data_controls/restore.rs` and `src-tauri/src/db/mod.rs` (`open_file` migrates internally: add a restore-only open variant that sets `trusted_schema=OFF` before `migrate`; do not change the shared `configure`/`open_file` in this PR); `src-tauri/src/data_controls/security_tests.rs` (new cases). The live-connection `trusted_schema=OFF` change is a **separate PR** (own approval) and must run `db/upgrade_tests.rs` on the v3/v4/v8 fixtures.
 
 ## Out of scope
 Archive format changes; dump format changes; cap changes (TASK-013).
@@ -42,7 +42,7 @@ Archive format changes; dump format changes; cap changes (TASK-013).
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 2. Replace the LIKE filter with an exact allow-list by `(type, name)`: tables `sqlite_sequence`, `sqlite_stat1`, `sqlite_stat4`; indexes whose name starts with `sqlite_autoindex_` and whose `sql IS NULL`. Any other object whose name begins case-insensitively with `sqlite` fails validation with `Integrity`.
 3. Apply the same rule in `dump()` so hidden tables cannot escape `data.json` equality; existing v1 archives must still match.
-4. Ensure the restore candidate connection has `PRAGMA trusted_schema=OFF` before any migration runs (inside `open_file`/`configure` or a dedicated open variant).
+4. Ensure the restore candidate connection has `PRAGMA trusted_schema=OFF` before any migration runs via the restore-only open variant (shared `configure`/`open_file` unchanged).
 5. Security tests: archives with `CREATE TRIGGER sqlitex_evil`, `CREATE TABLE SQLITE1(x)`, `CREATE VIEW sqliteA AS SELECT 1`, and a `sqlite_x` trigger planted via `PRAGMA writable_schema` → `Integrity`; a journal with a non-empty `sqlite_sequence`, and one with `sqlite_stat1` after `ANALYZE`, still export and restore.
 
 ## Prerequisites, dependencies and conflicts
@@ -56,7 +56,7 @@ Archive format changes; dump format changes; cap changes (TASK-013).
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` unset for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
 ## Verification plan
-Existing: `data_controls/security_tests.rs`, `data_controls/tests.rs`, `current_schema_tests.rs`. New: the three crafted-name archives.
+Existing: `data_controls/security_tests.rs`, `data_controls/tests.rs`, `current_schema_tests.rs`. New: the four crafted archives plus the `sqlite_sequence`/`sqlite_stat1` positive cases.
 
 Standard checks (run serially, frontend build before Rust):
 - Repository root: `npm run check:boundaries -w @fundedflow/domain` → exit 0
@@ -74,4 +74,4 @@ Use only disposable test journals and temporary directories created by tests. Ne
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
 ## Independent review notes
-Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.
+Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.

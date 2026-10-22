@@ -33,7 +33,7 @@ Building a candidate from an untested SHA; downgrade testing.
 Workflow design; fixed version.
 
 ## Expected change scope
-`.github/workflows/release-installer.yml` (require a successful `ci.yml` run on the same SHA or run the CI steps in-job; widen PR paths; log rustc/node/npm/@tauri-apps/cli versions to the summary), version fields `apps/desktop/src-tauri/tauri.conf.json:4`, `apps/desktop/src-tauri/Cargo.toml:3`, root/workspace `package.json` versions as decided in TASK-005; third-party summary `appVersion` regenerated only if the notices task scope allows (record). Full version knock-on (all in the same PR): `Cargo.lock`, `package-lock.json`, `npm run notices` (cargo-about 0.9.2; regenerates the notices `appVersion`), `producerVersion` in `packages/domain/test/fixtures/data-controls-wire.json` (reviewed diff). TEST-010 `check:engine-runtimes`: explicitly deferred to V1.1 (not in this card).
+`.github/workflows/release-installer.yml` (require a successful `ci.yml` run on the same SHA or run the CI steps in-job; widen PR paths; log rustc/node/npm/@tauri-apps/cli versions to the summary), version fields `apps/desktop/src-tauri/tauri.conf.json:4`, `apps/desktop/src-tauri/Cargo.toml:3`, root/workspace `package.json` versions as decided in TASK-005. Full version knock-on (all in the same PR): `Cargo.lock`, `package-lock.json`, `npm run notices` (cargo-about 0.9.2; regenerates the notices `appVersion`), `producerVersion` in `packages/domain/test/fixtures/data-controls-wire.json` (reviewed diff). TEST-010 `check:engine-runtimes`: explicitly deferred to V1.1 (not in this card).
 
 ## Out of scope
 Signing; updater; pinning actions by SHA (optional, V1.1).
@@ -75,4 +75,4 @@ No user data.
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
 ## Independent review notes
-Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.
+Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.

@@ -33,10 +33,10 @@ Profile or `C:\Users` relocated via junction; redirected Roaming; mount point; p
 `src-tauri/src/data_controls/filesystem.rs:89-109` (walk from `components()` incl. bare prefix), `data_controls/mod.rs:155-168`, `runtime.rs:330-335, 130`.
 
 ## Expected change scope
-`filesystem.rs` (root-anchored check), all **22 app-owned** `no_symlink_components` call sites switched to the root-anchored check (inventory them in the PR; e.g. `recover_cleanup` at `deletion.rs:323` runs at startup) — user-chosen export/restore paths keep the old check; `data_controls/mod.rs::filesystem_ownership`; `runtime.rs` and `apps/desktop/src/lib/data/runtime.ts` (`failureCategories` + stage map: new non-retry category — contract change), UI copy and docs; Windows-gated tests. First evaluate std `FileType::is_symlink()` / `symlink_metadata` on Windows (may cover junctions without a new dependency); only if insufficient declare `windows-sys` in `Cargo.toml` — **dependency change requires explicit approval**, plus `npm run check:notices` and a `Cargo.lock` diff check.
+`filesystem.rs` (root-anchored check), all app-owned `no_symlink_components` call sites (21 of 24 non-test sites at a7310fd; user paths `archive.rs:223, 331, 552` keep the old check) switched to the root-anchored check (inventory them in the PR; e.g. `recover_cleanup` at `deletion.rs:323` runs at startup) — user-chosen export/restore paths keep the old check; `data_controls/mod.rs::filesystem_ownership`; `runtime.rs` and `apps/desktop/src/lib/data/runtime.ts` (`failureCategories` + stage map: new non-retry category — contract change), UI copy and docs; Windows-gated tests. First evaluate std `FileType::is_symlink()` / `symlink_metadata` on Windows (may cover junctions without a new dependency); only if insufficient declare `windows-sys` in `Cargo.toml` — **dependency change requires explicit approval**, plus `npm run check:notices` and a `Cargo.lock` diff check.
 
 ## Out of scope
-Export/restore user-path validation (TR-007/WIN-002, V1.1); hard-link checks (ISSUE-024, V1.1; no task).
+Export/restore user-path validation (TR-007/WIN-002, V1.1); hard-link checks (ISSUE-024, unassigned; record a Triage card).
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
@@ -46,14 +46,14 @@ Export/restore user-path validation (TR-007/WIN-002, V1.1); hard-link checks (IS
 5. `cfg(windows)` tests: app root under a junctioned parent → Ready; app root itself a junction → refused with the new category.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-017 (merge order on data_controls); TASK-011 (b) results to confirm cases; approval of the `windows-sys` declaration.
+- Prerequisites: TASK-017 (merge order on data_controls); TASK-011 (b) results to confirm cases; approval of the `windows-sys` declaration only if std `is_symlink` proves insufficient.
 - Likely shared-file conflicts: `filesystem.rs` shared with TASK-015; `runtime.rs` with TASK-015.
 
 ## Acceptance criteria (pass/fail)
-- [ ] Windows CI: `cargo test --offline --locked` (windows-latest) runs the new `cfg(windows)` tests → pass.
+- [ ] Windows CI: the `ci.yml` `cargo test` step (windows-latest, `ci.yml:69`) runs the new `cfg(windows)` tests → pass.
 - [ ] Manual Windows check (owner/VM, recorded): junctioned profile layout starts Ready; standard profile unaffected.
 - [ ] Full Rust and root checks → exit 0.
-- [ ] All 22 app-owned call sites listed in the PR and each uses the root-anchored check; user-path call sites unchanged.
+- [ ] All app-owned call sites (21 of 24 at a7310fd) listed in the PR and each uses the root-anchored check; user-path call sites unchanged.
 - [ ] `runtime.ts` failure-category tests updated deliberately; root `npm run typecheck` and `npm test` → exit 0.
 - [ ] If a dependency is declared: `npm run check:notices` → exit 0 and the `Cargo.lock` diff is limited to the declaration.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` unset for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
@@ -77,4 +77,4 @@ Use only disposable test journals and temporary directories created by tests. Ne
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
 ## Independent review notes
-Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.
+Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.

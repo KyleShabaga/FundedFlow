@@ -40,10 +40,10 @@ Raising archive caps or changing archive format (owner decision TASK-009 D-ARCH)
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
-2. Compute used bytes as `(page_count − freelist_count) × page_size` for the live-side size check; VACUUM the temporary snapshot (never the live journal) where a snapshot is checked.
+2. Compute used bytes as `(page_count − freelist_count) × page_size` for the live-side size check; for export/restore-prepare snapshots apply the option chosen in the PR (VACUUM the temporary snapshot, never the live journal, or narrowed acceptance).
 3. When any cap is exceeded, return the existing code with `detail` naming the component (database pages / rows / data.json / total archive / entry count) and the measured value.
 4. Render the detail in user-facing copy that says which limit was exceeded.
-5. Tests: a journal with >64 MiB free pages but small live data → erase preview and export succeed; a journal over a real cap → error detail names the component.
+5. Tests: a journal with >64 MiB free pages but small live data → erase preview succeeds; export succeeds if VACUUM was chosen, otherwise its error detail names database pages; a journal over a real cap → error detail names the component.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-012 (same file, merge order); TASK-010 result (priority).
@@ -75,4 +75,4 @@ Use only disposable test journals and temporary directories created by tests. Ne
 Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
 
 ## Independent review notes
-Independent review (Block 3, 2026-10-22): CHANGES REQUIRED on r1. All listed corrections applied in r2 (see 08 index §H for the per-card list). Re-check by the approving reviewer recommended before execution.
+Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.
