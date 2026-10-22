@@ -4,7 +4,7 @@
 // choices live in the URL, so returning from a trade restores them. Money never crosses currencies.
 import { selectTrades, summarize, type InsightsDataset, type InsightsFilter } from "@fundedflow/domain";
 import { Filter, Users } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
@@ -57,6 +57,8 @@ export function InsightsPage() {
   const state = useMemo(() => parseInsightsParams(params), [params]);
   const update = (patch: Partial<InsightsState>) => setParams(toInsightsParams({ ...state, ...patch }), { replace: true });
   const navigate = useNavigate();
+  // The Tags section exists only when the loaded trades have tags; the body reports it so the top tabs can list it.
+  const [hasTags, setHasTags] = useState(false);
 
   if (active.state.kind === "loading") return <LoadingState label="Loading accounts" layout="table" rows={4} />;
   if (active.state.kind === "error") return <ErrorState scope="route" title="Accounts couldn't be loaded" message="Insights needs to know which accounts exist. Use the recovery controls, then try again." />;
@@ -72,8 +74,16 @@ export function InsightsPage() {
   }
   // Explicit attempts from the URL; otherwise the active account. Never silently widened.
   const selectedIds = state.accounts ?? (active.activeId ? [active.activeId] : []);
+  // P0-D16: the section tabs sit directly under the page title on every Insights view, above the account, basis and
+  // filters. Their panels stay inside the loaded body (Radix Tabs links them through context), so moving the list
+  // doesn't move any state: sections, filters and accounts still live in the URL.
+  const sections: { value: Section; label: string }[] = [
+    { value: "overview", label: "Overview" }, { value: "calendar", label: "Calendar" }, { value: "breakdowns", label: "Breakdowns" },
+    ...(hasTags ? [{ value: "tags" as const, label: "Tags" }] : []), { value: "attempts", label: "Attempts" },
+  ];
+  const section = sections.some(s => s.value === state.section) ? state.section : "overview";
   return (
-    <div className="in-page">
+    <Tabs label="Insights sections" value={section} onValueChange={v => update({ section: v as Section })} items={sections} className="in-page">
       <div className="in-head">
         <p className="jr-sub">Closed trades only: every number opens the trades it was added up from. Not account balance, live equity or firm compliance.</p>
         <div className="in-head-actions">
@@ -88,23 +98,23 @@ export function InsightsPage() {
             description="Pick one or more attempts with Accounts above. Failed, passed, closed and archived attempts can be chosen too." />
         </div>
       ) : (
-        <Loaded key={[...selectedIds].sort().join(",")} ids={selectedIds} state={state} update={update} />
+        <Loaded key={[...selectedIds].sort().join(",")} ids={selectedIds} state={state} update={update} onTags={setHasTags} />
       )}
-    </div>
+    </Tabs>
   );
 }
 
-function Loaded({ ids, state, update }: { ids: string[]; state: InsightsState; update: (p: Partial<InsightsState>) => void }) {
+function Loaded({ ids, state, update, onTags }: { ids: string[]; state: InsightsState; update: (p: Partial<InsightsState>) => void; onTags: (hasTags: boolean) => void }) {
   const dataset = useInsightsDataset(ids);
   return (
     <StateBoundary state={toAsyncState(dataset)} label="insights" scope="route" onRetry={retryRead(dataset.refresh)}
       loading={<LoadingState label="Adding up the selected trades" layout="panel" />}>
-      {data => <Body dataset={data} ids={ids} state={state} update={update} />}
+      {data => <Body dataset={data} ids={ids} state={state} update={update} onTags={onTags} />}
     </StateBoundary>
   );
 }
 
-function Body({ dataset, ids, state, update }: { dataset: InsightsDataset; ids: string[]; state: InsightsState; update: (p: Partial<InsightsState>) => void }) {
+function Body({ dataset, ids, state, update, onTags }: { dataset: InsightsDataset; ids: string[]; state: InsightsState; update: (p: Partial<InsightsState>) => void; onTags: (hasTags: boolean) => void }) {
   const filter: InsightsFilter = { ...state.filter, accountIds: ids };
   const filterKey = JSON.stringify(filter);
   const selection = useMemo(() => selectTrades(dataset, filter), [dataset, filterKey]);
@@ -116,11 +126,7 @@ function Body({ dataset, ids, state, update }: { dataset: InsightsDataset; ids: 
   const failedImports = selection.accounts.reduce((n, a) => n + a.failedImportCount, 0);
   const allClosed = selection.candidates.length + selection.excluded.filteredOut;
   const clear = () => update({ filter: { ...state.filter, from: null, to: null, symbol: null, side: "all", strategyId: null, tagId: null, source: "all" }, day: null });
-  const sections: { value: Section; label: string }[] = [
-    { value: "overview", label: "Overview" }, { value: "calendar", label: "Calendar" }, { value: "breakdowns", label: "Breakdowns" },
-    ...(hasTags ? [{ value: "tags" as const, label: "Tags" }] : []), { value: "attempts", label: "Attempts" },
-  ];
-  const section = sections.some(s => s.value === state.section) ? state.section : "overview";
+  useEffect(() => onTags(hasTags), [hasTags, onTags]);
 
   return (
     <div className="in-body">
@@ -165,13 +171,13 @@ function Body({ dataset, ids, state, update }: { dataset: InsightsDataset; ids: 
             action={<Button onClick={clear}>Clear filters</Button>} />
         </div>
       ) : (
-        <Tabs label="Insights sections" value={section} onValueChange={v => update({ section: v as Section })} items={sections}>
+        <>
           <TabPanel value="overview" heading="Overview">{selection.currency ? <OverviewSection {...props} /> : <ChooseCurrency />}</TabPanel>
           <TabPanel value="calendar" heading="Calendar">{selection.currency ? <CalendarSection {...props} /> : <ChooseCurrency />}</TabPanel>
           <TabPanel value="breakdowns" heading="Breakdowns">{selection.currency ? <BreakdownsSection {...props} /> : <ChooseCurrency />}</TabPanel>
           {hasTags && <TabPanel value="tags" heading="Tags">{selection.currency ? <TagsSection {...props} /> : <ChooseCurrency />}</TabPanel>}
           <TabPanel value="attempts" heading="Attempts"><AttemptsSection {...props} /></TabPanel>
-        </Tabs>
+        </>
       )}
       <ContributingTradesDrawer drill={drill} selection={selection} onClose={() => setDrill(null)} />
     </div>

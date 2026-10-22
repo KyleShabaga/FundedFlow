@@ -84,6 +84,23 @@ async function chooseOption(user: ReturnType<typeof userEvent.setup>, label: Reg
 }
 
 describe("Journal", () => {
+  it("puts the views first, then one labelled summary of the viewed account, and keeps the account when switching views (P0-D15)", async () => {
+    const user = userEvent.setup();
+    renderAt("/journal?view=log");
+    const tabs = await screen.findByRole("tablist", { name: "Journal views" });
+    const summary = screen.getByRole("region", { name: "Viewing account" });
+    // Reading order: views, then the account summary, then the list actions.
+    expect(tabs.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(summary.compareDocumentPosition(screen.getByRole("button", { name: "Import trades" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(summary).getByText("Eval A")).toBeTruthy();
+    expect(within(summary).getByText("Trading day starts").nextElementSibling?.textContent).toBe("17:00");
+    expect(within(summary).getByText("Time zone").nextElementSibling?.textContent).toMatch(/^America\/New_York/);
+    expect(within(tabs).getByRole("tab", { name: /Trade log/ }).getAttribute("aria-selected")).toBe("true");
+    await user.click(within(tabs).getByRole("tab", { name: "By day" }));
+    expect(location).toBe("/journal?view=day");
+    expect(within(screen.getByRole("region", { name: "Viewing account" })).getByText("Eval A")).toBeTruthy();
+  });
+
   it("asks for an account instead of guessing one", async () => {
     holder.store = createJournalStore(accounts(), seed(), null);
     renderAt("/journal");

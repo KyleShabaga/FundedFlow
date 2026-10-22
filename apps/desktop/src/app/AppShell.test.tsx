@@ -178,7 +178,7 @@ it("renders the shared frame without a router or runtime host", () => {
   expect(invoke).not.toHaveBeenCalled();
 });
 
-it("anchors the collapse toggle on the sidebar edge beside the logo, first in keyboard order, in both widths", async () => {
+it("keeps the collapse toggle in the sidebar header beside the logo, first in keyboard order, in both widths", async () => {
   const user = userEvent.setup();
   render(<App />);
   await screen.findByRole("heading", { name: "Today is not built yet" });
@@ -202,6 +202,8 @@ it("anchors the collapse toggle on the sidebar edge beside the logo, first in ke
   expect(sidebar.querySelector(".shell-brand svg.ds-brand-mark")).toBeTruthy();
   const collapsed = within(sidebar.querySelector(".ds-app-sidebar-edge") as HTMLElement).getByRole("button", { name: "Expand sidebar" });
   expect(collapsed.getAttribute("aria-expanded")).toBe("false");
+  // P0-D08: toggling keeps the same control focused, so keyboard users can toggle straight back.
+  expect(document.activeElement).toBe(collapsed);
   // Navigation and the selected route survive collapsing.
   expect(within(screen.getByRole("navigation", { name: "Primary navigation" })).getByRole("link", { name: "Today" }).getAttribute("aria-current")).toBe("page");
 });

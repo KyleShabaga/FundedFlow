@@ -8,6 +8,8 @@ Mockup: `Reports.dc.html` (labelled Reports). References: `reports-alltime.png`,
 Learn from traceable evidence: every metric resolves to the exact trades that produced it.
 
 ## Layout
+- Section tabs first (P0-D16), directly under the page title on every view: Overview, Calendar, Breakdowns, Tags
+  (only with tags), Attempts. One tab list for the page; the section stays in `?section=` with the sidebar.
 - Head: Net / Gross toggle, filters (accounts, trading-day range, symbol root, direction, setup/strategy, tag,
   source, account status: active, failed, passed, closed, archived).
 - Section menu: Overview; Calendar ([04](04-calendar.md)); Breakdowns (day, week, month, symbol, weekday, side,

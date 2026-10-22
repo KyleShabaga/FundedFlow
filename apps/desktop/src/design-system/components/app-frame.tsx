@@ -5,8 +5,8 @@ export function AppFrame({ collapsed, sidebar, sidebarEdge, header, children }: 
   collapsed: boolean;
   sidebar: ReactNode;
   /**
-   * A control centred on the sidebar's right edge, level with the brand row (the collapse toggle). It sits
-   * outside the sidebar's scroll area, above the content column, so it is never clipped at either width.
+   * A control inside the sidebar header (the collapse toggle): top-right beside the brand when expanded, centred under
+   * the brand mark in the icon rail. It sits outside the sidebar's scroll area, so scrolling never hides it.
    */
   sidebarEdge?: ReactNode;
   header: ReactNode;

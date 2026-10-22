@@ -220,8 +220,10 @@
 /* The sidebar itself doesn't scroll (its edge control would be clipped); its inner area does. */
 .ds-app-sidebar { position: sticky; top: 0; z-index: 3; height: 100dvh; min-width: 0; box-sizing: border-box; background: var(--bg-100); border-right: 1px solid var(--line-100); }
 .ds-app-sidebar-scroll { display: flex; flex-direction: column; height: 100%; min-width: 0; overflow-x: hidden; overflow-y: auto; }
-/* Centred on the right border (half its width past it), level with the brand mark. */
-.ds-app-sidebar-edge { position: absolute; top: var(--space-6); right: 0; transform: translateX(50%); display: grid; }
+/* Inside the sidebar's header (P0-D08): top-right beside the brand when expanded; centred under the brand mark in the
+   icon rail. The host sets the offsets to line up with its brand row; nothing straddles the border. */
+.ds-app-sidebar-edge { position: absolute; z-index: 1; top: var(--ds-app-edge-top, var(--space-6)); right: var(--ds-app-edge-inset, var(--space-3)); display: grid; }
+.ds-app-frame.is-collapsed .ds-app-sidebar-edge { top: var(--ds-app-edge-top-collapsed, var(--space-6)); right: 50%; transform: translateX(50%); }
 .ds-app-column { min-width: 0; }
 
 /* FundedFlow mark and wordmark. The mark's gradient comes from the brand-mark tokens, so it follows the theme. */

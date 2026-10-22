@@ -29,7 +29,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `tokens.test.ts` | Fails if any text/background pair drops below 4.5:1, or control borders below 3:1, in either theme |
 | `format.ts` | Money, compact money, percentage, byte size (`formatBytes`), trading-day and instant (`formatInstant`) formatting; exact money sums |
 | `components/primitives.tsx` | `Button`, `Badge`, `Pnl`, `StatTile`, `Tabs` + `TabPanel` (Radix Tabs; `keepMounted` keeps a panel's form state while another tab shows, Build 19) |
-| `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots and a `sidebarEdge` slot centred on the sidebar border (Build 18.5); Build 12 supplies navigation and routing |
+| `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots and a `sidebarEdge` slot in the sidebar header (Build 18.5, placed P0-D08); Build 12 supplies navigation and routing |
 | `components/brand.tsx` | `BrandMark` (the swept-F mark, decorative) and `BrandLogo` (mark + "FundedFlow" wordmark; `showName={false}` for the icon rail) (P0-D01) |
 | `components/rules.tsx` | `RuleMeter`, `ruleState`, `AccountCard` |
 | `components/account-overview.tsx` | `AccountOverviewCard`, `ProgressMeter`, `meterFraction` (Build 18.5) |
@@ -228,7 +228,8 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
 - `useWindowFileDropGuard()` (mounted once by the app shell) stops a file dropped outside every drop zone from
   navigating the window to that file, which is the WebView2 default once Tauri's native drop handler is off
   (`dragDropEnabled: false`). Zones handle their own events first, so it only catches stray drops.
-- `AppFrame` `sidebarEdge`: a control centred on the sidebar's right border, level with the brand row, rendered
+- `AppFrame` `sidebarEdge`: a control inside the sidebar header (P0-D08: top-right when expanded, centred under the
+  brand in the rail; the host sets `--ds-app-edge-top`, `--ds-app-edge-inset` and `--ds-app-edge-top-collapsed`), rendered
   before the scrolling sidebar content (keyboard order matches what is seen) and outside it (never clipped). The
   sidebar no longer scrolls itself; `.ds-app-sidebar-scroll` does.
 - `AccountOverviewCard` lays out one account attempt: identity (mark, eyebrow, title, masked reference, meta) and
