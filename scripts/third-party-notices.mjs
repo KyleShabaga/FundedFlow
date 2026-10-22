@@ -305,7 +305,15 @@ export function runCargoAbout(tauriDir = TAURI_DIR) {
   };
   // cargo metadata (used by cargo-about) needs every locked crate present, then generation runs offline.
   run(["fetch", "--locked"], "cargo fetch");
-  return JSON.parse(run(["about", "generate", "--format", "json", "--offline", "--locked", "--fail", "-c", "about.toml"], "cargo about generate"));
+  // cargo-about refuses to write to a pipe when started from PowerShell (as on the CI runner), so use a file.
+  const temp = mkdtempSync(join(tmpdir(), "fundedflow-about-"));
+  try {
+    const out = join(temp, "about.json");
+    run(["about", "generate", "--format", "json", "--offline", "--locked", "--fail", "-c", "about.toml", "-o", out], "cargo about generate");
+    return JSON.parse(readFileSync(out, "utf8"));
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
 }
 
 /** Rust components from `cargo about generate --format json` output. */
