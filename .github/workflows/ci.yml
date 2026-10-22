@@ -4,6 +4,9 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Daily audit so new advisories surface without a code change (runs the dependency-audit job only).
+  schedule:
+    - cron: "17 6 * * *"
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -15,6 +18,7 @@ permissions:
 
 jobs:
   build-and-test:
+    if: github.event_name != 'schedule'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
@@ -27,10 +31,6 @@ jobs:
       # Clean install from the single root lockfile (no node_modules or dist cached).
       - name: Install dependencies
         run: npm ci
-
-      # Production dependencies only (what ships in the app); fails on high or critical advisories.
-      - name: npm audit (production dependencies)
-        run: npm audit --omit=dev --audit-level=high
 
       - name: Domain boundaries (no React, Tauri, Node I/O or apps/desktop in packages/domain)
         run: npm run check:boundaries -w @fundedflow/domain
@@ -69,16 +69,6 @@ jobs:
         working-directory: apps/desktop/src-tauri
         run: cargo clippy --all-targets -- -D warnings
 
-      # RustSec advisories for Cargo.lock. Vulnerabilities and unsound advisories fail; the one ignored advisory
-      # (Linux-only glib) is documented in apps/desktop/src-tauri/.cargo/audit.toml.
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-audit
-
-      - name: cargo audit
-        working-directory: apps/desktop/src-tauri
-        run: cargo audit --deny unsound
-
       # Build 26.78: THIRD_PARTY_NOTICES.txt must match the locked dependencies. Regenerates it in a temp folder
       # (cargo-about for the Windows crates, package-lock.json for the npm packages and fonts) and fails on any
       # difference, telling the contributor to run `npm run notices`. Also fails on a licence outside the allow-list.
@@ -88,3 +78,38 @@ jobs:
 
       - name: Third-party notices are up to date
         run: npm run check:notices
+
+  # Dependency audits live in their own job so a registry outage (npm audit 503, RustSec fetch failure) cannot
+  # skip typecheck, tests, build or the Rust checks. A real high+ advisory still fails this job; an audit that
+  # cannot get an advisory result after retries is reported as "not run" (warning annotation + job summary).
+  # scripts/audit-guard.mjs does the retry and the result-versus-outage distinction.
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Audit guard tests
+        run: node --test scripts/audit-guard.test.mjs
+
+      # Production dependencies only (what ships in the app); fails on high or critical advisories.
+      # `npm audit` reads package-lock.json, so no install is needed.
+      - name: npm audit (production dependencies)
+        run: >
+          node scripts/audit-guard.mjs --label "npm audit" --expect metadata --attempts 3 --backoff 15
+          -- npm audit --omit=dev --audit-level=high --json
+
+      # RustSec advisories for Cargo.lock. Vulnerabilities and unsound advisories fail; the one ignored advisory
+      # (Linux-only glib) is documented in apps/desktop/src-tauri/.cargo/audit.toml.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: cargo audit
+        working-directory: apps/desktop/src-tauri
+        run: >
+          node ../../../scripts/audit-guard.mjs --label "cargo audit" --expect vulnerabilities --attempts 3 --backoff 15
+          -- cargo audit --deny unsound --json

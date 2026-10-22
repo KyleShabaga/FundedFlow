@@ -30,7 +30,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `tokens.test.ts` | Fails if any text/background pair drops below 4.5:1, or control borders below 3:1, in either theme |
 | `format.ts` | Money, compact money, percentage, byte size (`formatBytes`), trading-day and instant (`formatInstant`) formatting; exact money sums; display time zones (`desktopTimeZone`, `isSupportedTimeZone`, `supportedTimeZones`, `timeZoneDisplayName`, `zoneOffsetLabel`, P0-D05) |
 | `components/primitives.tsx` | `Button`, `Badge`, `Pnl`, `StatTile`, `Tabs` + `TabPanel` (Radix Tabs; `keepMounted` keeps a panel's form state while another tab shows, Build 19) |
-| `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots and a `sidebarEdge` slot in the sidebar header (Build 18.5, placed P0-D08); `ContentFrame`, the shared content frame (P0-D29); Build 12 supplies navigation and routing |
+| `components/app-frame.tsx` | Host-independent `AppFrame` with sidebar/header/content slots and `sidebarHeader` (the brand row, outside the scroll area) and `sidebarEdge` slots in the sidebar header (Build 18.5, placed P0-D08); `ContentFrame`, the shared content frame (P0-D29); Build 12 supplies navigation and routing |
 | `components/brand.tsx` | `BrandMark` (the swept-F mark, decorative) and `BrandLogo` (mark + "FundedFlow" wordmark; `showName={false}` for the icon rail) (P0-D01) |
 | `components/rules.tsx` | `RuleMeter`, `ruleState`, `AccountCard` |
 | `components/account-overview.tsx` | `AccountOverviewCard`, `ProgressMeter`, `meterFraction` (Build 18.5) |
@@ -38,11 +38,11 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `components/charts.tsx` | `WinGauge`, `Sparkline`, `EquityCurve` |
 | `components/journal.tsx` | `PnlCalendar`, `monthWeeks`, `DayCard`, `TradeTable`, `tradeResult` |
 | `components/forms.tsx` | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select` (Radix), `FieldGroup`, `FormSection`, `FieldError`, `ValidationSummary`, `focusFirstInvalid`, `focusFirstInvalidWhenShown` (Build 26), `FileDropzone`, `dragHasFiles`, `useWindowFileDropGuard`, `formatFileSize` |
-| `components/overlays.tsx` | `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `OverlayClose`, `DropdownMenu`, `Tooltip` (Radix Dialog, Dropdown Menu, Tooltip) |
+| `components/overlays.tsx` | `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `OverlayClose`, `DropdownMenu`, `Tooltip`, `InfoTip` (Radix Dialog, Dropdown Menu, Tooltip) |
 | `components/feedback.tsx` | `InlineNotice`, `ToastProvider` + `useToast`, `StatusIndicator` |
 | `components/async-states.tsx` | `AsyncState`, `StateBoundary`, `Skeleton`, `LoadingState`, `EmptyState`, `ErrorState`, `UnavailableState`, `StaleDataNotice`, `RefreshingIndicator`, `MutationState`, `MutationFeedback`, `isMutationBusy`, `hasData` |
 | `components/data.tsx` | `DataTable`, `MetricCard`, `MetricValue` + `MetricValueView`, `MoneyCell`, `UnknownValue`, `LabeledValue`, `StatList`, `Stepper`, `MonthYearPicker` |
-| `components/primitives.tsx` (Build 13 additions) | `Button` `loading` and `disabledReason`, `IconButton`, `SegmentedControl` |
+| `components/primitives.tsx` (Build 13 additions) | `Button` `loading` and `disabledReason`, `IconButton`, `SegmentedControl`, `DisclosureButton` (P0-D18) |
 | `components/rules.tsx` (Build 13 additions) | `MiniMeter`, `RuleStateBadge`, `RulebookLine` |
 | `components/charts.tsx` (Build 13 addition) | `ChartPanel` |
 | Build 23 additions | `PnlBars` (charts.tsx); `PnlCalendar` `selectedDay`, `onSelectWeek`/`selectedWeek`, `display`, `title`/`summary` (journal.tsx) |
@@ -216,6 +216,14 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
   screen-reader context, such as "(draft, version 0.1.0-draft)", to a link-like summary. `onToggle(open)` (Build
   26.78) reports each open and close, so a long body can be loaded on first open.
 
+## P0-D18: DisclosureButton
+
+- `DisclosureButton` shows and hides a region elsewhere in the layout, where a native `Disclosure` can't work because
+  its summary must sit apart from its body (a Filters action in a toolbar, its panel below). It is a `Button` with
+  `aria-expanded` and `aria-controls`; the caller keeps the state and renders the region with that id.
+- Open reads as pressed (flow edge and tint) plus a turned chevron, and a Highlight edge in contrast themes. `count`
+  shows "· n" for active items (none for 0), with `countLabel` giving the screen-reader words ("3 filters applied").
+
 ## Build 23: selectable calendar and PnlBars
 
 - `PnlCalendar` keeps its defaults. `selectedDay` rings and presses a day; `onSelectWeek` makes week totals buttons
@@ -242,6 +250,9 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
   brand in the rail; the host sets `--ds-app-edge-top`, `--ds-app-edge-inset` and `--ds-app-edge-top-collapsed`), rendered
   before the scrolling sidebar content (keyboard order matches what is seen) and outside it (never clipped). The
   sidebar no longer scrolls itself; `.ds-app-sidebar-scroll` does.
+- `AppFrame` `sidebarHeader`: the sidebar's header row (the app shell's brand), rendered first and outside
+  `.ds-app-sidebar-scroll`, which fills the height left below it. A scrollbar in a short window narrows only the
+  links, never the wordmark.
 - `AccountOverviewCard` lays out one account attempt: identity (mark, eyebrow, title, masked reference, meta) and
   badges; a primary figure and secondary figures, each a `MetricValue` with an optional provenance badge and note;
   up to two meters; rule lines as a `dl` (`muted` for non-values); an activity line and actions in the footer. It

@@ -138,13 +138,100 @@ Every row is exercised through its real native writer. The test is
 | 13 | Rulebook assignment | `rulebooks::assign` | `inputs.assignments`, `applicableAssignment` | no |
 | 14 | Applicable version claim (shared version) | `rulebooks::flag_conflict` on a shared version | `inputs.rulebookVersions`, `applicableRulebook` | **yes**: every account using the version |
 | 15 | Account financial, zone or reset configuration | `accounts::update` | `inputs.account` | no |
-| 16 | Account lifecycle (status, attempt, archive/restore) | `accounts::change_status` (also archive/restore) | `inputs.account` | no |
+| 16 | Account lifecycle (status, archive/restore) | `accounts::change_status`; `accounts::archive` and `accounts::restore` driven directly | `inputs.account` (`status`, `archivedAt`, `updatedAt`) | no |
 | 17 | Phase event | `catalogue::record_phase_event` | `inputs.phaseHistory` | no |
 | 18 | Calculation history (a new breach) | any stored engine calculation (`snapshots::save` in the test; `promote_account_risk` too) | `priorBreaches` | no |
+| 19 | Attempt reset (the predecessor's confirmed outcome) | `attempts::reset` | the predecessor's `inputs.account` (`status`, `successorAccountId`, `updatedAt`) | no: the new attempt starts with no result |
+| 20 | Catalogue link | `catalogue::set_link` | `inputs.catalogueLink`, `inputs.account.updatedAt` | no |
+| 21 | Whole-journal restore | `data_controls::prepare_restore`, installed by `data_controls::recover` at the next open | every source: the journal is replaced | **yes**: every account |
+| 22 | Permanent deletion (one account / whole journal) | `data_controls::delete_data` | the account, its calculations and promotions are removed | account: no; journal: every account |
+
+Rows 16 and 19–22 also have their own tests, because the loop's shape (a pending capture, a second account that
+stays current) does not fit them all. Each promotes, runs the writer directly, asserts the result reads not current
+(or is gone), and promotes a fresh calculation:
+
+- `archive_and_restore_account_driven_directly_invalidate_and_a_new_calculation_promotes` (16);
+- `an_attempt_reset_invalidates_the_predecessor_and_both_attempts_promote_afresh` (19);
+- `a_catalogue_link_change_invalidates_and_a_new_calculation_promotes` (20);
+- `a_journal_restore_keeps_a_result_current_only_when_its_sources_are_byte_identical` (21): a promotion in the
+  archive whose sources the archive also holds unchanged is current again after the restore; one whose sources the
+  archive holds changed reads not current; one made after the archive was taken is gone;
+- `permanently_deleting_an_account_removes_its_results_and_leaves_others_current` and
+  `erasing_the_whole_journal_removes_every_result_and_a_new_journal_promotes` (22).
 
 **Not sources**, and they do not invalidate (`non_risk_records_and_failed_writes_do_not_invalidate`): journal entries,
-trade and daily reviews, screenshots, the review library, and settings. A **failed** write of any kind also changes
-nothing.
+trade and daily reviews, screenshots, the review library, and settings. Rulebook and catalogue drafts are not sources
+either: a draft can't be assigned, catalogue version status and offer selections aren't read by `capture_in`, and the
+link's ids (row 20) are all the capture keeps of the catalogue. Publishing a version is row 14 because it can change
+an assigned version's status (a private draft confirmed, or a verified version superseded). A **failed** write of any
+kind also changes nothing.
+
+**Every write command** is classified below. `every_write_command_is_classified_for_risk_promotion` parses the
+`#[tauri::command]` functions in `commands.rs`, `dev_tools` and `legal.rs`, and fails when a command is neither a
+listed read nor in this table with the row it names, so a new writer can't be missed silently. `create_account` only
+adds an account that has no result yet; `dev_seed_fake_data` (dev builds) writes through the rows 1–17 writers and
+`dev_reset_handoff` (dev builds) erases the isolated test journal like row 22's whole-journal scope.
+
+| Command | Row |
+|---|---|
+| `create_trade` | 1 |
+| `update_trade` | 2 |
+| `delete_trade` | 3 |
+| `restore_trade` | 4 |
+| `commit_csv_import` | 5 |
+| `create_financial_observation` | 6 |
+| `correct_financial_observation` | 7 |
+| `create_ledger_entry` | 8 |
+| `update_ledger_entry` | 9 |
+| `correct_ledger_entry` | 9 |
+| `delete_ledger_entry` | 10 |
+| `remove_ledger_entry_with_reason` | 10 |
+| `reconcile_financial_balance` | 11 |
+| `resolve_financial_reconciliation` | 12 |
+| `assign_rulebook_to_account` | 13 |
+| `flag_rulebook_source_conflict` | 14 |
+| `publish_rulebook_version` | 14 |
+| `update_account` | 15 |
+| `change_account_status` | 16 |
+| `archive_account` | 16 |
+| `restore_account` | 16 |
+| `record_account_phase_event` | 17 |
+| `save_account_snapshot` | 18 |
+| `promote_account_risk` | 18 |
+| `reset_account_attempt` | 19 |
+| `set_account_catalogue_link` | 20 |
+| `restore_journal_archive` | 21 |
+| `dev_reset_handoff` | 22 |
+| `permanently_delete_data` | 22 |
+| `dev_seed_fake_data` | 1–17 |
+| `create_account` | new account |
+| `create_journal_entry` | not a source |
+| `update_journal_entry` | not a source |
+| `delete_journal_entry` | not a source |
+| `save_trade_review` | not a source |
+| `add_trade_screenshot` | not a source |
+| `remove_trade_screenshot` | not a source |
+| `save_strategy` | not a source |
+| `save_tag` | not a source |
+| `save_checklist` | not a source |
+| `set_library_archived` | not a source |
+| `save_daily_review` | not a source |
+| `reopen_daily_review` | not a source |
+| `relink_daily_review_trades` | not a source |
+| `set_setting` | not a source |
+| `remove_setting` | not a source |
+| `create_rulebook_draft` | not a source |
+| `update_rulebook_draft` | not a source |
+| `discard_rulebook_draft` | not a source |
+| `transition_catalogue_version` | not a source |
+| `create_catalogue_source` | not a source |
+| `create_catalogue_draft` | not a source |
+| `replace_catalogue_draft` | not a source |
+| `select_account_offer` | not a source |
+| `retry_runtime` | not a source |
+| `retry_data_cleanup` | not a source |
+| `dev_dismiss_reset_report` | not a source |
+| `record_legal_acceptance` | not a source |
 
 **Deliberate over-invalidation:** everything in the frozen inputs counts, including descriptive fields such as account
 name and notes, trade notes, and `updatedAt`. Excluding them would require a second, hand-maintained definition of

@@ -107,7 +107,11 @@ describe("Build 15 on real Rust payloads through the merged adapter", () => {
     expect(within(screen.getByRole("table", { name: "Accounts" })).getAllByRole("rowheader")).toHaveLength(3);
     await user.click(within(filters).getByRole("button", { name: "Archived 1" }));
     expect(within(screen.getByRole("table", { name: "Accounts" })).getByText("Euro account")).toBeTruthy();
-    expect(screen.getByText("€50,000.00")).toBeTruthy();
+    // P0-D19: the Current balance column never falls back to the €50,000.00 starting balance; this bridge answers no
+    // checkpoint read, so the cell says — and why.
+    const archived = screen.getByRole("table", { name: "Accounts" });
+    expect(await within(archived).findByText("Checkpoints couldn't be read.", { selector: ".acct-cell-note" })).toBeTruthy();
+    expect(within(archived).queryByText("€50,000.00")).toBeNull();
     // Every read went through commands Rust registers; nothing else was called. The Current balance KPI reads Today's
     // risk truth per live account (NA-4): the current result, latest snapshot, inputs as of now and evidence. All reads.
     const commands = new Set(bridge.invoke.mock.calls.map(c => c[0]));
