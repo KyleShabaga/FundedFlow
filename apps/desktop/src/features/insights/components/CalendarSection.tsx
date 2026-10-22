@@ -3,14 +3,17 @@
 // cell is a summary of the included trades of that stored trading day (each account's own day rule), and opens them.
 // A day with an unknown P&L shows a dash and no tint. Daily reviews (Build 22) are linked as process context only.
 import { addMoney, basisAmount, byPeriod, monthOf, summarize, type Group, type InsightsAccount } from "@fundedflow/domain";
-import { useMemo, useState } from "react";
+import { Filter } from "lucide-react";
+import { type ReactNode, useId, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import {
+  Button,
   type CalendarDay,
   type CalendarDisplay,
   formatMoneyCompact,
   currencySymbol,
+  DisclosureButton,
   moneySign,
   MonthYearPicker,
   type MonthSummary,
@@ -28,8 +31,16 @@ import { barValue, BASIS_LABEL, DrillButton, MetricText, type SectionProps } fro
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function CalendarSection(props: SectionProps) {
-  const { selection, basis, currency, state, update, drill } = props;
+/** The page's one filter bar and what it has applied, shown behind the calendar's Filters button (P0-D18). */
+export interface CalendarFilters {
+  panel: ReactNode;
+  /** One phrase per active filter group; its length is the count on the button. */
+  applied: string[];
+  onClear: () => void;
+}
+
+export function CalendarSection(props: SectionProps & { filters: CalendarFilters }) {
+  const { selection, basis, currency, state, update, drill, filters } = props;
   const trades = selection.trades;
   const days = useMemo(() => byPeriod(trades, "day"), [trades]);
   const months = useMemo(() => byPeriod(trades, "month"), [trades]);
@@ -63,11 +74,7 @@ export function CalendarSection(props: SectionProps) {
 
   return (
     <div className="in-section">
-      <div className="in-cal-bar">
-        <SegmentedControl<CalendarDisplay> label="Calendar cells show" value={state.display} onValueChange={display => update({ display })}
-          options={[{ value: "pnl", label: BASIS_LABEL[basis] }, { value: "trades", label: "Trades" }, { value: "winRate", label: "Win rate" }]} />
-        <span className="ds-faint">Trading days run Monday to Friday in each account's zone; weekend activity counts toward Monday.</span>
-      </div>
+      <CalendarBar display={state.display} onDisplay={display => update({ display })} basis={basis} filters={filters} />
       <div className="in-cal">
         <PnlCalendar year={year} month={month} days={cells} today={todayDay} currency={currency} display={state.display}
           selectedDay={selectedDay} onSelectDay={d => { setWeek(null); update({ day: d }); }}
@@ -86,6 +93,34 @@ export function CalendarSection(props: SectionProps) {
         </aside>
       </div>
       <YearlyTable months={byMonth} basis={basis} currency={currency} onMonth={go} drill={drill} scope={scope} />
+    </div>
+  );
+}
+
+/**
+ * What the cells show, then the Filters action (P0-D18). The panel starts closed on each visit and closing it only
+ * hides it: the filters live in the URL. Closed with filters applied, a summary and Clear filters stay in view.
+ */
+function CalendarBar({ display, onDisplay, basis, filters }: { display: CalendarDisplay; onDisplay: (d: CalendarDisplay) => void; basis: SectionProps["basis"]; filters: CalendarFilters }) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const count = filters.applied.length;
+  return (
+    <div className="in-cal-toolbar">
+      <div className="in-cal-bar">
+        <SegmentedControl<CalendarDisplay> label="Calendar cells show" value={display} onValueChange={onDisplay}
+          options={[{ value: "pnl", label: BASIS_LABEL[basis] }, { value: "trades", label: "Trades" }, { value: "winRate", label: "Win rate" }]} />
+        <DisclosureButton size="sm" className="in-cal-filters-btn" icon={<Filter size={14} aria-hidden="true" />} expanded={open} controls={panelId}
+          count={count} countLabel={n => (n === 1 ? "1 filter applied" : `${n} filters applied`)} onClick={() => setOpen(o => !o)}>Filters</DisclosureButton>
+        <span className="ds-faint in-cal-note">Trading days run Monday to Friday in each account's zone; weekend activity counts toward Monday.</span>
+      </div>
+      {!open && count > 0 && (
+        <p className="in-cal-applied">
+          <span className="ds-faint">Filtered by</span> {filters.applied.join(" · ")}
+          <Button size="sm" variant="ghost" onClick={filters.onClear}>Clear filters</Button>
+        </p>
+      )}
+      <div id={panelId} className="in-cal-filters" hidden={!open}>{open && filters.panel}</div>
     </div>
   );
 }

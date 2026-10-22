@@ -1,5 +1,5 @@
 import * as RadixTabs from "@radix-ui/react-tabs";
-import { LoaderCircle } from "lucide-react";
+import { ChevronDown, LoaderCircle } from "lucide-react";
 import { type ButtonHTMLAttributes, type ReactNode, type Ref, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import { currencySymbol, formatMoney, formatMoneyCompact, formatPercent, moneySign } from "../format";
@@ -95,6 +95,40 @@ export function IconButton({ label, icon, variant = "secondary", size = "md", cl
     <button {...rest} type={type} aria-label={label} title={title ?? label} className={cx("ds-icon-btn", `ds-icon-btn-${variant}`, `ds-icon-btn-${size}`, className)}>
       {icon}
     </button>
+  );
+}
+
+/* ---------- DisclosureButton ---------- */
+
+export interface DisclosureButtonProps extends Omit<ButtonProps, "aria-expanded" | "aria-controls" | "loading"> {
+  /** Whether the region it shows is open; drawn as a pressed style and a turned chevron, and read as aria-expanded. */
+  expanded: boolean;
+  /** Id of the region it shows and hides. */
+  controls: string;
+  /** Active items behind it ("Filters · 3"); 0 or null shows none. */
+  count?: number | null;
+  /** Screen-reader words for the count, e.g. "3 filters applied". Default: "<n> active". */
+  countLabel?: (count: number) => string;
+}
+
+/**
+ * A button that shows and hides a region elsewhere in the layout (P0-D18), for when a native Disclosure's summary
+ * can't sit apart from its body, such as a Filters action in a toolbar with its panel below. The caller keeps the
+ * state and renders the region with the matching id.
+ */
+export function DisclosureButton({ expanded, controls, count, countLabel, className, children, ...rest }: DisclosureButtonProps) {
+  const shown = count != null && count > 0 ? count : null;
+  return (
+    <Button {...rest} aria-expanded={expanded} aria-controls={controls} className={cx("ds-disclosure-btn", expanded && "is-expanded", className)}>
+      {children}
+      {shown !== null && (
+        <>
+          <span className="ds-disclosure-count" aria-hidden="true">· {shown}</span>
+          <span className="ds-sr-only">, {countLabel ? countLabel(shown) : `${shown} active`}</span>
+        </>
+      )}
+      <ChevronDown size={14} className="ds-disclosure-chevron" aria-hidden="true" />
+    </Button>
   );
 }
 
