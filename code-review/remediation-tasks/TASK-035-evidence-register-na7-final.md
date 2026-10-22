@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval |
+| Status | Ready for Approval (r3) |
 | Type | Documentation |
 | Audit priority | Gate |
 | Roadmap lane | NA-7 |
@@ -16,11 +16,11 @@
 | Effort / risk | S / Low |
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r2 (2026-10-22; r1 + independent-review corrections) |
+| Inspected source revision | 4d4e66d (application source identical to 92e7980) |
+| Specification revision | r3 (2026-10-22; r2 + Block 4 nits from 10 §8.3) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
-| Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
+| Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 4d4e66d (HEAD at r3; application source unchanged). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
 
 ## Purpose / risk
@@ -47,7 +47,8 @@ Evidence register document and NA-7 notes.
 - Likely shared-file conflicts: Docs only.
 
 ## Acceptance criteria (pass/fail)
-- [ ] Every gate row has state, SHA, EXE hash, environment and evidence link; NA-7 statements match observed behaviour.
+- [ ] Every gate row has state, source SHA, installer EXE SHA-256, environment and evidence link; NA-7 statements match observed behaviour.
+- [ ] Every row's source SHA and installer SHA-256 equal the candidate recorded by TASK-029 (from `SHA256SUMS.txt`, not the artifact ZIP digest); a row from a different build is marked as such and does not count toward the gate. Decision rows (TASK-001..009) record the installer hash as N/A.
 
 ## Verification plan
 Reviewer.
@@ -58,5 +59,10 @@ Docs only.
 ## Definition of done
 Documents updated; every factual statement checked against the cited source (file:line/workflow line) at the recorded SHA; reviewed.
 
+## Changes in r3
+- Acceptance now requires each row's source SHA and installer SHA-256 to match the TASK-029 candidate (10 §8.3 TASK-033/035).
+
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).
+Block 4 review (10 §8.3): nits only — applied in r3.
+Independent review r3 (2026-10-22): CHANGES on 012, 024, 026 (citations, test construction, scope lines); applied. READY.
