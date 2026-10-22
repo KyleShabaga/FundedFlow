@@ -169,4 +169,4 @@ The software is provided as is, without warranty; see the full license for its t
 The privacy notice and license/product information remain drafts. The MIT transition does not constitute counsel review or
 complete the existing release gate; see [transition scope and remaining work](docs/licensing-transition.md).
 
-The owner adopted revised P0-13 criteria and authorized notice acknowledgment on 2026-10-22; content and release approval remain pending. See [verification and owner decisions](docs/privacy-product-verification.md).
+The owner adopted revised P0-13 criteria and authorized notice acknowledgment on 2026-10-22; document content is now owner-approved, while release approval remains pending. See [verification and owner decisions](docs/privacy-product-verification.md).

@@ -4,7 +4,7 @@ Card: [NA-3 — First-run privacy and product notices](https://app.notion.com/p/
 (Final Push P0-12 and the engineering half of P0-13). Code: `apps/desktop/src/features/legal`, documents in
 `apps/desktop/src/legal`, native record in `apps/desktop/src-tauri/src/legal.rs`.
 
-> **Both documents remain complete editorial drafts (`0.2.1-draft`, dated 2026-10-22).** No lawyer review or release approval is recorded. On 2026-10-22 the owner explicitly adopted the revised P0-13 criteria and authorized notice acknowledgment wording. See [recorded decisions and release criteria](../../privacy-product-verification.md).
+> **Both documents remain complete editorial drafts (`0.2.1-draft`, dated 2026-10-22).** Document content was approved by the owner on 2026-10-22; no lawyer review or release approval is recorded. On 2026-10-22 the owner explicitly adopted the revised P0-13 criteria and authorized notice acknowledgment wording. See [recorded decisions and release criteria](../../privacy-product-verification.md).
 
 ## When it shows
 

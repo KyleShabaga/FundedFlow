@@ -1,6 +1,6 @@
 # Privacy and product documents: verification and owner decision
 
-Status: complete editorial drafts, unreviewed; owner content/release approval NOT recorded. Revision 0.2.1-draft, 2026-10-22. PR #107 was open and unmerged when inspected. Work continues its existing branch; MIT distribution permissions do not themselves approve a release.
+Status: owner-approved document content; no independent legal review or release approval recorded. Documents retain draft distribution status pending the remaining release checks. Revision 0.2.1-draft, 2026-10-22. PR #107 was open and unmerged when inspected. Work continues its existing branch; MIT distribution permissions do not themselves approve a release.
 
 ## Evidence map
 
@@ -32,7 +32,18 @@ The owner selected “Adopt the proposed criteria” in response to the exact cr
 
 This explicit decision replaces the original counsel-sign-off requirement. It is policy approval only: it does not approve document content or a release. Independent review remains optional; no such review is recorded.
 
-Remaining owner decision: approve the identified document revision and a named release commit/distribution scope after required verification, or request changes. Recommendation: retain draft status and withhold release approval until packaged checks and CI results are recorded. Owner content/release approval is NOT recorded.
+## Document content approval — recorded 2026-10-22
+
+The owner reviewed the documents supplied in this chat and explicitly stated: “I have review the documents and i appove them”. This records approval of the following exact bundled content at source commit `d3e263f`, unchanged in `c290d1c`:
+
+| Document | Approved version | SHA-256 document digest |
+|---|---|---|
+| Privacy notice | `0.2.1-draft` | `8b83157f3e1075a64fb631e39616c37e5b70cc3c70e54f473c05ec9d0db1c392` |
+| License and product information | `0.2.1-draft` | `96894603aff89db92b60b307f85693756d0e540f03851c2d39568a441c68911a` |
+
+This is owner content approval, not lawyer review, certification, approval to merge, or authorization to publish a release. The approved document bytes, versions, digests and draft flags are unchanged by this approval record. Statements in their preparation-status paragraphs describe the submitted revision; this dated decision records the subsequent owner approval. Distribution status remains draft until the remaining release criteria are met. A future finalized revision must update its status wording, version and digest consistently and identify any substantive changes for approval.
+
+Remaining owner decision: approve a named release commit and distribution scope after required verification and the disposition of remaining risks. Release approval is NOT recorded.
 
 Contact decision recorded in this chat: owner selected public GitHub Issues. No private address or separate business identity has been invented.
 
@@ -79,4 +90,4 @@ Use a disposable Windows environment or separate test user so these checks canno
 5. Delete one synthetic account; verify recovery copies remain. Erase the synthetic whole journal; verify managed copies are removed on completion and external exports, acceptance/acknowledgment file and WebView stores remain outside that operation.
 6. Uninstall the test installation and inventory the remaining app data, WebView data and external exports. Record each available uninstall option rather than assuming that uninstall erases data. Reinstall and confirm whether the retained acknowledgment still suppresses the prompt.
 
-The Windows computer-use helper is available, but no FundedFlow window was running during inspection. No packaged runtime, uninstall, missing-WebView2 or interrupted-operation smoke check is claimed as completed. Those checks and explicit owner approval of document content and release commit/scope remain release blockers under the adopted P0-13 criteria. No release is authorized by this report.
+The Windows computer-use helper is available, but no FundedFlow window was running during inspection. No packaged runtime, uninstall, missing-WebView2 or interrupted-operation smoke check is claimed as completed. Those checks and explicit owner approval of the release commit/scope remain release blockers under the adopted P0-13 criteria. No release is authorized by this report.
