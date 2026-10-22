@@ -23,27 +23,30 @@ function Rows({ caption, rows, activeLabel, proposedLabel, showSame }: {
   const visible = showSame ? rows : rows.filter(r => r.kind !== "unchanged");
   if (visible.length === 0) return null;
   return (
-    <table className="rb-compare-table">
-      <caption>{caption}</caption>
-      <thead>
-        <tr>
-          <th scope="col">Field</th>
-          <th scope="col">{activeLabel}</th>
-          <th scope="col">{proposedLabel}</th>
-          <th scope="col">Change</th>
-        </tr>
-      </thead>
-      <tbody>
-        {visible.map(r => (
-          <tr key={r.field} className={`rb-compare-${r.kind}`}>
-            <th scope="row">{r.label}</th>
-            <td>{r.before ?? <span className="ds-faint">Not in this version</span>}</td>
-            <td>{r.after ?? <span className="ds-faint">Not in this version</span>}</td>
-            <td><ChangeBadge kind={r.kind} /></td>
+    // Build 26.85: in a narrow window the comparison scrolls inside its own named, focusable region, never the page.
+    <div className="rb-compare-scroll" tabIndex={0} role="group" aria-label={`${caption}, scrolls sideways`}>
+      <table className="rb-compare-table">
+        <caption>{caption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Field</th>
+            <th scope="col">{activeLabel}</th>
+            <th scope="col">{proposedLabel}</th>
+            <th scope="col">Change</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {visible.map(r => (
+            <tr key={r.field} className={`rb-compare-${r.kind}`}>
+              <th scope="row">{r.label}</th>
+              <td>{r.before ?? <span className="ds-faint">Not in this version</span>}</td>
+              <td>{r.after ?? <span className="ds-faint">Not in this version</span>}</td>
+              <td><ChangeBadge kind={r.kind} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

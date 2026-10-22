@@ -57,6 +57,21 @@
 .app-root :focus-visible { outline: 2px solid var(--flow); outline-offset: 3px; }
 .shell-skip { position: fixed; top: var(--space-2); left: var(--space-2); transform: translateY(-200%); z-index: 10; padding: var(--space-3); background: var(--bg-100); color: var(--flow); border: 1px solid var(--line-200); border-radius: var(--radius-md); }
 .shell-skip:focus { transform: none; }
+/* Short windows (Build 26.85: 480 px minimum height): the header gives the page more of the height; it scrolls away
+   with the page as before. */
+@media (max-height: 599px) {
+  .shell-header { min-height: 0; padding-block: var(--space-3); }
+  .shell-account-context { margin-top: var(--space-2); }
+  .shell-content { padding-block: var(--space-4); }
+}
+/* Windows contrast themes (Build 26.85): the selected route keeps a system-colour mark, since tints and shadows drop. */
+@media (forced-colors: active) {
+  .shell-nav-indicator { display: none; }
+  .shell-nav-link[aria-current="page"], .shell-nav.has-indicator .shell-nav-link[aria-current="page"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .shell-subnav-link[aria-current="true"] { text-decoration: underline; }
+  .shell-header { border-bottom-color: CanvasText; }
+  .ds-app-sidebar { border-right-color: CanvasText; }
+}
 @media (prefers-reduced-motion: reduce) {
   .shell-brand, .shell-toggle, .shell-nav-link, .shell-nav-indicator.is-sliding, .shell-nav-expand svg { transition: none; }
   .ds-app-frame:not(.is-collapsed) .shell-nav-label, .ds-app-frame:not(.is-collapsed) .shell-brand .ds-brand-name { animation: none; }

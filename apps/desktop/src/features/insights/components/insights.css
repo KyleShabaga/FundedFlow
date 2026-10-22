@@ -42,6 +42,7 @@
 .in-review-link { margin: 0; font-size: 13px; }
 .in-review-link a { color: var(--flow); font-weight: 600; }
 .in-yearly-scroll { overflow-x: auto; }
+.in-yearly-scroll:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
 .in-yearly td, .in-yearly th { padding: 8px var(--space-2); }
 .in-cell-btn { display: inline-grid; justify-items: end; background: none; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 2px 4px; font: inherit; color: inherit; cursor: pointer; }
 .in-cell-btn:hover { border-color: var(--line-200); }

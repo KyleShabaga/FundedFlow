@@ -156,7 +156,8 @@ function YearlyTable({ months, basis, currency, onMonth, drill, scope }: { month
         <h3 id="in-yearly-h" className="ds-title">Yearly performance</h3>
         <span className="ds-faint">Months are the sum of their days. Choose a month to show it; choose a year total to see its trades.</span>
       </div>
-      <div className="in-yearly-scroll">
+      {/* Build 26.85: a narrow window scrolls the table, not the page; the region is named and reachable by keyboard. */}
+      <div className="in-yearly-scroll" tabIndex={0} role="group" aria-label="Yearly performance, scrolls sideways">
         <table className="ds-table in-yearly">
           <caption className="ds-sr-only">{BASIS_LABEL[basis]} and trades per month and year</caption>
           <thead><tr><th scope="col">Year</th>{MONTHS.map(m => <th key={m} scope="col">{m}</th>)}<th scope="col">Total</th></tr></thead>

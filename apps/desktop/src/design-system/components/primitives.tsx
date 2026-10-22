@@ -1,9 +1,10 @@
 import * as RadixTabs from "@radix-ui/react-tabs";
 import { LoaderCircle } from "lucide-react";
-import { type ButtonHTMLAttributes, type ReactNode, type Ref, useId } from "react";
+import { type ButtonHTMLAttributes, type ReactNode, type Ref, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import { currencySymbol, formatMoney, formatMoneyCompact, formatPercent, moneySign } from "../format";
 import { cx } from "./cx";
+import { Select } from "./forms";
 
 /* ---------- Button ---------- */
 
@@ -108,37 +109,102 @@ export interface SegmentOption<V extends string = string> {
 }
 
 export interface SegmentedControlProps<V extends string = string> {
-  /** Accessible name for the group ("Status", "Show"). */
+  /** Accessible name for the group ("Status", "Show"); also the dropdown's visible label when it folds. */
   label: string;
   options: readonly SegmentOption<V>[];
   value: V;
   onValueChange: (value: V) => void;
+  /**
+   * When the buttons don't fit the width they can take (Build 26.85): "menu" (default) swaps them for a labelled
+   * dropdown with the same options, counts and selection; "scroll" keeps the buttons and scrolls them sideways.
+   */
+  overflow?: "menu" | "scroll";
   className?: string;
+}
+
+/**
+ * Whether a row of buttons still fits beside its container's edges. The buttons' natural width is measured while they
+ * show; the space is the parent's content width, which a wrapping toolbar gives an item on its own line. A change of
+ * options measures again. Nothing is decided until both are known, so without layout (tests, a hidden tab) the
+ * buttons stay.
+ */
+function useFitsWidth(enabled: boolean, signature: string) {
+  const box = useRef<HTMLSpanElement>(null);
+  const group = useRef<HTMLDivElement>(null);
+  const needed = useRef(0);
+  const measured = useRef(signature);
+  const refocus = useRef(false);
+  const [folded, setFolded] = useState(false);
+  const check = useCallback(() => {
+    const parent = box.current?.parentElement;
+    if (!enabled || !parent) return;
+    if (measured.current !== signature) {
+      measured.current = signature;
+      needed.current = 0;
+      setFolded(false);
+      return;
+    }
+    if (group.current) needed.current = group.current.scrollWidth;
+    const style = getComputedStyle(parent);
+    const available = parent.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
+    if (needed.current <= 0 || available <= 0) return;
+    const next = needed.current > available;
+    setFolded(previous => {
+      if (previous !== next && box.current?.contains(document.activeElement)) refocus.current = true;
+      return next;
+    });
+  }, [enabled, signature]);
+  useLayoutEffect(check);
+  useEffect(() => {
+    const parent = box.current?.parentElement;
+    if (!enabled || !parent || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => check());
+    observer.observe(parent);
+    return () => observer.disconnect();
+  }, [enabled, check]);
+  // Focus that was on the buttons (or the dropdown) moves to what replaced them, so a resize never drops it.
+  useLayoutEffect(() => {
+    if (!refocus.current) return;
+    refocus.current = false;
+    box.current?.querySelector<HTMLElement>('[aria-pressed="true"], button, [role="combobox"]')?.focus();
+  }, [folded]);
+  return { box, group, folded: enabled && folded };
 }
 
 /**
  * A filter or view switch inside one screen (Table/Cards, All/Errors). Buttons
  * with aria-pressed, unlike Tabs, because they change the content in place
- * rather than switching panels.
+ * rather than switching panels. When the buttons no longer fit they become a
+ * labelled dropdown (overflow="menu"); the caller owns the value, so the
+ * selection survives every switch.
  */
-export function SegmentedControl<V extends string>({ label, options, value, onValueChange, className }: SegmentedControlProps<V>) {
+export function SegmentedControl<V extends string>({ label, options, value, onValueChange, overflow = "menu", className }: SegmentedControlProps<V>) {
+  const optionText = (o: SegmentOption<V>) => (o.count != null ? `${o.label} (${o.count})` : o.label);
+  const fit = useFitsWidth(overflow === "menu", options.map(optionText).join("|"));
   return (
-    <div role="group" aria-label={label} className={cx("ds-tabs", "ds-seg", className)}>
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          className="ds-tab"
-          data-state={o.value === value ? "active" : "inactive"}
-          aria-pressed={o.value === value}
-          disabled={o.disabled}
-          onClick={() => onValueChange(o.value)}
-        >
-          {o.label}
-          {o.count != null && <> <span className="ds-tab-count">{o.count}</span></>}
-        </button>
-      ))}
-    </div>
+    <span ref={fit.box} className={cx("ds-seg-fit", fit.folded && "is-folded")}>
+      {fit.folded ? (
+        <Select<V> label={label} size="sm" className={cx("ds-seg-select", className)} value={value} onValueChange={onValueChange}
+          options={options.map(o => ({ value: o.value, label: optionText(o), disabled: o.disabled }))} />
+      ) : (
+        <div ref={fit.group} role="group" aria-label={label} className={cx("ds-tabs", "ds-seg", className)}>
+          {options.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              className="ds-tab"
+              data-state={o.value === value ? "active" : "inactive"}
+              aria-pressed={o.value === value}
+              disabled={o.disabled}
+              onClick={() => onValueChange(o.value)}
+            >
+              {o.label}
+              {o.count != null && <> <span className="ds-tab-count">{o.count}</span></>}
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
   );
 }
 

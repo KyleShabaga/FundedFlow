@@ -196,6 +196,12 @@ describe("TradeTable", () => {
     expect(within(row).getByText("09:31")).toBeTruthy();
     expect(within(row).getByText("+$71.26")).toBeTruthy();
   });
+  it("scrolls inside its own named, focusable region in a narrow window (Build 26.85)", () => {
+    render(<TradeTable label="Trades on Monday" trades={[base]} />);
+    const region = screen.getByRole("group", { name: "Trades on Monday, scrolls sideways" });
+    expect(region.tabIndex).toBe(0);
+    expect(within(region).getByRole("table", { name: "Trades on Monday" })).toBeTruthy();
+  });
 });
 
 describe("currency on Build 7 components", () => {

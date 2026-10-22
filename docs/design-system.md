@@ -26,6 +26,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | File | Contents |
 |---|---|
 | `tokens.css` | Colour tokens per theme (with the role of each), spacing, the content-frame cap (`--frame-max`), radii, font stacks |
+| `forced-colors.css` | Windows contrast themes: system-colour focus, selection, edges and meters (Build 26.85) |
 | `tokens.test.ts` | Fails if any text/background pair drops below 4.5:1, or control borders below 3:1, in either theme |
 | `format.ts` | Money, compact money, percentage, byte size (`formatBytes`), trading-day and instant (`formatInstant`) formatting; exact money sums |
 | `components/primitives.tsx` | `Button`, `Badge`, `Pnl`, `StatTile`, `Tabs` + `TabPanel` (Radix Tabs; `keepMounted` keeps a panel's form state while another tab shows, Build 19) |
@@ -264,6 +265,23 @@ Policy, numbers and rationale: [design/window-support.md](design/window-support.
   window-width media query in page CSS, and on a page re-adding its own 1600 px cap. Narrower caps for forms and
   reading pages stay with those pages and start on the frame's left edge.
 - Gallery: "Content frame", after "Application frame".
+
+## Build 26.85: compact patterns and contrast themes
+
+Policy and decisions: [design/window-support.md](design/window-support.md).
+
+- `SegmentedControl` `overflow` (`"menu"` default, `"scroll"`): when the buttons' natural width no longer fits the width
+  the parent can give them, "menu" renders a `Select` (size `sm`) with the group's label shown beside it, the same
+  options with counts as "Errors (1)" and the caller's value; focus on the buttons moves to the dropdown. It is wrapped
+  in `.ds-seg-fit`. Without layout (jsdom, a hidden tab) it keeps the buttons. Tests: `segmented.test.tsx`.
+- `TradeTable` scrolls inside a named, focusable region ("{label}, scrolls sideways"), like `DataTable`.
+- `forced-colors.css`: Windows contrast themes. System colours only (`Canvas`, `CanvasText`, `Highlight`,
+  `HighlightText`, `ButtonText`, `ButtonBorder`, `GrayText`): one focus ring, selected states filled with `Highlight`,
+  edges on cards, pills, badges and dialogs, meter fills in `CanvasText`. Shell and Today add their own selected-state
+  rules. Tests: `window-support.test.ts`.
+- Themes: nothing sets `data-theme` in the app; `tokens.css` follows `prefers-color-scheme` live. The gallery's theme
+  tabs still force a theme for review.
+- Gallery: "Narrow widths" (the same filter wide and folded).
 
 ## P0-D01: brand mark and logo
 

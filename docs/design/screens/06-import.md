@@ -18,7 +18,8 @@ The wizard's two panels sit side by side from 880 px of main column and stack be
    ask the user to choose before showing rows).
 3. Summary (`StatTile` ×5): will import (incl. restores), net P&L of new trades and fees, duplicates skipped,
    errors left out, warnings.
-4. `DataTable` with a segmented filter: All / Will import / Duplicates / Errors / Warnings (counts). Columns: line,
+4. `DataTable` with a segmented filter: All / Will import / Duplicates / Errors / Warnings (counts); it folds into a
+   labelled "Show rows" dropdown when the buttons don't fit (Build 26.85). Columns: line,
    status, symbol, side, qty, opened, entry, exit, file P&L, net P&L, fill IDs, details.
 5. Sticky confirm bar: "Nothing is saved until you import. All n trades are written together, or none are."
    Cancel, primary "Import n trades into {account}".
