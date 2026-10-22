@@ -3,11 +3,12 @@
 // here reads or writes the journal.
 
 import { toMicros } from "@fundedflow/domain";
-import { Columns3, Ellipsis, Plus } from "lucide-react";
-import { type FormEvent, type ReactNode, useMemo, useRef, useState } from "react";
+import { Columns3, Ellipsis, Filter, Plus } from "lucide-react";
+import { type FormEvent, type ReactNode, useId, useMemo, useRef, useState } from "react";
 
 import {
   Disclosure,
+  DisclosureButton,
   DocumentView,
   GatePage,
   type AsyncState,
@@ -170,6 +171,8 @@ export function FormsSection() {
 export function OverlaysSection() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [fail, setFail] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersId = useId();
   const toast = useToast();
   return (
     <Section title="Buttons, dialogs and menus" note="Focus moves into overlays, Escape closes them and focus returns to what opened them. ConfirmDialog focuses Cancel first and blocks double submits.">
@@ -179,7 +182,10 @@ export function OverlaysSection() {
         <IconButton label="Previous month" icon={<span aria-hidden="true">‹</span>} />
         <IconButton label="Row actions" variant="ghost" icon={<Ellipsis size={16} aria-hidden="true" />} />
         <SegmentedControl label="Layout" value="table" onValueChange={() => {}} options={[{ value: "table", label: "Table" }, { value: "cards", label: "Cards" }]} />
+        <DisclosureButton size="sm" icon={<Filter size={14} aria-hidden="true" />} expanded={filtersOpen} controls={filtersId} count={2}
+          countLabel={n => `${n} filters applied`} onClick={() => setFiltersOpen(o => !o)}>Filters</DisclosureButton>
       </div>
+      <div id={filtersId} hidden={!filtersOpen} className="ds-faint">DisclosureButton (P0-D18): the region it shows sits wherever the layout needs it; the button carries aria-expanded and aria-controls, and the count of active items.</div>
       <div className="dsg-row">
         <Dialog
           trigger={<Button>Open dialog</Button>}
