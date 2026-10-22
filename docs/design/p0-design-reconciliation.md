@@ -94,16 +94,16 @@ navigation. See [components.md](components.md#p0-design-patterns-build-251).
 | Export history (more than the last export) | Settings export history | Accepted V1 limitation (P0-17, 2026-10-21) |
 | Local data folder path | Settings "Stored" fact | Accepted V1 limitation (P0-17, 2026-10-21) |
 | Per-account status in archive manifest | Restore preview account list | Accepted V1 limitation (P0-17, 2026-10-21) |
-| Undo for a whole import | Import details | Post-V1 (NA-6, 2026-10-21) |
-| `/import/history/:batchId` route | Deep links to one import | Post-V1 (NA-6, 2026-10-21) |
-| Account size label (`account_size_micros`) | Account identity line | Post-V1 (NA-6, 2026-10-21) |
-| Per-account totals command | Account detail and Accounts list at scale | Post-V1 (NA-6, 2026-10-21) |
+| Undo for a whole import | Import details | Post-V1 (NA-6, 2026-10-21; [P1 boards card](https://app.notion.com/p/4001bd4b6bde813da4f3c258bc18bc74)) |
+| `/import/history/:batchId` route | Deep links to one import | Post-V1 (NA-6, 2026-10-21; [P1 boards card](https://app.notion.com/p/4001bd4b6bde813da4f3c258bc18bc74)) |
+| Account size label (`account_size_micros`) | Account identity line | Post-V1 (NA-6, 2026-10-21; [P1 boards card](https://app.notion.com/p/4001bd4b6bde813da4f3c258bc18bc74)) |
+| Per-account totals command | Account detail and Accounts list at scale | Post-V1 (NA-6, 2026-10-21; [P1 boards card](https://app.notion.com/p/4001bd4b6bde813da4f3c258bc18bc74)) |
 
-Implementing the #64 boards is post-V1 (owner decision 2026-10-21, NA-6).
+Implementing the #64 boards is post-V1 (owner decision 2026-10-21, [NA-1](https://app.notion.com/p/4001bd4b6bde8176b254e307bd204933)); tracked on the [P1 boards card](https://app.notion.com/p/4001bd4b6bde813da4f3c258bc18bc74).
 
 ## 8. Decisions
 
-All five decided 2026-10-21, as drawn (owner decision, NA-6):
+All five decided 2026-10-21, as drawn (owner decision, [NA-1](https://app.notion.com/p/4001bd4b6bde8176b254e307bd204933); recorded by NA-6):
 
 1. Breadcrumbs replace the back links on nested pages; approved as a shell change.
 2. The rulebook readiness strip counts None/Off rules apart from "can be calculated".
