@@ -1740,7 +1740,7 @@
    "Verification Platform": "Any OS locally; Windows CI (`ci.yml`, windows-latest)",
    "Proposed First Batch": "__NO__",
    "Needs Owner Decision": "__NO__",
-   "Decision Notes": "Updated to r2 by Claude at Kyle's direction: installer packaging gated on in-job checks via a reusable workflow on the exact SOURCE_SHA (independently reviewed, 2026-10-22). Not an approval."
+   "Decision Notes": "Updated to r2 by Claude (2026-10-22): aligned with TASK-027 r5, so the fmt step goes into the reusable checks.yml if TASK-027 merges first (independently reviewed). Not an approval."
   },
   "corr": [],
   "nits": [],
