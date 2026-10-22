@@ -8,6 +8,7 @@ import { type FormEvent, type ReactNode, useMemo, useRef, useState } from "react
 
 import {
   Disclosure,
+  DisclosureCard,
   DocumentView,
   GatePage,
   type AsyncState,
@@ -552,6 +553,18 @@ export function DocumentsSection() {
       <Disclosure summary="Read an example licence" onToggle={open => open && setLicenceOpened(true)}>
         {licenceOpened && <DocumentView preformatted headingLevel={3} title="Example licence" sections={SAMPLE_LICENCE} />}
       </Disclosure>
+    </Section>
+  );
+}
+
+export function DisclosureCardSection() {
+  const [open, setOpen] = useState(false);
+  return (
+    <Section title="DisclosureCard (P0-D22)" note="A card whose whole header is one button: title, a short summary and a chevron (down closed, up open). The body opens downward in the flow and is inert while closed. Notices passed separately stay visible when it is closed. The caller keeps open/closed, so it survives data refreshes.">
+      <DisclosureCard headingLevel={3} title="Example details" summary="Checked at Oct 22, 2026, 00:13 GMT+1" open={open} onOpenChange={setOpen}
+        notices={<InlineNotice tone="warning" title="Example notice">Stays visible while the details are closed.</InlineNotice>}>
+        <StatList items={[{ label: "First fact", value: "Example value" }, { label: "Second fact", value: <a href="#example">Example link</a> }]} />
+      </DisclosureCard>
     </Section>
   );
 }

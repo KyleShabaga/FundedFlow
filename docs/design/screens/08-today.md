@@ -32,6 +32,12 @@ Today fills the shared content frame ([window-support.md](../window-support.md))
 - Active accounts: 1 to 4 columns by the section's own width (from 560, 880 and 1200 px); cards stay about
   270–560 px wide.
 - Freshness disclosure and a Cards/List view are separate cards; this layout leaves room for both.
+- P0-D22: "How fresh this is" is a `DisclosureCard`. It starts closed, showing the title, "Checked against your records
+  at …" and a chevron; the header button opens the rows downward in the flow. The choice lasts for the window session
+  (through Check again, data refreshes and account changes) and opening it reads nothing. While closed, anything a row
+  would flag (trades or import history unreadable, last import failed, checkpoints unreadable, the last estimate for
+  another trading day) is listed under the header as "Needs attention", and the checkpoint-conflict and discrepancy
+  notices always stay visible. Check again stays outside the card, above it.
 
 ## States (all distinct)
 No account, needs setup, unknown rulebook, no trades, import processing, partially supported rule, stale input,

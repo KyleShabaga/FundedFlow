@@ -80,4 +80,6 @@
 .td-page a { color: var(--flow); font-weight: 600; }
 
 /* ---- P0-D05 / D22 / D06 (ui-freshness session): freshness panel display zone ---- */
-.td-fresh-zone { margin: var(--space-3) 0 0; font-size: 12px; line-height: 18px; }
+.td-fresh-zone { margin: 0; font-size: 12px; line-height: 18px; }
+.td-fresh-attention { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.td-fresh.ds-disclosure-card:not(.is-open) > .td-fresh-attention { margin-top: var(--space-2); }

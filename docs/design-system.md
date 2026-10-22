@@ -34,7 +34,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `components/brand.tsx` | `BrandMark` (the swept-F mark, decorative) and `BrandLogo` (mark + "FundedFlow" wordmark; `showName={false}` for the icon rail) (P0-D01) |
 | `components/rules.tsx` | `RuleMeter`, `ruleState`, `AccountCard` |
 | `components/account-overview.tsx` | `AccountOverviewCard`, `ProgressMeter`, `meterFraction` (Build 18.5) |
-| `components/documents.tsx`, `documents.css` | `GatePage`, `DocumentView`, `Disclosure` (NA-3) |
+| `components/documents.tsx`, `documents.css` | `GatePage`, `DocumentView`, `Disclosure` (NA-3), `DisclosureCard` (P0-D22) |
 | `components/charts.tsx` | `WinGauge`, `Sparkline`, `EquityCurve` |
 | `components/journal.tsx` | `PnlCalendar`, `monthWeeks`, `DayCard`, `TradeTable`, `tradeResult` |
 | `components/forms.tsx` | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select` (Radix), `FieldGroup`, `FormSection`, `FieldError`, `ValidationSummary`, `focusFirstInvalid`, `focusFirstInvalidWhenShown` (Build 26), `FileDropzone`, `dragHasFiles`, `useWindowFileDropGuard`, `formatFileSize` |
@@ -215,6 +215,21 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
 - `Disclosure` is a native `details`/`summary` expander (keyboard behaviour is the browser's). `srSummary` adds
   screen-reader context, such as "(draft, version 0.1.0-draft)", to a link-like summary. `onToggle(open)` (Build
   26.78) reports each open and close, so a long body can be loaded on first open.
+
+## P0-D22: DisclosureCard
+
+- `DisclosureCard` is a card (`ds-card`, a `section` region named by `title`) whose whole header is one `button`
+  inside the heading (`headingLevel`, default 2): the title, an optional `summary` (still visible when closed, read as
+  part of the button) and a chevron that points down when closed and up when open. `aria-expanded` and
+  `aria-controls` tie the button to the body. Use it instead of `Disclosure` when a card's details should fold away but
+  its header still says something (Today's "How fresh this is").
+- Controlled (`open`, `onOpenChange`): the caller keeps the choice, so it can outlive data refreshes and remounts.
+- The body opens downward in the document flow (no overlay). Closed, it is `inert` and `visibility: hidden` with zero
+  height, so nothing in it can be focused or read; the details stay in the DOM. The rows animate open in 160 ms
+  (grid rows) and the chevron turns; `prefers-reduced-motion` removes both transitions.
+- `notices` render under the header whether open or closed: essential warnings never hide with the details. Nothing
+  inside the header is interactive besides the button itself; put actions such as Check again outside the card.
+- Gallery: "DisclosureCard (P0-D22)", after the NA-3 documents section. Tests: `documents.test.tsx`.
 
 ## Build 23: selectable calendar and PnlBars
 
