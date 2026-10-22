@@ -29,8 +29,9 @@ Today fills the shared content frame ([window-support.md](../window-support.md))
   accounts, or, with one active attempt, the account summary with the risk estimate under it. CSS placement only:
   nothing is reordered or remounted. Below that everything stacks.
 - The freshness list shows two columns of label/value rows when each gets 420 px, so values stay near their labels.
-- Active accounts: 1 to 4 columns by the section's own width (from 560, 880 and 1200 px); cards stay about
-  270–560 px wide.
+- Active accounts: 1 to 4 columns by the section's own width (from 560, 880 and 1130 px); cards stay 270–560 px
+  wide. A count that would leave one card alone on the last row is balanced (P0-D31: 4 → 2 + 2, 5 → 3 + 2,
+  7 → 3 + 2 + 2), except with 2 across, where three would be too narrow ([window-support.md](../window-support.md)).
 - Freshness disclosure and a Cards/List view are separate cards; this layout leaves room for both.
 
 ## States (all distinct)

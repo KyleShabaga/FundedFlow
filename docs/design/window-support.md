@@ -80,8 +80,14 @@ Before P0-D29 these were window-width media queries at 900 px (Accounts, Import)
   (`repeat(auto-fit, minmax(min(420px, 100%), 1fr))`); a label wraps at half its column, so 200% text never squeezes
   the value away.
 - **Today Active accounts** (`td-overview` container): 1 column below 560 px, 2 from 560, 3 from 880, 4 from
-  1200 px of the section's own width. Cards stay roughly 270–560 px wide; a few accounts never stretch across an
-  ultrawide frame.
+  1130 px of the section's own width. Cards stay 270–560 px wide; a few accounts never stretch across an ultrawide
+  frame. P0-D31: the grid has 12 tracks and each card spans 12, 6, 4 or 3, so a count that would leave one card alone
+  on the last row is balanced by CSS alone (DOM and Tab order unchanged): with 3 across, 3n + 1 cards end two by two
+  (4 → 2 + 2, 7 → 3 + 2 + 2); with 4 across, 4n + 1 cards end three then two (5 → 3 + 2). 4 across starts at 1130
+  (was 1200) so a card in a row of two stays under 560 px. At 1280, 1920 and 3440 px windows the section is 923–968 px
+  (3 across), so 1–8 accounts never leave a lone card. **Known limit:** with 2 across (a section of 560–879 px, for
+  example beside freshness in a 1600 px window) an odd count still ends with one card, because three across would be
+  under 270 px there.
 - Grids of figures and cards elsewhere keep `repeat(auto-fit|auto-fill, minmax(…))` with their existing minimums.
 - The account overview card has its own container breakpoints (460 and 300 px; Build 18.5).
 
