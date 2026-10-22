@@ -8,6 +8,7 @@ pub mod attempts;
 pub mod authoring;
 pub mod catalogue;
 pub mod daily_reviews;
+pub mod freshness;
 pub mod insights;
 pub mod journal;
 pub mod ledger;

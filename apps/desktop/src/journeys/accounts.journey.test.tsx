@@ -143,7 +143,7 @@ describe("active account and late responses", () => {
     await waitFor(() => expect(slowA.calls).toHaveLength(1));
     // Switch while A's read is still pending.
     await user.click(await screen.findByRole("button", { name: /Eval A/ }));
-    await user.click(await screen.findByRole("menuitem", { name: /Eval B/ }));
+    await user.click(await screen.findByRole("menuitemradio", { name: /Eval B/ }));
     await waitFor(() => expect(store.settings.get(ACTIVE_ACCOUNT_SETTING)).toBe("acct-b"));
     expect(await screen.findByText("MNQZ6")).toBeTruthy();
     // A's answer arrives last; it must not replace or join B's list.

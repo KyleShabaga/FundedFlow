@@ -23,6 +23,14 @@
     forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight;
   }
   .ds-tab[data-state="active"] .ds-tab-count, .ds-tab[aria-pressed="true"] .ds-tab-count { color: HighlightText; }
+  .ds-dot { forced-color-adjust: none; box-shadow: none; }
+  .ds-dot-success, .ds-dot-caution { background: CanvasText; }
+  .ds-dot-unknown { border-color: CanvasText; }
+  .ds-menu-item.is-choice[data-state="checked"] .ds-dot-success, .ds-menu-item.is-choice[data-state="checked"] .ds-dot-caution { background: HighlightText; }
+  .ds-menu-item.is-choice[data-state="checked"] .ds-dot-unknown { border-color: HighlightText; }
+  .ds-menu-item.is-choice[data-state="checked"] { forced-color-adjust: none; background: Highlight; color: HighlightText; box-shadow: none; }
+  .ds-menu-item.is-choice[data-state="checked"] .ds-menu-description { color: HighlightText; }
+  .ds-menu-item[data-highlighted] { outline: 2px solid Highlight; outline-offset: -2px; }
   .ds-pager-page.is-on { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
   .ds-dt tbody tr.is-on > *, .ds-table tbody tr.is-on > * { border-block: 2px solid Highlight; }
   .ds-cal-day.is-selected, .ds-cal-week.is-selected, .ds-bars-row.is-selected, .ds-myp-month.is-on, .ds-aoc.is-selected,

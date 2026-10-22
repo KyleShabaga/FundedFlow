@@ -1400,7 +1400,7 @@ const READ_COMMANDS: &[&str] = &[
     "list_financial_observations", "get_ledger_history", "list_financial_reconciliations",
     "list_reconciliation_resolutions", "export_journal_archive", "export_trade_csv", "inspect_journal_archive",
     "preview_permanent_deletion", "get_daily_review", "list_daily_reviews", "get_insights_dataset", "dev_tools_status",
-    "dev_reset_preview", "get_legal_acceptance",
+    "dev_reset_preview", "get_legal_acceptance", "list_account_freshness",
 ];
 
 /// Every `#[tauri::command]` is either a listed read or a write the §3 command table classifies (a matrix row, or

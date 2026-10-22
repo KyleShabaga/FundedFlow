@@ -47,7 +47,7 @@ function newStore() {
 
 async function chooseActive(user: User, account: Account) {
   await user.click(await screen.findByRole("button", { name: /Eval [AB]/, description: "Account" }));
-  await user.click(await screen.findByRole("menuitem", { name: names[account] }));
+  await user.click(await screen.findByRole("menuitemradio", { name: n => n.startsWith(names[account]) }));
   await screen.findByText(`${names[account]} is the active account`);
 }
 

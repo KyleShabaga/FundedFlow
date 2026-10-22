@@ -39,7 +39,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `components/journal.tsx` | `PnlCalendar`, `monthWeeks`, `DayCard`, `TradeTable`, `tradeResult` |
 | `components/forms.tsx` | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select` (Radix), `FieldGroup`, `FormSection`, `FieldError`, `ValidationSummary`, `focusFirstInvalid`, `focusFirstInvalidWhenShown` (Build 26), `FileDropzone`, `dragHasFiles`, `useWindowFileDropGuard`, `formatFileSize` |
 | `components/overlays.tsx` | `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `OverlayClose`, `DropdownMenu`, `ActionPill` (P0-D12), `Tooltip`, `InfoTip` (Radix Dialog, Dropdown Menu, Tooltip) |
-| `components/feedback.tsx` | `InlineNotice`, `ToastProvider` + `useToast`, `StatusIndicator` |
+| `components/feedback.tsx` | `InlineNotice`, `ToastProvider` + `useToast`, `StatusIndicator`, `StatusDot` (P0-D06) |
 | `components/async-states.tsx` | `AsyncState`, `StateBoundary`, `Skeleton`, `LoadingState`, `EmptyState`, `ErrorState`, `UnavailableState`, `StaleDataNotice`, `RefreshingIndicator`, `MutationState`, `MutationFeedback`, `isMutationBusy`, `hasData` |
 | `components/data.tsx` | `DataTable`, `MetricCard`, `MetricValue` + `MetricValueView`, `MoneyCell`, `UnknownValue`, `LabeledValue`, `StatList`, `Stepper`, `MonthYearPicker` |
 | `components/primitives.tsx` (Build 13 additions) | `Button` `loading` and `disabledReason`, `IconButton`, `SegmentedControl`, `DisclosureButton` (P0-D18) |
@@ -221,6 +221,20 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
 - `Disclosure` is a native `details`/`summary` expander (keyboard behaviour is the browser's). `srSummary` adds
   screen-reader context, such as "(draft, version 0.1.0-draft)", to a link-like summary. `onToggle(open)` (Build
   26.78) reports each open and close, so a long body can be loaded on first open.
+
+## P0-D06: menu choices and StatusDot
+
+- `DropdownMenu` items with `checked` are choices: consecutive ones render as one Radix radio group
+  (`menuitemradio`, `aria-checked`). The checked choice has a `flow-soft` ground, a 3 px `flow` accent bar and full-ink
+  semibold text (`ink` and `ink-muted` on `flow-soft` are in `tokens.test.ts`); keyboard/hover highlight stays
+  `bg-300`, and highlighted-while-checked adds a `flow` edge, so selection, highlight and disabled never look alike.
+  There is no checkmark, so `icon` can carry a status. Choosing the checked item again only closes the menu. In
+  Windows contrast themes the checked choice fills with `Highlight` and the highlighted item gets an outline.
+- Any item may have a `description`: a quieter second line that is part of its accessible name.
+- `{ type: "note", text }` is a short, non-focusable explanation inside a menu.
+- `StatusDot` (`tone`: `success`, `caution`, `unknown`) is an 8 px dot with a static glow; unknown is a hollow ring, so
+  shape differs as well as colour. It is `aria-hidden` beside text that names the status, or `role="img"` with `label`.
+- Gallery: "Choice menu" in the overlays section. Tests: `overlays.test.tsx`.
 
 ## P0-D22: DisclosureCard
 

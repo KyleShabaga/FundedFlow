@@ -27,6 +27,8 @@ const TEXT_PAIRS: [string, string][] = [
   ["ink", "bg-000"], ["ink", "bg-100"], ["ink", "bg-300"], ["ink-muted", "bg-300"],
   ["ink-muted", "bg-100"], ["ink-muted", "bg-200"], ["ink-faint", "bg-100"], ["ink-faint", "bg-200"],
   ["flow", "bg-100"], ["on-flow", "flow-fill"], ["flow", "flow-soft"],
+  // P0-D06: the checked menu item (the active account) and its description line.
+  ["ink", "flow-soft"], ["ink-muted", "flow-soft"],
   ["profit", "bg-100"], ["profit", "bg-200"], ["profit", "profit-soft"],
   ["loss", "bg-100"], ["loss", "bg-200"], ["loss", "loss-soft"],
   ["warn", "bg-100"], ["warn", "warn-soft"],

@@ -307,9 +307,21 @@ export const OverlayClose = RadixDialog.Close;
 /* ---------- DropdownMenu ---------- */
 
 export type MenuEntry =
-  | { type?: "item"; label: string; onSelect: () => void; icon?: ReactNode; disabled?: boolean; tone?: "danger"; shortcut?: string }
+  | {
+      type?: "item"; label: string; onSelect: () => void; icon?: ReactNode; disabled?: boolean; tone?: "danger"; shortcut?: string;
+      /**
+       * P0-D06: the current choice in a list of choices (the active account). Set on every choice item: consecutive
+       * choices render as one radio group (`menuitemradio`, `aria-checked`), the checked one drawn with a filled ground
+       * and an accent bar, not a checkmark, so `icon` stays free for a status. Choosing it again only closes the menu.
+       */
+      checked?: boolean;
+      /** A second, quieter line under the label ("Fresh · import Oct 21, 16:58"). Part of the item's name. */
+      description?: string;
+    }
   | { type: "separator" }
-  | { type: "label"; label: string };
+  | { type: "label"; label: string }
+  /** P0-D06: a short explanation inside the menu (what the dots mean). Not focusable; read with the menu. */
+  | { type: "note"; text: string };
 
 export interface DropdownMenuProps {
   /** The button that opens the menu (an IconButton for row menus, a Button "Columns"). */
@@ -340,30 +352,79 @@ export function DropdownMenu({ trigger, items, align = "end", label }: DropdownM
             pending.current = null;
             if (action) queueMicrotask(action);
           }}>
-          {items.map((it, i) =>
-            it.type === "separator" ? (
-              <RadixMenu.Separator key={i} className="ds-menu-sep" />
-            ) : it.type === "label" ? (
-              <RadixMenu.Label key={i} className="ds-menu-label">
-                {it.label}
-              </RadixMenu.Label>
-            ) : (
-              <RadixMenu.Item
-                key={i}
-                className={cx("ds-menu-item", it.tone === "danger" && "is-danger")}
-                disabled={it.disabled}
-                // Runs from onCloseAutoFocus above, after the menu has closed and returned focus to its trigger.
-                onSelect={() => { pending.current = it.onSelect; }}
-              >
-                {it.icon}
-                <span className="ds-menu-text">{it.label}</span>
-                {it.shortcut && <span className="ds-menu-shortcut">{it.shortcut}</span>}
-              </RadixMenu.Item>
-            ),
-          )}
+          {menuRuns(items).map(run => run.choices
+            ? (
+              // A run of choices is one radio group: the checked one is `aria-checked`, the others can be chosen.
+              <RadixMenu.RadioGroup key={run.start} value={String(run.items.findIndex(c => c.checked))}>
+                {run.items.map((it, j) => (
+                  <RadixMenu.RadioItem
+                    key={run.start + j}
+                    value={String(j)}
+                    className={cx("ds-menu-item", "is-choice", it.description && "has-description")}
+                    disabled={it.disabled}
+                    onSelect={() => { pending.current = it.checked ? null : it.onSelect; }}
+                  >
+                    {it.icon}
+                    <MenuText label={it.label} description={it.description} />
+                  </RadixMenu.RadioItem>
+                ))}
+              </RadixMenu.RadioGroup>
+            )
+            : run.items.map((it, j) => {
+              const i = run.start + j;
+              return it.type === "separator" ? (
+                <RadixMenu.Separator key={i} className="ds-menu-sep" />
+              ) : it.type === "note" ? (
+                <RadixMenu.Label key={i} className="ds-menu-note">
+                  {it.text}
+                </RadixMenu.Label>
+              ) : it.type === "label" ? (
+                <RadixMenu.Label key={i} className="ds-menu-label">
+                  {it.label}
+                </RadixMenu.Label>
+              ) : (
+                <RadixMenu.Item
+                  key={i}
+                  className={cx("ds-menu-item", it.tone === "danger" && "is-danger", it.description && "has-description")}
+                  disabled={it.disabled}
+                  // Runs from onCloseAutoFocus above, after the menu has closed and returned focus to its trigger.
+                  onSelect={() => { pending.current = it.onSelect; }}
+                >
+                  {it.icon}
+                  <MenuText label={it.label} description={it.description} />
+                  {it.shortcut && <span className="ds-menu-shortcut">{it.shortcut}</span>}
+                </RadixMenu.Item>
+              );
+            }))}
         </RadixMenu.Content>
       </RadixMenu.Portal>
     </RadixMenu.Root>
+  );
+}
+
+type MenuItemEntry = Extract<MenuEntry, { label: string; onSelect: () => void }>;
+type MenuRun = { start: number; choices: true; items: MenuItemEntry[] } | { start: number; choices: false; items: MenuEntry[] };
+const isChoice = (it: MenuEntry): it is MenuItemEntry => (it.type === undefined || it.type === "item") && (it as MenuItemEntry).checked !== undefined;
+
+/** Consecutive choice items (those with `checked`) form one run, so each renders as one radio group. */
+function menuRuns(items: readonly MenuEntry[]): MenuRun[] {
+  const runs: MenuRun[] = [];
+  items.forEach((it, i) => {
+    const last = runs[runs.length - 1];
+    const choice = isChoice(it);
+    if (last && last.choices === choice) (last.items as MenuEntry[]).push(it);
+    else runs.push(choice ? { start: i, choices: true, items: [it] } : { start: i, choices: false, items: [it] });
+  });
+  return runs;
+}
+
+function MenuText({ label, description }: { label: string; description?: string }) {
+  if (!description) return <span className="ds-menu-text">{label}</span>;
+  return (
+    <span className="ds-menu-lines">
+      <span className="ds-menu-text">{label}</span>
+      <span className="ds-menu-description">{description}</span>
+    </span>
   );
 }
 

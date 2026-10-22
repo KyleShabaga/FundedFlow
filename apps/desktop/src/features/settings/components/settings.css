@@ -1,2 +1,7 @@
 /* Settings → Date and time (P0-D05). Every value comes from tokens.css; components come from the design system. */
 .st-zone-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: var(--space-3); max-width: 640px; }
+
+/* Settings → Account freshness (P0-D06). */
+.st-fresh-custom { display: grid; gap: var(--space-3); max-width: 640px; padding: var(--space-4); border: 1px solid var(--line-100); border-radius: var(--radius-md); background: var(--bg-200); }
+.st-fresh-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: var(--space-3); align-items: start; }
+.st-fresh-days { max-width: 240px; }

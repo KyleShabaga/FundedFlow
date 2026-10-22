@@ -129,7 +129,7 @@ describe("Build 15 on real Rust payloads through the merged adapter", () => {
     expect(within(attempts).getAllByRole("row")).toHaveLength(3);
     expect(within(attempts).getByText("Eval 50K attempt 2")).toBeTruthy();
     await user.click(await screen.findByRole("button", { name: /Choose an account/ }));
-    await user.click(await screen.findByRole("menuitem", { name: /Eval 50K attempt 2/ }));
+    await user.click(await screen.findByRole("menuitemradio", { name: /Eval 50K attempt 2/ }));
     const successor = journal.accounts.find(a => a.name === "Eval 50K attempt 2")!;
     await waitFor(() => expect(settings[ACTIVE_ACCOUNT_SETTING]).toBe(successor.id));
     expect(bridge.invoke).toHaveBeenCalledWith("set_setting", { key: ACTIVE_ACCOUNT_SETTING, value: successor.id });

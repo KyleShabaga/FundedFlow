@@ -14,6 +14,7 @@ import {
   DropdownMenu,
   InlineNotice,
   Popover,
+  StatusDot,
   StatusIndicator,
   ToastProvider,
   Tooltip,
@@ -163,6 +164,62 @@ describe("DropdownMenu", () => {
     expect(archive).toHaveBeenCalledTimes(1);
     expect(remove).not.toHaveBeenCalled();
     await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+});
+
+describe("DropdownMenu choices (P0-D06)", () => {
+  function Choices({ onChoose }: { onChoose: (id: string) => void }) {
+    return (
+      <DropdownMenu
+        trigger={<Button>Account</Button>}
+        items={[
+          { type: "label", label: "Live accounts" },
+          { label: "Eval A", description: "Fresh · updated Oct 21", icon: <StatusDot tone="success" />, checked: true, onSelect: () => onChoose("a") },
+          { label: "Eval B", description: "Unknown · no records yet", icon: <StatusDot tone="unknown" />, checked: false, onSelect: () => onChoose("b") },
+          { type: "separator" },
+          { type: "note", text: "Dots show how recent each account's records are." },
+          { label: "Manage accounts", onSelect: () => onChoose("manage") },
+        ]}
+      />
+    );
+  }
+  it("renders choices as one radio group, the current one checked and enabled, with its line in the name", async () => {
+    const chosen = vi.fn();
+    render(<Choices onChoose={chosen} />);
+    await userEvent.click(screen.getByRole("button", { name: "Account" }));
+    const radios = await screen.findAllByRole("menuitemradio");
+    expect(radios.map(r => r.getAttribute("aria-checked"))).toEqual(["true", "false"]);
+    expect(radios[0].getAttribute("aria-disabled")).toBeNull();
+    expect(radios[0].textContent).toBe("Eval AFresh · updated Oct 21");
+    expect(radios[0].querySelector("svg")).toBeNull();
+    expect(radios[0].querySelector(".ds-dot")?.getAttribute("aria-hidden")).toBe("true");
+    expect(screen.getByRole("menuitem", { name: "Manage accounts" })).toBeTruthy();
+    expect(screen.getByText("Dots show how recent each account's records are.")).toBeTruthy();
+    // Choosing the checked one only closes the menu; another runs its action.
+    await userEvent.click(radios[0]);
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    expect(chosen).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Account" }));
+    await userEvent.click((await screen.findAllByRole("menuitemradio"))[1]);
+    await waitFor(() => expect(chosen).toHaveBeenCalledWith("b"));
+  });
+  it("moves through choices and actions with the keyboard", async () => {
+    const chosen = vi.fn();
+    render(<Choices onChoose={chosen} />);
+    screen.getByRole("button", { name: "Account" }).focus();
+    await userEvent.keyboard("{Enter}");
+    await screen.findAllByRole("menuitemradio");
+    await waitFor(() => expect(document.activeElement?.textContent).toContain("Eval A"));
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    await waitFor(() => expect(chosen).toHaveBeenCalledWith("b"));
+  });
+});
+
+describe("StatusDot (P0-D06)", () => {
+  it("is decoration beside text, or an image with its own name when it stands alone", () => {
+    render(<><StatusDot tone="success" /><StatusDot tone="unknown" label="Unknown" /></>);
+    expect(document.querySelector(".ds-dot-success")?.getAttribute("aria-hidden")).toBe("true");
+    expect(screen.getByRole("img", { name: "Unknown" }).classList.contains("ds-dot-unknown")).toBe(true);
   });
 });
 
