@@ -49,7 +49,8 @@ fn count(conn: &Connection, sql: &str) -> i64 {
 
 #[test]
 fn the_legacy_rules_fixture_covers_every_matrix_case() {
-    let conn = read_only(&Journal::copy_of(LEGACY_RULES).0);
+    let journal = Journal::copy_of(LEGACY_RULES);
+    let conn = read_only(&journal.0);
     assert_eq!(version(&conn), 8);
     let set = |items: &[&str]| items.iter().map(|s| s.to_string()).collect::<BTreeSet<_>>();
 
@@ -231,7 +232,8 @@ fn converted_rules_match_the_shared_golden_file() {
 
 #[test]
 fn assignment_intervals_follow_effective_from_and_contain_their_snapshots() {
-    let conn = read_only(&Journal::copy_of(LEGACY_RULES).0);
+    let journal = Journal::copy_of(LEGACY_RULES);
+    let conn = read_only(&journal.0);
     let intervals: BTreeMap<String, (String, Option<String>)> = conn
         .prepare(ASSIGNMENT_INTERVALS)
         .unwrap()
@@ -269,7 +271,8 @@ fn assignment_intervals_follow_effective_from_and_contain_their_snapshots() {
 
 #[test]
 fn rule_keys_are_unique_per_version() {
-    let conn = read_only(&Journal::copy_of(LEGACY_RULES).0);
+    let journal = Journal::copy_of(LEGACY_RULES);
+    let conn = read_only(&journal.0);
     let keys: Vec<(String, String)> = conn
         .prepare(&format!("SELECT r.rulebook_version_id, k.rule_key FROM rules r JOIN ({RULE_KEYS}) k ON k.id = r.id"))
         .unwrap()
@@ -286,7 +289,8 @@ fn rule_keys_are_unique_per_version() {
 
 #[test]
 fn legacy_parameters_use_only_the_keys_the_matrix_maps() {
-    let conn = read_only(&Journal::copy_of(LEGACY_RULES).0);
+    let journal = Journal::copy_of(LEGACY_RULES);
+    let conn = read_only(&journal.0);
     // docs/rulebook-migration.md, "Rule parameters".
     let mapped: BTreeMap<&str, &[&str]> = BTreeMap::from([
         ("profit_target", &["amount_micros"][..]),
