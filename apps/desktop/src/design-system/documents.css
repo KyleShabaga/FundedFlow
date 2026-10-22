@@ -30,6 +30,8 @@
 .ds-document-section { display: grid; gap: var(--space-2); }
 .ds-document-heading { margin: 0; font: 600 14px/20px var(--font-sans); color: var(--ink); }
 .ds-document-section p { margin: 0; max-width: 72ch; overflow-wrap: anywhere; }
+/* Licence texts: keep the authors' line breaks and wrap anything longer than the column. */
+.ds-document.is-preformatted .ds-document-section p { max-width: 84ch; white-space: pre-wrap; font: 400 12px/18px var(--font-mono); color: var(--ink-muted); }
 
 /* Disclosure */
 .ds-disclosure { border: 1px solid var(--line-100); border-radius: var(--radius-md); background: var(--bg-100); }

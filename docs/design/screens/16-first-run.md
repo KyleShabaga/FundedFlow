@@ -65,3 +65,23 @@ anything, and would have prompted again after every erase or restore.
 has `id`, `version`, `effectiveDate`, `draft` and `digest` (SHA-256 of `documentText(doc)`); `legal.test.ts` fails
 with the new digest when the text changes. To ship final text: replace the sections, set `draft: false`, bump
 `version`, update `effectiveDate`, and paste the digest the test prints.
+
+## Licence and third-party notices
+
+Card: [Build 26.78 — Ship LICENSE and third-party notices](https://app.notion.com/p/4001bd4b6bde814ba508eec6d607e37d).
+Settings only; the first-run screen doesn't show them (the installer has no licence page either). Settings →
+Privacy & legal ends with a `Disclosure` **Licence and third-party notices**:
+
+1. `h3` **Licence**: `LICENSE_SUMMARY` (copyright line and a plain-language paraphrase; the root `LICENSE` is the
+   authority and counsel may change its wording, P0-13).
+2. `h3` **Third-party notices**: one sentence with the counts from `third-party-summary.json` ("FundedFlow includes N
+   third-party components: R Rust crates, P npm packages and F fonts…") and where the installed file is.
+3. A nested `Disclosure` **Read the third-party notices** (screen readers also hear "(N components)"). Its first open
+   loads `THIRD_PARTY_NOTICES.txt` with a dynamic `?raw` import (its own chunk, so the main bundle doesn't grow) and
+   shows `LoadingState`, then one `DocumentView` per part (`h3`: About this file, Rust crates, npm packages, Fonts,
+   Licence texts) with an `h4` per component or licence text. `preformatted` keeps the licence texts' line breaks
+   and wraps long lines, so an 800 px window has no sideways scroll. Text is never interpreted as markup. If the
+   chunk fails to load, `ErrorState` says the same text is in the install folder and offers **Try again**.
+
+The text comes from `npm run notices` (`scripts/third-party-notices.mjs`); `apps/desktop/src/legal/third-party.ts`
+splits it into parts and sections by its underlined headings.

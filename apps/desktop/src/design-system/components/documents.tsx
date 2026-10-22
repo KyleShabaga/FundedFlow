@@ -71,15 +71,17 @@ export interface DocumentViewProps {
   sections: DocumentSection[];
   /** The title's level; section headings are one level lower. Default 2. */
   headingLevel?: Exclude<HeadingLevel, 4>;
+  /** Paragraphs keep their line breaks and indentation, in a monospaced face: for licence texts. Still text, never markup. */
+  preformatted?: boolean;
   className?: string;
 }
 
-export function DocumentView({ title, badge, meta, sections, headingLevel = 2, className }: DocumentViewProps) {
+export function DocumentView({ title, badge, meta, sections, headingLevel = 2, preformatted = false, className }: DocumentViewProps) {
   const titleId = useId();
   const Title = `h${headingLevel}` as const;
   const Section = `h${headingLevel + 1}` as "h3" | "h4";
   return (
-    <article className={cx("ds-document", className)} aria-labelledby={titleId}>
+    <article className={cx("ds-document", preformatted && "is-preformatted", className)} aria-labelledby={titleId}>
       <header className="ds-document-head">
         <div className="ds-row">
           <Title id={titleId} className="ds-title">{title}</Title>
@@ -104,13 +106,16 @@ export interface DisclosureProps {
   /** Extra screen-reader text read after the visible summary. */
   srSummary?: string;
   defaultOpen?: boolean;
+  /** Called when the reader opens or closes it, for example to load a long body on first open. */
+  onToggle?: (open: boolean) => void;
   children: ReactNode;
   className?: string;
 }
 
-export function Disclosure({ summary, srSummary, defaultOpen = false, children, className }: DisclosureProps) {
+export function Disclosure({ summary, srSummary, defaultOpen = false, onToggle, children, className }: DisclosureProps) {
   return (
-    <details className={cx("ds-disclosure", className)} open={defaultOpen || undefined}>
+    <details className={cx("ds-disclosure", className)} open={defaultOpen || undefined}
+      onToggle={onToggle && (event => onToggle(event.currentTarget.open))}>
       <summary className="ds-disclosure-summary">
         {summary}
         {srSummary && <span className="ds-sr-only"> {srSummary}</span>}

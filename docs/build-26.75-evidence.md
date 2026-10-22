@@ -29,7 +29,8 @@ on a fresh Windows 11 VM or Windows Sandbox and fills in the results.
 | `bundle.windows.webviewInstallMode` | `{ "type": "downloadBootstrapper", "silent": true }` | Tauri's default, set explicitly so the choice is visible. See below. |
 | `bundle.windows.nsis.installMode` | `currentUser` | See below. |
 | `identifier` | `com.fundedflow.desktop` (**unchanged**) | It names the journal folder `%APPDATA%\com.fundedflow.desktop`; changing it would orphan existing journals. |
-| Licence page | none | The user agreement is shown in the app (NA-3), not by the installer. |
+| Licence page | none | The user agreement is shown in the app (NA-3), not by the installer. `licenseFile` stays unset. |
+| `bundle.resources` | `LICENSE`, `THIRD_PARTY_NOTICES.txt` (Build 26.78) | Licence notices travel with the binaries. See [Third-party notices](#third-party-notices). |
 
 **WebView2: `downloadBootstrapper` (silent).** Windows 11, and Windows 10 kept current by Windows Update, normally have the Evergreen WebView2 runtime,
 so on the V1 target machines the installer skips this step and makes no network call. Only when the runtime is
@@ -69,6 +70,35 @@ dev commands are registered only under `cfg(debug_assertions)`, which a release 
 - **Artifact:** `fundedflow-<version>-<short sha>-windows-nsis`, containing the installer and `SHA256SUMS.txt`; kept
   30 days. The hash and SHA are also in the run's job summary.
 - `SHA256SUMS.txt` has three `#` comment lines (title, `source_sha`, `version`) and one `<sha256>  <file>` line.
+
+## Third-party notices
+
+Added by [Build 26.78](https://app.notion.com/p/4001bd4b6bde814ba508eec6d607e37d).
+
+- **Installed files.** `bundle.resources` maps the root `LICENSE` and `apps/desktop/THIRD_PARTY_NOTICES.txt` to the
+  install folder: `%LOCALAPPDATA%\FundedFlow\LICENSE` and `%LOCALAPPDATA%\FundedFlow\THIRD_PARTY_NOTICES.txt`, next
+  to `fundedflow.exe`. Tauri's generated `installer.nsi` copies them in `Section Install` after `SetOutPath $INSTDIR`
+  (`File /a "/oname=LICENSE" …`, `File /a "/oname=THIRD_PARTY_NOTICES.txt" …`), and its uninstaller deletes both.
+  The installer still has no licence page (`!define LICENSE ""`). The same notices are in Settings → Privacy & legal.
+- **Generation.** `npm run notices` (`scripts/third-party-notices.mjs`) runs `cargo about generate --format json
+  --offline --locked --fail` with `apps/desktop/src-tauri/about.toml` (target `x86_64-pc-windows-msvc`, no dev or
+  build dependencies, FundedFlow's own crate ignored), walks `package-lock.json` for the production dependency tree
+  of `apps/desktop` and `packages/domain` (the OFL-1.1 Fontsource packages get their own Fonts section), and writes
+  one sorted text file with each component's version, licence, copyright and a reference to its licence text, each
+  distinct text printed once. It also writes `apps/desktop/src/legal/third-party-summary.json` (the counts Settings
+  shows). Both files contain no dates or paths, so they change only with a dependency.
+- **Licence policy.** Both tools share one allow-list (MIT, Apache-2.0, Apache-2.0 WITH LLVM-exception, BSD-2-Clause,
+  BSD-3-Clause, ISC, Zlib, Unicode-3.0, MPL-2.0, CC0-1.0, 0BSD, OFL-1.1). Anything else, or a package with no licence
+  text, fails generation; two npm packages published without a licence file are covered by version-pinned entries
+  in `MISSING_TEXT_OVERRIDES` that record where the copyright line was checked.
+- **CI.** `ci.yml` installs `cargo-about@0.9.2` with `taiki-e/install-action` and runs `npm run check:notices`, which
+  regenerates both files in a temp folder and fails, telling the contributor to run `npm run notices`, if either
+  differs from the checked-in copy. `npm test` includes the generator's unit tests.
+- **Not covered.** The WebView2 runtime isn't bundled (`downloadBootstrapper`) and Microsoft licenses it under its own
+  terms. NSIS builds the installer but isn't part of the installed app. Its zlib/libpng licence asks for its notice
+  only in source distributions, but the installer stub also carries NSIS's own compression code (Tauri uses LZMA),
+  which NSIS lists under separate terms; whether that needs a notice is an open question for the owner and counsel.
+  Both are named in the notices header.
 
 ## CI evidence (this PR)
 

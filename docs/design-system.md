@@ -202,9 +202,11 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
   focus move), as in the gallery.
 - `DocumentView` shows bundled long-form text as an `article` named by its title: `headingLevel` (2 or 3) for the
   title, one level lower for sections, an optional `badge` (Draft) and `meta` line. Text is rendered as text; no
-  markup is interpreted.
+  markup is interpreted. `preformatted` (Build 26.78) keeps each paragraph's line breaks and indentation in the
+  monospaced face and wraps long lines, for licence texts.
 - `Disclosure` is a native `details`/`summary` expander (keyboard behaviour is the browser's). `srSummary` adds
-  screen-reader context, such as "(draft, version 0.1.0-draft)", to a link-like summary.
+  screen-reader context, such as "(draft, version 0.1.0-draft)", to a link-like summary. `onToggle(open)` (Build
+  26.78) reports each open and close, so a long body can be loaded on first open.
 
 ## Build 23: selectable calendar and PnlBars
 

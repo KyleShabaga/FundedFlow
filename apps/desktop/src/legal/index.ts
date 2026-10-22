@@ -22,9 +22,10 @@ export const LICENSE_SUMMARY = {
     "It is provided as is, without warranty, as a record-keeping tool that doesn't give financial, trading or investment advice.",
     "Third-party components (libraries, crates, npm packages and fonts) are licensed by their own authors under their own terms.",
   ],
-  /** Third-party licence texts aren't bundled yet (tracked on the roadmap board from the NA-2 installer work). */
-  thirdPartyNotices: null as string | null,
 } as const;
+
+export type { NoticesPart, ThirdPartySummary } from "./third-party";
+export { loadThirdPartyNotices, parseNotices, THIRD_PARTY_SUMMARY } from "./third-party";
 
 export interface AcceptedDocument {
   id: string;
