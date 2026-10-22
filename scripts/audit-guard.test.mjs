@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { run } from "./audit-guard.mjs";
+import { parseArgs, run } from "./audit-guard.mjs";
 
 const node = (code) => [process.execPath, "-e", code];
 const opts = (code, extra = {}) => ({ label: "x audit", expect: "metadata", attempts: 2, backoff: 0, command: node(code), ...extra });
@@ -34,4 +34,32 @@ test("a transient failure is retried and the later real result wins", () => {
   const flag = `${process.env.TMPDIR ?? process.env.TEMP ?? "/tmp"}/audit-guard-${process.pid}`;
   const code = `const f=require("fs");const p=${JSON.stringify(flag)};if(!f.existsSync(p)){f.writeFileSync(p,"1");process.exit(1)}f.unlinkSync(p);console.log(JSON.stringify({metadata:{}}))`;
   assert.equal(run(opts(code), () => {}), 0);
+});
+
+test("an outage fails with --fail-on-outage, and on schedule and workflow_dispatch events", () => {
+  const out = [];
+  const outage = `console.log(JSON.stringify({error:{code:"E503"}}));process.exit(1)`;
+  assert.equal(run(opts(outage, { failOnOutage: true }), (l) => out.push(l)), 1);
+  assert.ok(out.some((l) => l.startsWith("::warning title=x audit not run::") && l.includes("Failing")));
+  const argv = ["--label", "x audit", "--expect", "metadata", "--", "npm", "audit"];
+  for (const [event, fail] of [["pull_request", false], ["push", false], ["", false], ["schedule", true], ["workflow_dispatch", true]]) {
+    assert.equal(parseArgs(argv, event).failOnOutage, fail, event || "(no event)");
+  }
+  const flagged = parseArgs(["--fail-on-outage", ...argv], "pull_request");
+  assert.equal(flagged.failOnOutage, true);
+  assert.equal(flagged.label, "x audit");
+  assert.deepEqual(flagged.command, ["npm", "audit"]);
+});
+
+test("a real advisory fails whatever the outage rule", () => {
+  const code = `console.log(JSON.stringify({metadata:{},vulnerabilities:{lodash:{severity:"critical"}}}));process.exit(1)`;
+  assert.equal(run(opts(code, { failOnOutage: false }), () => {}), 1);
+});
+
+test("an attempt that hangs is killed after --timeout and counts as an outage", () => {
+  const out = [];
+  const started = Date.now();
+  assert.equal(run(opts(`setTimeout(() => {}, 60000)`, { timeout: 1 }), (l) => out.push(l)), 0);
+  assert.ok(Date.now() - started < 20000, "both attempts end near the timeout, not after 60 s");
+  assert.equal(out.filter((l) => l.startsWith("x audit: attempt") && l.endsWith("timed out after 1 s")).length, 2);
 });
