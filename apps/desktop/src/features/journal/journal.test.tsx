@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // Build 20 journeys through the real Journal, Trade detail and Library pages, Build 13 components and Build 14 hooks.
 // The repository is an in-memory store (test-store.ts); persistence, P&L and snapshots are tested in Rust.
+import { RepositoryError } from "@fundedflow/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -344,10 +345,91 @@ describe("Library", () => {
     expect(await screen.findByText("VWAP pullback")).toBeTruthy();
     await user.click(screen.getByRole("tab", { name: /Tags/ }));
     const mindset = await screen.findByRole("region", { name: "Mindset" });
-    await user.click(within(mindset).getByRole("button", { name: "Archive" }));
+    await user.click(within(mindset).getByRole("button", { name: "Actions for tag FOMO" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Archive…" }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Archive" }));
     await waitFor(() => expect(holder.store.tags.get([...holder.store.tags.keys()][0])!.archived).toBe(true));
     expect(holder.store.tags.size).toBe(1);
+  });
+
+  // P0-D12: tags are pills with their own menu (Rename…, Archive… or Restore); no Rename/Archive links per row, no X.
+  it("shows each tag as a pill with its usage and a labelled menu, not repeated Rename and Archive links", async () => {
+    await holder.store.repository.library.saveTag(null, { name: "ORB", kind: "setup" });
+    await holder.store.repository.library.saveTag(null, { name: "A very long setup tag name that has to wrap inside its pill", kind: "setup" });
+    renderAt("/journal?view=library&section=tags");
+    const setup = await screen.findByRole("region", { name: "Setup" });
+    expect(within(setup).getByRole("button", { name: "Add" })).toBeTruthy();
+    expect(within(setup).getByText("ORB")).toBeTruthy();
+    expect(within(setup).getAllByText("Not used yet")).toHaveLength(2);
+    expect(within(setup).queryByRole("button", { name: "Rename" })).toBeNull();
+    expect(within(setup).queryByRole("button", { name: "Archive" })).toBeNull();
+    // The pill isn't a control; its only control is the menu button, so no button sits inside another.
+    const trigger = within(setup).getByRole("button", { name: "Actions for tag ORB" });
+    expect(trigger.closest(".ds-action-pill")!.querySelectorAll("button")).toHaveLength(1);
+    expect(trigger.parentElement!.closest("button")).toBeNull();
+    // Keyboard: Enter opens the menu, Escape closes it and focus returns to the trigger.
+    trigger.focus();
+    await userEvent.keyboard("{Enter}");
+    expect((await screen.findAllByRole("menuitem")).map(m => m.textContent)).toEqual(["Rename…", "Archive…"]);
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it("renames from the menu: Escape cancels, a failed save keeps the draft, and focus returns to the tag's menu", async () => {
+    const user = userEvent.setup();
+    const tag = await holder.store.repository.library.saveTag(null, { name: "FOMO", kind: "emotion" });
+    renderAt("/journal?view=library&section=tags");
+    const mindset = await screen.findByRole("region", { name: "Mindset" });
+    const trigger = within(mindset).getByRole("button", { name: "Actions for tag FOMO" });
+    // Escape cancels without saving and returns focus.
+    await user.click(trigger);
+    await user.click(await screen.findByRole("menuitem", { name: "Rename…" }));
+    let dialog = await screen.findByRole("dialog", { name: "Rename FOMO" });
+    await user.clear(within(dialog).getByLabelText(/^Name/));
+    await user.type(within(dialog).getByLabelText(/^Name/), "Chasing{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(holder.store.tags.get(tag.id)!.name).toBe("FOMO");
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+    // A save that fails keeps the dialog and the typed name; the next Save stores it once.
+    const save = vi.spyOn(holder.store.repository.library, "saveTag").mockRejectedValueOnce(new RepositoryError({ kind: "conflict", message: "duplicate name" }));
+    await user.click(trigger);
+    await user.click(await screen.findByRole("menuitem", { name: "Rename…" }));
+    dialog = await screen.findByRole("dialog", { name: "Rename FOMO" });
+    await user.clear(within(dialog).getByLabelText(/^Name/));
+    await user.type(within(dialog).getByLabelText(/^Name/), "Chasing");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(await within(dialog).findByText("That name is already used")).toBeTruthy();
+    expect((within(dialog).getByLabelText(/^Name/) as HTMLInputElement).value).toBe("Chasing");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(holder.store.tags.get(tag.id)!.name).toBe("Chasing");
+    await waitFor(() => expect(document.activeElement?.getAttribute("aria-label")).toBe("Actions for tag Chasing"));
+  });
+
+  it("archives only after a confirmation that says past reviews keep the tag, and restores from the same menu", async () => {
+    const user = userEvent.setup();
+    const tag = await holder.store.repository.library.saveTag(null, { name: "FOMO", kind: "emotion" });
+    renderAt("/journal?view=library&section=tags");
+    const mindset = await screen.findByRole("region", { name: "Mindset" });
+    await user.click(within(mindset).getByRole("button", { name: "Actions for tag FOMO" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Archive…" }));
+    const confirm = await screen.findByRole("alertdialog", { name: "Archive FOMO?" });
+    expect(confirm.textContent).toContain("archiving doesn't remove it from any trade and deletes nothing");
+    await user.click(within(confirm).getByRole("button", { name: "Cancel" }));
+    expect(holder.store.tags.get(tag.id)!.archived).toBe(false);
+    await user.click(within(mindset).getByRole("button", { name: "Actions for tag FOMO" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Archive…" }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Archive" }));
+    await waitFor(() => expect(holder.store.tags.get(tag.id)!.archived).toBe(true));
+    expect(holder.store.tags.size).toBe(1);
+    // Hidden by default; shown with its state, and restored from its menu.
+    await waitFor(() => expect(within(mindset).queryByText("FOMO")).toBeNull());
+    await user.click(screen.getByRole("button", { name: "Show archived" }));
+    expect(within(mindset).getByText("Archived")).toBeTruthy();
+    await user.click(within(mindset).getByRole("button", { name: "Actions for tag FOMO" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Restore" }));
+    await waitFor(() => expect(holder.store.tags.get(tag.id)!.archived).toBe(false));
   });
 
   it("edits a checklist's items in order and archives removed items", async () => {

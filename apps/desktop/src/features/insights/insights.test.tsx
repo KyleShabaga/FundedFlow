@@ -379,6 +379,72 @@ describe("Insights", () => {
   });
 });
 
+describe("Insights closed-trade curve (P0-D13)", () => {
+  // The active attempt's known closed trades in exit order: +96, −54, +26, so the running total is 96, 42, 68.
+  const chart = () => screen.findByRole("group", { name: /^Closed-trade net P&L: 3 trades, ending at \+\$68\.00/ });
+
+  it("labels both axes with the scale and the reporting currency, and draws a zero line", async () => {
+    renderAt("/insights");
+    const c = await chart();
+    expect(within(c).getByText("Cumulative net P&L (USD)")).toBeTruthy();
+    expect(within(c).getByText("Closed trades (exit order)")).toBeTruthy();
+    expect(c.querySelector(".ds-rt-zero")).not.toBeNull();
+    for (const tick of ["0", "1", "2", "3"]) expect(within(c).getAllByText(tick).length).toBeGreaterThan(0);
+  });
+
+  it("starts stepped, switches to smooth by mouse or keyboard, keeps the same points and saves the choice", async () => {
+    const user = userEvent.setup();
+    renderAt("/insights");
+    const c = await chart();
+    const style = screen.getByRole("group", { name: "Line style" });
+    expect(within(style).getByRole("button", { name: "Stepped" }).getAttribute("aria-pressed")).toBe("true");
+    const end = () => [c.querySelector(".ds-rt-end")?.getAttribute("cx"), c.querySelector(".ds-rt-end")?.getAttribute("cy")];
+    const stepEnd = end();
+    expect(c.querySelector(".ds-rt-line")?.getAttribute("d")).not.toContain("C");
+
+    await user.click(within(style).getByRole("button", { name: "Smooth" }));
+    expect(within(style).getByRole("button", { name: "Smooth" }).getAttribute("aria-pressed")).toBe("true");
+    expect(c.querySelector(".ds-rt-line")?.getAttribute("d")).toContain("C");
+    expect(end()).toEqual(stepEnd);
+    expect(screen.getByText(/Smooth joins the same closed-trade points/)).toBeTruthy();
+    await waitFor(() => expect(holder.store.base.settings.get("insights.curve_style")).toBe("smooth"));
+
+    within(style).getByRole("button", { name: "Stepped" }).focus();
+    await user.keyboard("{Enter}");
+    expect(within(style).getByRole("button", { name: "Stepped" }).getAttribute("aria-pressed")).toBe("true");
+    await waitFor(() => expect(holder.store.base.settings.get("insights.curve_style")).toBe("step"));
+  });
+
+  it("opens in the saved style", async () => {
+    holder.store.base.settings.set("insights.curve_style", "smooth");
+    renderAt("/insights");
+    await chart();
+    await waitFor(() => expect(within(screen.getByRole("group", { name: "Line style" })).getByRole("button", { name: "Smooth" }).getAttribute("aria-pressed")).toBe("true"));
+  });
+
+  it("reads each observed trade from the keyboard, matching the table's running totals", async () => {
+    const user = userEvent.setup();
+    renderAt("/insights");
+    const c = await chart();
+    act(() => c.focus());
+    const tip = () => c.querySelector(".ds-rt-tip")?.textContent ?? "";
+    expect(tip()).toContain("Trade 3");
+    expect(tip()).toContain("+$68.00");
+    await user.keyboard("{Home}");
+    expect(tip()).toContain("Start of the selection");
+    expect(tip()).toContain("$0.00");
+    await user.keyboard("{ArrowRight}");
+    expect(tip()).toMatch(/Trade 1 · ESZ6 · .*Result \+\$96\.00.*Running total \+\$96\.00/);
+    await user.keyboard("{ArrowRight}");
+    expect(tip()).toMatch(/Trade 2 · NQZ6 · .*Result −\$54\.00.*Running total \+\$42\.00/);
+
+    await user.click(within(screen.getByRole("group", { name: "Show the curve as" })).getByRole("button", { name: "Table" }));
+    const rows = within(screen.getByRole("table", { name: "Closed-trade net P&L by trade" })).getAllByRole("row").slice(1);
+    expect(rows.map(r => { const cells = within(r).getAllByRole("cell"); return cells[cells.length - 1].textContent; })).toEqual(["+$96.00", "+$42.00", "+$68.00"]);
+    expect(screen.queryByRole("group", { name: "Line style" })).toBeNull();
+  });
+});
+
 describe("Insights metric info (P0-D14)", () => {
   const card = async (label: string) => (await screen.findByText(label, { selector: ".ds-label" })).closest(".ds-metric") as HTMLElement;
   const info = async (user: ReturnType<typeof userEvent.setup>, label: string) => {

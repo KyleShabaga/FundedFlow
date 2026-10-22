@@ -26,3 +26,17 @@ Mockup: `Library.dc.html`. Reference: `tw-library.png`.
 - Playbooks, templates and tags: `get_review_library`, `save_strategy`, `save_checklist`, `save_tag`,
   `set_library_archived` (Build 20). Nothing is deleted; archiving keeps past reviews' labels.
 - Search is client-side to start; move to SQLite FTS if it gets slow.
+
+## Tags (P0-D12)
+- Four category cards (Setup, Mistake, Mindset, General), each with **Add** in its header. Each tag is an
+  `ActionPill`: its name, "Used in n reviews" ("Not used yet" at zero), and a menu button named "Actions for tag
+  {name}" with **Rename…** and **Archive…** (**Restore** for an archived tag). No Rename/Archive links per row, no X,
+  no settings mode; double-click rename is not offered (the menu is the one path).
+- Rename opens the existing name dialog (Save/Cancel, validation, Escape cancels; a failed save keeps the dialog and
+  the typed name; Save is ignored while a save runs). Past reviews keep the name they were reviewed under.
+- Archive asks first, through the existing confirmation, with what it affects: it isn't offered for new reviews, the
+  n reviews already tagged keep it exactly as recorded, it isn't removed from any trade and nothing is deleted;
+  restore is from the same menu ("Show archived"). Same `save_tag` and `set_library_archived` commands as before.
+- Focus: Escape on the menu returns to its button; Rename and Archive dialogs return to the tag's menu button (or
+  to Add after a new tag); after an archive hides the tag, to the first remaining control in that category.
+- Screenshots: [`p0-d12/`](p0-d12/).

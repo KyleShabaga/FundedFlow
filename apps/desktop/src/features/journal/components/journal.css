@@ -107,7 +107,7 @@
 .jr-library, .jr-notes, .jr-lib-section { display: grid; gap: var(--space-3); min-width: 0; }
 .jr-lib-bar { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .jr-lib-bar p { margin: 0; max-width: 80ch; }
-.jr-note-list, .jr-lib-list, .jr-tag-list, .jr-item-editor { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.jr-note-list, .jr-lib-list, .jr-item-editor { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
 .jr-note-item, .jr-lib-item { display: grid; gap: var(--space-2); min-width: 0; }
 .jr-note-head, .jr-lib-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .jr-lib-head h3 { margin: 0; font: 600 14px/20px var(--font-display); flex: 1; }
@@ -116,7 +116,8 @@
 .jr-check-preview { margin: 0; padding-left: var(--space-6); color: var(--ink-muted); font-size: 13px; }
 .jr-tag-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4); align-items: start; }
 .jr-tag-col { display: grid; gap: var(--space-2); }
-.jr-tag-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.jr-tag-pills { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.jr-tag-pills > li { display: flex; max-width: 100%; min-width: 0; }
 .jr-item-editor { gap: var(--space-2); }
 .jr-item-editor .ds-field { flex: 1; min-width: 160px; }
 .jr-archived-items summary { cursor: pointer; color: var(--ink-muted); }

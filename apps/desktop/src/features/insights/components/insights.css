@@ -65,6 +65,10 @@
 /* Two-column page grids stack below 880 px of main column (docs/design/window-support.md). */
 @container ds-main (max-width: 879px) { .in-cal { grid-template-columns: minmax(0, 1fr); } }
 
+/* ---- Overview: closed-trade curve (P0-D13, ui-insights-overview) ---- */
+.in-curve { display: grid; gap: var(--space-2); min-width: 0; }
+.in-curve-note { margin: 0; }
+
 /* ---------- P0-D18: Calendar Filters button and its panel (Calendar session) ---------- */
 /* The toolbar groups the cell choice, the Filters action and the panel, so the section's gap doesn't split them. */
 .in-cal-toolbar { display: grid; gap: var(--space-2); min-width: 0; }
