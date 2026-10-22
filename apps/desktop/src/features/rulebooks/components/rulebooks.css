@@ -39,7 +39,9 @@
 .rb-compare { display: grid; gap: var(--space-3); min-width: 0; }
 .rb-compare-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .rb-compare-count { margin: 0; font-weight: 600; }
-.rb-compare-table { width: 100%; border-collapse: collapse; font: 500 13px/18px var(--font-sans); display: block; overflow-x: auto; }
+.rb-compare-scroll { overflow-x: auto; min-width: 0; }
+.rb-compare-scroll:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.rb-compare-table { width: 100%; border-collapse: collapse; font: 500 13px/18px var(--font-sans); }
 .rb-compare-table caption { text-align: left; font: 600 14px/20px var(--font-sans); padding: var(--space-2) 0; color: var(--ink); }
 .rb-compare-table th, .rb-compare-table td { text-align: left; vertical-align: top; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--line-200); }
 .rb-compare-table thead th { color: var(--ink-muted); font-weight: 600; white-space: nowrap; }

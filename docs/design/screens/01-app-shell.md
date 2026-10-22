@@ -39,8 +39,9 @@ panel and Design system gallery stay reachable from Settings › Developer in de
   that slides to the newly selected route (route changes only, never hover; it appears in place when coming from a page
   with no sidebar item). Opening and closing animate the sidebar width; icons keep a fixed inset so they don't move,
   and labels and the wordmark fade in once the width is mostly open. `prefers-reduced-motion` turns all of it off.
-- Below 760 px, the icon rail is enforced and the toggle is disabled with an explanatory accessible name.
-  On wider windows, restore the user's locally saved collapse preference. Ctrl+B leaves editable fields alone.
+- Below 900 px of window (Build 26.85; was 760 px), the icon rail is enforced and the toggle is disabled with an
+  explanatory accessible name, so the page always keeps the 640 px compact main column. On wider windows, restore the
+  user's locally saved collapse preference. Minimum window 800 × 480 ([window-support.md](../window-support.md)). Ctrl+B leaves editable fields alone.
 - Footer: Settings and a "Saved on this computer" status (local-first promise). No Import item in the sidebar.
   Development builds only (Build 26.9): **Add Fake Data** and **Reset All Data** directly above Settings, same
   height, icon size and focus style, icon-only with tooltips when collapsed; absent from production builds
@@ -78,7 +79,7 @@ initialization command. Root render failure offers Return to app and Open Settin
 | Search / command palette | Triage card |
 | Feedback button | Triage card |
 | Notifications | "Desktop Privacy, Security & User Notifications" card |
-| Theme switcher | "Build UI skins & theme customization" (P2) |
+| Theme switcher | "Build UI skins & theme customization" (P2). V1 follows the Windows light/dark mode live (Build 26.85) |
 | Session clock and Trading sessions popover | Build 41 (P2) |
 | "Add trade" header button | Manual entry is contextual to Today and Journal (Build 20) |
 

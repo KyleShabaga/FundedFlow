@@ -60,7 +60,7 @@ behaviour. Build 12, Triage and P2 patterns remain with their cards.
   storage until settings commands exist).
 - Navigation: **Today** (default), **Journal**, **Insights**, **Accounts**, with **Settings** at the bottom and a "Saved on this computer" footer. No Import item or fabricated counts.
 - Active item: `flow-soft` ground, `flow` text, `aria-current="page"`.
-- Below ~760 px wide the sidebar collapses automatically.
+- Below 900 px of window the sidebar collapses to the icon rail automatically (Build 26.85; [window-support.md](window-support.md)).
 
 ### Header (Build 12)
 Page title, reserved AccountContextBar (account selector, filters), text-only **Import** menu. Wraps when narrow.

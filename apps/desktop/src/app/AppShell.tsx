@@ -32,7 +32,12 @@ const isDayReviewPath = (path: string) => /^\/journal\/days\/[^/]+$/.test(path);
 const preferenceKey = "fundedflow.sidebarCollapsed";
 /** Build 26.9 developer actions (Add Fake Data, Reset All Data): development builds only, never bundled in production. */
 const DevSidebarTools = import.meta.env.DEV ? lazy(() => import("./dev-tools/DevSidebarTools")) : null;
-const narrowQuery = "(max-width: 759px)";
+/**
+ * Below 900 px of window the icon rail is enforced (Build 26.85): the expanded 248 px sidebar would leave the page less
+ * than the 640 px main column the compact layout is built for. The sidebar belongs to the window, so this is the one
+ * window-width query; pages respond to the main column (docs/design/window-support.md).
+ */
+const narrowQuery = "(max-width: 899px)";
 
 function useSidebar() {
   const [preferredCollapsed, setPreferredCollapsed] = useState(() => {

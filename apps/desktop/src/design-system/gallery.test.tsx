@@ -30,6 +30,11 @@ describe("DesignSystemGallery", () => {
     const section = screen.getByRole("heading", { name: "Content frame" }).closest("section")!;
     expect(section.querySelectorAll(".ds-content-frame")).toHaveLength(2);
   });
+  it("shows the narrow-widths section with the same filter twice", () => {
+    render(<DesignSystemGallery />);
+    const section = screen.getByRole("heading", { name: "Narrow widths" }).closest("section")!;
+    expect(within(section).getByRole("group", { name: "Show rows (wide)" })).toBeTruthy();
+  });
   it("shows the brand mark and logo section", () => {
     render(<DesignSystemGallery />);
     const section = screen.getByRole("heading", { name: "Brand mark and logo" }).closest("section")!;

@@ -1,9 +1,10 @@
 import * as RadixTabs from "@radix-ui/react-tabs";
 import { LoaderCircle } from "lucide-react";
-import { type ButtonHTMLAttributes, type ReactNode, type Ref, useId } from "react";
+import { type ButtonHTMLAttributes, type ReactNode, type Ref, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import { currencySymbol, formatMoney, formatMoneyCompact, formatPercent, moneySign } from "../format";
 import { cx } from "./cx";
+import { Select } from "./forms";
 
 /* ---------- Button ---------- */
 
@@ -108,36 +109,115 @@ export interface SegmentOption<V extends string = string> {
 }
 
 export interface SegmentedControlProps<V extends string = string> {
-  /** Accessible name for the group ("Status", "Show"). */
+  /** Accessible name for the group ("Status", "Show"); also the dropdown's visible label when it folds. */
   label: string;
   options: readonly SegmentOption<V>[];
   value: V;
   onValueChange: (value: V) => void;
+  /**
+   * When the buttons don't fit the width they can take (Build 26.85): "menu" (default) swaps them for a labelled
+   * dropdown with the same options, counts and selection; "scroll" keeps the buttons and scrolls them sideways.
+   */
+  overflow?: "menu" | "scroll";
   className?: string;
+}
+
+/** Flex items that don't grow are as wide as their content, so their width says nothing about the room available. */
+function isContentSized(el: HTMLElement) {
+  const style = getComputedStyle(el);
+  if (style.display.startsWith("inline")) return true;
+  const parent = el.parentElement && getComputedStyle(el.parentElement).display;
+  return (parent === "flex" || parent === "inline-flex") && (parseFloat(style.flexGrow) || 0) === 0;
+}
+
+/**
+ * The row a control can take: the nearest ancestor whose width doesn't depend on its content (a wrapping toolbar
+ * gives an item a line of its own, so that row's content width is the most it can get).
+ */
+function roomFor(box: HTMLElement): HTMLElement | null {
+  let el = box.parentElement;
+  while (el?.parentElement && isContentSized(el)) el = el.parentElement;
+  return el;
+}
+
+/**
+ * Whether a row of buttons still fits the row it sits in (Build 26.85). The buttons' natural width is read from the
+ * visible group, or, while folded, from an inert hidden copy, so new counts never unfold the control to measure it.
+ * Nothing is decided until both widths are known, so without layout (tests, a hidden tab) the buttons stay.
+ */
+function useFitsWidth(enabled: boolean, signature: string) {
+  const box = useRef<HTMLDivElement>(null);
+  const measure = useRef<HTMLDivElement>(null);
+  const refocus = useRef(false);
+  const [folded, setFolded] = useState(false);
+  const check = useCallback(() => {
+    const room = box.current && roomFor(box.current);
+    if (!enabled || !room || !measure.current) return;
+    const needed = measure.current.scrollWidth;
+    const style = getComputedStyle(room);
+    const available = room.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
+    if (needed <= 0 || available <= 0) return;
+    const next = needed > available;
+    setFolded(previous => {
+      // Focus on the buttons, the dropdown or its open list moves to what replaces them, so a resize never drops it.
+      const active = document.activeElement;
+      if (previous !== next && (box.current?.contains(active) || active?.closest("[role=listbox]"))) refocus.current = true;
+      return next;
+    });
+  }, [enabled]);
+  useLayoutEffect(check, [check, folded, signature]);
+  useEffect(() => {
+    const room = box.current && roomFor(box.current);
+    if (!enabled || !room || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => check());
+    observer.observe(room);
+    return () => observer.disconnect();
+  }, [enabled, check]);
+  useLayoutEffect(() => {
+    if (!refocus.current) return;
+    refocus.current = false;
+    box.current?.querySelector<HTMLElement>('[aria-pressed="true"], [role="combobox"], button:not([tabindex="-1"])')?.focus();
+  }, [folded]);
+  return { box, measure, folded: enabled && folded };
 }
 
 /**
  * A filter or view switch inside one screen (Table/Cards, All/Errors). Buttons
  * with aria-pressed, unlike Tabs, because they change the content in place
- * rather than switching panels.
+ * rather than switching panels. When the buttons no longer fit they become a
+ * labelled dropdown (overflow="menu"); the caller owns the value, so the
+ * selection survives every switch.
  */
-export function SegmentedControl<V extends string>({ label, options, value, onValueChange, className }: SegmentedControlProps<V>) {
+export function SegmentedControl<V extends string>({ label, options, value, onValueChange, overflow = "menu", className }: SegmentedControlProps<V>) {
+  const optionText = (o: SegmentOption<V>) => (o.count != null ? `${o.label} (${o.count})` : o.label);
+  const fit = useFitsWidth(overflow === "menu", options.map(optionText).join("|"));
+  const buttons = (inert: boolean) => options.map((o) => (
+    <button
+      key={o.value}
+      type="button"
+      className="ds-tab"
+      data-state={o.value === value ? "active" : "inactive"}
+      aria-pressed={inert ? undefined : o.value === value}
+      tabIndex={inert ? -1 : undefined}
+      disabled={o.disabled}
+      onClick={inert ? undefined : () => onValueChange(o.value)}
+    >
+      {o.label}
+      {o.count != null && <> <span className="ds-tab-count">{o.count}</span></>}
+    </button>
+  ));
   return (
-    <div role="group" aria-label={label} className={cx("ds-tabs", "ds-seg", className)}>
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          className="ds-tab"
-          data-state={o.value === value ? "active" : "inactive"}
-          aria-pressed={o.value === value}
-          disabled={o.disabled}
-          onClick={() => onValueChange(o.value)}
-        >
-          {o.label}
-          {o.count != null && <> <span className="ds-tab-count">{o.count}</span></>}
-        </button>
-      ))}
+    <div ref={fit.box} className={cx("ds-seg-fit", fit.folded && "is-folded")}>
+      {fit.folded ? (
+        <>
+          <Select<V> label={label} size="sm" className={cx("ds-seg-select", className)} value={value} onValueChange={onValueChange}
+            options={options.map(o => ({ value: o.value, label: optionText(o), disabled: o.disabled }))} />
+          {/* Measures the buttons while they're folded away; hidden from every user and input. */}
+          <div ref={fit.measure} className="ds-tabs ds-seg ds-seg-measure" aria-hidden="true" inert>{buttons(true)}</div>
+        </>
+      ) : (
+        <div ref={fit.measure} role="group" aria-label={label} className={cx("ds-tabs", "ds-seg", className)}>{buttons(false)}</div>
+      )}
     </div>
   );
 }

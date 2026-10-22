@@ -15,6 +15,7 @@ import "./controls.css";
 import "./states.css";
 import "./data.css";
 import "./documents.css";
+import "./forced-colors.css";
 
 export * from "./format";
 export * from "./components/primitives";

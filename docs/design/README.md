@@ -46,8 +46,8 @@ Shared patterns ([components.md](components.md)) belong to **Build 13**; their v
 ### Not on the board yet (proposed as Triage cards)
 Day-ending timer · Search / command palette · In-app feedback · Notifications centre (relate to "Desktop Privacy,
 Security & User Notifications") · Insights calendar view with month/year picker (if not covered by 23).
-Theme switching belongs to "Build UI skins & theme customization" (P2); V1 ships the dark theme and follows the OS
-for light only if Build 7 says so.
+Theme switching belongs to "Build UI skins & theme customization" (P2). V1 follows the Windows light/dark mode
+live and supports the Windows contrast themes, with no in-app setting (Build 26.85, [window-support.md](window-support.md)).
 
 ## Rules for building from these specs
 

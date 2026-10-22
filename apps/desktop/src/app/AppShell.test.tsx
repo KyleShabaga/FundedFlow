@@ -140,6 +140,8 @@ it("retains the collapse preference across navigation and remounts with named ic
 
 it("automatically uses an icon rail on narrow windows and restores the wide preference", async () => {
   render(<App />);
+  // Build 26.85: below 900 px of window the expanded sidebar would leave the page under 640 px.
+  expect(window.matchMedia).toHaveBeenCalledWith("(max-width: 899px)");
   await screen.findByRole("heading", { name: "Today is not built yet" });
   act(() => { narrow = true; change?.(); });
   expect((screen.getByRole("button", { name: "Sidebar collapsed for narrow window" }) as HTMLButtonElement).disabled).toBe(true);

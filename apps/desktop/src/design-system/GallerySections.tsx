@@ -555,3 +555,22 @@ export function DocumentsSection() {
     </Section>
   );
 }
+
+const ROW_FILTERS = [
+  { value: "all", label: "All", count: 120 }, { value: "new", label: "Will import", count: 96 },
+  { value: "dupes", label: "Duplicates", count: 23 }, { value: "errors", label: "Errors", count: 1 },
+] as const;
+type RowFilterDemo = typeof ROW_FILTERS[number]["value"];
+
+/** Build 26.85: the same filter in a wide and a narrow container; the narrow one folds into a labelled dropdown. */
+export function CompactSection() {
+  const [filter, setFilter] = useState<RowFilterDemo>("dupes");
+  return (
+    <Section title="Narrow widths" note="SegmentedControl folds into a labelled dropdown when its buttons no longer fit the width they can take: same options, counts and selection, owned by the caller. overflow=&quot;scroll&quot; keeps the buttons and scrolls them instead. Tables scroll inside their own named region; the page never scrolls sideways.">
+      <div className="dsg-stack">
+        <div className="dsg-narrow-demo is-wide"><SegmentedControl<RowFilterDemo> label="Show rows (wide)" value={filter} onValueChange={setFilter} options={ROW_FILTERS} /></div>
+        <div className="dsg-narrow-demo"><SegmentedControl<RowFilterDemo> label="Show rows (narrow)" value={filter} onValueChange={setFilter} options={ROW_FILTERS} /></div>
+      </div>
+    </Section>
+  );
+}

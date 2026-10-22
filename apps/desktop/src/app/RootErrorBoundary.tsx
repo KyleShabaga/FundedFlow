@@ -35,7 +35,7 @@ export class RootErrorBoundary extends Component<{ children: ReactNode }, State>
   render() {
     if (this.state.failed) {
       return (
-        <main className="ds-surface app-foundation" data-theme="dark">
+        <main className="ds-surface app-foundation">
           <section role="alert" aria-labelledby="root-error-title">
             <h1 id="root-error-title" ref={this.heading} tabIndex={-1}>FundedFlow couldn't display this screen</h1>
             <p>Return to the app to check local data availability again. Unsaved changes on this screen may be lost; your saved journal isn't changed.</p>
@@ -49,6 +49,8 @@ export class RootErrorBoundary extends Component<{ children: ReactNode }, State>
         </main>
       );
     }
-    return <div className="ds-surface app-root" data-theme="dark">{this.props.children}</div>;
+    // The theme follows Windows live (Build 26.85): no data-theme here, so tokens.css picks light or dark from
+    // prefers-color-scheme, and portalled dialogs and menus match the page. There is no in-app theme setting in V1.
+    return <div className="ds-surface app-root">{this.props.children}</div>;
   }
 }

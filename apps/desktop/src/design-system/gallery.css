@@ -20,3 +20,5 @@
 .dsg-frame-demo { display: grid; gap: var(--space-2); padding-block: var(--space-3); border: 1px dashed var(--line-200); border-radius: var(--radius-md); container: ds-main / inline-size; }
 .dsg-frame-demo .ds-content-frame { outline: 1px dashed var(--flow); outline-offset: -1px; }
 .dsg-frame-demo-row { display: flex; justify-content: space-between; gap: var(--space-4); }
+.dsg-narrow-demo { width: 260px; max-width: 100%; padding: var(--space-3); border: 1px dashed var(--line-200); border-radius: var(--radius-md); }
+.dsg-narrow-demo.is-wide { width: auto; }

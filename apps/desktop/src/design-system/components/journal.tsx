@@ -225,7 +225,8 @@ export function tradeResult(t: Trade): { text: string; tone: Tone } {
 export function TradeTable({ trades, timeZone, onRowClick, selectedId, label, currency }: TradeTableProps) {
   const time = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone });
   return (
-    <div className="ds-card ds-table-card">
+    // A narrow window scrolls the table inside its card, a named region reachable by keyboard (Build 26.85).
+    <div className="ds-card ds-table-card" tabIndex={0} role="group" aria-label={`${label}, scrolls sideways`}>
       <table className="ds-table" aria-label={label}>
         <thead>
           <tr>

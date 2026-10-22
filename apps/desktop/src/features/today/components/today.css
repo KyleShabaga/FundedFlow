@@ -55,6 +55,8 @@
 @container td-overview (min-width: 1200px) { .td-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .td-card { display: grid; gap: var(--space-2); padding: var(--space-4); align-content: start; height: 100%; box-sizing: border-box; }
 .td-card.is-selected { border-color: var(--flow); box-shadow: inset 0 0 0 1px var(--flow); }
+/* Contrast themes: the shown account keeps a system-colour ring (Build 26.85). */
+@media (forced-colors: active) { .td-card.is-selected { outline: 3px solid Highlight; outline-offset: 1px; } }
 .td-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2); flex-wrap: wrap; }
 .td-card-title { margin: 0; font: 600 15px/22px var(--font-display); overflow-wrap: anywhere; }
 .td-card-line { margin: 0; display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }

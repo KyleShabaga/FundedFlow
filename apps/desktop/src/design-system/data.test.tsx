@@ -81,6 +81,13 @@ describe("DataTable", () => {
     await userEvent.click(within(balance).getByRole("button", { name: "Balance" }));
     expect(balance.getAttribute("aria-sort")).toBe("descending");
   });
+  it("scrolls inside its own named, focusable region, never the page (Build 26.85)", () => {
+    render(<Table />);
+    const region = screen.getByRole("group", { name: "Accounts, scrolls sideways" });
+    expect(region.tabIndex).toBe(0);
+    expect(region.classList.contains("ds-dt-scroll")).toBe(true);
+    expect(within(region).getByRole("table")).toBeTruthy();
+  });
   it("selects rows, shows bulk actions and a mixed select-all", async () => {
     const onBulk = vi.fn();
     render(<Table onBulk={onBulk} />);

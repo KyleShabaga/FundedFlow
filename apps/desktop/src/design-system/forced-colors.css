@@ -1,0 +1,43 @@
+/*
+ * Windows contrast themes (Build 26.85, docs/design/window-support.md). In forced-colors mode the browser replaces
+ * colours with the theme's system colours and drops backgrounds and box-shadows, so every state drawn only with a tint
+ * or an inset shadow needs an edge, an outline or a system-colour fill here. Status already carries an icon and a
+ * word (Safe, Caution, Stop, Unknown), never colour alone; these rules keep its shape visible too.
+ * System colours only: Canvas, CanvasText, LinkText, Highlight, HighlightText, ButtonText, ButtonBorder, GrayText.
+ */
+@media (forced-colors: active) {
+  /* Focus: one visible ring everywhere, including controls that drew focus with a shadow. */
+  :focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; }
+
+  /* Edges: cards, panels, pills and badges keep a border so they read as shapes. */
+  .ds-card, .ds-metric, .ds-aoc, .ds-notice, .ds-dt-card, .ds-pop, .ds-menu, .ds-dialog, .ds-drawer, .ds-tooltip,
+  .ds-status-pill, .ds-badge, .ds-chip, .ds-step, .ds-cal-day, .ds-cal-week, .ds-day { border-color: CanvasText; }
+  .ds-status-pill, .ds-badge { border-style: solid; border-width: 1px; }
+  .ds-status-pill.ds-status-unknown { border-style: dashed; }
+  .ds-dialog, .ds-drawer { border: 2px solid CanvasText; }
+  .ds-overlay { background: Canvas; opacity: .6; forced-color-adjust: none; }
+
+  /* Selected and pressed: a system highlight, never just a tint. */
+  .ds-tab[data-state="active"], .ds-tab[aria-pressed="true"], .ds-chip.is-on, .ds-day[aria-pressed="true"],
+  .ds-day.is-on, .ds-step.is-current .ds-step-mark {
+    forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight;
+  }
+  .ds-tab[data-state="active"] .ds-tab-count, .ds-tab[aria-pressed="true"] .ds-tab-count { color: HighlightText; }
+  .ds-pager-page.is-on { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+  .ds-dt tbody tr.is-on > *, .ds-table tbody tr.is-on > * { border-block: 2px solid Highlight; }
+  .ds-cal-day.is-selected, .ds-cal-week.is-selected, .ds-bars-row.is-selected, .ds-myp-month.is-on, .ds-aoc.is-selected,
+  .ds-radio-group.is-cards .ds-check:has(.ds-radio-input:checked) { outline: 3px solid Highlight; outline-offset: 1px; }
+
+  /* Meters and bars: the track has an edge and the fill a system colour, so the amount stays visible. */
+  .ds-rule-track, .ds-mini-track, .ds-pmeter-track { border: 1px solid CanvasText; background: Canvas; forced-color-adjust: none; }
+  .ds-rule-fill, .ds-mini-fill, .ds-pmeter-fill, .ds-bars-bar { forced-color-adjust: none; background: CanvasText; }
+  .ds-switch-input { border: 1px solid ButtonText; }
+  .ds-switch-input::after { forced-color-adjust: none; background: ButtonText; }
+  .ds-switch-input:checked { forced-color-adjust: none; background: Highlight; border-color: Highlight; }
+  .ds-switch-input:checked::after { background: HighlightText; }
+
+  /* Buttons keep their border; disabled reads as GrayText rather than faded colour. */
+  .ds-btn, .ds-icon-btn, .ds-tab { border: 1px solid ButtonBorder; }
+  .ds-btn:disabled, .ds-icon-btn:disabled, .ds-tab:disabled { color: GrayText; border-color: GrayText; opacity: 1; }
+  .ds-skel { border: 1px dashed GrayText; }
+}

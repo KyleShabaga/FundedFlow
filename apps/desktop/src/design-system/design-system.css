@@ -75,6 +75,8 @@
 .ds-tab:hover { color: var(--ink); }
 .ds-tab[data-state="active"] { background: var(--bg-300); color: var(--flow); }
 .ds-tab-count { font: 500 11px/14px var(--font-mono); color: var(--ink-faint); }
+/* On the selected segment's bg-300, ink-faint drops under 4.5:1; ink-muted keeps the count readable (Build 26.85). */
+.ds-tab[data-state="active"] .ds-tab-count { color: var(--ink-muted); }
 
 /* RuleMeter */
 .ds-rule { display: grid; gap: 6px; }

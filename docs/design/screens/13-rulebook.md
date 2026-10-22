@@ -169,7 +169,7 @@ no route, command or state is added. Where a board proposes a change to the buil
 - Tabs are `Tabs` (arrow keys move, Enter/Space selects); the edit panel stays mounted. Rule summaries are buttons
   with `aria-expanded`. Move/remove are icon buttons named "Move {rule} up" etc.; the first/last move buttons are
   disabled. Save status is a `role="status"` line in the sticky bar.
-- Below 760 px: actions wrap under the title, the facts grid becomes a definition list, the rules table becomes a
+- Narrow windows (mockup proposal; breakpoints follow [window-support.md](../window-support.md)): actions wrap under the title, the facts grid becomes a definition list, the rules table becomes a
   list (name, state, value, source), the versions table scrolls inside its card, the save bar stays at the bottom.
 
 ### Changes proposed for the built screen (UI only, separate PRs)
