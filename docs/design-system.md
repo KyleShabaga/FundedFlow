@@ -42,7 +42,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `components/feedback.tsx` | `InlineNotice`, `ToastProvider` + `useToast`, `StatusIndicator` |
 | `components/async-states.tsx` | `AsyncState`, `StateBoundary`, `Skeleton`, `LoadingState`, `EmptyState`, `ErrorState`, `UnavailableState`, `StaleDataNotice`, `RefreshingIndicator`, `MutationState`, `MutationFeedback`, `isMutationBusy`, `hasData` |
 | `components/data.tsx` | `DataTable`, `MetricCard`, `MetricValue` + `MetricValueView`, `MoneyCell`, `UnknownValue`, `LabeledValue`, `StatList`, `Stepper`, `MonthYearPicker` |
-| `components/primitives.tsx` (Build 13 additions) | `Button` `loading` and `disabledReason`, `IconButton`, `SegmentedControl` |
+| `components/primitives.tsx` (Build 13 additions) | `Button` `loading` and `disabledReason`, `IconButton`, `SegmentedControl`, `DisclosureButton` (P0-D18) |
 | `components/rules.tsx` (Build 13 additions) | `MiniMeter`, `RuleStateBadge`, `RulebookLine` |
 | `components/charts.tsx` (Build 13 addition) | `ChartPanel` |
 | Build 23 additions | `PnlBars` (charts.tsx); `PnlCalendar` `selectedDay`, `onSelectWeek`/`selectedWeek`, `display`, `title`/`summary` (journal.tsx) |
@@ -213,6 +213,14 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
 - `Disclosure` is a native `details`/`summary` expander (keyboard behaviour is the browser's). `srSummary` adds
   screen-reader context, such as "(draft, version 0.1.0-draft)", to a link-like summary. `onToggle(open)` (Build
   26.78) reports each open and close, so a long body can be loaded on first open.
+
+## P0-D18: DisclosureButton
+
+- `DisclosureButton` shows and hides a region elsewhere in the layout, where a native `Disclosure` can't work because
+  its summary must sit apart from its body (a Filters action in a toolbar, its panel below). It is a `Button` with
+  `aria-expanded` and `aria-controls`; the caller keeps the state and renders the region with that id.
+- Open reads as pressed (flow edge and tint) plus a turned chevron, and a Highlight edge in contrast themes. `count`
+  shows "· n" for active items (none for 0), with `countLabel` giving the screen-reader words ("3 filters applied").
 
 ## Build 23: selectable calendar and PnlBars
 
