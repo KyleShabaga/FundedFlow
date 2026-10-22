@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r4) |
+| Status | Proposed (r5; awaiting independent review) |
 | Type | Documentation |
 | Audit priority | Gate work |
 | Roadmap lane | NA-2 / NA-5 / NA-7 |
@@ -16,8 +16,8 @@
 | Effort / risk | S / Low |
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | b01e2b9 (application source identical to 92e7980) |
-| Specification revision | r4 (2026-10-22; r3 + currency update for approved decisions) |
+| Inspected source revision | 9430f2a (application source identical to 92e7980) |
+| Specification revision | r5 (2026-10-22; r4 + approved-task audit fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -48,7 +48,7 @@ Running the gates (TASK-030..033).
 |---|---|---|---|---|
 | B1 | Data root behind a junction: on a test account, place `%APPDATA%` (or the relocated profile) behind a junction, then launch. | After TASK-018: the app reaches the first-run agreement / Today with the journal under the junctioned path; no "retry" failure. If the app folder itself is a junction: refused with TASK-018's non-retry message. | Junction command used and `dir /AL` (or `fsutil reparsepoint query`) output for the junctioned folder; resolved journal path; runtime screen screenshot; message text if refused. | Yes |
 | B2 | Export to OneDrive Documents (Files On-Demand on) and to a junctioned folder. | Known limitation (V1.1): the export is refused with a clear message and the journal is unchanged, unless TASK-011(b) recorded that it works, in which case the archive is saved and its name, size and SHA-256 are shown. | Target path; OneDrive Files On-Demand state; on-screen result (screenshot); archive SHA-256 if produced; whether any file was left at the target. | Yes |
-| B3 | Title-bar close (X) and Alt+F4 with unsaved text in a trade review and a daily review. | After TASK-023: a prompt asks before discarding; Cancel keeps the text; Leave closes. If TASK-023 closed as Not Needed, the native prompt recorded in TASK-011(a) appears. A clean window closes immediately. | Screen and field dirtied; screenshot of the prompt; result of Cancel and of Leave; text present after Cancel. | Yes |
+| B3 | Title-bar close (X) and Alt+F4 with unsaved text in a trade review and a daily review. | The expected result depends on TASK-023's state at the candidate SHA, which the tester records first. **(1) TASK-023 Verified and merged into the candidate:** a prompt asks before discarding; Cancel keeps the text; Leave closes. **(2) TASK-023 not in the candidate (still Deferred, or closed Not Needed):** the behaviour matches what TASK-011(a) recorded for the same close action. If TASK-011(a) recorded a prompt (Not Needed case), that prompt appears, Cancel keeps the text and Leave closes. If it recorded that the window closes and the unsaved text is lost, the step passes only as a **known gap** (ISSUE-009 window close): the observed behaviour equals the TASK-011(a) record, and the gap is listed for Kyle's explicit acceptance in TASK-036; behaviour different from the record is a Fail. In both cases a clean window closes immediately. | TASK-023 state at the candidate SHA (Verified / Deferred / Not Needed) and, for case (2), the TASK-011(a) record it is compared with; screen and field dirtied; screenshot of the prompt (or of the closed window and the lost text on reopening, for a known gap); result of Cancel and of Leave; text present after Cancel. | Yes |
 | B4 | Ticked uninstall after an export: export an archive to a folder outside `%APPDATA%` and `%LOCALAPPDATA%`, then uninstall with "Delete the application data" ticked. (Part of V-023.) | Removes exactly the folders listed by TASK-026 (`%APPDATA%\com.fundedflow.desktop` and `%LOCALAPPDATA%\com.fundedflow.desktop`) plus the program folder, shortcuts and uninstall entry; the exported archive remains. | `dir` of `%LOCALAPPDATA%\FundedFlow`, `%APPDATA%\com.fundedflow.desktop`, `%LOCALAPPDATA%\com.fundedflow.desktop` before and after; `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall` entry before/after; archive path still present; any leftover listed exactly. | Yes |
 | B5 | Second instance: with the app open, launch it again from the Start menu. | Known limitation (V1.1, ISSUE-031/WIN-012): the second window may show a failure screen; the first instance keeps working and the journal opens normally on the next launch. Any data loss is a Fail. | Screenshots of both windows; message text; first instance still saves; next-launch result. | Yes |
 | B6 | Windows scaling 125%, 150% and 200% (first-run agreement, Today, Settings). | Every primary action reachable, nothing clipped that blocks a task; the full matrix is TASK-033. | Scaling, physical resolution, screenshots per scaling. | Yes |
@@ -57,7 +57,7 @@ Running the gates (TASK-030..033).
 3. Refresh the NA-7 draft (lines 147-166) so it is consistent with TASK-026 (uninstall list; WebView2/network wording per TASK-006 Option A: an internet connection is needed during install when WebView2 is missing) and with the corrected step 4 (first-run agreement).
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-025, TASK-026, TASK-011 (results recorded: (a) sets the B3 expected result, (b) the B1/B2 expected results).
+- Prerequisites: TASK-025, TASK-026, TASK-011 (results recorded: (a) sets the B3 expected result for the case where TASK-023 is not in the candidate, (b) the B1/B2 expected results). TASK-023 is **not** a prerequisite: it is Deferred by Kyle pending TASK-011(a), and B3 states the expected result for both outcomes.
 - Likely shared-file conflicts: Same doc as TASK-026 (TASK-026 owns lines 51-71; this card owns 117-166).
 
 ## Acceptance criteria (pass/fail)
@@ -91,6 +91,10 @@ Documents updated; every factual statement checked against the cited source (fil
 - Step B7 expected result: states only the Option A (`downloadBootstrapper`) expectation; the "Options B/C" branch is removed, because TASK-006 r2 was approved with Option A (decisions 2026-10-22). Config re-checked at `src-tauri/tauri.conf.json:49-52` (`downloadBootstrapper`, `silent: true`).
 - Step 3 and the NA-7 acceptance criterion: "per the TASK-006 decision" replaced with the decided Option A wording (WebView2 downloaded when missing; install then needs internet) (TASK-006 = A).
 - TASK-026 line range corrected from 51-70 to 51-71 (scope and conflicts lines), to match TASK-026 r3, which owns `docs/build-26.75-evidence.md:51-71`.
+
+## Changes in r5
+- Step B3: the expected result no longer assumes TASK-023 is done. It states the result for both outcomes: (1) TASK-023 Verified in the candidate, and (2) TASK-023 still Deferred or closed Not Needed, where the TASK-011(a) record is the expectation and a recorded no-prompt close passes only as a known gap listed for Kyle's acceptance in TASK-036. Evidence fields now include TASK-023's state (approved-task audit, MUST, process item: TASK-023 was Deferred by Kyle pending TASK-011(a) on 2026-10-22).
+- Prerequisites: TASK-023 stated as not a prerequisite; TASK-011(a)'s role narrowed to the case where TASK-023 is not in the candidate (follows from the B3 change).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.

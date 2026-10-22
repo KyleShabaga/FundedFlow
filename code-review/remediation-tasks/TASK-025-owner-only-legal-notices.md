@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r3) |
+| Status | Proposed (r4; awaiting independent review) |
 | Type | Fix |
 | Audit priority | Gate work (mandatory) |
 | Roadmap lane | P0-13 / NA-3 (V1, open) |
@@ -16,8 +16,8 @@
 | Effort / risk | S–M / Low |
 | Verification platform | Any OS (+ packaged check in TASK-030) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r3 (2026-10-22; r2 + currency update for approved decisions) |
+| Inspected source revision | 9430f2a (application source identical to 92e7980) |
+| Specification revision | r4 (2026-10-22; r3 + approved-task audit fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -42,7 +42,11 @@ Counsel review/external-user agreements (V2); third-party notices regeneration.
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 2. Obtain the exact v1.1 texts from Kyle (owner-only package page) — do not paraphrase. Record Kyle's decision on keeping the `user-agreement` id.
 3. Update the version regex in `legal.test.ts:15` (`^\d+\.\d+\.\d+(-[0-9a-z.]+)?$` rejects `1.0.1-owner-only` because of the hyphenated suffix — it must accept `[0-9a-z.-]`).
-4. Replace texts, versions, `draft:false`, titles; run `npm run test -w @fundedflow/desktop -- src/legal` (expected to fail first) and copy the new digests from its failure message into the documents.
+4. Replace texts, versions, `draft:false`, titles. Set each document's `digest` to the value pinned in the owner-only package manifest (page 4001bd4b6bde81e28d74f5e17bb56a16, "SHA-256" lines), **not** to whatever a failing test prints:
+   - `user-agreement` (owner-use statement), version `1.0.1-owner-only`, effective `2026-10-22`: `ab5e539be811bef70e96115cb5fad9a5c6592c6d0079e1774738b019e3e08ead`
+   - `privacy-notice`, version `1.0.0-owner-only`, effective `2026-10-22`: `042bf1b9e34c986f6c240f92ca20fcd4d2591a5144ec34202c01fc959a535a9a`
+
+   Field mapping that reproduces these digests through `documentText` (`legal/document.ts:28-40`), verified by the approved-task audit: `title` "Owner-use statement" / "Privacy notice — owner-only V1"; `summary` = the intro paragraph under the version line; `sections` = the `###` headings with their paragraphs; `effectiveDate` `2026-10-22`; `draft: false`. The `%APPDATA%\com.fundedflow.desktop\…` path is hashed with single backslashes, so it is written `\\` in a TS string literal. Run `npm run test -w @fundedflow/desktop -- src/legal`: if the computed digest of the integrated text differs from the pinned value, the PR is blocked until the text is made faithful to the package; never accept the printed digest. Reword the "copy the digest from this failure" guidance in `legal.test.ts:7` and the header comments of `user-agreement.ts:4` and `privacy-notice.ts:4-5` accordingly.
 5. Rewrite `legal.test.ts` draft assertions to final-state assertions (version pattern, no '(draft)', ids).
 6. Update first-run journey expectations and the spec; apply the `PRIVACY_SUMMARY` text agreed in TASK-026.
 
@@ -53,6 +57,7 @@ Counsel review/external-user agreements (V2); third-party notices regeneration.
 ## Acceptance criteria (pass/fail)
 - [ ] `npm run test -w @fundedflow/desktop -- src/legal src/journeys/first-run.journey.test.tsx` → exit 0.
 - [ ] Document versions equal `1.0.1-owner-only` and `1.0.0-owner-only`; digests match the texts (test).
+- [ ] Digests are pinned to the package manifest: a test in `legal.test.ts` asserts the literal values `userAgreement.digest === "ab5e539be811bef70e96115cb5fad9a5c6592c6d0079e1774738b019e3e08ead"` and `privacyNotice.digest === "042bf1b9e34c986f6c240f92ca20fcd4d2591a5144ec34202c01fc959a535a9a"`, independent of the self-consistency test at `legal.test.ts:6-9`, and both pass. A mismatch is investigated and fixed in the text, never resolved by changing the pinned value.
 - [ ] Full root checks → exit 0.
 - [ ] Packaged first-run shows the v1.1 texts (verified in TASK-030).
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
@@ -80,6 +85,12 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - TASK-006 approved as Option A (keep `downloadBootstrapper`): prerequisite now states the decided wording basis for `PRIVACY_SUMMARY`, matching TASK-026 r3 step 2.
 - The two remaining prerequisites (Kyle's v1.1 texts; the `user-agreement` id decision) are marked open; they are not decided here.
 - Fixture rule: unset (not `0`) (10 §8.3; independent review nit).
+
+## Changes in r4
+- Step 4: removed "copy the new digests from its failure message"; digests are now the manifest values from the owner-only package page, a mismatch blocks the PR, and the field mapping that reproduces them is recorded (approved-task audit, MUST; the Notion card says a mismatch "must be investigated, not concealed by accepting a new digest").
+- Acceptance: new criterion pinning the full digests `ab5e539b…08ead` (user-agreement) and `042bf1b9…a535a9a` (privacy-notice). The full values were read from the package page manifest on 2026-10-22 and match the audit's prefixes and suffixes; they are not stored anywhere in the repository at 9430f2a (approved-task audit, MUST).
+- Step 4 also notes the single-backslash rule for the `%APPDATA%` path (audit NIT, cheap) and the source comments that tell implementers to copy printed digests (`legal.test.ts:7`, `user-agreement.ts:4`, `privacy-notice.ts:4-5`).
+- Not applied (audit SHOULD items): sourcing `PRIVACY_SUMMARY`/`LICENSE_SUMMARY` verbatim from the package and dropping the TASK-026 wording dependency; extra scope lines (`first-run.journey.test.tsx:57, 66, 227`, `16-first-run.md:22, 25`, `docs/design/README.md:40`); refreshing the "open" prerequisites (package page and `user-agreement` id already decided on the board).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.

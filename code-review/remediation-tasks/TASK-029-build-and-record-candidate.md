@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r5) |
+| Status | Proposed (r6; awaiting independent review) |
 | Type | Verification |
 | Audit priority | Gate |
 | Roadmap lane | NA-2 / P0-06 |
@@ -16,8 +16,8 @@
 | Effort / risk | S / Low |
 | Verification platform | GitHub Actions + Windows (hash check) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | a9be03f (application source identical to 92e7980) |
-| Specification revision | r5 (2026-10-22; r4 + CI evidence taken from the release run's in-job checks, TASK-027 r5) |
+| Inspected source revision | 9430f2a (application source identical to 92e7980) |
+| Specification revision | r6 (2026-10-22; r5 + approved-task audit fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -46,7 +46,8 @@ Installing (TASK-030).
 5. Record all fields in the evidence register.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: All W1–W3 tasks Verified (incl. TASK-025, TASK-026, TASK-027). W1–W3 here means the code and documentation tasks.
+- Prerequisites: All W1–W3 tasks Verified (incl. TASK-025, TASK-026, TASK-027), except TASK-023 (below). W1–W3 here means the code and documentation tasks.
+- TASK-023 (native window-close veto, W2; Deferred by Kyle pending TASK-011(a)): TASK-023 Verified, closed Not Needed with evidence, or still Deferred with the window-close gap explicitly accepted by Kyle in TASK-036. In the last case this card may proceed, the gap (ISSUE-009 window close) is recorded in the evidence register for TASK-036, and the candidate cannot be Go unless Kyle accepts it there.
 - Decisions (approved 2026-10-22): TASK-001 (A), TASK-002 (B + cleanup), TASK-005 (A), TASK-006 (A), TASK-008 (A for both gates).
 - TASK-002 follow-ups resolved (this card stays **Blocked** until then, per the TASK-002 decision): TASK-037 (synthetic replacement for `test_csvimport/Performance.csv` and its Rust tests) Verified and merged into the candidate SHA; TASK-038 (removal of the two unreferenced exports) Verified and merged; TASK-039 (Git-history exposure) assessed, Kyle's separate owner disposition recorded and, if he chose option B (make the repository private) or option C (rewrite history), its separate execution task **Verified** (for C, the candidate SHA is taken from the rewritten history). If Kyle rules (TASK-041) that the value-level copies of real rows must be removed, TASK-041 Verified and merged into the candidate SHA is a prerequisite too; if he accepts them as low-risk, it is not.
 - TASK-040 (`cargo fmt` formatting and CI check, the TASK-008 cargo-fmt follow-up) **Verified** and contained in the candidate SHA (TASK-008 = A: adopt; G5).
@@ -57,6 +58,7 @@ Installing (TASK-030).
 - [ ] Evidence register row complete: SHA, release run (with its check jobs), advisory result (not 'NOT RUN'), version (`0.1.1` or later and higher than every earlier candidate, TASK-005 = A; equal to the `FundedFlow_<version>_x64-setup.exe` file name and, for a tag run, to the tag `v<version>`), EXE SHA-256 (matches SHA256SUMS.txt), artifact expiry ≥ 30 days.
 - [ ] The candidate SHA contains the merged TASK-037, TASK-038, TASK-040 and TASK-034 (code) changes, and TASK-039's owner disposition is recorded and, if option B or C was chosen, its execution task is Verified (for C, the SHA is from the rewritten history); TASK-041 is merged if Kyle chose removal; the release run's check jobs on that SHA include the TASK-040 `cargo fmt` check, green.
 - [ ] The release run (event `workflow_dispatch` or a `v<version>` tag push, not `pull_request`) has every check job green on `SOURCE_SHA` = the recorded SHA, every job's reported checked-out commit equals it, both audits produced a result (not 'NOT RUN'; `fail-on-outage` true on these events per TASK-027 r5), and the packaging job ran after them.
+- [ ] TASK-023's state is recorded with the candidate: Verified (contained in the candidate SHA), closed Not Needed (with the TASK-011(a) evidence), or Deferred (with the window-close gap listed for Kyle's explicit acceptance in TASK-036).
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
 ## Verification plan
@@ -90,6 +92,10 @@ Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE
 - Audit result: dispatch and tag release runs fail on an audit with no result (`fail-on-outage` input), so 'NOT RUN' cannot reach a candidate; the old re-dispatch-`ci.yml` workaround is removed.
 - Step 2 and the acceptance criteria updated to match; prerequisite unchanged (TASK-027 is already in W1–W3).
 - Independent review fixes: dispatch happens in step 1 before the run is recorded; duplicate "release run" and "Dispatch" wording removed; a re-run after an audit outage keeps the same SHA and version with a new run ID recorded.
+
+## Changes in r6
+- Prerequisites: the TASK-023 dependency changed from an implicit "Verified" (via "All W1–W3 tasks Verified" and the Notion relation) to "TASK-023 Verified, closed Not Needed with evidence, or still Deferred with the window-close gap explicitly accepted by Kyle in TASK-036", because Kyle deferred TASK-023 pending TASK-011(a) and the board has no way to record "Not Needed" as Verified (approved-task audit, MUST, process item).
+- Acceptance: added a criterion recording TASK-023's state with the candidate (follows from the prerequisite change).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
