@@ -3,7 +3,7 @@
 // The review keeps the labels it was made with; renamed or archived templates show both. Process (checklist) and
 // outcome (P&L) are shown apart. A save names the revision it started from, so a stale form is a conflict. Unsaved
 // edits are guarded (links and window close) and kept per account and trade for the window's session.
-import type { Library, ReviewInput, TradeReview } from "@fundedflow/domain";
+import { toMicros, type Library, type ReviewInput, type TradeReview } from "@fundedflow/domain";
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -202,7 +202,9 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
       const v = values[f].trim();
       if (v && !decimal.test(v)) issues.push({ fieldId: fid(base, f), message: `${FIELD_LABELS[f]}: enter a number` });
     }
-    if (values.plannedRisk.trim() && Number(values.plannedRisk) <= 0) issues.push({ fieldId: fid(base, "plannedRisk"), message: "Planned risk: must be greater than zero (leave it empty when unknown)" });
+    // Money is compared in micro-units, never through number (an invalid entry is reported above).
+    const plannedRisk = values.plannedRisk.trim() ? toMicros(values.plannedRisk.trim()) : null;
+    if (plannedRisk !== null && plannedRisk <= 0n) issues.push({ fieldId: fid(base, "plannedRisk"), message: "Planned risk: must be greater than zero (leave it empty when unknown)" });
     setSummary(issues);
     if (issues.length) { queueMicrotask(() => focusFirstInvalid(form.current)); return; }
     save.submit(toReviewInput(account.id, trade.id, revision, values)).then(

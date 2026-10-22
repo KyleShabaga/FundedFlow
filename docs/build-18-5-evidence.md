@@ -52,5 +52,6 @@ product owner must sign off the UX (see "Outstanding").
 - Each card reads its attempt's canonical risk inputs (`get_account_risk_inputs`); an account summary command would
   scale better beyond tens of accounts.
 - The Accounts "Current balance" KPI still says "Needs balance checkpoints" when checkpoints exist; it predates
-  Build 15.5 and was left as is (cross-currency totals are not defined).
+  Build 15.5 and was left as is (cross-currency totals are not defined). **Fixed by NA-4:** per-currency totals of
+  current estimates, or — ([02-accounts.md](design/screens/02-accounts.md#na-4-account-detail-risk-section-and-current-balance-kpi)).
 - The status filter scrolls inside its pill below ~900 px (existing `SegmentedControl` behaviour).

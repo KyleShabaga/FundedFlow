@@ -75,7 +75,8 @@ Code: `apps/desktop/src/features/accounts/` (`components/`, `active-account.ts`,
   account is valid. Evaluation, sim-funded and live-funded accounts show **Needs setup** while the firm or a
   rulebook assignment in force today (account zone) is missing; personal, demo and other accounts need neither.
   Unknown while assignments can't be read: never "complete" without the facts. Nothing blocks journaling or imports.
-- **Risk** is shown as "Not calculated yet" (`StatusIndicator` unknown) until Builds 15.5/16. Never Safe.
+- **Risk** (superseded by NA-4, below): the detail page's Risk section reads the overview card's model. It was a
+  permanent "Not calculated yet" until NA-4.
 - **Archived accounts are read-only** in the UI: view and Restore only (domain contract), even though
   `update_account` doesn't refuse them (see dependencies).
 - **Edits that re-derive trades.** Changing currency, time zone or day start warns with the trade count from the
@@ -91,7 +92,7 @@ Code: `apps/desktop/src/features/accounts/` (`components/`, `active-account.ts`,
 ### Differences from the mockup (and why)
 | Mockup | Build 15 | Why |
 |---|---|---|
-| Balance column, "combined balance" KPI | Starting balance column; Current balance KPI shown as unavailable | Build 15.5 stores user-reported balance/equity observations and exact reconciliations (`JournalRepository.evidence`), but no hook or screen enters or shows them yet, and a reconciled balance is not a live balance; currencies are never added together |
+| Balance column, "combined balance" KPI | Starting balance column; Current balance KPI per currency from current estimates (NA-4, below) | Build 15.5 stores user-reported balance/equity observations and exact reconciliations (`JournalRepository.evidence`), but no hook or screen enters or shows them yet, and a reconciled balance is not a live balance; currencies are never added together |
 | P&L column | Net P&L = Rust's lineage `netPnl` (known closed trades), with "n unknown" | Rust-computed, never a UI sum; unknown stays unknown |
 | Drawdown used / Profit target meters | Not shown; footnote explains | Needs Build 16 rule evaluation; no meters at zero |
 | "Closest to a limit" KPI | "Need setup" count | Same reason; a truthful, supported fact instead |
@@ -182,3 +183,47 @@ the main column; at 720 px "Import history" moves into the ⋯ menu and tables s
 ### Changes proposed for the built screen (UI only)
 Header breadcrumb; figures row and Rules and risk card (reusing the overview-card view model); recent trades and
 imports lists; the two new menu items; Import trades as a menu (today it goes straight to the wizard).
+
+## NA-4: account detail Risk section and Current balance KPI
+
+Card: NA-4 (finishes P0-11; Build 18.5 and Build 15). No new calculation and no new command: both read Today's truth
+model (`useTodayAccount`), the same source as the overview card.
+
+### Detail page Risk section
+`AccountDetailPage` and `OverviewCard` both call `useAccountOverview` (`features/accounts/hooks/overview.ts`), which
+builds `overviewModel()`. The Risk section shows `model.risk` (state, why, reasons, last saved), the card's own
+figures (`headroom`, `floor`, `balance`, through the design system's `OverviewFigure`) and its meters. For the same
+attempt the detail page and the card therefore name the same state and show the same figures.
+
+| State (truth) | Status shown | Figures | "Never shown as safe" line | Calculate |
+|---|---|---|---|---|
+| Current | Today's status ("Safe (estimate)", "Caution (estimate)", "Stop") | Engine headroom ("Current estimate", or Caution / Limit reached), floor, balance "From your records", each "As of {time, zone}"; meters | No | Yes |
+| Not current (stale, including the P0-02 "not promoted" reason after upgrade) | "Not current" (a recorded Stop stays "Stop · not current") | — with the reason; balance falls back to the latest checkpoint | Yes | Yes |
+| Not current (sources couldn't be checked) | "Not current" | — with the reason | Yes | Yes |
+| Unknown (saved calculation unreadable, or saved before the engine) | "Unknown" | — with the reason, never 0 | Yes | Yes, with a rulebook |
+| No rule (current result without a drawdown outcome) | Today's status | Headroom and floor "No rule" (—) | No | Yes |
+| Not calculated (rulebook, nothing saved) | "Not calculated" | — | Yes | Yes |
+| Needs setup / No rulebook | "Needs setup" (prop account) or "No rulebook" | — | Yes | No: set up the rulebook first |
+| History only (failed, passed, closed, paused, archived) | "History only" | — | No (not part of today's risk) | No |
+
+Stale reasons are listed one per line (`STALE_TEXT`), followed by what the last saved estimate said and its cutoff
+in the account's zone. Actions: **Calculate estimate** opens Today's existing `CalculateNow` dialog (only for a live
+attempt with a rulebook in force today). **Open Today** links to `/` when the attempt is active; otherwise **Use as
+active and open Today** makes it the active account first (Today shows the active account; same as Today's own
+"Show"). Archived attempts get neither.
+
+### Current balance KPI
+`currentBalanceKpi` (`view-models/balance-kpi.ts`), fed by the existing per-account `FactsProbe`, which now also
+reads `useTodayAccount` for each live account:
+- Only a balance Today calls **current** (`truth.kind === "current"`, engine `balance` not null) counts: the card's
+  "Estimated balance". Checkpoints, stale estimates and unknowns are left out, never treated as zero.
+- **One currency:** the exact sum (`sumMoney`, bigint micro-units) as money, with "n of m live accounts · current
+  estimates".
+- **Several currencies:** one total per currency, sorted by code, on one line ("€12,480.55 · $150.50"), with "n of m
+  live accounts · each currency totalled on its own". Currencies are never added together or converted.
+- **None current:** — with "None of the m live accounts has a current estimate" (or "No live accounts").
+- While any live account is still being checked the value is loading, never a partial total.
+
+The table view now makes Today's reads for every live account (about seven queries each, as the cards already do).
+A native account-summary command would scale better; see the proposed card in the NA-4 pull request (related to
+Build 27.25).

@@ -7,7 +7,7 @@
 // edits are guarded on navigation and window close and kept per account and day for the window's session, and a
 // failed or conflicting save leaves the text in the form. Process adherence, the closed-trade outcome and prop-firm
 // rules are shown apart; none implies another.
-import type { DailyReview, DailyReviewDay, Library } from "@fundedflow/domain";
+import { toMicros, type DailyReview, type DailyReviewDay, type Library } from "@fundedflow/domain";
 import { ChevronLeft, ChevronRight, CircleCheck, RotateCcw, Save } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -295,7 +295,9 @@ function ReviewForm({ account, data, library, libraryFailed, onDirtyChange, relo
     if (busy || readOnly) return;
     const issues: ValidationIssue[] = [];
     const risk = values.plan.maxRisk.trim();
-    if (risk && (!/^[+-]?(\d+\.?\d*|\.\d+)$/.test(risk) || Number(risk) <= 0)) {
+    // Compared in micro-units, never through number; an amount outside the stored range is invalid too.
+    const micros = risk ? toMicros(risk) : null;
+    if (risk && (!/^[+-]?(\d+\.?\d*|\.\d+)$/.test(risk) || micros === null || micros <= 0n)) {
       issues.push({ fieldId: fieldDomId(base, "plan.maxRisk"), message: `${PLAN_LABELS.maxRisk}: enter an amount greater than zero, or leave it empty` });
     }
     setSummary(issues);

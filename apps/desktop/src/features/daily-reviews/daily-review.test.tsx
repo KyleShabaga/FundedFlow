@@ -205,6 +205,24 @@ describe("daily review", () => {
     expect(screen.getByDisplayValue("Chased the open")).toBeTruthy();
   });
 
+  it("compares the day's maximum risk in micro-units: zero or out of range is refused, a small amount is kept", async () => {
+    const user = userEvent.setup();
+    renderAt(dayPath("2026-10-19"));
+    await screen.findByRole("form", { name: "Daily review" });
+    const refused = "Maximum risk for the day: enter an amount greater than zero, or leave it empty";
+    for (const value of ["0.000", "0.0000001", "99999999999999999999"]) {
+      await user.clear(field(/^Maximum risk for the day/));
+      await user.type(field(/^Maximum risk for the day/), value);
+      await user.click(within(form()).getByRole("button", { name: "Save draft" }));
+      expect((await screen.findAllByText(refused)).length).toBeGreaterThan(0);
+    }
+    expect(holder.store.daily.reviews.size).toBe(0);
+    await user.clear(field(/^Maximum risk for the day/));
+    await user.type(field(/^Maximum risk for the day/), "0.000001");
+    await user.click(within(form()).getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(holder.store.daily.reviews.size).toBe(1));
+  });
+
   it("reports a conflict without losing edits, and offers them back after reloading", async () => {
     await holder.store.repository.dailyReviews.save({ accountId: A, tradingDay: "2026-10-19", expectedRevision: null, plan: { focus: "v1" }, reflection: {}, noTradeDay: false, answers: [], action: "save" });
     const user = userEvent.setup();

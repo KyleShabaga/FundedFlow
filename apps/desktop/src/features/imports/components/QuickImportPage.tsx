@@ -207,7 +207,7 @@ export function QuickImportPage() {
   const result = commit.data;
   const head = (
     <div className="imp-head">
-      <p className="imp-sub">Quick import: for a file you've imported before. Choose the account and the CSV, check the summary, then confirm. Files that need a decision open in the full wizard.</p>
+      <p className="imp-sub">Quick import: check and import a CSV in one step. Choose the account and the CSV; FundedFlow detects the format and reads times in the account's time zone. Check the summary, then confirm. Files that need a decision open in the full wizard.</p>
       <div className="imp-actions">
         <Button variant="ghost" icon={<Workflow size={16} aria-hidden="true" />} onClick={toWizard} disabled={committing}>Full wizard</Button>
         <Button variant="ghost" icon={<History size={16} aria-hidden="true" />} onClick={history}>Import history</Button>

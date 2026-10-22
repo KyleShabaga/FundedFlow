@@ -15,7 +15,12 @@ import { ACTIVE_ACCOUNT_SETTING } from "./active-account";
 import { AccountDetailPage } from "./components/AccountDetailPage";
 import { AccountsPage } from "./components/AccountsPage";
 import { AccountSwitcher } from "./components/AccountSwitcher";
-import { createTestStore, makeAccount } from "./test-store";
+import { createTodayStore } from "../today/test-store";
+import { makeAccount } from "./test-store";
+
+// The Accounts and detail pages read Today's risk truth (NA-4), so the store is the Today one (accounts, rulebooks,
+// snapshots, canonical inputs and evidence) rather than accounts only.
+const createTestStore = (seed: Parameters<typeof createTodayStore>[0] = []) => createTodayStore(seed);
 
 const runtime = vi.hoisted(() => ({ state: { kind: "ready" } as unknown as RuntimeState, check: vi.fn() }));
 const holder = vi.hoisted(() => ({ store: null as unknown as ReturnType<typeof createTestStore> }));
@@ -108,7 +113,13 @@ describe("first run and onboarding", () => {
     expect(await screen.findAllByText("Needs setup")).toBeTruthy();
     expect(screen.getByText("Firm not set")).toBeTruthy();
     expect(screen.getByText("No rulebook")).toBeTruthy();
-    expect(screen.getByText("Not calculated yet")).toBeTruthy();
+    // Risk reads the card's model: Needs setup (no rulebook), why, and the never-safe guarantee; nothing to calculate.
+    const risk = screen.getByRole("region", { name: "Risk" });
+    await waitFor(() => expect(within(risk).getAllByText("Needs setup").length).toBeGreaterThan(0));
+    expect(within(risk).getByText("Assign a rulebook, then calculate on Today.", { selector: "p" })).toBeTruthy();
+    expect(within(risk).getByText("Without a current calculation this account is never shown as safe.")).toBeTruthy();
+    expect(within(risk).queryByRole("button", { name: "Calculate estimate" })).toBeNull();
+    expect(screen.queryByText("Not calculated yet")).toBeNull();
     expect(screen.queryByText(/^Safe$/)).toBeNull();
   });
 
@@ -201,8 +212,9 @@ describe("list, states and selection", () => {
     expect(within(filters).getByRole("button", { name: "Failed 1" })).toBeTruthy();
     await user.click(within(filters).getByRole("button", { name: "Archived 1" }));
     expect(within(screen.getByRole("table", { name: "Accounts" })).getByText("Old eval")).toBeTruthy();
+    // Nothing is calculated, so the Current balance KPI is unknown (—) and says so; never a starting balance or 0.
     expect(screen.getByText("Current balance")).toBeTruthy();
-    expect(screen.getAllByText(/Currencies are never added together/).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/live accounts has a current estimate|live account has no current estimate/)).length).toBeGreaterThan(0);
   });
 
   it("searches name, firm and number, and offers to clear a search with no matches", async () => {

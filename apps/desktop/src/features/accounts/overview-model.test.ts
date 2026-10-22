@@ -192,3 +192,69 @@ describe("account overview card model", () => {
     expect(m.headroom.value).toEqual({ kind: "text", text: null });
   });
 });
+
+// NA-4: the detail page's Risk section reads model.risk; it must name the same state as the card's headroom badge.
+describe("account overview risk summary (detail page)", () => {
+  const stale = (reasons: Extract<RiskTruth, { kind: "stale" }>["reasons"], r = result()): RiskTruth => {
+    const c = current(r) as Extract<RiskTruth, { kind: "current" }>;
+    return { kind: "stale", snapshot: c.snapshot, result: r, reasons, newer: { trades: 0, checkpoints: 0, ledger: 0 } };
+  };
+  const agrees = (m: ReturnType<typeof model>) => expect(m.risk.label === m.headroom.provenance?.label || m.risk.neverSafe === false).toBe(true);
+
+  it("current: Today's own status, no guarantee line, Calculate available; figures carry their as-of", () => {
+    const m = model({ truth: current() });
+    expect(m.risk).toMatchObject({ current: true, label: "Safe (estimate)", status: "success", reasons: [], lastRecorded: null, neverSafe: false, canCalculate: true });
+    expect(m.headroom.provenance?.label).toBe("Current estimate");
+    expect(m.headroom.note).toBe("As of at 2026-10-21T17:00:00.000Z");
+  });
+
+  it("stale: Not current with every reason, what was last saved and its cutoff; never Safe", () => {
+    const m = model({ truth: stale(["earlier-trading-day", "newer-data"]) });
+    expect(m.risk).toMatchObject({ current: false, label: "Not current", status: "stale", neverSafe: true, canCalculate: true, detail: "The last saved estimate isn't current." });
+    expect(m.risk.reasons).toEqual(["It was calculated for an earlier trading day.", expect.stringContaining("Records dated after its cutoff")]);
+    expect(m.risk.lastRecorded).toBe("Last saved estimate: Safe (estimate) for trading day 2026-10-21. Its cutoff was at 2026-10-21T17:00:00.000Z.");
+    expect(m.headroom.provenance?.label).toBe("Not current");
+    agrees(m);
+  });
+
+  it("not promoted after upgrade (P0-02): stale with the not-promoted reason", () => {
+    const m = model({ truth: stale(["not-promoted"]) });
+    expect(m.risk.label).toBe("Not current");
+    expect(m.risk.reasons).toEqual([expect.stringContaining("without being confirmed as the current result")]);
+  });
+
+  it("a recorded Stop stays Stop, marked not current", () => {
+    const m = model({ truth: stale(["sources-changed"], result({ status: "Stop" })) });
+    expect(m.risk).toMatchObject({ label: "Stop · not current", status: "danger", neverSafe: true });
+    agrees(m);
+  });
+
+  it("Unknown when the saved calculation can't be read or predates the engine", () => {
+    for (const truth of [{ kind: "read-failed" }, { kind: "legacy", snapshot: (current() as Extract<RiskTruth, { kind: "current" }>).snapshot }] as RiskTruth[]) {
+      const m = model({ truth });
+      expect(m.risk).toMatchObject({ label: "Unknown", status: "unknown", neverSafe: true });
+      expect(m.headroom.value.kind).toBe("unavailable");
+      agrees(m);
+    }
+  });
+
+  it("Not calculated, Needs setup and No rulebook stay distinct; Calculate only with a rulebook", () => {
+    expect(model().risk).toMatchObject({ label: "Not calculated", canCalculate: true, neverSafe: true });
+    const needs = model({ rulebook: { kind: "none" }, setup: [{ key: "rulebook", label: "No rulebook", detail: "" }] });
+    expect(needs.risk).toMatchObject({ label: "Needs setup", canCalculate: false, neverSafe: true });
+    const personal = model({ account: account({ accountType: "personal" }), rulebook: { kind: "none" }, setup: [] });
+    expect(personal.risk).toMatchObject({ label: "No rulebook", canCalculate: false });
+  });
+
+  it("No rule: a current result without a drawdown rule keeps Today's status and shows No rule on the figure", () => {
+    const m = model({ truth: current(result({ rules: [] })), version: version(TARGET) });
+    expect(m.risk.label).toBe("Safe (estimate)");
+    expect(m.headroom.provenance?.label).toBe("No rule");
+    expect(m.headroom.value.kind).toBe("unavailable");
+  });
+
+  it("History only: not part of today's risk, no guarantee line and nothing to calculate", () => {
+    const m = model({ account: account({ status: "failed" }), truth: { kind: "historical" } });
+    expect(m.risk).toMatchObject({ label: "History only", status: "neutral", neverSafe: false, canCalculate: false });
+  });
+});

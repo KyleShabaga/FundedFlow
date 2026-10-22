@@ -116,6 +116,9 @@ describe("Quick import: eligible files", () => {
     const user = userEvent.setup();
     renderAt();
     await ready();
+    // NA-4: the copy describes detection and the account's zone, not remembered settings.
+    expect(screen.getByText(/^Quick import: check and import a CSV in one step\. .*detects the format and reads times in the account's time zone/)).toBeTruthy();
+    expect(screen.queryByText(/for a file you've imported before/)).toBeNull();
     await user.upload(fileInput(), csvFile(byName("paired-short-warning")));
     expect(await screen.findByRole("heading", { name: "What would be imported" })).toBeTruthy();
     expect(imports.repository.preview).toHaveBeenCalledTimes(1);

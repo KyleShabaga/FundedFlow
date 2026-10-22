@@ -110,6 +110,11 @@ Decisions and gaps:
 - **No saved import preferences exist.** There is no stored, validated per-account mapping/date-order preference
   (settings hold only generic keys). Quick import therefore relies on Rust detection plus the account's own zone;
   a remembered generic mapping would need a backend preference store (new Triage card).
+- **Wording (NA-4).** Quick import is described by what it does, never as "a file you've imported before": the
+  menus say "Quick import: check and import a CSV in one step", and the page says "Quick import: check and import a
+  CSV in one step. Choose the account and the CSV; FundedFlow detects the format and reads times in the account's
+  time zone. Check the summary, then confirm. Files that need a decision open in the full wizard." The "This file was
+  imported before" notice (same file digest) stays.
 - Generic CSVs always go to the wizard, even when Rust matched every column by name, so a human checks the matches.
 - Native drop on packaged Windows depends on `dragDropEnabled: false` (tauri.conf.json, Build 20). It must be
   re-checked by a person dragging from Explorer on each release.

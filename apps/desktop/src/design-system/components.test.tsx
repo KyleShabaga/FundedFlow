@@ -4,8 +4,9 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AccountCard, AccountOverviewCard, BrandLogo, BrandMark, meterFraction, Pnl, PnlBars, PnlCalendar, ProgressMeter, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
+import { AccountCard, AccountOverviewCard, BrandLogo, OverviewFigure, BrandMark, meterFraction, Pnl, PnlBars, PnlCalendar, ProgressMeter, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
 import { monthWeeks } from "./components/journal";
+import { expectNoAxeViolations } from "../test/axe";
 
 afterEach(cleanup);
 
@@ -239,6 +240,24 @@ describe("ProgressMeter", () => {
     expect(meterFraction("abc", "2000")).toBe(0);
     expect(meterFraction("2500", "2000")).toBe(1);
     expect(meterFraction("0.000001", "0")).toBe(0);
+  });
+});
+
+describe("OverviewFigure", () => {
+  it("shows a figure outside a card with its provenance and note, and unknown as unknown", async () => {
+    const { container } = render(
+      <main>
+        <OverviewFigure primary figure={{ label: "Drawdown headroom", value: { kind: "money", amount: "1500", signed: false }, provenance: { label: "Current estimate", tone: "flow" }, note: "As of 21 Oct 2026, 13:00 EDT" }} />
+        <OverviewFigure figure={{ label: "Drawdown floor", value: { kind: "unavailable", reason: "Nothing calculated yet" }, provenance: { label: "Not calculated", tone: "neutral" } }} />
+      </main>,
+    );
+    expect(screen.getByText("$1,500.00")).toBeTruthy();
+    expect(screen.getByText("Current estimate")).toBeTruthy();
+    expect(screen.getByText("As of 21 Oct 2026, 13:00 EDT")).toBeTruthy();
+    expect(screen.getByTitle("Unavailable: Nothing calculated yet")).toBeTruthy();
+    expect(screen.queryByText("$0.00")).toBeNull();
+    expect(container.querySelector(".ds-aoc-figure.is-primary")).toBeTruthy();
+    await expectNoAxeViolations({ root: container });
   });
 });
 
