@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r3; awaiting independent review) |
+| Status | Ready for Approval (r3) |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -45,7 +45,7 @@ New Rust command/DTO; batched overview (ISSUE-014, V1.1); freshness adapter rout
 4. Reset dialog: derive default `effectiveFrom` from the Rust trading day (or let TASK-020's validation message guide the user).
 5. Fake-clock tests at 2026-10-23T22:30Z (America/New_York, reset 17:00) and Saturday noon → assignment effective 2026-10-26 is 'in use'; no false badge.
 6. Fail closed: if the Rust trading day (freshness) is unavailable, show 'unknown' rather than falling back to `zonedDay`.
-7. AssignDialog stops offering Saturday/Sunday effective dates.
+7. AssignDialog's default effective date comes from the Rust trading day and is never a weekend (today it is `zonedDay(...)`, `AssignDialog.tsx:30, 36`); the existing weekend rejection at `:48` stays.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-020.
@@ -55,7 +55,7 @@ New Rust command/DTO; batched overview (ISSUE-014, V1.1); freshness adapter rout
 - [ ] New tests pass; fail before.
 - [ ] Reset dialog default at the boundary (fake clock, America/New_York, reset 17:00): at 2026-10-23T22:30Z (Friday after reset) the default `effectiveFrom` is the Rust trading day 2026-10-26, not 2026-10-23; just before the reset it is 2026-10-23.
 - [ ] Freshness unavailable (`list_account_freshness` errors or has no entry for the account): 'in use', the badge and the reset default show the 'unknown' state; a test asserts no `zonedDay` fallback value is rendered.
-- [ ] AssignDialog offers no Saturday or Sunday effective date: a fake-clock test on a Saturday asserts the default and every offered date is Monday to Friday.
+- [ ] AssignDialog never defaults to a Saturday or Sunday: a fake-clock test on a Saturday asserts the default "First trading day" is the Rust trading day (the following Monday), and that submitting a Saturday is still rejected with the weekday message (`AssignDialog.tsx:48`). The field stays a native date input (`AssignDialog.tsx:82`); no custom picker is in scope.
 - [ ] Repository root: `npm run test -w @fundedflow/desktop -- src/features/rulebooks src/features/accounts` → exit 0.
 - [ ] Full root checks → exit 0.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
@@ -81,7 +81,9 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 ## Changes in r3
 - 10 §8.2 TASK-021 (G10): added acceptance tests for the reset-dialog default at the reset boundary (step 4), the 'unknown' state when freshness is unavailable (step 6) and no weekend dates in AssignDialog (step 7).
 - 10 §8.3 fixture rule: fixture line says `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`).
+- r3 review fix: the AssignDialog criterion now tests the default date and the existing weekend rejection, because the field is a native date input (independent r3 review).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: tests for reset-dialog boundary default, unknown state without freshness, no weekend dates in AssignDialog (G10); fixture rule unset (not 0).
+Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.

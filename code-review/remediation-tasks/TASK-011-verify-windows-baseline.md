@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r3; awaiting independent review) |
+| Status | Ready for Approval (r3) |
 | Type | Verification |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -41,7 +41,7 @@ Fixes; counting results toward gates.
 ## Implementation approach
 1. Build from the current SHA (CI workflow_dispatch or local `npm run tauri build`).
 2. On a disposable VM/profile: dirty a trade review and a daily review, click the title-bar X; record behaviour.
-3. Create a junction for `%APPDATA%` (or relocated profile) on a test account; install and launch the **release EXE**; record runtime status. Repeat in Windows Sandbox. Do not set `FUNDEDFLOW_DEV_DATA_DIR` and do not use `npm run dev:test-journal` for this step: that variable replaces the OS-resolved `app_data_dir()` (`src-tauri/src/lib.rs:181`, override at `lib.rs:185-195`, debug builds only), so it would bypass the very path being tested.
+3. Create a junction for `%APPDATA%` (or relocated profile) on a test account; install and launch the **release EXE**; record runtime status. Repeat in Windows Sandbox. Do not set `FUNDEDFLOW_DEV_DATA_DIR` and do not use `npm run dev:test-journal` for this step: that variable replaces the OS-resolved `app_data_dir()` (`src-tauri/src/lib.rs:181`, override at `lib.rs:185-199`, debug builds only), so it would bypass the very path being tested.
 4. Export to OneDrive\Documents (Files On-Demand on) and to a junctioned folder; record result.
 5. Import a synthetic 50k-row CSV and export a large synthetic journal; time both.
 
@@ -65,9 +65,10 @@ Disposable VM/profile only; never the real journal.
 Results recorded in `code-review/11-remediation-execution-log.md` with tester, date, source SHA (and installer EXE SHA-256 where applicable), environment and raw observations; the linked decision/escalation is updated. No code change is implied.
 
 ## Changes in r3
-- 10 §8.2 TASK-011 (G14): step (b) uses the release EXE and forbids `FUNDEDFLOW_DEV_DATA_DIR` and `dev:test-journal`; cited the override at `lib.rs:185-195` (comment at 185, `#[cfg(debug_assertions)]` block 188-195) and the `app_data_dir()` call at `lib.rs:181`; added a matching acceptance criterion.
+- 10 §8.2 TASK-011 (G14): step (b) uses the release EXE and forbids `FUNDEDFLOW_DEV_DATA_DIR` and `dev:test-journal`; cited the override at `lib.rs:185-199` (comment at 185, `#[cfg(debug_assertions)]` block 188-195) and the `app_data_dir()` call at `lib.rs:181`; added a matching acceptance criterion.
 - 10 §8.3 fixture rule: `FUNDEDFLOW_UPDATE_FIXTURES` must be unset (not `0`).
 
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: release EXE and no `FUNDEDFLOW_DEV_DATA_DIR`/`dev:test-journal` for step (b) (G14); fixture rule "unset (not `0`)".
+Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.

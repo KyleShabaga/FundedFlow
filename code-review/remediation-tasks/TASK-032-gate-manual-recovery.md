@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r3; awaiting independent review) |
+| Status | Ready for Approval (r3) |
 | Type | Verification |
 | Audit priority | Gate |
 | Roadmap lane | Build 26.5–26.7 / Build 10.5 gate 6 |
@@ -90,3 +90,4 @@ Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: explicit pass rule (R1–R8 mandatory); recovery doc 187-194 cited; large-journal export expected result; legal re-prompt expected; fixture rule unset (not 0).
+Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.

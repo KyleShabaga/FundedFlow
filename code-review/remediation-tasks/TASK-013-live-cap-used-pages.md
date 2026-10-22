@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r3; awaiting independent review) |
+| Status | Ready for Approval (r3) |
 | Type | Fix |
 | Audit priority | P1 (P0 if TASK-010 escalates) |
 | Roadmap lane | Unassigned (owner) |
@@ -55,7 +55,7 @@ Raising archive caps or changing archive format (owner decision TASK-009 D-ARCH)
 - [ ] The live journal is never vacuumed: the test journal's `page_count` and `freelist_count` are unchanged after export and restore prepare.
 - [ ] Over-cap test asserts the component name.
 - [ ] Repository root: `npm run test -w @fundedflow/desktop -- src/features/data-controls` → exit 0, and it asserts the rendered `detail` text.
-- [ ] `packages/domain/test/fixtures/data-controls-wire.json` diff is limited to `detail` (errors without detail serialize unchanged).
+- [ ] `packages/domain/test/fixtures/data-controls-wire.json` diff is limited to `detail`: errors without detail serialize unchanged, and one new error row carrying `detail` (for example `LimitExceeded` naming database pages) is added so the TS schema parses `detail` from the fixture.
 - [ ] `apps/desktop/src-tauri`: `cargo test --offline --locked data_controls` → exit 0.
 - [ ] Full Rust and root checks → exit 0.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check (the wire test rewrites the fixture whenever the variable is set, to any value: `src-tauri/src/data_controls/wire_tests.rs:90`); never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
@@ -88,3 +88,4 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: mandatory VACUUM of the temporary snapshot and no narrowed acceptance (G3); >64 MiB free-pages export criterion (G10); desktop data-controls detail test and `detail`-only fixture diff (G10); `skip_serializing_if`/`.optional()`; `DataControlProblem` carries `detail`; fixture rule "unset (not `0`)".
+Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.

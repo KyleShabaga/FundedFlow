@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r3; awaiting independent review) |
+| Status | Ready for Approval (r3) |
 | Type | Documentation |
 | Audit priority | Gate work |
 | Roadmap lane | NA-2 / NA-5 / NA-7 |
@@ -90,3 +90,4 @@ Documents updated; every factual statement checked against the cited source (fil
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: target file named; steps B1–B7 with expected result, evidence and mandatory flag; NA-7 draft criterion; TASK-011 prerequisite; NA-7 lines 145-166 owned here; V-023 ownership; fixture rule unset (not 0).
+Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.

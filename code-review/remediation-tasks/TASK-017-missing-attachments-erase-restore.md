@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r3; awaiting independent review) |
+| Status | Ready for Approval (r3) |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -54,6 +54,7 @@ AV quarantine, AppData tidying, disk damage.
 - [ ] New restore/erase/rollback tests pass and fail before the change.
 - [ ] Missing ids appear in `DeletionPreview.warnings` and `RestorePreview.warnings`; no new preview field is added (TS schema `packages/domain/src/contracts/data-controls.ts` preview objects unchanged).
 - [ ] Rollback of a restore prepared by the previous version (no `safety-missing.json`) succeeds.
+- [ ] Repository root: `npm run test -w @fundedflow/desktop -- src/features/data-controls` → exit 0, and it asserts that DeletionDialog and RestoreArchiveDialog render a preview `warnings` entry naming a missing attachment id.
 - [ ] Export behaviour unchanged except `detail` names the ids; `data_controls/tests.rs:49` unchanged and passing.
 - [ ] `packages/domain/test/fixtures/data-controls-wire.json` unchanged, or its diff limited to a reviewed missing-id `warnings`/`detail` example.
 - [ ] Full Rust and root checks → exit 0.
@@ -86,3 +87,4 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: missing ids in existing preview `warnings`, no new field (G12); missing `safety-missing.json` = empty list, previous-version rollback test (G12); export step limited to `detail`; fixture rule "unset (not `0`)".
+Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.

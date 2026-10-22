@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r3; awaiting independent review) |
+| Status | Ready for Approval (r3) |
 | Type | Test |
 | Audit priority | Gate (if kept) / P2 test safety |
 | Roadmap lane | Build 10.5 gate |
@@ -56,7 +56,7 @@ Owner run (W5, after TASK-029 is recorded):
 ## Acceptance criteria (pass/fail)
 - [ ] Code change merged before TASK-029's candidate SHA (the candidate SHA contains it).
 - [ ] The `upgrade_tests.rs:428` doc comment names an offline copy for `FUNDEDFLOW_UPGRADE_DB`, not the live `%APPDATA%` path, and no longer suggests `--nocapture` before redaction.
-- [ ] The same command in `docs/data-model.md:571` is corrected the same way (it gives the live `%APPDATA%` path and `--nocapture` today).
+- [ ] The same command in `docs/data-model.md:572` is corrected the same way (it gives the live `%APPDATA%` path and `--nocapture` today).
 - [ ] Test refuses when the lock is held (unit-tested with a temp lock).
 - [ ] Output contains no trade ids.
 - [ ] Owner-recorded run result (counts, PASS/FAIL).
@@ -85,10 +85,11 @@ Tests merged after review; they fail against a deliberately broken variant or th
 - 10 §8.2 TASK-034 (G7): split into a code change in W3c (merged before TASK-029) and an owner run in W5; Wave field set to `W3c (code) / W5 (owner run)`; prerequisites split accordingly.
 - 10 §8.2 TASK-034 (G7): `FUNDEDFLOW_UPGRADE_DB` is set to the copy, never the live path (step 4 and run-record criterion).
 - 10 §8.2 TASK-034 (G7): fix the doc comment at `upgrade_tests.rs:428` (verified: it gives the live `%APPDATA%` path and `--nocapture`); scope, step 2 and criterion added.
-- r3 review fix: the identical live-path command in `docs/data-model.md:571` is corrected with the doc comment (independent r3 review).
+- r3 review fix: the identical live-path command in `docs/data-model.md:572` is corrected with the doc comment (independent r3 review).
 - Source re-check at b01e2b9: test span corrected from `upgrade_tests.rs:426-457` to `426-459`.
 - 10 §8.3 fixture rule: fixture line says `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: W3c code / W5 owner-run split with code before TASK-029 (G7); `FUNDEDFLOW_UPGRADE_DB` set to the copy; `upgrade_tests.rs:428` doc-comment fix; fixture rule unset (not 0).
+Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.

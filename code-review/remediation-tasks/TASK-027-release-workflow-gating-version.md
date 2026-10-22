@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r3; awaiting independent review) |
+| Status | Ready for Approval (r3) |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | NA-2 / P0-06 (release) |
@@ -33,7 +33,7 @@ Building a candidate from an untested SHA; downgrade testing.
 Workflow design; fixed version.
 
 ## Expected change scope
-`.github/workflows/release-installer.yml` (require a successful `ci.yml` run on the same SHA or run the CI steps in-job; widen PR paths; log rustc/node/npm/@tauri-apps/cli versions to the summary), version fields `apps/desktop/src-tauri/tauri.conf.json:4`, `apps/desktop/src-tauri/Cargo.toml:3`, root/workspace `package.json` versions as decided in TASK-005. Full version knock-on (all in the same PR): `Cargo.lock`, `package-lock.json`, `npm run notices` (cargo-about 0.9.2; regenerates the notices `appVersion`), `producerVersion` in `packages/domain/test/fixtures/data-controls-wire.json:89` (reviewed diff), and the version assertion `expect(text).toContain("FundedFlow version: 0.1.0")` at `apps/desktop/src/journeys/recovery.journey.test.tsx:66`. WebView2 install mode: if TASK-006 = B or C, set `bundle.windows.webviewInstallMode` (`apps/desktop/src-tauri/tauri.conf.json:49-52`, currently `downloadBootstrapper`, `silent: true`) to `offlineInstaller` (B) or `fixedVersion` with its runtime path (C); if TASK-006 = A, leave it unchanged. Option for the implementer (not mandated): add `"producerVersion"` to the volatile keys in `normalize()` (`apps/desktop/src-tauri/src/data_controls/wire_tests.rs:9-17`, the match arms inside `normalize()` at 4-28) so the wire fixture stops changing on every version bump; if taken, the fixture's `producerVersion` becomes a fixed placeholder in this one reviewed diff (the contract is `z.string()`, `packages/domain/src/contracts/data-controls.ts:39`), and the choice is recorded in the PR. TEST-010 `check:engine-runtimes`: explicitly deferred to V1.1 (not in this card).
+`.github/workflows/release-installer.yml` (require a successful `ci.yml` run on the same SHA or run the CI steps in-job; widen PR paths; log rustc/node/npm/@tauri-apps/cli versions to the summary), version fields `apps/desktop/package.json:22` (pinned `"@fundedflow/domain": "0.1.0"`, changes with `packages/domain/package.json:3` if the workspace versions are bumped), `apps/desktop/src-tauri/tauri.conf.json:4`, `apps/desktop/src-tauri/Cargo.toml:3`, root/workspace `package.json` versions as decided in TASK-005. Full version knock-on (all in the same PR): `Cargo.lock`, `package-lock.json`, `npm run notices` (cargo-about 0.9.2; regenerates the notices `appVersion`), `producerVersion` in `packages/domain/test/fixtures/data-controls-wire.json:89` (reviewed diff), and the version assertion `expect(text).toContain("FundedFlow version: 0.1.0")` at `apps/desktop/src/journeys/recovery.journey.test.tsx:66`. WebView2 install mode: if TASK-006 = B or C, set `bundle.windows.webviewInstallMode` (`apps/desktop/src-tauri/tauri.conf.json:49-52`, currently `downloadBootstrapper`, `silent: true`) to `offlineInstaller` (B) or `fixedVersion` with its runtime path (C); if TASK-006 = A, leave it unchanged. Option for the implementer (not mandated): add `"producerVersion"` to the volatile keys in `normalize()` (`apps/desktop/src-tauri/src/data_controls/wire_tests.rs:9-17`, the match arms inside `normalize()` at 4-28) so the wire fixture stops changing on every version bump; if taken, the fixture's `producerVersion` becomes a fixed placeholder in this one reviewed diff (the contract is `z.string()`, `packages/domain/src/contracts/data-controls.ts:39`), and the choice is recorded in the PR. TEST-010 `check:engine-runtimes`: explicitly deferred to V1.1 (not in this card).
 
 ## Out of scope
 Signing; updater; pinning actions by SHA (optional, V1.1).
@@ -48,8 +48,8 @@ Signing; updater; pinning actions by SHA (optional, V1.1).
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-005 decided; TASK-006 decided.
-- Merge order: after TASK-017 (the last W1 wire-fixture edit; 013 → 016 → 017 → 027 on `data-controls-wire.json`) and before TASK-029 (candidate).
-- Likely shared-file conflicts: Version files with TASK-029 (candidate); `packages/domain/test/fixtures/data-controls-wire.json` with TASK-013, 016, 017.
+- Merge order: after TASK-017 (the last W1 wire-fixture edit; 013 → 015 (option B only) → 016 → 017 → 027 on `data-controls-wire.json`) and before TASK-029 (candidate).
+- Likely shared-file conflicts: Version files with TASK-029 (candidate); `packages/domain/test/fixtures/data-controls-wire.json` with TASK-013, 015 (option B), 016, 017.
 
 ## Acceptance criteria (pass/fail)
 - [ ] Workflow lint/dry run: a PR changing only `apps/desktop/src/**` triggers the installer build (observed in Actions).
@@ -89,3 +89,4 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: `recovery.journey.test.tsx:66` knock-on (G13); TASK-006 `webviewInstallMode` scope and prerequisite (G4); `producerVersion` normalize option (G13); merge after 017 and before 029; fixture rule unset (not 0).
+Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.

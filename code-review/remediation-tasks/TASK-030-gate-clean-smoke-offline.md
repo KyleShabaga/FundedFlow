@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r3; awaiting independent review) |
+| Status | Ready for Approval (r3) |
 | Type | Verification |
 | Audit priority | Gate |
 | Roadmap lane | NA-2 / NA-5 |
@@ -74,3 +74,4 @@ Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: explicit pass rule with mandatory steps; legal re-prompt after upgrade expected; V-023 not claimed (owned by TASK-028); fixture rule unset (not 0).
+Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed (r3; awaiting independent review) |
+| Status | Ready for Approval (r3) |
 | Type | Verification |
 | Audit priority | Gate |
 | Roadmap lane | NA-2 / P0-06 |
@@ -73,3 +73,4 @@ Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: TASK-008/fmt prerequisite; CI evidence on exact SHA via push or workflow_dispatch with automatic `--fail-on-outage`; WebView2 field dropped from DoD; fixture rule unset (not 0).
+Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
