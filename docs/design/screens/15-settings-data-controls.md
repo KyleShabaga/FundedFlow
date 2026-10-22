@@ -70,9 +70,18 @@ adds FundedFlow's recovery copies. `cleanup_pending` shows a warning and "Retry 
 
 ## Gaps (not faked)
 
-- No command returns the local data folder path, so the page describes the location without one.
-- The archive manifest has counts and account IDs but no per-account status, so the restore preview cannot list
-  which included accounts are failed or archived; it states that they are restored exactly as saved.
+### Accepted V1 limitations (P0-17, 2026-10-21)
+
+- No data-folder path; the page describes the location without one.
+- No pre-export size estimate.
+- No per-account restore status; the archive manifest has counts and account IDs only, so the preview states
+  that accounts are restored exactly as saved without listing which are failed or archived.
+- No export history; only the last export is stored and shown.
+
+The UI must not fabricate any of these facts.
+
+Other retained gap:
+
 - The account deletion preview lists linked attempts by ID only (no name lookup across a pending deletion).
 
 ## P0 design (Build 25.1)
@@ -96,7 +105,7 @@ command is added.
   "It can't be restored and isn't a backup." The account select appears only for CSV. The export button stays
   disabled (with its reason) until the "not encrypted" box is ticked.
 - **Export history**: only the last export is shown, because only the last export is stored. A history list is a
-  backend gap, not a design.
+  limitation accepted for V1; see the P0-17 list above.
 - **Danger zone**: one loss-outlined area with two rows, each naming its scope. Destructive buttons are loss outlines,
   never filled red, and they open dialogs; nothing destructive happens on the page.
 - **Archive vs delete vs erase** have different titles, button words and phrases (see the comparison on 3D). Archive is
@@ -120,4 +129,5 @@ command is added.
 3. The archive / delete / erase comparison as help text on the deletion section.
 
 ### Gaps (unchanged)
-Folder path, export history and per-account status in archive previews still need backend support.
+See **Accepted V1 limitations (P0-17, 2026-10-21)** above for the folder path, pre-export size estimate,
+per-account restore status and export history; these are accepted V1 limits.

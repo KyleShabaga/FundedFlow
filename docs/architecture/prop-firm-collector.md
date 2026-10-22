@@ -22,6 +22,9 @@ for Build 31. Build 29 does not interpret rules, approve anything, write to the 
 
 ## 2. Baseline and independence check (checked 2026-10-20)
 
+The desktop consumer (import → review/edit → account prefill) is deferred to V1.5
+(owner decision 2026-10-21, P0-14).
+
 | Area | State on `main` (`970306b`) | Consequence for Build 29 |
 |---|---|---|
 | Python | No `.py` files, no `pyproject.toml`, no `tools/` directory | Greenfield project; no precedent to follow or break |

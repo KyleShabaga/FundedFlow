@@ -94,6 +94,9 @@ not applicable / no rule / several rules; valid zero headroom; runtime unavailab
 
 ## Limitations and follow-ups
 
+Owner decision 2026-10-21 (P0-16): in V1, a mistaken checkpoint is corrected by recording a new one.
+Correction, comparison-resolution and ledger-entry screens are P1. Today's 'ledger incomplete' state is expected in V1.
+
 - The equity curve with the drawdown floor is not drawn: snapshots store one floor per calculation, not a series.
 - Checkpoint corrections (`evidence.correct`) and comparison resolutions have no UI yet; a new checkpoint is
   recorded instead and conflicts are flagged.

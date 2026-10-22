@@ -118,5 +118,6 @@ Boards in [`mockups/p0/`](../mockups/p0/). They redraw the page Build 22 ships; 
 2. Trades and history as a right rail on wide windows (today they follow the form).
 3. Checklist answers as choice chips with icons (today plain inline radios).
 
-### Open questions
-- Should "Missed" ever use the loss tone? The board says no (warn), to keep process apart from money.
+### Decided
+- "Missed" uses the amber warning tone, never the red loss tone, to keep process apart from money (owner decision
+  2026-10-21, [NA-1](https://app.notion.com/p/4001bd4b6bde8176b254e307bd204933); [p0-design-reconciliation.md](../p0-design-reconciliation.md) §8).
