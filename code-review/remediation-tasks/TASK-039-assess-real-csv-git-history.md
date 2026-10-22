@@ -1,0 +1,84 @@
+# TASK-039 — Owner decision: real CSV exports in Git history and on GitHub (exposure assessment and disposition)
+
+| Field | Value |
+|---|---|
+| Status | Proposed (r1; awaiting independent review) |
+| Type | Owner Decision |
+| Audit priority | P1 (decision; release-blocking) |
+| Roadmap lane | Unassigned (owner) |
+| Mandatory gate | Yes — TASK-029 stays Blocked until the disposition is recorded and any chosen cleanup is verified (TASK-002 = B) |
+| Severity | Medium (real trading data in a public repository's history) |
+| Confidence | Medium (local clone is shallow; GitHub-side facts not queried) |
+| Canonical issue | ISSUE-036 (see `code-review/remediation-findings-ledger.md`) |
+| Original Stage 1 finding IDs | TR-020 |
+| Source card / date | Notion draft TASK-039 r1 (https://app.notion.com/p/4011bd4b6bde81ebb125e99184851d21), created 2026-10-22 under TASK-002 r2 Option B |
+| Wave | W0 (decision; recommended before any W1 branch is opened) |
+| Effort / risk | S / Low for this card (decision only); the chosen action may be High risk and needs its own task |
+| Verification platform | N/A (repository metadata and owner confirmation) |
+| Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
+| Inspected source revision | 1012d63 (application source identical to 92e7980) |
+| Specification revision | r1 (2026-10-22; from the Notion draft, Block 3 format) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
+| Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
+| Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 1012d63 (HEAD). Tested source SHA and installer EXE SHA-256: N/A (decision). |
+| Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision, and a separate explicit approval for any visibility change or history rewrite) |
+
+## Purpose / risk
+TASK-037 and TASK-038 remove the real exports from the tracked tree only. Every earlier commit, the merged PR pages, any fork and any existing clone still contain them. The owner must decide, with evidence, whether to accept that, restrict access, or rewrite history.
+
+## Trigger / reproduction
+The repository is public: `origin` is `https://github.com/KyleShabaga/FundedFlow` and `README.md:155-157` states the source is publicly viewable and that GitHub forking is permitted.
+
+## Root cause / evidence
+Read-only, local facts at 1012d63 (no network queries; no rows printed):
+- Affected paths: `test_csvimport/Performance.csv` (added `75fd6f4`, 2026-10-19, merged by PR #4 / `4e3c01f`), `test_csvimport/Performance Oct 20.csv` and `test_csvimport/Performance Oct 20(1).csv` (added `31f1447`, 2026-10-20, merged by PR #25 / `0828db4`). Their blobs have not changed since they were added.
+- Copies outside these paths (also in history from the commits that introduced them): identifiers or a row from the exports in `src-tauri/src/csv_import/{tests,regression_tests,identity_tests,wire_limit_tests,direction_pnl_tests}.rs`, `test_csvimport/identity/fill-pair-v2.json`, `docs/architecture/p0-01-p0-03.md`, `docs/design/mockups/TradeDetail.dc.html` (line numbers in TASK-037/038).
+- Commits touching `test_csvimport/`: 7 on the current branch, 9 across all local refs (`git log --oneline [--all] -- test_csvimport | wc -l`; these counts include the JSON fixture commits). Refs seen locally: `main`, `origin/main`, `origin/claude/practical-turing-wmii06`.
+- The local clone is **shallow** (`git rev-parse --is-shallow-repository` → true; 4 shallow boundaries), so the full set of commits, branches and tags on GitHub is not visible here.
+- Unknowns to establish (owner or GitHub UI/API, not this audit): number of forks and who owns them; other remote branches, tags and `refs/pull/*`; release artifacts; whether any automated archive or search index has copied the repository; other clones (owner machines, CI caches, agent sessions).
+
+## Options and consequences (owner decides)
+- **(A) Accept exposure.** Keep history as is; TASK-037/038 clean HEAD. No SHA changes, no coordination. The rows stay readable in history, PR #4/#25 file views, forks and clones indefinitely.
+- **(B) Stopgap: make the repository private** (GitHub Settings → Danger Zone). Immediate and reversible; no SHA changes. Stops new anonymous access, but existing clones and forks keep the data (existing public forks are detached and stay public). Contradicts `README.md:155-157` and possibly `LICENSE` wording (doc follow-up needed); GitHub Actions minutes for Windows runners become billable against the plan (check before choosing); release artifacts and Notion links to GitHub become owner-only.
+- **(C) Rewrite history.** On a fresh mirror clone, `git filter-repo` removes the three paths and replaces the copied identifiers (`--invert-paths --path …` plus `--replace-text`), then force-pushes every branch and tag. Every commit SHA changes: the recorded baselines (`92e7980`, `a7310fd`, `1012d63`), the `0.1.0` artifact's source SHA, CI run links and all code-review evidence go stale and must be re-mapped; every clone must be re-cloned and open branches rebuilt. GitHub keeps cached views and `refs/pull/*` until a GitHub Support purge request is made; forks are not rewritten. Destructive and irreversible for collaborators.
+- B and C can be combined (B now, C later). C, if chosen, should run before any W1 branch is opened and in all cases before TASK-029, so the candidate SHA is never invalidated.
+
+**Recommendation (for the owner to accept or reject):** decide now, before W1 work starts, not at W4. If the owner considers the rows sensitive, take (B) immediately as a reversible stopgap, then decide between (A) and (C) with the concrete plan above; choose (C) only if the data must be unrecoverable from GitHub, and accept the SHA re-mapping cost. If the rows are not sensitive enough to justify that, (A) with TASK-037/038 is sufficient.
+
+## Expected change scope
+No code and no repository or GitHub changes in this task. Output: the assessment above refreshed at execution, Kyle's verbatim disposition, and, if (B) or (C) is chosen, a separate execution task with its own card and approval.
+
+## Out of scope
+Changing visibility, `git filter-repo`, force-pushes, deleting branches/tags/releases/forks, GitHub Support requests, README/LICENSE wording changes — all require a separate explicitly approved execution task. Removing files from HEAD (TASK-037, TASK-038).
+
+## Implementation approach
+1. Refresh the facts above at the then-current revision (paths, introducing commits, local commit counts, shallow status) without printing rows.
+2. Ask Kyle to supply or confirm GitHub-side facts (fork count, other branches/tags/releases, known clones), or approve a read-only GitHub query for them; record unknowns explicitly.
+3. Present options A/B/C with the consequences above and the recommendation.
+4. Record Kyle's disposition verbatim with date and source.
+5. If B or C: create the execution card (Triage card per CLAUDE.md) with a concrete step list, rollback, and verification (for C: re-clone and scan all refs for the paths and identifiers → 0; Support purge confirmation; SHA re-mapping table), and obtain its separate approval. Do not execute it under this card.
+
+## Prerequisites, dependencies and conflicts
+- Prerequisites: TASK-002 approved (done, Option B).
+- Ordering: decide before TASK-037/038 PRs are opened (their diffs re-display the rows) and before any W1 branch if C is likely.
+- Dependants: TASK-029 (Blocked until the disposition is recorded and any chosen cleanup is verified).
+- Likely shared-file conflicts: None for this card; option C conflicts with every open branch.
+
+## Acceptance criteria (pass/fail)
+- [ ] Affected paths, introducing commits/refs, known visibility/sharing facts and material unknowns recorded without raw rows.
+- [ ] Options, consequences and a concrete recommendation presented; for B or C a concrete plan is attached for separate approval.
+- [ ] Kyle's explicit disposition recorded verbatim with date and source. If B or C is chosen, a specific execution task exists, is approved, and its outcome is verified before this gate resolves.
+- [ ] Fixture rule: N/A (decision only; no checks run). Any later check run for this task keeps `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)**.
+- [ ] Assessment, disposition and any verification evidence recorded in the execution log.
+
+## Verification plan
+Owner confirmation; for B or C, the execution task's own verification.
+
+## Safety, rollback and side effects
+Do not print or copy CSV rows or identifiers. No `git push`, force-push, history rewrite, visibility change or deletion under this card. Read-only Git commands only.
+
+## Definition of done
+Kyle's explicit choice recorded verbatim with date and source (trusted conversation or attributable Notion decision). Claude may prepare options but cannot decide, waive a gate, or infer approval; a history rewrite or visibility change needs its own explicit approval.
+
+## Independent review notes
+Not yet reviewed. r1 written from the Notion draft; options made concrete from local repository facts. GitHub-side facts (forks, PR refs, releases) are unverified and listed as unknowns.
