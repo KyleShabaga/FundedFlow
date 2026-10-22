@@ -213,7 +213,8 @@ describe("account detail Risk section", () => {
 });
 
 describe("Accounts Current balance KPI", () => {
-  const kpi = () => screen.getByText("Current balance").closest(".ds-metric") as HTMLElement;
+  // The KPI card, not the table's Current balance column header.
+  const kpi = () => screen.getAllByText("Current balance").map(e => e.closest(".ds-metric")).find(Boolean) as HTMLElement;
 
   it("none current: — with how many live accounts were looked at, never a starting balance or 0", async () => {
     seed([makeAccount({ id: A, name: "Eval A" }), makeAccount({ id: B, name: "Eval B" })]);

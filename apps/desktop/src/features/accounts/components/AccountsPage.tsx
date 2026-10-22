@@ -1,7 +1,8 @@
 // The Accounts page: every account with its status, setup and rulebook, and the
 // place to add, open, edit, archive and select accounts. It shows only values the
-// backend supplies: starting balance (never presented as today's balance), Rust's
-// known net P&L per attempt, and rulebook assignment. The Current balance KPI totals,
+// backend supplies: each attempt's balance as its card states it (current engine
+// estimate, else the latest checkpoint, else why there is none; never the starting
+// balance), Rust's known net P&L per attempt, and rulebook assignment. The Current balance KPI totals,
 // per currency, only the engine balances Today calls current (NA-4); cards show
 // headroom and meters from the same model.
 import { accountFilterLabels, filterAccounts, type AccountFilter } from "@fundedflow/domain";
@@ -11,7 +12,6 @@ import { useNavigate } from "react-router-dom";
 
 import {
   Button,
-  compareMoney,
   type DataColumn,
   DataTable,
   DropdownMenu,
@@ -20,6 +20,7 @@ import {
   IconButton,
   LoadingState,
   MetricCard,
+  MetricValueView,
   MoneyCell,
   SearchField,
   SegmentedControl,
@@ -30,6 +31,7 @@ import { retryRead, toAsyncState } from "../../shared/presentation";
 import { useActiveAccount } from "../active-account";
 import { useCheckTime, useTodayAccount } from "../../today/hooks/today";
 import { useAccounts } from "../hooks/accounts";
+import { useAccountBalance } from "../hooks/overview";
 import type { AccountViewModel } from "../view-models/account";
 import { currentBalanceKpi, type CurrentBalance } from "../view-models/balance-kpi";
 import { accountMenu, useAccountDialogs } from "./AccountActions";
@@ -48,6 +50,25 @@ function NetPnlCell({ account }: { account: AccountViewModel }) {
     <span className="acct-pnl" title={summary.tradesWithUnknownPnl ? `${summary.tradesWithUnknownPnl} trades without P&L are not included` : undefined}>
       <MoneyCell value={summary.netPnl} currency={account.currency} />
       {summary.tradesWithUnknownPnl > 0 && <span className="acct-cell-note">{summary.tradesWithUnknownPnl} unknown</span>}
+    </span>
+  );
+}
+/**
+ * The attempt's balance as its card states it. The short lines say where the value comes from and when (or why there
+ * is none), and any trades a checkpoint leaves out; the full label and note are in the tooltip and read aloud.
+ */
+function BalanceCell({ account, checkedAt }: { account: AccountViewModel; checkedAt: string }) {
+  const figure = useAccountBalance(account, checkedAt);
+  const short = figure.value.kind === "unavailable" ? figure.value.reason
+    : figure.provenance ? [figure.provenance.label, figure.at && formatInstant(figure.at, { timeZone: account.timezone })].filter(Boolean).join(" · ")
+    : figure.note;
+  const detail = [figure.label, figure.provenance?.label, figure.note].filter(Boolean).join(" · ");
+  return (
+    <span className="acct-balance" title={detail}>
+      <MetricValueView value={figure.value} />
+      {short && <span className="acct-cell-note" aria-hidden="true">{short}</span>}
+      {figure.tradesSince > 0 && <span className="acct-cell-note" aria-hidden="true">{figure.tradesSince} {figure.tradesSince === 1 ? "trade" : "trades"} since, not included</span>}
+      <span className="ds-sr-only">{detail}</span>
     </span>
   );
 }
@@ -134,8 +155,6 @@ export function AccountsPage() {
       switch (sort.columnId) {
         case "type": return ACCOUNT_TYPE_LABELS[a.accountType].localeCompare(ACCOUNT_TYPE_LABELS[b.accountType]) * dir;
         case "status": return a.status.localeCompare(b.status) * dir;
-        // Amounts in different currencies are never compared: group by currency first.
-        case "start": return a.currency !== b.currency ? a.currency.localeCompare(b.currency) : compareMoney(a.startingBalance, b.startingBalance, sort.direction);
         default: return label(a).localeCompare(label(b)) * dir;
       }
     });
@@ -163,7 +182,9 @@ export function AccountsPage() {
     { id: "platform", header: "Platform", cell: a => a.broker ?? <span className="ds-faint">Not set</span> },
     { id: "type", header: "Type", sortable: true, cell: a => ACCOUNT_TYPE_LABELS[a.accountType] },
     { id: "status", header: "Status", sortable: true, cell: a => <AccountStatus account={a} /> },
-    { id: "start", header: "Starting balance", align: "end", sortable: true, firstDirection: "descending", cell: a => <MoneyCell value={a.startingBalance} signed={false} currency={a.currency} /> },
+    // Not sortable: each balance is read per row (estimate or checkpoint, possibly unknown or in another currency),
+    // so the page has no list of comparable amounts to order by. Starting balance stays on the account's details.
+    { id: "balance", header: "Current balance", align: "end", cell: a => <BalanceCell account={a} checkedAt={checkedAt} /> },
     { id: "pnl", header: "Net P&L", align: "end", cell: a => <NetPnlCell account={a} /> },
     { id: "rulebook", header: "Rulebook", cell: a => <RulebookCell account={a} /> },
     { id: "trades", header: "Trades", align: "end", cell: a => <TradesCell account={a} /> },
@@ -180,18 +201,16 @@ export function AccountsPage() {
     },
   ];
 
-  // The same search and status filter for both layouts.
-  const filterBar = (
-    <>
-      <SearchField label="Search accounts" value={query} onValueChange={v => { setQuery(v); resetPage(); }} placeholder="Search name, firm, platform or number" />
-      <SegmentedControl<AccountFilter>
-        label="Show"
-        value={filter}
-        onValueChange={f => { setFilter(f); resetPage(); }}
-        options={FILTERS.map(f => ({ value: f, label: accountFilterLabels[f], count: counts[f] }))}
-      />
-    </>
+  // The same status filter (left) and search (right, on the same row) for both layouts.
+  const statusFilter = (
+    <SegmentedControl<AccountFilter>
+      label="Show"
+      value={filter}
+      onValueChange={f => { setFilter(f); resetPage(); }}
+      options={FILTERS.map(f => ({ value: f, label: accountFilterLabels[f], count: counts[f] }))}
+    />
   );
+  const search = <SearchField label="Search accounts" value={query} onValueChange={v => { setQuery(v); resetPage(); }} placeholder="Search name, firm, platform or number" />;
 
   const addButton = (
     <Button variant="primary" icon={<Plus size={16} aria-hidden="true" />} onClick={() => dialogs.open({ kind: "create" })}>
@@ -247,6 +266,7 @@ export function AccountsPage() {
             <Kpis live={filterAccounts(all, "live")} checkedAt={checkedAt} />
             {view === "table" ? (
               <DataTable
+                className="acct-table"
                 label="Accounts"
                 headingLevel={2}
                 columns={columns}
@@ -258,14 +278,15 @@ export function AccountsPage() {
                 onRowClick={open}
                 activeRowId={active.activeId}
                 isRowMuted={a => a.archivedAt !== null}
-                toolbar={filterBar}
+                toolbar={statusFilter}
+                actions={search}
                 fallback={rows.length === 0 ? <EmptyState kind="no-matches" size="compact" description={filter === "archived" ? "No archived accounts." : "No accounts match this search and filter."} action={<Button size="sm" onClick={() => { setQuery(""); setFilter("live"); }}>Show live accounts</Button>} /> : undefined}
                 pagination={{ page, pageSize, total: rows.length, onPageChange: setPage, pageSizeOptions: [10, 25, 50], onPageSizeChange: n => { setPageSize(n); resetPage(); } }}
                 footer={filter !== "archived" && counts.archived > 0 ? <button type="button" className="acct-link" onClick={() => { setFilter("archived"); resetPage(); }}>{counts.archived} archived</button> : undefined}
               />
             ) : (
               <>
-                <div className="acct-card-toolbar">{filterBar}</div>
+                <div className="acct-card-toolbar">{statusFilter}{search}</div>
                 <ul className="acct-cards" aria-label="Accounts">
                   {rows.map(a => (
                     <li key={a.id} className="acct-card-wrap">
@@ -277,7 +298,8 @@ export function AccountsPage() {
               </>
             )}
             <p className="ds-faint acct-footnote">
-              Starting balance is what each attempt began with, not today's balance. Net P&amp;L is the sum of closed trades with a known result.
+              Current balance is the last saved estimate while Today calls it current, otherwise the latest balance checkpoint you recorded (labelled as one),
+              otherwise — with the reason; it is never the starting balance, which stays on each account's details. Net P&amp;L is the sum of closed trades with a known result.
               Cards show drawdown headroom, floor and progress only from the last saved estimate while it is current; otherwise they say why the figure is unknown, never Safe.
             </p>
           </div>

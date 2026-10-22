@@ -68,6 +68,14 @@ export interface OverviewFigure {
   note: string | null;
 }
 
+/** The balance figure, with what the Accounts table's Current balance column shows in short. */
+export interface BalanceFigure extends OverviewFigure {
+  /** When the value is from: the estimate's as-of instant or the checkpoint's; null when there is no value. */
+  at: string | null;
+  /** Trades recorded after the checkpoint, which it doesn't include (0 for an estimate). */
+  tradesSince: number;
+}
+
 export interface OverviewMeter {
   label: string;
   /** Engine-recorded amounts as decimal text; only their ratio sets the bar width. */
@@ -172,7 +180,12 @@ const OBSERVATION_SOURCE: Record<FinancialObservation["sourceCategory"], string>
   user_entered: "entered by you",
 };
 
-function balanceFigure(input: OverviewInput): OverviewFigure {
+/**
+ * An attempt's balance, as the card and the Accounts table's Current balance column show it: the current engine
+ * balance, else the latest checkpoint with its provenance, else Not available with the reason. Never the starting
+ * balance, never a sum made here.
+ */
+export function balanceFigure(input: Pick<OverviewInput, "account" | "truth" | "records" | "when">): BalanceFigure {
   const { account, truth, records, when } = input;
   // A current calculation's balance: opening checkpoint + closed trades + ledger, as Rust's engine recorded it.
   if (truth.kind === "current" && truth.result.balance !== null) {
@@ -184,10 +197,13 @@ function balanceFigure(input: OverviewInput): OverviewFigure {
       value: money(truth.result.balance, account.currency),
       provenance: { label: "From your records", tone: "flow" },
       note: `As of ${when(truth.result.asOf)}${incomplete.length ? ` · ${incomplete.map(k => words[k]).join(", ")} stated incomplete` : ""}`,
+      at: truth.result.asOf,
+      tradesSince: 0,
     };
   }
-  if (records.state === "loading") return { label: "Balance", value: { kind: "text", text: null }, provenance: null, note: "Checking checkpoints…" };
-  if (records.state === "error") return { label: "Balance", value: unavailable("Checkpoints couldn't be read."), provenance: { label: "Unknown", tone: "neutral" }, note: "Checkpoints couldn't be read." };
+  const none = { at: null, tradesSince: 0 };
+  if (records.state === "loading") return { label: "Balance", value: { kind: "text", text: null }, provenance: null, note: "Checking checkpoints…", ...none };
+  if (records.state === "error") return { label: "Balance", value: unavailable("Checkpoints couldn't be read."), provenance: { label: "Unknown", tone: "neutral" }, note: "Checkpoints couldn't be read.", ...none };
   const latest = checkpointSummary(records.value.observations).latest;
   if (!latest) {
     return {
@@ -195,6 +211,7 @@ function balanceFigure(input: OverviewInput): OverviewFigure {
       value: unavailable("No balance checkpoint recorded yet."),
       provenance: { label: "Not available", tone: "neutral" },
       note: "Record a balance checkpoint to show one. The starting balance isn't today's balance.",
+      ...none,
     };
   }
   const since = records.value.trades.filter(t => Date.parse(t.exitAt ?? t.entryAt) > Date.parse(latest.observedAt)).length;
@@ -205,6 +222,8 @@ function balanceFigure(input: OverviewInput): OverviewFigure {
     value: money(latest.value, latest.currency),
     provenance: confirmed ? { label: "Confirmed by you", tone: "profit" } : { label: "Not confirmed", tone: "warn" },
     note: `${OBSERVATION_SOURCE[latest.sourceCategory]}, ${when(latest.observedAt)}${since > 0 ? ` · ${since} ${since === 1 ? "trade" : "trades"} since, not included` : ""}`,
+    at: latest.observedAt,
+    tradesSince: since,
   };
 }
 
