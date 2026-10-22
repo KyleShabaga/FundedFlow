@@ -2,7 +2,9 @@
 // mindset/general tags, the plan (entry, stop, target, risk), thesis and reflection; screenshots below.
 // The review keeps the labels it was made with; renamed or archived templates show both. Process (checklist) and
 // outcome (P&L) are shown apart. A save names the revision it started from, so a stale form is a conflict. Unsaved
-// edits are guarded (links and window close) and kept per account and trade for the window's session.
+// edits are guarded (links and window close) and kept per account and trade for the window's session. A save's
+// returned review is the form's new baseline: Rust stores canonical values (decimals, tag and answer order), so the
+// form is compared with what was persisted, never with what was typed.
 import { toMicros, type Library, type ReviewInput, type TradeReview } from "@fundedflow/domain";
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -97,6 +99,8 @@ export function toReviewInput(accountId: string, tradeId: string, revision: numb
 /* ---------- Kept edits (per window session; every access guarded) ---------- */
 
 interface Kept { revision: number | null; values: ReviewFormValues }
+interface Baseline { revision: number | null; values: ReviewFormValues }
+const same = (a: ReviewFormValues, b: ReviewFormValues) => JSON.stringify(a) === JSON.stringify(b);
 const keptKey = (accountId: string, tradeId: string) => `fundedflow.tradeReview.${accountId}.${tradeId}`;
 function keep(accountId: string, tradeId: string, kept: Kept) {
   try { sessionStorage.setItem(keptKey(accountId, tradeId), JSON.stringify(kept)); } catch { /* Edits stay in the page. */ }
@@ -129,9 +133,8 @@ export function ReviewCard({ account, trade }: { account: AccountViewModel; trad
           <LoadingState label="Loading the review" rows={5} />
         )
       ) : (
-        // A new revision (saved here or elsewhere) starts the form again from what is stored. A screenshot added to a
-        // trade without a review creates an empty one at revision 1, which must not reset the form: no review is 1 too.
-        <ReviewForm key={review.data?.revision ?? 1} account={account} trade={trade} review={review.data} library={library.data ?? null}
+        // The form follows new revisions itself, so a save made here keeps edits typed while it was pending.
+        <ReviewForm account={account} trade={trade} review={review.data} library={library.data ?? null}
           libraryFailed={library.error !== null && library.data === undefined} reload={retryRead(review.refresh)} />
       )}
       {review.data !== undefined && <Screenshots account={account} trade={trade} review={review.data} />}
@@ -151,19 +154,40 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
   const base = useId().replace(/:/g, "");
   const navigate = useNavigate();
   const toast = useToast();
-  const initial = useMemo(() => reviewValues(review), [review]);
-  const revision = review?.revision ?? null;
-  const [restorable, setRestorable] = useState(() => {
+  const persistedNow = useMemo<Baseline>(() => ({ revision: review?.revision ?? null, values: reviewValues(review) }), [review]);
+  const restorableFor = (b: Baseline) => {
     const k = kept(account.id, trade.id);
-    return k && JSON.stringify(k.values) !== JSON.stringify(initial) ? k : null;
-  });
-  const [values, setValues] = useState(initial);
+    return k && !same(k.values, b.values) ? k : null;
+  };
+  // What is persisted as far as this form knows: the review it opened on, the one its last save returned, or a newer one.
+  const [baseline, setBaseline] = useState(persistedNow);
+  const [restorable, setRestorable] = useState(() => restorableFor(persistedNow));
+  const [values, setValues] = useState(persistedNow.values);
+  const [pending, setPending] = useState(false);
+  const [starts, setStarts] = useState(0);
   const [summary, setSummary] = useState<ValidationIssue[]>([]);
   const [leaving, setLeaving] = useState<string | null>(null);
+  const latest = useRef(values);
+  latest.current = values;
   const form = useRef<HTMLFormElement>(null);
   const save = useSaveTradeReview(account.id, trade.id);
   const readOnly = account.archivedAt !== null;
-  const dirty = JSON.stringify(values) !== JSON.stringify(initial);
+  // A newer revision saved elsewhere (or reloaded after a conflict) starts the form again from what is stored. While a
+  // save is pending its result decides, and a revision it returned is already the baseline. A screenshot added to a
+  // trade without a review creates an empty one at revision 1, which must not reset the form: no review is 1 too.
+  if (!pending && (persistedNow.revision ?? 1) > (baseline.revision ?? 1)) {
+    setBaseline(persistedNow);
+    setValues(persistedNow.values);
+    setRestorable(restorableFor(persistedNow));
+    setSummary([]);
+    setStarts(n => n + 1);
+  }
+  // Starting again also drops the last save's feedback (a conflict notice belongs to the revision it was about).
+  const resetSave = useRef(save.reset);
+  resetSave.current = save.reset;
+  useEffect(() => { if (starts > 0) resetSave.current(); }, [starts]);
+  const revision = (persistedNow.revision ?? 0) > (baseline.revision ?? 0) ? persistedNow.revision : baseline.revision;
+  const dirty = !same(values, baseline.values);
 
   useLeaveGuard(dirty, href => setLeaving(href));
   useEffect(() => {
@@ -207,9 +231,21 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
     if (plannedRisk !== null && plannedRisk <= 0n) issues.push({ fieldId: fid(base, "plannedRisk"), message: "Planned risk: must be greater than zero (leave it empty when unknown)" });
     setSummary(issues);
     if (issues.length) { queueMicrotask(() => focusFirstInvalid(form.current)); return; }
-    save.submit(toReviewInput(account.id, trade.id, revision, values)).then(
-      () => { forget(account.id, trade.id); toast.show({ tone: "success", title: "Review saved" }); },
-      () => focusFirstInvalidWhenShown(form.current),
+    const submitted = values;
+    setPending(true);
+    save.submit(toReviewInput(account.id, trade.id, revision, submitted)).then(
+      saved => {
+        const persisted = { revision: saved.revision, values: reviewValues(saved) };
+        // Edits made while the save was pending stay unsaved, now against the revision it stored.
+        const edited = !same(latest.current, submitted);
+        if (edited) keep(account.id, trade.id, { revision: persisted.revision, values: latest.current });
+        else forget(account.id, trade.id);
+        setBaseline(persisted);
+        if (!edited) setValues(persisted.values);
+        setPending(false);
+        toast.show({ tone: "success", title: "Review saved" });
+      },
+      () => { setPending(false); focusFirstInvalidWhenShown(form.current); },
     );
   };
   const feedback = toMutationState(save, { success: "Review saved.", fieldId: f => fid(base, f.split(".")[0]), fieldLabel: f => FIELD_LABELS[f.split(".")[0]] });
@@ -316,7 +352,7 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
         </fieldset>
         <div className="jr-form-actions">
           {dirty && <span className="ds-faint" role="status">Unsaved changes</span>}
-          <Button disabled={!dirty || save.isPending} onClick={() => { setValues(initial); forget(account.id, trade.id); }}>Discard changes</Button>
+          <Button disabled={!dirty || save.isPending} onClick={() => { setValues(baseline.values); forget(account.id, trade.id); }}>Discard changes</Button>
           <Button type="submit" variant="primary" loading={save.isPending} disabled={readOnly || (!save.canSubmit && !save.isPending)}
             disabledReason={readOnly ? "Archived accounts are read-only" : !save.canSubmit && !save.isPending ? "Saving isn't available right now" : undefined}>
             {save.isPending ? "Saving…" : review ? "Save review" : "Save review"}
