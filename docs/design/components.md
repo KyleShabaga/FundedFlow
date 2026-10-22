@@ -59,7 +59,7 @@ behaviour. Build 12, Triage and P2 patterns remain with their cards.
 - Layout: sidebar + main column. Sidebar 248 px expanded, 72 px collapsed (icons only, `title` and `aria-label` on
   each link). Toggle button in the sidebar header; shortcut Ctrl+B. Remember the state in `settings` (or local
   storage until settings commands exist).
-- Navigation: **Today** (default), **Journal**, **Insights**, **Accounts**, with **Settings** at the bottom and a "Saved on this computer" footer. No Import item or fabricated counts.
+- Navigation: **Today** (default), **Journal**, **Insights**, **Accounts**, **Import Wizard** (P0-D07), with **Settings** at the bottom and a "Saved on this computer" footer. No fabricated counts.
 - Active item: `flow-soft` ground, `flow` text, `aria-current="page"`.
 - Below 900 px of window the sidebar collapses to the icon rail automatically (Build 26.85; [window-support.md](window-support.md)).
 
