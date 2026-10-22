@@ -114,26 +114,6 @@ function SelectedAccount({ account, checkedAt, overview, predecessor }: { accoun
   const importing = useCommitCsvImport(account.id).isPending;
   const [verifying, setVerifying] = useState(false);
   const opening = today.observations.data ? checkpointSummary(today.observations.data).opening : null;
-  const summary = (
-    <section className="ds-card td-panel td-account" aria-labelledby="td-account-title">
-      <div className="td-panel-head">
-        <div>
-          <h2 id="td-account-title" className="td-account-name">{accountLabel(account)}</h2>
-          <p className="ds-faint td-card-line">{ACCOUNT_TYPE_LABELS[account.accountType]} · {account.currency} · <AccountStatus account={account} /></p>
-        </div>
-        <div className="td-card-line"><RulebookSummary facts={facts} /></div>
-      </div>
-      {facts.setup && facts.setup.length > 0 && (
-        <InlineNotice tone="warning" live="off" title="Setup needed for limits"
-          actions={<Link to={facts.setup.some(s => s.key === "rulebook") ? `/accounts/${encodeURIComponent(account.id)}/rulebook` : `/accounts/${encodeURIComponent(account.id)}`}>Finish setup</Link>}>
-          <ul className="td-list">{facts.setup.map(s => <li key={s.key}><b>{s.label}.</b> {s.detail}</li>)}</ul>
-        </InlineNotice>
-      )}
-      {facts.setup === null && facts.rulebook.kind === "unknown" && (
-        <InlineNotice tone="warning" live="off" title="Rulebook unknown">The rulebook assignment couldn't be read, so limits are Unknown.</InlineNotice>
-      )}
-    </section>
-  );
   return (
     <>
       {account.predecessorAccountId && (
@@ -143,13 +123,26 @@ function SelectedAccount({ account, checkedAt, overview, predecessor }: { accoun
           <Link to={`/accounts/${encodeURIComponent(account.predecessorAccountId)}`}>Earlier attempt (history only)</Link>
         </InlineNotice>
       )}
-      {/* P0-D29: on a wide main column freshness shares a row with what follows it (all accounts, or this account when
-          there is no overview); reading and keyboard order stay freshness first. */}
-      <div className="td-lead">
-        <FreshnessPanel account={account} today={today} imports={imports.data ?? (imports.error ? null : undefined)} importing={importing} checkedAt={checkedAt} />
-        {overview ?? summary}
-      </div>
-      {overview && summary}
+      <FreshnessPanel account={account} today={today} imports={imports.data ?? (imports.error ? null : undefined)} importing={importing} checkedAt={checkedAt} />
+      {overview}
+      <section className="ds-card td-panel td-account" aria-labelledby="td-account-title">
+        <div className="td-panel-head">
+          <div>
+            <h2 id="td-account-title" className="td-account-name">{accountLabel(account)}</h2>
+            <p className="ds-faint td-card-line">{ACCOUNT_TYPE_LABELS[account.accountType]} · {account.currency} · <AccountStatus account={account} /></p>
+          </div>
+          <div className="td-card-line"><RulebookSummary facts={facts} /></div>
+        </div>
+        {facts.setup && facts.setup.length > 0 && (
+          <InlineNotice tone="warning" live="off" title="Setup needed for limits"
+            actions={<Link to={facts.setup.some(s => s.key === "rulebook") ? `/accounts/${encodeURIComponent(account.id)}/rulebook` : `/accounts/${encodeURIComponent(account.id)}`}>Finish setup</Link>}>
+            <ul className="td-list">{facts.setup.map(s => <li key={s.key}><b>{s.label}.</b> {s.detail}</li>)}</ul>
+          </InlineNotice>
+        )}
+        {facts.setup === null && facts.rulebook.kind === "unknown" && (
+          <InlineNotice tone="warning" live="off" title="Rulebook unknown">The rulebook assignment couldn't be read, so limits are Unknown.</InlineNotice>
+        )}
+      </section>
       <RiskSection account={account} today={today} current={rulebook.currentVersion.data ?? null} />
       <TodayActions account={account} onVerify={() => setVerifying(true)} />
       <RealizedSection account={account} />

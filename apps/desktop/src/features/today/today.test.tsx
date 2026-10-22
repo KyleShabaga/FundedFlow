@@ -555,25 +555,36 @@ describe("P0-02: the current result", () => {
 describe("layout (P0-D29)", () => {
   const follows = (a: Element, b: Element) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 
-  it("keeps freshness first, then all accounts, then the selected account, whatever the arrangement", async () => {
+  it("keeps freshness first, then all accounts, then the selected account, as siblings the wide grid can place", async () => {
     renderToday();
     const fresh = await screen.findByRole("region", { name: "How fresh this is" });
     const overview = screen.getByRole("region", { name: "Active accounts" });
     const summary = screen.getByRole("region", { name: "Example · Eval A" });
-    // On a wide main column the lead row puts freshness beside the overview; reading and Tab order don't change.
-    const lead = fresh.parentElement!;
-    expect(lead.classList.contains("td-lead")).toBe(true);
-    expect([...lead.children]).toEqual([fresh, overview]);
-    expect(follows(fresh, overview) && follows(overview, summary)).toBe(true);
-    expect(follows(summary, riskSection())).toBe(true);
+    // today.css places the panel right after freshness beside it; DOM, reading and Tab order never change.
+    expect(fresh.classList.contains("td-fresh")).toBe(true);
+    expect(fresh.parentElement!.classList.contains("td-page")).toBe(true);
+    expect(fresh.nextElementSibling).toBe(overview);
+    expect(overview.nextElementSibling).toBe(summary);
+    expect(summary.nextElementSibling).toBe(riskSection());
+    expect(riskSection().classList.contains("td-risk")).toBe(true);
   });
 
-  it("with one active account, freshness shares the lead row with that account's summary", async () => {
+  it("with one active account, freshness is followed by the summary and then the risk estimate", async () => {
     seed([makeAccount({ id: A, name: "Eval A", propFirm: "Example" })]);
     renderToday();
     const fresh = await screen.findByRole("region", { name: "How fresh this is" });
     expect(screen.queryByRole("region", { name: "Active accounts" })).toBeNull();
-    expect([...fresh.parentElement!.children]).toEqual([fresh, screen.getByRole("region", { name: "Example · Eval A" })]);
-    expect(follows(fresh.parentElement!, riskSection())).toBe(true);
+    const summary = screen.getByRole("region", { name: "Example · Eval A" });
+    expect(fresh.nextElementSibling).toBe(summary);
+    expect(summary.classList.contains("td-account")).toBe(true);
+    expect(summary.nextElementSibling).toBe(riskSection());
+  });
+
+  it("with no account chosen, the overview is not placed beside anything", async () => {
+    seed([makeAccount({ id: A, name: "Eval A" }), makeAccount({ id: B, name: "Eval B" })], null);
+    renderToday();
+    await screen.findByText("Choose an account");
+    expect(screen.queryByRole("region", { name: "How fresh this is" })).toBeNull();
+    expect(follows(screen.getByText("Choose an account"), screen.getByRole("region", { name: "Active accounts" }))).toBe(true);
   });
 });

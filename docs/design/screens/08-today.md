@@ -25,9 +25,10 @@ default route; there is no separate Home.
 
 ## Responsive layout (P0-D29)
 Today fills the shared content frame ([window-support.md](../window-support.md)); nothing is reordered.
-- From 1280 px of main column, freshness shares a row (5 : 7) with the panel after it in reading order: Active
-  accounts, or the account summary when only one attempt is active. Below that everything stacks.
-- Between 880 and 1279 px the freshness list shows two columns of label/value rows, so values stay near their labels.
+- From 1280 px of main column, freshness (5 of 12 columns) sits beside the panel after it in reading order: Active
+  accounts, or, with one active attempt, the account summary with the risk estimate under it. CSS placement only:
+  nothing is reordered or remounted. Below that everything stacks.
+- The freshness list shows two columns of label/value rows when each gets 420 px, so values stay near their labels.
 - Active accounts: 1 to 4 columns by the section's own width (from 560, 880 and 1200 px); cards stay about
   270–560 px wide.
 - Freshness disclosure and a Cards/List view are separate cards; this layout leaves room for both.

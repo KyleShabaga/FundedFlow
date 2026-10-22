@@ -109,8 +109,9 @@ Boards in [`mockups/p0/`](../mockups/p0/). They redraw the page Build 22 ships; 
 ### Keyboard and narrow windows
 - Day navigation buttons come before the summary in tab order; jump links move focus to the section heading.
 - Radio groups are arrow-key navigable; Clear answer follows the group. After a save, focus returns to the status line.
-- Below 1100 px the rail moves under the form; below 860 px the summary stacks; at 720 px all fields are one column
-  and the action bar wraps (primary last).
+- As built: the summary and fact grids fold by their own width (`auto-fit`), the plan grid is one column below 640 px
+  of its own width, and the sticky action bar wraps (primary last). The mockup's rail breakpoints (1100/860/720 px of
+  window) are superseded by [window-support.md](../window-support.md) (P0-D29).
 
 ### Changes proposed for the built screen (UI only)
 1. Section jump links with progress counts.

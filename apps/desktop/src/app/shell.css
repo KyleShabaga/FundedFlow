@@ -42,7 +42,7 @@
 .shell-local { display: flex; justify-content: center; white-space: nowrap; align-items: center; gap: var(--space-2); font-size: 12px; color: var(--ink-muted); }
 .shell-local > span:first-child { color: var(--flow); }
 /* The header's rule spans the main column; its contents sit on the shared content frame, like the body (P0-D29). */
-.shell-header { display: flex; align-items: center; min-height: 96px; box-sizing: border-box; padding: var(--space-6) 0; border-bottom: 1px solid var(--line-100); }
+.shell-header { display: flex; align-items: center; min-height: 96px; padding: var(--space-6) 0; border-bottom: 1px solid var(--line-100); }
 .shell-header-frame { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4); }
 .shell-header h1 { margin: 0; font: 600 24px/32px var(--font-display); overflow-wrap: anywhere; }
 .shell-header-context { flex: 1 1 200px; min-width: 0; }

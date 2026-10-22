@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 const src = new URL("../", import.meta.url);
 const sheets: Record<string, string> = Object.fromEntries(
   (readdirSync(src, { recursive: true }) as string[])
-    .map(f => f.replaceAll("\\", "/"))
+    .map(f => f.replace(/\\/g, "/"))
     .filter(f => f.endsWith(".css") && !f.endsWith("DataModelPanel.css"))
     .map(f => [f, readFileSync(new URL(f, src), "utf8") as string]),
 );
@@ -59,7 +59,7 @@ describe("one breakpoint set", () => {
   });
 
   it("uses no window-width media queries for page layout", () => {
-    for (const [file, css] of entries) expect(css, file).not.toMatch(/@media[^{]*\((?:max|min)-width/);
+    for (const [file, css] of entries) expect(css, file).not.toMatch(/@media[^{]*\((?:(?:max|min)-width|width\s*[<>])/);
   });
 
   it("only breaks the main column at the documented widths", () => {
@@ -85,8 +85,18 @@ describe("Today", () => {
     expect(css).toContain("@container td-overview (min-width: 1200px) { .td-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }");
   });
 
-  it("puts freshness beside the next panel only on a wide main column", () => {
-    expect(rule(css, ".td-lead")).toContain("grid-template-columns: minmax(0, 1fr)");
-    expect(css).toContain("@container ds-main (min-width: 1280px) { .td-lead { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); } }");
+  it("places freshness beside the next panel only on a wide main column, by CSS alone", () => {
+    expect(css).toContain("@container ds-main (min-width: 1280px) {");
+    const wide = css.slice(css.indexOf("@container ds-main (min-width: 1280px) {"));
+    expect(wide).toContain(".td-page > .td-fresh { grid-column: span 5; align-self: start; }");
+    expect(wide).toContain(".td-page > .td-fresh + * { grid-column: span 7; }");
+    expect(wide).toContain(".td-page > .td-fresh + .td-account + .td-risk { grid-column: 6 / -1; }");
+    // Nothing is moved out of reading order: no `order`, only column spans.
+    expect(css).not.toMatch(/(^|[;{])\s*order\s*:/m);
+  });
+
+  it("lets the freshness list use two columns only when each gets 420 px, without squeezing values", () => {
+    expect(css).toContain(".td-fresh .ds-stats { grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));");
+    expect(css).toContain(".td-fresh .ds-stats dt { flex: none; max-width: 50%; }");
   });
 });

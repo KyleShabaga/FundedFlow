@@ -59,18 +59,26 @@ Nothing uses CSS `zoom`, transforms or a global font-size change to fill space.
 |---|---|---|
 | < 640 px | Gutter `space-4`; header and body vertical padding `space-4` | `design-system.css`, `shell.css` |
 | < 880 px | Gutter `space-6`. Two-column page grids stack: account detail, journal trade detail, Insights calendar with its day panel, the import wizard's two panels | feature CSS |
-| ≥ 880 px and < 1280 px | Today's freshness list shows its label/value rows in two columns | `today.css` |
-| ≥ 1280 px | Today's lead row: freshness beside the panel that follows it in reading order (Active accounts, or the account summary when there is only one active account), 5 : 7 | `today.css` |
+| ≥ 1280 px | Today: freshness (5 of 12 columns) beside the panel that follows it in reading order: Active accounts, or, with one active account, the account summary with the risk estimate under it. CSS placement only; nothing is reordered or remounted | `today.css` |
 
 880 px is content-driven: the narrowest two-column page grid needs a main column of about 480 px plus a 320 px side
 panel and a gap, which is 816 px of content plus 2 × 32 px gutters. 1280 px is where Today's 5 : 7 split gives the
-freshness list about 500 px and Active accounts room for two cards of at least 270 px.
+freshness list about 500 px and Active accounts room for three cards.
+
+**Trade-off at 1024 px.** With the sidebar open, a 1024 px window leaves a 761 px main column, so the two-column page
+grids stack there; collapse the sidebar (Ctrl+B) and the 937 px column shows them side by side. Before P0-D29
+Accounts and Import stayed two-column down to a 900 px window while Journal and Insights stacked below 1080/1100 px;
+one rule now applies to all four. "Expanded layout from 1024 px" (Build 26.85) means full navigation, filters and
+page structure, not that every grid is two-column.
 
 Before P0-D29 these were window-width media queries at 900 px (Accounts, Import), 1080 px (Journal) and 1100 px
 (Insights), which ignored the sidebar: the same window stacked or not depending on whether the sidebar was open.
 
 ### Component-level widths
 
+- **Today freshness list:** two columns of label/value rows when each column gets 420 px
+  (`repeat(auto-fit, minmax(min(420px, 100%), 1fr))`); a label wraps at half its column, so 200% text never squeezes
+  the value away.
 - **Today Active accounts** (`td-overview` container): 1 column below 560 px, 2 from 560, 3 from 880, 4 from
   1200 px of the section's own width. Cards stay roughly 270–560 px wide; a few accounts never stretch across an
   ultrawide frame.
