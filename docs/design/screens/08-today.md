@@ -33,6 +33,12 @@ Today fills the shared content frame ([window-support.md](../window-support.md))
   wide. A count that would leave one card alone on the last row is balanced (P0-D31: 4 → 2 + 2, 5 → 3 + 2,
   7 → 3 + 2 + 2) in the Cards view, except with 2 across, where three would be too narrow ([window-support.md](../window-support.md)).
 - Freshness disclosure is a separate card; this layout leaves room for it.
+- P0-D22: "How fresh this is" is a `DisclosureCard`. It starts closed, showing the title, "Checked against your records
+  at …" and a chevron; the header button opens the rows downward in the flow. The choice lasts for the window session
+  (through Check again, data refreshes and account changes) and opening it reads nothing. While closed, anything a row
+  would flag (trades or import history unreadable, last import failed, checkpoints unreadable, the last estimate for
+  another trading day) is listed under the header as "Needs attention", and the checkpoint-conflict and discrepancy
+  notices always stay visible. Check again stays outside the card, above it.
 
 ## Cards / List (P0-D23)
 - A **Cards | List** segmented control (`SegmentedControl`, named "Active accounts layout") sits beside the Active

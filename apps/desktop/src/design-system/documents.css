@@ -39,4 +39,28 @@
 .ds-disclosure-summary:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
 .ds-disclosure[open] > .ds-disclosure-summary { border-bottom: 1px solid var(--line-100); border-radius: var(--radius-md) var(--radius-md) 0 0; }
 .ds-disclosure-body { padding: var(--space-4); }
+/* DisclosureCard (P0-D22): the header is the toggle; the body opens downward in the flow. Closed, the body is inert
+   and hidden, and it takes no space. */
+.ds-disclosure-card { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4); min-width: 0; }
+.ds-disclosure-card:not(.is-open) { row-gap: 0; }
+.ds-disclosure-card:not(.is-open) > .ds-notice { margin-top: var(--space-3); }
+.ds-disclosure-card-heading { margin: 0; font: inherit; }
+.ds-disclosure-card-toggle {
+  display: flex; align-items: center; gap: var(--space-3); width: calc(100% + 2 * var(--space-2)); margin: 0 calc(-1 * var(--space-2));
+  padding: var(--space-2); border: 0; border-radius: var(--radius-md); background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.ds-disclosure-card-toggle:hover { background: var(--bg-200); }
+.ds-disclosure-card-toggle:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.ds-disclosure-card-text { display: flex; flex: 1; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: var(--space-3); row-gap: var(--space-1); min-width: 0; }
+.ds-disclosure-card-text .ds-title { margin: 0; }
+.ds-disclosure-card-summary { color: var(--ink-faint); font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+.ds-disclosure-card-chevron { flex: none; color: var(--ink-muted); transition: transform 160ms ease-out; }
+.ds-disclosure-card.is-open .ds-disclosure-card-chevron { transform: rotate(180deg); }
+.ds-disclosure-card-body { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 160ms ease-out, visibility 0s; }
+.ds-disclosure-card-body[inert] { grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows 160ms ease-out, visibility 0s linear 160ms; }
+.ds-disclosure-card-inner { display: grid; gap: var(--space-3); min-height: 0; overflow: clip; overflow-clip-margin: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  .ds-disclosure-card-chevron, .ds-disclosure-card-body, .ds-disclosure-card-body[inert] { transition: none; }
+}
+
 .ds-gate-body h2, .ds-gate-body h3 { margin: 0; }
