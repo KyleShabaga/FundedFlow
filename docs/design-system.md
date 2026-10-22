@@ -116,6 +116,14 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
 - `RadioGroup cards` (P0-D20) shows each option as a bordered card with its description, side by side when each gets
   280 px and stacked otherwise; the chosen card is outlined (border, ground and the radio dot). For a few
   consequential choices, such as the export format.
+- `RadioGroup segmented` (P0-D24) shows a short ordered scale (the 1–5 execution rating) as equal-width segments in
+  one 36 px track. The native radios stay in the segments, visually hidden but focusable: Tab focuses without
+  choosing, arrows and Space choose. Chosen is a flow border, ground and bold label; focus is a separate ring outside
+  the segment; hover only lifts the ground. Option descriptions are not shown, so the group `description` carries the
+  scale's meaning. No value is chosen unless the screen passes one.
+- `Checkbox tile` (P0-D24) is a bordered checkbox the height of a button for a status saved with a form (a trade's
+  Reviewed). The whole tile toggles; checked, it is outlined in flow and keeps the native tick, so colour is never the
+  only signal.
 - `Button loading` keeps focus and ignores clicks, so one click is one write. `disabledReason` keeps a disabled
   button focusable and reads the reason.
 - `FileDropzone` only hands `File` objects (or an `onBrowse` request for a native dialog) to the caller. Reading,

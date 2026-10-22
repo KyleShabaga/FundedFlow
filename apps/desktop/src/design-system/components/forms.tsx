@@ -210,9 +210,14 @@ export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement
   indeterminate?: boolean;
   /** Hide the label visually (table row checkboxes). Pass a string label then. */
   hideLabel?: boolean;
+  /**
+   * A bordered tile the height of a button, the whole tile toggling (P0-D24): for a status saved with a form, such as
+   * a trade's Reviewed, where a bare checkbox gets lost. Checked, the tile is outlined and keeps the native tick.
+   */
+  tile?: boolean;
 }
 
-export function Checkbox({ label, description, error, indeterminate = false, hideLabel, id, className, ref, ...rest }: CheckboxProps) {
+export function Checkbox({ label, description, error, indeterminate = false, hideLabel, tile, id, className, ref, ...rest }: CheckboxProps) {
   const ids = useFieldIds(id);
   const inner = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
@@ -225,7 +230,7 @@ export function Checkbox({ label, description, error, indeterminate = false, hid
     else if (ref) ref.current = el;
   };
   return (
-    <div className={cx("ds-check", error && "is-invalid", className)}>
+    <div className={cx("ds-check", tile && "is-tile", error && "is-invalid", className)}>
       <span className="ds-check-row">
         <input
           {...rest}
@@ -314,18 +319,24 @@ export interface RadioGroupProps<V extends string = string> {
    * descriptions need room. Cards sit side by side when they fit and stack otherwise; the chosen one is outlined.
    */
   cards?: boolean;
+  /**
+   * Show the options as equal-width segments in one track (P0-D24): for a short ordered scale such as a 1–5 rating.
+   * The native radios stay focusable (arrow keys, Space), so focus alone never chooses; option descriptions are not
+   * shown, so put the scale's meaning in the group's `description`.
+   */
+  segmented?: boolean;
   className?: string;
 }
 
 /** One choice of a few. Native radios: arrow keys move and select, Tab leaves the group. */
-export function RadioGroup<V extends string>({ label, name, options, value, defaultValue, onValueChange, description, error, required, disabled, inline, cards, className }: RadioGroupProps<V>) {
+export function RadioGroup<V extends string>({ label, name, options, value, defaultValue, onValueChange, description, error, required, disabled, inline, cards, segmented, className }: RadioGroupProps<V>) {
   const ids = useFieldIds(undefined);
   const groupName = name ?? ids.control;
   return (
     <fieldset
       // radiogroup, not the fieldset's implicit group role: only radiogroup supports aria-required (axe aria-allowed-attr).
       role="radiogroup"
-      className={cx("ds-fieldset", "ds-radio-group", inline && "is-inline", cards && "is-cards", error && "is-invalid", className)}
+      className={cx("ds-fieldset", "ds-radio-group", inline && "is-inline", cards && "is-cards", segmented && "is-segmented", error && "is-invalid", className)}
       aria-describedby={describedBy(ids, description, error)}
       aria-invalid={error ? true : undefined}
       aria-required={required || undefined}
@@ -357,13 +368,13 @@ export function RadioGroup<V extends string>({ label, name, options, value, defa
                   checked={value === undefined ? undefined : value === o.value}
                   defaultChecked={value === undefined && defaultValue !== undefined ? defaultValue === o.value : undefined}
                   onChange={() => onValueChange?.(o.value)}
-                  aria-describedby={o.description != null ? `${optId}-description` : undefined}
+                  aria-describedby={o.description != null && !segmented ? `${optId}-description` : undefined}
                 />
                 <label htmlFor={optId} className="ds-check-label">
                   {o.label}
                 </label>
               </span>
-              {o.description != null && (
+              {o.description != null && !segmented && (
                 <p id={`${optId}-description`} className="ds-field-desc ds-check-desc">
                   {o.description}
                 </p>
