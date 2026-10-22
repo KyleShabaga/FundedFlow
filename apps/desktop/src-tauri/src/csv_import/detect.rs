@@ -46,6 +46,23 @@ pub struct ColumnMapping {
     pub notes: Option<String>,
 }
 
+/// How one field's mapping stands (P0-D09). It judges the header mapping
+/// only: `Matched` never says the rows' values are valid.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MappingStatus {
+    /// A column is mapped and nothing about the mapping is in question.
+    Matched,
+    /// Mapped, but worth a look (another unused column also fits, or one
+    /// column feeds two fields). Never blocks.
+    Review,
+    /// Required field without a column, a column not in the file, or a
+    /// mapping rule broken. Always backed by a `columns.*` file issue.
+    Error,
+    /// Optional field left out.
+    NotMapped,
+}
+
 /// A normalized field and the header it was taken from.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -53,6 +70,9 @@ pub struct MappedField {
     pub field: &'static str,
     pub header: Option<String>,
     pub required: bool,
+    pub status: MappingStatus,
+    /// Short, user-facing reason for `status`.
+    pub reason: String,
 }
 
 struct FieldSpec {
@@ -242,41 +262,55 @@ pub fn detect(headers: &[String], format: Option<Format>, columns: Option<&Colum
             None => spec.names.iter().map(|n| n.to_string()).collect(),
         };
         let found = wanted.iter().find_map(|n| positions.get(n).map(|p| (n, p)));
+        let (status, reason);
         let header = match found {
             Some((_, idx)) if idx.len() > 1 => {
                 let cols: Vec<String> = idx.iter().map(|i| (i + 1).to_string()).collect();
-                d.issues.push(FieldIssue::new(
-                    format!("columns.{}", spec.field),
-                    format!(
-                        "Header '{}' appears in more than one column ({}); rename or remove the extra column.",
-                        headers[idx[0]].trim(),
-                        cols.join(", ")
-                    ),
-                ));
+                let msg = format!(
+                    "Header '{}' appears in more than one column ({}); rename or remove the extra column.",
+                    headers[idx[0]].trim(),
+                    cols.join(", ")
+                );
+                d.issues.push(FieldIssue::new(format!("columns.{}", spec.field), msg.clone()));
+                (status, reason) = (MappingStatus::Error, msg);
                 None
             }
-            Some((_, idx)) => {
+            Some((name, idx)) => {
                 d.columns.0.insert(spec.field, idx[0]);
                 used.push(idx[0]);
+                status = MappingStatus::Matched;
+                reason = if *name == normalize_header(spec.field) {
+                    "The expected header.".to_string()
+                } else if spec.names.contains(&name.as_str()) {
+                    "A known alternative header.".to_string()
+                } else {
+                    "The column you chose.".to_string()
+                };
                 Some(headers[idx[0]].trim().to_string())
             }
             None => {
-                if let Some(Some(h)) = explicit.as_ref().and_then(|m| m.get(spec.field)) {
-                    d.issues.push(FieldIssue::new(
-                        format!("columns.{}", spec.field),
-                        format!("Column '{h}' is not in the file."),
-                    ));
+                let msg = if let Some(Some(h)) = explicit.as_ref().and_then(|m| m.get(spec.field)) {
+                    Some(format!("Column '{h}' is not in the file."))
                 } else if spec.required {
-                    let msg = match &explicit {
+                    Some(match &explicit {
                         Some(_) => "Choose the column for this required field.".to_string(),
                         None => format!("No column found (looked for: {}).", list(spec.names)),
-                    };
-                    d.issues.push(FieldIssue::new(format!("columns.{}", spec.field), msg));
-                }
+                    })
+                } else {
+                    None
+                };
+                (status, reason) = match msg {
+                    Some(msg) => {
+                        d.issues.push(FieldIssue::new(format!("columns.{}", spec.field), msg.clone()));
+                        (MappingStatus::Error, msg)
+                    }
+                    None if explicit.is_some() => (MappingStatus::NotMapped, "Optional; not used.".to_string()),
+                    None => (MappingStatus::NotMapped, "Optional; no matching column.".to_string()),
+                };
                 None
             }
         };
-        d.mapping.push(MappedField { field: spec.field, header, required: spec.required });
+        d.mapping.push(MappedField { field: spec.field, header, required: spec.required, status, reason });
     }
 
     if format == Format::Generic {
@@ -287,9 +321,16 @@ pub fn detect(headers: &[String], format: Option<Format>, columns: Option<&Colum
             None => d.columns.get(f).is_some(),
         };
         if mapped("exitTime") != mapped("exitPrice") {
-            d.issues.push(FieldIssue::new("columns.exitPrice", "Map exit time and exit price together, or neither."));
+            const PAIR: &str = "Map exit time and exit price together, or neither.";
+            d.issues.push(FieldIssue::new("columns.exitPrice", PAIR));
+            // The missing half carries the problem; a column not in the file keeps its own reason.
+            let missing: Vec<&str> = ["exitTime", "exitPrice"].into_iter().filter(|f| !mapped(f)).collect();
+            for m in d.mapping.iter_mut().filter(|m| missing.contains(&m.field) && m.status != MappingStatus::Error) {
+                (m.status, m.reason) = (MappingStatus::Error, PAIR.to_string());
+            }
         }
     }
+    review_mapping(&mut d, specs, &positions, headers);
     if format == Format::Performance && !looks_performance && d.issues.is_empty() {
         d.warnings.push(FieldIssue::new("format", "Headers only partly match a performance export."));
     }
@@ -308,6 +349,35 @@ pub fn detect(headers: &[String], format: Option<Format>, columns: Option<&Colum
         }
     }
     d
+}
+
+/// Non-blocking doubts about mapped fields: one column feeds two fields, or
+/// another unused column also fits the field. Errors are left as they are.
+fn review_mapping(d: &mut Detection, specs: &[FieldSpec], positions: &HashMap<String, Vec<usize>>, headers: &[String]) {
+    let used: Vec<usize> = d.mapping.iter().filter_map(|m| d.columns.get(m.field)).collect();
+    for (m, spec) in d.mapping.iter_mut().zip(specs) {
+        let Some(idx) = d.columns.get(m.field) else { continue };
+        if used.iter().filter(|i| **i == idx).count() > 1 {
+            m.status = MappingStatus::Review;
+            m.reason = format!("Column '{}' is used for more than one field.", headers[idx].trim());
+            continue;
+        }
+        let mut others: Vec<usize> = spec
+            .names
+            .iter()
+            .filter_map(|n| positions.get(*n))
+            .flatten()
+            .copied()
+            .filter(|i| *i != idx && !used.contains(i))
+            .collect();
+        others.sort_unstable();
+        others.dedup();
+        if !others.is_empty() {
+            let names: Vec<String> = others.iter().map(|i| format!("'{}'", headers[*i].trim())).collect();
+            m.status = MappingStatus::Review;
+            m.reason = format!("{} also fits this field and is not used. Check this is the right column.", names.join(", "));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -368,5 +438,92 @@ mod tests {
         let fields: Vec<_> = d.issues.iter().map(|i| i.field.as_str()).collect();
         assert_eq!(fields, ["columns.exitTime", "columns.exitPrice"]);
         assert_eq!(d.columns.get("side"), Some(1));
+    }
+
+    fn status(d: &Detection, field: &str) -> (MappingStatus, String) {
+        let m = d.mapping.iter().find(|m| m.field == field).unwrap();
+        (m.status, m.reason.clone())
+    }
+
+    #[test]
+    fn reports_a_status_and_reason_for_every_field() {
+        // Exact and alias names match; P&L wins realizedPnl but Profit also fits; Fees has no column.
+        let h = headers("Ticker,Action,Quantity,Open Time,Open Price,Close Time,Close Price,P&L,Profit,Account");
+        let d = detect(&h, None, None);
+        assert!(d.issues.is_empty(), "{:?}", d.issues);
+        assert_eq!(status(&d, "symbol"), (MappingStatus::Matched, "A known alternative header.".into()));
+        assert_eq!(status(&d, "quantity"), (MappingStatus::Matched, "The expected header.".into()));
+        let (s, reason) = status(&d, "realizedPnl");
+        assert_eq!(s, MappingStatus::Review);
+        assert!(reason.contains("'Profit'"), "{reason}");
+        assert_eq!(status(&d, "fees"), (MappingStatus::NotMapped, "Optional; no matching column.".into()));
+        // Review never blocks: the file has no issues.
+        assert!(d.mapping.iter().all(|m| m.status != MappingStatus::Error));
+    }
+
+    #[test]
+    fn every_error_status_has_a_blocking_issue_with_the_same_reason() {
+        let d = detect(&headers("Symbol,Qty,Qty,Entry Time,Entry Price"), None, None);
+        for m in &d.mapping {
+            let issue = d.issues.iter().find(|i| i.field == format!("columns.{}", m.field));
+            assert_eq!(m.status == MappingStatus::Error, issue.is_some(), "{m:?}");
+            if let Some(i) = issue {
+                assert_eq!(i.message, m.reason);
+            }
+        }
+        assert_eq!(status(&d, "side").0, MappingStatus::Error);
+        assert!(status(&d, "quantity").1.contains("more than one column"));
+        assert_eq!(status(&d, "exitTime").0, MappingStatus::NotMapped);
+    }
+
+    #[test]
+    fn a_column_used_for_two_fields_needs_review_but_does_not_block() {
+        let m = ColumnMapping {
+            symbol: "Symbol".into(),
+            side: "Side".into(),
+            quantity: "Qty".into(),
+            entry_time: "Entry Time".into(),
+            entry_price: "Entry Price".into(),
+            fees: Some("P&L".into()),
+            realized_pnl: Some("P&L".into()),
+            ..Default::default()
+        };
+        let d = detect(&headers("Symbol,Side,Qty,Entry Time,Entry Price,P&L"), None, Some(&m));
+        assert!(d.issues.is_empty(), "{:?}", d.issues);
+        for f in ["fees", "realizedPnl"] {
+            assert_eq!(status(&d, f), (MappingStatus::Review, "Column 'P&L' is used for more than one field.".into()));
+        }
+        assert_eq!(status(&d, "side"), (MappingStatus::Matched, "The expected header.".into()));
+        assert_eq!(status(&d, "notes"), (MappingStatus::NotMapped, "Optional; not used.".into()));
+    }
+
+    #[test]
+    fn the_exit_pair_rule_marks_the_missing_half() {
+        let base = ColumnMapping {
+            symbol: "Symbol".into(),
+            side: "Side".into(),
+            quantity: "Qty".into(),
+            entry_time: "Entry Time".into(),
+            entry_price: "Entry Price".into(),
+            ..Default::default()
+        };
+        let h = headers("Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Trade");
+        let d = detect(&h, None, Some(&ColumnMapping { exit_time: Some("Exit Time".into()), ..base.clone() }));
+        assert_eq!(status(&d, "exitTime").0, MappingStatus::Matched);
+        assert_eq!(status(&d, "exitPrice"), (MappingStatus::Error, "Map exit time and exit price together, or neither.".into()));
+        // A chosen column that isn't in the file keeps its own reason; the other half carries the pair rule.
+        let d = detect(&h, None, Some(&ColumnMapping { exit_price: Some("Close".into()), ..base }));
+        assert_eq!(status(&d, "exitPrice"), (MappingStatus::Error, "Column 'Close' is not in the file.".into()));
+        assert_eq!(status(&d, "exitTime"), (MappingStatus::Error, "Map exit time and exit price together, or neither.".into()));
+    }
+
+    #[test]
+    fn performance_aliases_match_without_review() {
+        let h = headers("symbol,qty,buyPrice,sellPrice,pnl,boughtTimestamp,soldTimestamp");
+        let d = detect(&h, None, None);
+        assert_eq!(d.format, Format::Performance);
+        assert_eq!(status(&d, "quantity"), (MappingStatus::Matched, "A known alternative header.".into()));
+        assert_eq!(status(&d, "realizedPnl").0, MappingStatus::Matched);
+        assert_eq!(status(&d, "buyFillId").0, MappingStatus::NotMapped);
     }
 }

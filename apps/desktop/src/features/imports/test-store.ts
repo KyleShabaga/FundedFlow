@@ -10,13 +10,18 @@ export { golden };
 export type GoldenCase = (typeof golden.cases)[number];
 export const goldenCase = (name: string) => golden.cases.find(c => c.name === name)! as GoldenCase;
 
+const sorted = (columns: object | null | undefined) => columns ? Object.fromEntries(Object.entries(columns).sort(([a], [b]) => a.localeCompare(b))) : null;
+
 export function createImports() {
   const batches: ImportBatch[] = [];
   const problems = new Map<string, CsvPreview["rows"]>();
   const previews: CsvImportRequest[] = [];
   const overrides = new Map<string, (req: CsvImportRequest) => CsvPreview>();
   let n = 0;
-  const caseFor = (req: CsvImportRequest) => golden.cases.find(c => c.request.content === req.content);
+  // A case recorded for the request's exact column mapping wins (P0-D09 edits); otherwise the file's case.
+  const sameColumns = (c: GoldenCase, req: CsvImportRequest) => JSON.stringify(sorted(c.request.columns)) === JSON.stringify(sorted(req.columns ?? null));
+  const caseFor = (req: CsvImportRequest) =>
+    golden.cases.find(c => c.request.content === req.content && sameColumns(c, req)) ?? golden.cases.find(c => c.request.content === req.content && c.request.columns === null);
   const preview = vi.fn(async (req: CsvImportRequest): Promise<CsvPreview> => {
     previews.push(req);
     const custom = overrides.get(req.fileName);
