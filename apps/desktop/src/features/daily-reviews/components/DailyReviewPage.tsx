@@ -375,10 +375,10 @@ function ReviewForm({ account, data, library, libraryFailed, onDirtyChange, relo
             {review?.plan.timing === "pre_session" && <Badge tone="flow">Written before the session · {formatInstant(review.plan.authoredAt, { timeZone: account.timezone })}</Badge>}
             {review?.plan.timing === "retrospective" && <Badge tone="warn">Written afterwards (retrospective) · {formatInstant(review.plan.authoredAt, { timeZone: account.timezone })}</Badge>}
           </>}>
-          <div className="dr-grid">
+          {/* P0-D26: one two-column grid in reading order (focus, setups, no-trade conditions, commitments, maximum risk,
+              notes); it stacks in narrow containers. Maximum risk keeps its explanation with it. */}
+          <div className="dr-plan-grid">
             {(["focus", "setups", "noTradeConditions", "commitments"] as const).map(f => textArea("plan", f, PLAN_LABELS[f], values.plan[f], v => setPlan(f, v)))}
-          </div>
-          <div className="dr-grid">
             <TextField id={fieldDomId(base, "plan.maxRisk")} label={PLAN_LABELS.maxRisk} optional numeric inputMode="decimal" suffix={account.currency}
               value={values.plan.maxRisk} onChange={e => setPlan("maxRisk", e.target.value)} error={server["plan.maxRisk"]}
               description="Self-imposed. Leave empty when not set; it is never assumed to be zero and isn't checked against your firm's limits." />

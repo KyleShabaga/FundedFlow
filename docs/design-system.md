@@ -114,7 +114,8 @@ Design System artifact on claude.ai. When a token changes, change `tokens.css` h
 - `FileDropzone` only hands `File` objects (or an `onBrowse` request for a native dialog) to the caller. Reading,
   size limits, parsing and staging belong to the CSV import and attachment cards.
 - `ChipGroup` (Build 20) is a several-of-many choice as toggle chips (setup, mistake and mindset tags): a labelled
-  `fieldset` of buttons with `aria-pressed`. `tone="warn"` turns chosen chips amber (mistakes). A chip can carry a
+  `fieldset` of buttons with `aria-pressed`. `tone="warn"` turns chosen chips amber (mistakes). A chosen chip has no
+  checkmark (P0-D25): a filled ground and a doubled border mark it, so the label stays centred and the size doesn't change. A chip can carry a
   `note` (tooltip and screen-reader text, e.g. "Archived") and be `disabled`; `empty` replaces an empty list.
 
 ### Overlays

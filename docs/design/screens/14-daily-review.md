@@ -33,7 +33,8 @@ prop-firm rules are shown apart; none implies another.
 - **Form** (one form, sections as `FormSection`):
   - Status line (live region): Saving…, Unsaved changes, or "Draft / Completed <time> · last saved <time>".
   - Before the session: focus, planned setups, no-trade conditions, process commitments (textareas), maximum risk for
-    the day (money, account currency, optional), plan notes. Badge "Written before the session" or "Written afterwards
+    the day (money, account currency, optional), plan notes. P0-D26: one two-column grid in that reading order (one
+    column in narrow containers); every section card has a 24 px inset; maximum risk keeps its explanation with it. Badge "Written before the session" or "Written afterwards
     (retrospective)" with the authored time.
   - Daily checklist: a daily checklist from the library (`Select`), then one radio group per item: Followed, Missed,
     Not applicable, with an optional note and Clear answer. Unanswered items say so. Renamed or archived items show

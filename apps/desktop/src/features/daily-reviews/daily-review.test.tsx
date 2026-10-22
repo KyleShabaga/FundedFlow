@@ -125,6 +125,14 @@ describe("daily review", () => {
     expect(screen.getByText(/Reopened as draft/)).toBeTruthy();
   });
 
+  it("keeps the plan fields in reading order inside one grid (P0-D26)", async () => {
+    renderAt(dayPath("2026-10-19"));
+    const section = (await screen.findByRole("heading", { name: "Before the session" })).closest("section")!;
+    const labels = [...section.querySelectorAll("label")].map(l => l.textContent?.replace(/\s*Optional$/, "").trim());
+    expect(labels).toEqual(["Focus for the session", "Planned setups", "No-trade conditions", "Process commitments", "Maximum risk for the day", "Plan notes"]);
+    expect(within(section).getByText(/Self-imposed\. Leave empty when not set/)).toBeTruthy();
+  });
+
   it("never shares a review between two accounts on the same date, and says when the selection differs", async () => {
     await holder.store.repository.dailyReviews.save({ accountId: A, tradingDay: "2026-10-19", expectedRevision: null, plan: {}, reflection: { keyLesson: "A's lesson" }, noTradeDay: false, answers: [], action: "save" });
     renderAt(dayPath("2026-10-19", B));

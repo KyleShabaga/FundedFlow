@@ -202,9 +202,13 @@ describe("ChipGroup", () => {
     const moved = screen.getByRole("button", { name: "Moved stop" });
     expect(chased.getAttribute("aria-pressed")).toBe("true");
     expect(moved.getAttribute("aria-pressed")).toBe("false");
+    // P0-D25: a selected chip has no checkmark; its state is aria-pressed (and the selected styling), not an icon.
+    expect(chased.querySelector("svg")).toBeNull();
+    expect(chased.textContent).toBe("Chased");
     moved.focus();
     await userEvent.keyboard(" ");
     expect(moved.getAttribute("aria-pressed")).toBe("true");
+    expect(moved.querySelector("svg")).toBeNull();
     await userEvent.click(chased);
     expect(chased.getAttribute("aria-pressed")).toBe("false");
     const old = screen.getByRole("button", { name: "Old, Archived" }) as HTMLButtonElement;

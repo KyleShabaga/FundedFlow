@@ -435,7 +435,6 @@ export function ChipGroup<V extends string>({ label, options, value, onValueChan
                 title={o.note}
                 onClick={() => toggle(o.value)}
               >
-                {on && <Check size={12} aria-hidden="true" />}
                 {o.label}
                 {o.note && <span className="ds-sr-only">, {o.note}</span>}
               </button>
