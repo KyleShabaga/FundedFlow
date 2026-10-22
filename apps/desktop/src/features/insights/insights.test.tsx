@@ -230,6 +230,39 @@ describe("Insights", () => {
     expect(await screen.findByText("No closed trades in these attempts")).toBeTruthy();
   });
 
+  it("calendar: the selected day shows its average result per trade with the Insights eligibility rules (P0-D17)", async () => {
+    const user = userEvent.setup();
+    holder.store = createJournalStore(accounts(), [
+      ...["10", "20", "-5", "15", "10"].map((net, i) => t(`k${i}`, A3, "2026-10-19", net)),
+      t("u1", A3, "2026-10-19", null),
+      t("u2", A3, "2026-10-20", null),
+      t("s1", A3, "2026-10-21", "30"),
+    ], A3);
+    renderAt("/insights?section=calendar&day=2026-10-19");
+    const panel = await screen.findByRole("complementary", { name: "Selected period" });
+    const row = (label: string) => within(panel).getByText(label, { selector: "dt" }).closest(".ds-stats-row") as HTMLElement;
+    // Net, after fees, over the 5 trades with a known P&L: 50 / 5. The unknown trade is left out, never a zero.
+    expect(within(row("Average net per trade")).getByText("+$10.00")).toBeTruthy();
+    expect(within(row("Average net per trade")).getByText("Over 5 of 6 trades; 1 with an unknown P&L left out")).toBeTruthy();
+    // The "i" (P0-D14's InfoTip) gives the definition and coverage.
+    expect(within(row("Average net per trade")).getByRole("button", { name: "About Average net per trade" })).toBeTruthy();
+    // The links sit together in the panel's action area, after the statistics.
+    const actions = panel.querySelector(".in-period-actions") as HTMLElement;
+    expect(within(actions).getByRole("button", { name: /view the 6 trades/ })).toBeTruthy();
+    expect(within(actions).getByRole("link", { name: /Open Eval #3 for this day in the Journal/ })).toBeTruthy();
+    // The basis toggle switches it to gross (before fees): (50 + 5 × 4) / 5.
+    await user.click(screen.getByRole("button", { name: "Gross P&L" }));
+    expect(within(row("Average gross per trade")).getByText("+$14.00")).toBeTruthy();
+    expect(within(panel).queryByText("Average net per trade")).toBeNull();
+    // A day of unknown results is Unknown with its reason; a day below the minimum sample is withheld, not averaged.
+    await user.click(screen.getByRole("button", { name: /Tue Oct 20: P&L unknown/ }));
+    expect(within(row("Average gross per trade")).getByText("Unknown")).toBeTruthy();
+    expect(within(row("Average gross per trade")).getByText("Every trade here has an unknown P&L")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Wed Oct 21: \+\$34, 1 trade/ }));
+    expect(within(row("Average gross per trade")).getByText("Insufficient data")).toBeTruthy();
+    expect(within(row("Average gross per trade")).getByText("Too few trades for a stable figure: 1 of 5 needed")).toBeTruthy();
+  });
+
   it("calendar: filters sit behind a Filters button beside the cell choice and stay applied when closed (P0-D18)", async () => {
     const user = userEvent.setup();
     renderAt("/insights?section=calendar&show=trades&from=2026-10-01&to=2026-10-31&source=csv_import");

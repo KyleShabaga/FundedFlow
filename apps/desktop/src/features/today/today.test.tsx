@@ -14,8 +14,10 @@ import { ToastProvider } from "../../design-system";
 import { ACTIVE_ACCOUNT_SETTING } from "../accounts/active-account";
 import { makeAccount } from "../accounts/test-store";
 import { closedTrade } from "../rulebooks/test-store";
+import { featureKeys } from "../shared/query-keys";
 import { TodayPage } from "./components/TodayPage";
 import { TODAY_ACCOUNTS_VIEW_SETTING } from "./components/AccountsOverview";
+import { SESSION_SKIPS_SETTING } from "./view-models/session-prompt";
 import { createTodayStore, drawdownOutcome } from "./test-store";
 
 const runtime = vi.hoisted(() => ({ state: { kind: "ready" } as unknown as RuntimeState, check: vi.fn() }));
@@ -550,6 +552,154 @@ describe("P0-02: the current result", () => {
     expect(captured.priorBreaches).toHaveLength(1);
     renderToday();
     await waitFor(async () => expect(await headlineText()).toContain("Stop"));
+  });
+});
+
+describe("session plan / review prompt (P0-D27)", () => {
+  const savePlan = (accountId: string, extra: Record<string, unknown> = {}) => holder.store.repository.dailyReviews.save({
+    accountId, tradingDay: "2026-10-21", expectedRevision: null, plan: { focus: "A+ setups only" }, reflection: {}, noTradeDay: false, answers: [], action: "save", ...extra,
+  });
+  /** What a manual trade write or a committed import does (trades and imports hooks): the day's queries are read again. */
+  const tradesChanged = (accountId: string) => act(async () => { await client.invalidateQueries({ queryKey: featureKeys.dailyReviewsRoot(accountId) }); });
+
+  it("comes first on the page, and with no trade on the current day offers the before-session plan for that account and day", async () => {
+    holder.store.trades.set(A, [closedTrade(A, 2, "-40", "2026-10-20")]);
+    const user = userEvent.setup();
+    renderToday();
+    const card = await screen.findByRole("region", { name: "Before-session plan" });
+    expect(card.parentElement!.firstElementChild).toBe(card);
+    expect(within(card).getByText("Example · Eval A · trading day Wed Oct 21")).toBeTruthy();
+    expect(within(card).getByText(/No trades are recorded for this trading day yet/)).toBeTruthy();
+    expect(within(card).getByRole("button", { name: "Skip for now" })).toBeTruthy();
+    const writes = holder.store.writes.length;
+    await user.click(within(card).getByRole("button", { name: "Start plan" }));
+    expect(location).toBe(`/journal/days/2026-10-21?account=${A}`);
+    expect(holder.store.writes.length).toBe(writes);
+  });
+
+  it("a trade on the current day offers the after-session review, and keeps the saved plan reachable", async () => {
+    await savePlan(A);
+    const user = userEvent.setup();
+    renderToday();
+    const card = await screen.findByRole("region", { name: "After-session review" });
+    expect(within(card).getByText(/^1 trade recorded for this trading day\. .*doesn't end the session or complete the review\.$/)).toBeTruthy();
+    expect(within(card).queryByText("Completed")).toBeNull();
+    await user.click(within(card).getByRole("button", { name: "View plan" }));
+    expect(location).toBe(`/journal/days/2026-10-21?account=${A}`);
+    expect((await holder.store.repository.dailyReviews.getDay(A, "2026-10-21")).review!.plan.focus).toBe("A+ setups only");
+  });
+
+  it("switches from plan to review when a trade for the day is recorded, and only then", async () => {
+    holder.store.trades.set(A, []);
+    await savePlan(A);
+    renderToday();
+    const card = await screen.findByRole("region", { name: "Before-session plan" });
+    expect(within(card).getByText("Plan saved")).toBeTruthy();
+    expect(within(card).getByRole("button", { name: "View or edit plan" })).toBeTruthy();
+    // A historical-only import leaves the day as it was (a duplicate-only, failed or cancelled one adds no trade at all).
+    holder.store.trades.set(A, [closedTrade(A, 2, "-40", "2026-10-20")]);
+    await tradesChanged(A);
+    expect(await screen.findByRole("region", { name: "Before-session plan" })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "After-session review" })).toBeNull();
+    // A trade attributed to the current trading day does.
+    holder.store.trades.set(A, [closedTrade(A, 2, "-40", "2026-10-20"), closedTrade(A, 3, "60", "2026-10-21")]);
+    await tradesChanged(A);
+    const review = await screen.findByRole("region", { name: "After-session review" });
+    expect(within(review).getByRole("button", { name: "Start after-session review" })).toBeTruthy();
+    // Removing it again recomputes the stage; the plan is kept.
+    holder.store.trades.set(A, [closedTrade(A, 2, "-40", "2026-10-20")]);
+    await tradesChanged(A);
+    const back = await screen.findByRole("region", { name: "Before-session plan" });
+    expect(within(back).getByText("Plan saved")).toBeTruthy();
+  });
+
+  it("continues a started review and shows a completed one as completed, from the saved status alone", async () => {
+    await savePlan(A, { reflection: { wentWell: "Waited for the setup" } });
+    renderToday();
+    const draft = await screen.findByRole("region", { name: "After-session review" });
+    expect(within(draft).getByText("Draft")).toBeTruthy();
+    expect(within(draft).getByRole("button", { name: "Continue after-session review" })).toBeTruthy();
+    const saved = (await holder.store.repository.dailyReviews.getDay(A, "2026-10-21")).review!;
+    await holder.store.repository.dailyReviews.save({
+      accountId: A, tradingDay: "2026-10-21", expectedRevision: saved.revision, plan: { focus: "A+ setups only" }, reflection: { wentWell: "Waited for the setup" },
+      noTradeDay: false, answers: [], action: "complete",
+    });
+    await tradesChanged(A);
+    const done = await screen.findByRole("region", { name: "Daily review" });
+    expect(within(done).getByText("Completed")).toBeTruthy();
+    expect(within(done).getByRole("button", { name: "Open completed review" })).toBeTruthy();
+    expect(within(done).queryByRole("button", { name: "Skip for now" })).toBeNull();
+  });
+
+  it("skips a stage for this account and day only, never as done, and brings it back on request", async () => {
+    holder.store.trades.set(A, []);
+    const user = userEvent.setup();
+    renderToday();
+    await user.click(within(await screen.findByRole("region", { name: "Before-session plan" })).getByRole("button", { name: "Skip for now" }));
+    const compact = await screen.findByRole("region", { name: "Session plan / review" });
+    expect(within(compact).getByText("Before-session plan skipped for Example · Eval A · trading day Wed Oct 21.")).toBeTruthy();
+    await waitFor(() => expect(holder.store.settings.get(SESSION_SKIPS_SETTING)).toEqual([{ accountId: A, tradingDay: "2026-10-21", stage: "plan" }]));
+    expect((await holder.store.repository.dailyReviews.getDay(A, "2026-10-21")).review).toBeNull();
+    // Skipping the plan doesn't skip the review: a trade brings the review prompt.
+    holder.store.trades.set(A, [closedTrade(A, 3, "60", "2026-10-21")]);
+    await tradesChanged(A);
+    await user.click(within(await screen.findByRole("region", { name: "After-session review" })).getByRole("button", { name: "Skip for now" }));
+    await waitFor(() => expect(holder.store.settings.get(SESSION_SKIPS_SETTING)).toHaveLength(2));
+    await user.click(within(await screen.findByRole("region", { name: "Session plan / review" })).getByRole("button", { name: "Session plan / review" }));
+    expect(await screen.findByRole("region", { name: "After-session review" })).toBeTruthy();
+    await waitFor(() => expect(holder.store.settings.get(SESSION_SKIPS_SETTING)).toEqual([{ accountId: A, tradingDay: "2026-10-21", stage: "plan" }]));
+  });
+
+  it("a skip on one account leaves another account's prompt, and a switch never shows the previous account's", async () => {
+    holder.store.settings.set(SESSION_SKIPS_SETTING, [{ accountId: A, tradingDay: "2026-10-21", stage: "review" }]);
+    let release: () => void = () => {};
+    const getDay = holder.store.repository.dailyReviews.getDay;
+    holder.store.repository.dailyReviews.getDay = async (accountId: string, day: string) => {
+      if (accountId === B) await new Promise<void>(resolve => { release = resolve; });
+      return getDay(accountId, day);
+    };
+    const user = userEvent.setup();
+    renderToday();
+    expect(await screen.findByText(/After-session review skipped for Example · Eval A/)).toBeTruthy();
+    await user.click(within(screen.getByRole("region", { name: "Active accounts" })).getByRole("button", { name: "Show Eval B" }));
+    await screen.findByRole("heading", { name: "Eval B", level: 2 });
+    expect(await screen.findByText("Checking today's trading day…")).toBeTruthy();
+    expect(screen.queryByText(/Eval A · trading day/)).toBeNull();
+    await act(async () => { release(); });
+    const card = await screen.findByRole("region", { name: "Before-session plan" });
+    expect(within(card).getByText("Eval B · trading day Wed Oct 21")).toBeTruthy();
+  });
+
+  it("while the day is read it says so, and an unreadable day shows no prompt rather than guessing", async () => {
+    let fail: () => void = () => {};
+    const gate = new Promise<void>(resolve => { fail = resolve; });
+    holder.store.repository.dailyReviews.getDay = async () => { await gate; throw new Error("getDay failed"); };
+    renderToday();
+    expect(await screen.findByText("Checking today's trading day…")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Start plan" })).toBeNull();
+    await act(async () => { fail(); });
+    expect(await screen.findByText("Session plan / review unavailable")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: /Before-session plan|After-session review/ })).toBeNull();
+  });
+
+  it("a new trading day gets its own prompt when Today checks again; the previous day's skip doesn't carry over", async () => {
+    holder.store.settings.set(SESSION_SKIPS_SETTING, [{ accountId: A, tradingDay: "2026-10-21", stage: "review" }]);
+    const user = userEvent.setup();
+    renderToday();
+    expect(await screen.findByText(/After-session review skipped for Example · Eval A · trading day Wed Oct 21/)).toBeTruthy();
+    holder.store.day.current = "2026-10-22";
+    vi.setSystemTime(new Date("2026-10-22T14:00:00.000Z"));
+    await user.click(screen.getByRole("button", { name: "Check again" }));
+    const card = await screen.findByRole("region", { name: "Before-session plan" });
+    expect(within(card).getByText("Example · Eval A · trading day Thu Oct 22")).toBeTruthy();
+  });
+
+  it("is not shown when no account is chosen", async () => {
+    seed([makeAccount({ id: A, name: "Eval A" }), makeAccount({ id: B, name: "Eval B" })], null);
+    renderToday();
+    await screen.findByText("Choose an account");
+    expect(screen.queryByText("Checking today's trading day…")).toBeNull();
+    expect(screen.queryByRole("region", { name: /Before-session plan|After-session review|Session plan/ })).toBeNull();
   });
 });
 
