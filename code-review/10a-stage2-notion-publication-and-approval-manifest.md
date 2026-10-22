@@ -78,7 +78,7 @@ The 13 source reports are listed below. Each was attached byte-exact and verifie
 | Agent | Scope | Result |
 |---|---|---|
 | Secrets / PII scan (independent) | All payloads before publication | No redactions needed. The only optional note was that the GitHub slug is present. |
-| Notion QA (independent, read-only) | Schema, views, 36 rows, properties vs local, sampled card bodies, handoff page, no auto-approval | See §6 |
+| Notion QA (independent, read-only) | Schema, views, 36 rows, properties vs local, sampled card bodies, handoff page, no auto-approval | All 8 checks passed (§6) |
 
 ## 5. Omissions and deviations
 
@@ -90,7 +90,23 @@ The 13 source reports are listed below. Each was attached byte-exact and verifie
 
 ## 6. Verification results
 
-The results are recorded below after the independent QA agent completes.
+An independent, read-only QA agent checked the publication on 2026-10-22. All eight checks passed:
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Schema: Approval status has 5 options, default Pending Review; the human-decision fields exist; Dependencies and Blocks hold 55 matching links each way | PASS |
+| 2 | Views: the 4 views match their configuration, and the board shows empty groups. Notion also keeps its automatic "Default view". | PASS |
+| 3 | Rows: exactly 36, TASK-001…036, no duplicates | PASS |
+| 4 | No auto-approval: 0 cards Approved, Rejected or Deferred; Approved By, Approved At and Approved Specification Revision empty on all 36; 0 gates Passed; Changes Requested only on the 18 expected cards, each noting "NOT by Kyle" | PASS |
+| 5 | Properties and dependencies match `cards_properties.json` on all 36 rows | PASS |
+| 6 | Card bodies: 6 sampled (012, 022, 029, 007, 036, 017) match the local r2 spec; each has the PROPOSAL callout and a blank human-decision table | PASS |
+| 7 | Handoff page: all sections present; its 13 SHA-256 values and byte counts match; the Source Reports page has 13 attachments | PASS |
+| 8 | Secrets and personal data: none found | PASS |
+
+Three cosmetic issues do not block anything:
+- Notion turned some file names into links, for example `CLAUDE.md` became a link to `http://CLAUDE.md`. The visible text is correct.
+- On the Source Reports page, part 3 of report 00 appears below the attachments section.
+- The Source Reports page labels the Stage 1 phases 1–6, but the reports are numbered 00–05.
 
 ## 7. Blockers and resume point
 
