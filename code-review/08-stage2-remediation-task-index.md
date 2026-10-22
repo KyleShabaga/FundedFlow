@@ -70,7 +70,7 @@ Card paths are relative to `code-review/`. Every card carries the full field set
 |---|---|---|
 | W0 | Owner decisions and measurements. No code. | 001, 002, 003, 004 (docs after 003), 005, 006, 007, 008, 009, 010, 011 |
 | W1 | Data safety (native), merged in this order because they share `data_controls` files | 012 → 013 → 014 → 015 → 016 → 017 → 018; 019 is an optional pull-in that can run in parallel |
-| W2 | Correctness (Rust, then UI) | 020 → 021; 022 → 023 (023 needs the result of 011(a)); 024 goes after 021 and 022 |
+| W2 | Correctness (Rust, then UI). W2 and the independent units (019, 020, 022, 026, and the TASK-034 code change in W3c) may run alongside W1 (09 §4; r3). | 020 → 021; 022 → 023 (023 needs the result of 011(a)); 024 goes after 021 and 022 |
 | W3 | Legal, release and docs | 026 → 025; 027 (after 005); 028 (after 025 and 026) |
 | W4 | Candidate | 029 |
 | W5 | Manual Windows gates | 030, 031, 032, 033; 034 is conditional on 008 |
@@ -99,7 +99,7 @@ Card paths are relative to `code-review/`. Every card carries the full field set
 | ISSUE-002 Live size caps | DATA-004 | TASK-010, TASK-013, TASK-014, TASK-032 | V1 fix. **Deferred to V1.1:** 002c frozen-input redesign, needs TASK-003; a new task if TASK-010 escalates. |
 | ISSUE-003 Stray attachment blocks | DATA-002 | TASK-016, TASK-032 | V1 fix |
 | ISSUE-004 Missing attachment blocks | DATA-003 | TASK-017, TASK-009 (D-ARCH), TASK-032 | V1 fix for erase and restore. **Deferred to V1.1:** export side, pending the archive-format decision. |
-| ISSUE-005 Archive schema bypass | TR-001 | TASK-012 | V1 fix. The live `trusted_schema` change is a separate PR. |
+| ISSUE-005 Archive schema bypass | TR-001 | TASK-012 | V1 fix (restore path). Live-connection `trusted_schema=OFF`: **Deferred to V1.1** (needs `db/upgrade_tests.rs` on the v3/v4/v8 fixtures). (r3, G1) |
 | ISSUE-006 Reparse points | WIN-001; WIN-002 | TASK-011(b), TASK-018, TASK-028 | V1 fix for startup. **Deferred to V1.1:** WIN-002 user-path part (with TR-007). |
 | ISSUE-007 Calendar vs trading day | UI-001, UI-009, UI-010 | TASK-020, TASK-021 | V1 fix |
 | ISSUE-008 Decimal overflow panic | TR-002, TR-003 | TASK-019 (optional pull-in) | P2. If not pulled in, deferred to V1.1. **Deferred:** bounded price validation. |
@@ -209,11 +209,12 @@ All 58 canonical issues and all 84 original IDs are mapped above. Every original
 
 **Verification-only items not given their own card.** They are listed in 07 §G.1 and attached to the V1.1 issue they size:
 - V-013, V-014, V-015, V-020, V-024, V-027, V-029, V-030, V-033, V-B2-2.
-- V-023 and V-031 are covered by TASK-030, TASK-031 and TASK-033.
+- V-031 is covered by TASK-030, TASK-031 and TASK-033.
+- V-023 (install without WebView2, online and offline) moves to TASK-028, which adds it as a mandatory smoke-checklist step with its expected result and evidence fields. TASK-030, 031 and 033 no longer claim it. (r3, G2)
 
 ## E. Up to five tasks safe to execute after approval
 
-All five are small, independent and reversible. None touches the real journal, a migration, a fixture or a dependency.
+All five are small and reversible. They are not all independent: TASK-024 depends on TASK-021 and TASK-022 (r3). None touches the real journal, a migration, a fixture or a dependency.
 
 1. **TASK-001 to TASK-009 (owner decisions).** No code. They unblock W3 and W4 and cost only Kyle's time.
 2. **TASK-012: archive schema allow-list.** Restore-path hardening that is code-only and covered by security tests. The live `trusted_schema` change is excluded and goes in a separate PR.
@@ -272,7 +273,7 @@ All required corrections were applied in r2:
 | 015 | Quarantine key added to the `recover_cleanup` allow-list. Observable defined without breaking `failure:null` on Ready. Stray consequence noted. `prepare_restore` path tested. |
 | 016 | `.<uuid>.part` temp name. Mandatory wire fixture regeneration and TS schema named. `#[serde(default)]` for marker extras. Safety-copy acceptance added. |
 | 017 | Separate `safety-missing.json`. `copy_managed` relaxed. `tests.rs:49` stays unchanged. Detail contract named. |
-| 018 | All 22 app-owned call sites root-anchored. Contract change named (`runtime.ts` categories and stage map). std `is_symlink` tried first. `check:notices` and `Cargo.lock` diff check. ISSUE-024 reference fixed. CI uses plain `cargo test`. |
+| 018 | All app-owned call sites root-anchored (corrected in r3: 21 of 24 non-test call sites; the user paths are `archive.rs:223, 331, 552`). Contract change named (`runtime.ts` categories and stage map). std `is_symlink` tried first. `check:notices` and `Cargo.lock` diff check. ISSUE-024 reference fixed. CI uses plain `cargo test`. |
 | 020 | Successor account's tz and reset. Breaking tests and the seed listed as deliberate edits. Severity Medium. |
 | 021 | Command runs from the root and includes `src/features/accounts`. Fails closed when the trading day is unavailable. No weekend dates in AssignDialog. |
 | 022 | HashRouter and popstate constraints stated. Real-router tests assert the editor never unmounts. `unstable_HistoryRouter` named as fallback. DailyReviewPage→024 conflict dropped. |
