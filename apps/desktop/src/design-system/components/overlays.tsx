@@ -6,7 +6,7 @@
 import * as RadixDialog from "@radix-ui/react-dialog";
 import * as RadixMenu from "@radix-ui/react-dropdown-menu";
 import * as RadixTooltip from "@radix-ui/react-tooltip";
-import { Info, X } from "lucide-react";
+import { Ellipsis, Info, X } from "lucide-react";
 import { type ReactElement, type ReactNode, useEffect, useId, useRef, useState } from "react";
 
 import { cx } from "./cx";
@@ -424,6 +424,52 @@ function MenuText({ label, description }: { label: string; description?: string 
     <span className="ds-menu-lines">
       <span className="ds-menu-text">{label}</span>
       <span className="ds-menu-description">{description}</span>
+    </span>
+  );
+}
+
+/* ---------- ActionPill ---------- */
+
+export interface ActionPillProps {
+  /** The item's name; long names wrap inside the pill. */
+  label: ReactNode;
+  /** Short facts after the name ("Used in 47 reviews"). */
+  meta?: ReactNode;
+  /** A state badge ("Archived"). */
+  badge?: ReactNode;
+  /** The item's own actions, in a DropdownMenu on the pill's menu button. */
+  actions: readonly MenuEntry[];
+  /** Names the menu button and the menu ("Actions for tag ORB"). */
+  actionsLabel: string;
+  /** Drawn quieter (an archived item). */
+  muted?: boolean;
+  className?: string;
+}
+
+/**
+ * A named item in a managed list (a library tag) with its own overflow menu. The pill itself is not a button: its
+ * one control is the menu button at its end, so actions are never nested in another control and every action is
+ * reachable by keyboard and a single click. Archive or restore belong in the menu as words, not as an X, which
+ * reads as "remove".
+ */
+export function ActionPill({ label, meta, badge, actions, actionsLabel, muted, className }: ActionPillProps) {
+  return (
+    <span className={cx("ds-action-pill", muted && "is-muted", className)}>
+      <span className="ds-action-pill-text">
+        <span className="ds-action-pill-label">{label}</span>
+        {badge}
+        {meta != null && <span className="ds-action-pill-meta">{meta}</span>}
+      </span>
+      <DropdownMenu
+        label={actionsLabel}
+        align="start"
+        items={actions}
+        trigger={
+          <button type="button" className="ds-action-pill-menu" aria-label={actionsLabel}>
+            <Ellipsis size={14} aria-hidden="true" />
+          </button>
+        }
+      />
     </span>
   );
 }
