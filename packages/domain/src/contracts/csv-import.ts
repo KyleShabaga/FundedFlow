@@ -135,6 +135,23 @@ export const rowReportSchema = z.object({
 });
 export type RowReport = z.infer<typeof rowReportSchema>;
 
+/**
+ * How one field's mapping stands (Rust `MappingStatus`, P0-D09). Mapping only: `matched` never says the rows are
+ * valid. `error` always has a matching `columns.<field>` file issue; `review` never blocks.
+ */
+export const mappingStatusSchema = z.enum(["matched", "review", "error", "notMapped"]);
+export type MappingStatus = z.infer<typeof mappingStatusSchema>;
+
+export const mappedFieldSchema = z.object({
+  field: z.string(),
+  header: z.string().nullable(),
+  required: z.boolean(),
+  status: mappingStatusSchema,
+  /** Short, user-facing reason for the status. */
+  reason: z.string(),
+});
+export type MappedField = z.infer<typeof mappedFieldSchema>;
+
 export const csvPreviewSchema = z.object({
   targetAssessment: z.object({
     previewToken: z.string().min(1),
@@ -149,7 +166,7 @@ export const csvPreviewSchema = z.object({
   dateFormat: z.enum(["ymd", "mdy", "dmy"]).nullable(),
   dateFormatReason: z.string(),
   headers: z.array(z.string()),
-  mapping: z.array(z.object({ field: z.string(), header: z.string().nullable(), required: z.boolean() })),
+  mapping: z.array(mappedFieldSchema),
   ignoredHeaders: z.array(z.string()),
   /** Problems with the file, mapping or settings; when non-empty nothing can be imported. */
   fileIssues: z.array(fieldIssueSchema),

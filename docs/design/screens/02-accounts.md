@@ -93,14 +93,14 @@ Code: `apps/desktop/src/features/accounts/` (`components/`, `active-account.ts`,
 ### Differences from the mockup (and why)
 | Mockup | Build 15 | Why |
 |---|---|---|
-| Balance column, "combined balance" KPI | Starting balance column; Current balance KPI per currency from current estimates (NA-4, below) | Build 15.5 stores user-reported balance/equity observations and exact reconciliations (`JournalRepository.evidence`), but no hook or screen enters or shows them yet, and a reconciled balance is not a live balance; currencies are never added together |
+| Balance column, "combined balance" KPI | Current balance column (P0-D19, below); Current balance KPI per currency from current estimates (NA-4, below) | The column shows each attempt's balance exactly as its card does, never the starting balance or starting balance plus P&L; a checkpoint is not a live balance and says so; currencies are never added together |
 | P&L column | Net P&L = Rust's lineage `netPnl` (known closed trades), with "n unknown" | Rust-computed, never a UI sum; unknown stays unknown |
 | Drawdown used / Profit target meters | Not shown; footnote explains | Needs Build 16 rule evaluation; no meters at zero |
 | "Closest to a limit" KPI | "Need setup" count | Same reason; a truthful, supported fact instead |
 | Status filter All/Active/Passed/Failed/Paused | Live (default)/All/Active/Paused/Passed/Failed/Closed/Archived | Card's history filters and the domain's `filterAccounts` |
 | Import trades button | Not shown | CSV import is Build 18 |
 | Row selection, bulk Archive/Export, Columns menu | Not shown | Not in the card's scope; per-row actions cover archive |
-| Default sort: balance descending | Name ascending; starting balance sorts within each currency | Amounts in different currencies aren't comparable |
+| Default sort: balance descending | Name ascending; Current balance is not sortable (P0-D19) | Each balance is read per row and may be an estimate, a checkpoint, unknown or in another currency, so there is no comparable list to order by; amounts in different currencies aren't comparable |
 | Size label ("$100K") | Not shown | `account_size_micros` isn't returned by any command (open question above) |
 | Cards view balance | Build 18.5 overview card: engine balance or checkpoint with provenance, else Not available | See below |
 
@@ -116,6 +116,21 @@ Code: `apps/desktop/src/features/accounts/` (`components/`, `active-account.ts`,
   units and session they were recorded with, so later comparisons refuse mismatches instead of converting. The edit
   warning covers re-derived trades only; warning about recorded checkpoints needs an evidence hook (future Claude
   card, with the checkpoint-entry UI).
+
+### P0-D19: Current balance column and toolbar
+- **Current balance** replaces the Starting balance column. Each cell reads `useAccountBalance` (`hooks/overview.ts`):
+  the card's `balanceFigure` from Today's truth and canonical inputs, without the card's rulebook and lineage reads.
+  It shows the current engine balance ("From your records · {as-of}"), else the latest checkpoint ("Confirmed by you"
+  / "Not confirmed" · {its time}, and "n trades since, not included"), else — with the reason ("No balance checkpoint
+  recorded yet.", "Checkpoints couldn't be read."). Times are in the account's zone; a checkpoint is formatted in its
+  own currency. The full label and note ("Last confirmed balance · … · from the firm's dashboard, …") are the cell's
+  tooltip and screen-reader text.
+- Not sortable (see the table above). Starting balance stays on the account, its form, its detail page and the
+  card's "Started with" line.
+- Toolbar: the status filter on the left and search on the right of the same row (search 200–320 px wide, taking the
+  space left). When the row is too narrow, search wraps to its own line, right-aligned; the status filter folds to a
+  select only when it doesn't fit its own line. The Cards view toolbar does the same.
+- Column visibility and order: separate card (P0 column customization), not built here.
 
 ## Build 18.5 account overview cards
 

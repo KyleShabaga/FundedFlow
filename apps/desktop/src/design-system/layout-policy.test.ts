@@ -125,6 +125,17 @@ describe("Today", () => {
     }
   });
 
+  it("lays List rows out as four aligned groups from 880 px of the section's own width, wrapping below that (P0-D23)", () => {
+    // One row per account at every width: List never becomes a grid of columns.
+    expect(rule(css, ".td-rows")).not.toContain("grid-template-columns");
+    expect(rule(css, ".td-row")).toContain('grid-template-areas: "head foot" "est est" "setup setup" "note note"');
+    const at = css.indexOf("@container td-overview (min-width: 880px) {\n  .td-row {");
+    expect(at).toBeGreaterThanOrEqual(0);
+    const wide = css.slice(at, css.indexOf("\n}", at));
+    expect(wide).toContain("grid-template-columns: minmax(10rem, 1.1fr) minmax(13rem, 1.6fr) minmax(11rem, 1.2fr) 11rem;");
+    expect(wide).toContain('grid-template-areas: "head est setup foot" "note note note foot";');
+  });
+
   it("places freshness beside the next panel only on a wide main column, by CSS alone", () => {
     expect(css).toContain("@container ds-main (min-width: 1280px) {");
     const wide = css.slice(css.indexOf("@container ds-main (min-width: 1280px) {"));

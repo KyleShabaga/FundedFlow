@@ -10,7 +10,7 @@ import { type KeyboardEvent, type ReactNode, type RefObject, useId, useRef, useS
 import { formatInstant, formatMoney, formatPercent, moneySign, sumMoney, UNKNOWN } from "../format";
 import { cx } from "./cx";
 import { Checkbox, Select } from "./forms";
-import { OverlayClose, Popover } from "./overlays";
+import { InfoTip, OverlayClose, Popover } from "./overlays";
 import { Button, type HeadingLevel, IconButton } from "./primitives";
 
 /* ---------- Unknown ---------- */
@@ -72,8 +72,13 @@ export interface MetricCardProps {
   value: MetricValue;
   /** One line that explains the number ("22 W · 14 L", "After $125.40 in fees"). */
   sub?: ReactNode;
-  /** What it is calculated from ("Realized · this account · all time"). */
+  /** What it is calculated from ("Realized · this account · all time"). Shown under a divider. */
   basis?: ReactNode;
+  /**
+   * How the number is worked out, behind an "i" button after the label (InfoTip), in place of a basis footer.
+   * Keep reasons the current value needs (unavailable, partial data) visible in `sub` or `basis`, not only here.
+   */
+  info?: ReactNode;
   /** When the value was calculated (ISO instant), shown in the account zone. */
   asOf?: string | null;
   timeZone?: string;
@@ -91,11 +96,14 @@ export interface MetricCardProps {
  * StatTile for plain values without those. An unavailable value shows its
  * reason in place of the sub line.
  */
-export function MetricCard({ label, value, sub, basis, asOf, timeZone, stale, action, children, className }: MetricCardProps) {
+export function MetricCard({ label, value, sub, basis, info, asOf, timeZone, stale, action, children, className }: MetricCardProps) {
   return (
     <div className={cx("ds-card", "ds-tile", "ds-metric", stale && "is-stale", className)}>
       <div className="ds-tile-head">
-        <span className="ds-label">{label}</span>
+        <span className="ds-metric-title">
+          <span className="ds-label">{label}</span>
+          {info != null && <InfoTip label={`About ${label}`}>{info}</InfoTip>}
+        </span>
         {action != null && <span className="ds-metric-action">{action}</span>}
       </div>
       <div className="ds-tile-body">

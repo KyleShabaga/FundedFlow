@@ -7,7 +7,7 @@ import { useRulebookVersion } from "../../references/hooks/references";
 import { useTodayAccount } from "../../today/hooks/today";
 import type { Loadable } from "../../today/view-models/today";
 import { useAccountFacts } from "../components/presentation";
-import { overviewModel, type OverviewRecords } from "../view-models/overview";
+import { balanceFigure, overviewModel, type OverviewRecords } from "../view-models/overview";
 import type { AccountViewModel } from "../view-models/account";
 import { useAccountLineage } from "./accounts";
 
@@ -23,10 +23,7 @@ export function useAccountOverview(account: AccountViewModel, activeId: string |
   const lineage = useAccountLineage(account.id);
   const versionId = facts.rulebook.kind === "assigned" ? facts.rulebook.assignment.rulebookVersionId : null;
   const version = useRulebookVersion(versionId);
-  const inputs = today.facts.data?.inputs;
-  const records: Loadable<OverviewRecords> = inputs
-    ? { state: "ready", value: { trades: inputs.trades, observations: inputs.observations, phaseHistory: inputs.phaseHistory } }
-    : today.facts.error ? { state: "error" } : { state: "loading" };
+  const records = overviewRecords(today);
   const summary = facts.summary;
   const fmt = (amount: string | null) => formatMoney(amount, { signed: false, currency: account.currency, dp: 2 });
   const model = overviewModel({
@@ -39,7 +36,25 @@ export function useAccountOverview(account: AccountViewModel, activeId: string |
     truth: today.truth,
     records,
     fmt,
-    when: at => formatInstant(at, { timeZone: account.timezone, year: true, zoneName: true }),
+    when: when(account),
   });
   return { model, facts, today };
 }
+
+/**
+ * Only the balance figure, for the Accounts table's Current balance column: the same saved calculation, freshness
+ * check and checkpoints the card reads, without the rulebook and lineage reads the rest of the card needs.
+ */
+export function useAccountBalance(account: AccountViewModel, checkedAt: string) {
+  const today = useTodayAccount(account, checkedAt);
+  return balanceFigure({ account, truth: today.truth, records: overviewRecords(today), when: when(account) });
+}
+
+function overviewRecords(today: ReturnType<typeof useTodayAccount>): Loadable<OverviewRecords> {
+  const inputs = today.facts.data?.inputs;
+  return inputs
+    ? { state: "ready", value: { trades: inputs.trades, observations: inputs.observations, phaseHistory: inputs.phaseHistory } }
+    : today.facts.error ? { state: "error" } : { state: "loading" };
+}
+
+const when = (account: AccountViewModel) => (at: string) => formatInstant(at, { timeZone: account.timezone, year: true, zoneName: true });

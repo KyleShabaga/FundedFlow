@@ -88,6 +88,8 @@ Before P0-D29 these were window-width media queries at 900 px (Accounts, Import)
   (3 across), so 1–8 accounts never leave a lone card. **Known limit:** with 2 across (a section of 560–879 px, for
   example beside freshness in a 1600 px window) an odd count still ends with one card, because three across would be
   under 270 px there.
+- **Today Active accounts, List view** (P0-D23): one row per account at every width; four aligned groups from 880 px
+  of the section's own width, wrapping to name and actions over the rest below that.
 - Grids of figures and cards elsewhere keep `repeat(auto-fit|auto-fill, minmax(…))` with their existing minimums.
 - The account overview card has its own container breakpoints (460 and 300 px; Build 18.5).
 
