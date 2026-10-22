@@ -46,7 +46,7 @@ Installing (TASK-030).
 5. Record all fields in the evidence register.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: All W1–W3 tasks Verified (incl. TASK-025, TASK-026, TASK-027), except TASK-023 (below). W1–W3 here means the code and documentation tasks.
+- Prerequisites: All W1–W3 tasks Verified (incl. TASK-025, TASK-026, TASK-027, and TASK-042, TASK-043, TASK-044 from the TASK-009 r3 decisions), except TASK-023 (below). W1–W3 here means the code and documentation tasks.
 - TASK-023 (native window-close veto, W2; Deferred by Kyle pending TASK-011(a)): TASK-023 Verified, closed Not Needed with evidence, or still Deferred with the window-close gap explicitly accepted by Kyle in TASK-036. In the last case this card may proceed, the gap (ISSUE-009 window close) is recorded in the evidence register for TASK-036, and the candidate cannot be Go unless Kyle accepts it there.
 - Decisions (approved 2026-10-22): TASK-001 (A), TASK-002 (B + cleanup), TASK-005 (A), TASK-006 (A), TASK-008 (A for both gates).
 - TASK-002 follow-ups resolved (this card stays **Blocked** until then, per the TASK-002 decision): TASK-037 (synthetic replacement for `test_csvimport/Performance.csv` and its Rust tests) Verified and merged into the candidate SHA; TASK-038 (removal of the two unreferenced exports) Verified and merged; TASK-039 (Git-history exposure) assessed, Kyle's separate owner disposition recorded and, if he chose option B (make the repository private) or option C (rewrite history), its separate execution task **Verified** (for C, the candidate SHA is taken from the rewritten history). If Kyle rules (TASK-041) that the value-level copies of real rows must be removed, TASK-041 Verified and merged into the candidate SHA is a prerequisite too; if he accepts them as low-risk, it is not.
@@ -96,6 +96,7 @@ Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE
 ## Changes in r6
 - Prerequisites: the TASK-023 dependency changed from an implicit "Verified" (via "All W1–W3 tasks Verified" and the Notion relation) to "TASK-023 Verified, closed Not Needed with evidence, or still Deferred with the window-close gap explicitly accepted by Kyle in TASK-036", because Kyle deferred TASK-023 pending TASK-011(a) and the board has no way to record "Not Needed" as Verified (approved-task audit, MUST, process item).
 - Acceptance: added a criterion recording TASK-023's state with the candidate (follows from the prerequisite change).
+- Prerequisites name TASK-042, TASK-043 and TASK-044 (V1 work created by TASK-009 r3).
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.

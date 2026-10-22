@@ -1,0 +1,110 @@
+# TASK-044 — Fix (V1 wording): disclose that recovery copies keep deleted-account data
+
+| Field | Value |
+|---|---|
+| Status | Proposed (r1; awaiting independent review) |
+| Type | Fix |
+| Audit priority | P1 (V1: TASK-009 decision 4 accepts retention only if it is disclosed) |
+| Roadmap lane | Unassigned (owner) |
+| Mandatory gate | No |
+| Severity | Medium (the app states the opposite of what happens: "Deleting removes it for good") |
+| Confidence | High |
+| Canonical issue | ISSUE-018 (D-RET) (see `code-review/remediation-findings-ledger.md`) |
+| Original Stage 1 finding IDs | DATA-012 |
+| Source card / date | TASK-009 r3 decision (4); approved-task audit 2026-10-22 (TASK-009 MUST: "Accept disclosed retention" assumes a disclosure that doesn't exist) |
+| Wave | W3 (after TASK-025; after the W1 cards that edit the same dialogs) |
+| Effort / risk | S / Low (text and tests; legal re-acceptance by design) |
+| Verification platform | Any OS (+ packaged first-run re-prompt checked in TASK-030) |
+| Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
+| Inspected source revision | 9430f2a (application source identical to 92e7980) |
+| Specification revision | r1 (2026-10-22; created from the approved-task audit) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
+| Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
+| Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 9430f2a (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
+| Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision, and of the exact privacy-notice text) |
+
+## Purpose / risk
+Kyle accepted V1 retention of recovery copies, including deleted-account data, on condition that it is disclosed (TASK-009 decision 4). Today the app says the opposite and the privacy notice is incomplete, so V1 would ship a misleading privacy statement.
+
+## Trigger / reproduction
+Restore a full backup (this leaves a safety copy), or upgrade the app (this leaves a pre-upgrade copy); then delete one trading account. The account's trades, notes and screenshots remain in those copies, while the page said "Deleting removes it for good."
+
+## Root cause / evidence
+- Account-deletion section: "Failing or archiving an account keeps its history. Deleting removes it for good." (`features/data-controls/components/DataControlsPage.tsx:201`).
+- The deletion dialog mentions recovery copies only for whole-journal erasure: `!isAccount && preview.localRecoveryCopies > 0` (`features/data-controls/components/DeletionDialog.tsx:165-167`). The account preview already carries the count, because `preview` enumerates the copies for both scopes (`src-tauri/src/data_controls/deletion.rs:139`). The "What stays" notice (`DeletionDialog.tsx:169-174`) does not mention them.
+- Rust already says it in the preview `warnings` ("Whole-journal erasure also removes app-managed recovery copies; account deletion leaves them intact.", `deletion.rs:234-236`), but the dialog does not render `warnings`, and those strings are pinned in `packages/domain/test/fixtures/data-controls-wire.json`.
+- Privacy notice "Backups" (`apps/desktop/src/legal/privacy-notice.ts:36-42`) mentions only the pre-upgrade copy; "Exporting, restoring and deleting" (`:43-48`) does not say that deletion leaves copies.
+- The copies, as enumerated by `recovery_copies` (`deletion.rs:93-131`): restore operation folders `data-controls/<uuid>/` (each holds `safety.db` and `safety-attachments/`, the journal and screenshots as they were before the restore; `src-tauri/src/data_controls/restore.rs:126`); pre-upgrade copies `fundedflow.db.before-v<N>.bak` and retained `….previous-<uuid>.bak` (`src-tauri/src/db/mod.rs:244-247, 266-284`); the work folder `data-controls-work/`. Whole-journal erasure removes them; account deletion does not.
+
+## Expected change scope
+- `features/data-controls/components/DataControlsPage.tsx:201` (section description).
+- `features/data-controls/components/DeletionDialog.tsx` (account scope: a note when `preview.localRecoveryCopies > 0`; "What stays" names FundedFlow's recovery copies for account deletion).
+- `apps/desktop/src/legal/privacy-notice.ts` (Backups / Exporting, restoring and deleting), with its `version`, `effectiveDate` and `digest`; `apps/desktop/src/legal/legal.test.ts` (pinned digest).
+- Tests: `features/data-controls/data-controls.test.tsx`; `journeys/data-controls.journey.test.tsx` if it asserts the old text; `journeys/first-run.journey.test.tsx` only if its expectations name the notice version.
+- Spec: `docs/design/screens/15-settings-data-controls.md:66-74` (deletion dialog) to match.
+
+Proposed wording (Kyle approves the final text; UI copy may be adjusted in review, the privacy notice text may not):
+- Section description: "Failing or archiving an account keeps its history. Deleting removes it from the journal. Recovery copies FundedFlow keeps on this computer may still hold it until you erase the entire journal."
+- Account dialog, when copies exist: "{n} recovery cop{y|ies} kept by FundedFlow on this computer (pre-upgrade copies or restore safety copies) may still contain this account's data. Deleting the account doesn't change them; erasing the entire journal removes them."
+- Privacy notice, added paragraphs: "Before a restore replaces your journal, FundedFlow keeps a safety copy of the journal and screenshots it replaced, in the data-controls folder beside the journal." and "Pre-upgrade copies and restore safety copies are kept until you erase the entire journal. Deleting one trading account does not remove its data from them. Erase the entire journal in Settings to remove them." Extend the existing "not encrypted" sentence (`:40`) to name safety copies. Whether to add manual removal steps (close FundedFlow, then delete the `.bak` files and the `data-controls` folder) is Kyle's call: deleting `data-controls` while a restore is pending (`data-controls-pending.json` present) would leave startup recovery without its copy, so any such step must say so.
+
+## Out of scope
+- Rust preview `warnings` and any wire change (fixture-pinned; `data-controls-wire.json` must not change).
+- Pruning or a "remove copies" action (ISSUE-018, V1.1).
+- `PRIVACY_SUMMARY` and `LICENSE_SUMMARY` (`apps/desktop/src/legal/index.ts:12-15, 18-25`), owned by TASK-025/026; flag to them if the summary's "permanently delete your data" needs a qualifier.
+- `user-agreement.ts`.
+
+## Legal versioning and re-acceptance (checked at 9430f2a)
+- Acceptance is valid only when every current document matches by id, **version and digest** (`coversCurrent`, `apps/desktop/src/legal/index.ts:40-44`; tested at `legal.test.ts:39-47`). Any text change changes the digest (`legal.test.ts:32-36`), so it re-prompts at the next start whether or not the version changes. The file header and `legal.test.ts:7` require a version bump with every text change. Rust `legal.rs` stores whatever id/version/digest it is given and needs no change.
+- So changing the privacy notice **does** require a version bump, a new digest and a re-prompt. That is acceptable by design (TASK-025 already relies on it).
+- TASK-025 replaces this file with Kyle's owner-only text, pinned by digest (`1.0.0-owner-only`, `042bf1b9…`; approved-task audit, TASK-025 MUST). Two orders, Kyle chooses:
+  - **(A) Recommended: after TASK-025.** Merge TASK-025 unchanged; this card then adds Kyle-approved paragraphs, bumps to the next owner-only version (for example `1.0.1-owner-only`, matching the `-owner-only` suffix TASK-025 makes the regex accept), and pins the new digest that Kyle approves. Users are re-prompted twice (025, then 044); for owner-only V1 that is only Kyle.
+  - **(B) Fold into TASK-025.** Kyle amends the owner-only package text; TASK-025's pinned digest changes, so TASK-025 needs re-approval at a new revision, and this card keeps only the UI copy.
+- First check whether Kyle's approved owner-only privacy notice already covers restore safety copies and deleted-account retention. If it does, the privacy-notice part of this card is met by TASK-025 and only the UI copy remains (record that in the PR).
+- Digest rule (as TASK-025): the digest must equal the value of the text Kyle approved; a mismatch blocks the PR. Do not copy whatever the failing test prints without that check.
+
+## Implementation approach
+1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
+2. Record Kyle's choice of (A) or (B) and his exact privacy-notice text.
+3. Re-run `recovery_copies` (`deletion.rs:93-131`) at the merge base and list every location it enumerates then. If TASK-017 (owner amendment: preserved changed attachment bytes, available after success and rollback) or TASK-015 (quarantine) add copy locations, the wording must cover them.
+4. UI copy changes; tests that fail before:
+   - Account deletion preview with `localRecoveryCopies: 2` shows the account note; with `0` it does not.
+   - Journal erasure still shows "will also be removed" (`DeletionDialog.tsx:166`).
+   - The section description no longer contains "for good".
+5. Privacy notice text, version, effective date and digest; `legal.test.ts` asserts the approved digest.
+6. Update the screen spec.
+
+## Prerequisites, dependencies and conflicts
+- Prerequisites: TASK-009 r3 approved (decision 4). Option (A): TASK-025 merged. Kyle's approved text.
+- Likely shared-file conflicts: `DeletionDialog.tsx` with TASK-015 (erase copy), TASK-016 (owner amendment: visible extra-files erase confirmation) and TASK-017 (renders missing-attachment warnings); `DataControlsPage.tsx` with TASK-015 (`:225`); `privacy-notice.ts`, `legal.test.ts` and `journeys/first-run.journey.test.tsx` with TASK-025; `docs/design/screens/15-settings-data-controls.md` with TASK-015/016/017. Merge after all of them.
+- Follow-up (not done here): disclosure lines in TASK-028/TASK-035 NA-7 (approved-task audit S1); add TASK-044 to 08 §A, the 09 waves and TASK-029's dependencies.
+
+## Acceptance criteria (pass/fail)
+- [ ] The account-deletion section and dialog state that recovery copies may keep the account's data and that erasing the entire journal removes them (tests; they fail before).
+- [ ] The privacy notice names the pre-upgrade copies and restore safety copies, says deleted-account data stays in them, and says how to remove them; version bumped; digest equals the Kyle-approved value (test).
+- [ ] An acceptance record of the previous version no longer covers the current documents (`coversCurrent` false), so the gate re-prompts (existing test pattern, `legal.test.ts:39-47`).
+- [ ] `npm run test -w @fundedflow/desktop -- src/legal src/features/data-controls src/journeys` → exit 0.
+- [ ] `packages/domain/test/fixtures/data-controls-wire.json` unchanged.
+- [ ] Full root checks → exit 0.
+- [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed. This card names none.
+
+## Verification plan
+Targeted Vitest runs above; packaged re-prompt and text checked in TASK-030.
+
+Standard checks (run serially, frontend build before Rust):
+- Repository root: `npm run check:boundaries -w @fundedflow/domain` → exit 0
+- Repository root: `npm run typecheck` → exit 0
+- Repository root: `npm test` → exit 0 (domain + desktop Vitest incl. journeys/axe, test:notices, test:ci-scripts)
+- Repository root: `npm run build` → exit 0 (includes the dev-tools dist check)
+- Repository root: `npm run check:dist -w @fundedflow/domain` → exit 0
+- `apps/desktop/src-tauri`: `cargo test --offline --locked` → exit 0 (after `npm run build`, run serially)
+- `apps/desktop/src-tauri`: `cargo clippy --offline --locked --all-targets -- -D warnings` → exit 0
+
+## Safety, rollback and side effects
+No journal data touched; `legal-acceptance.json` format unchanged; the re-prompt is intended. Use only disposable test data; never open the real `%APPDATA%\com.fundedflow.desktop` journal or its recovery copies. Do not paraphrase owner-approved legal text.
+
+## Definition of done
+Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
+
+## Independent review notes
+Not yet reviewed. Created from the approved-task audit (TASK-009 MUST on decision 4). Open owner points: order (A) or (B); exact privacy-notice text; whether to give manual removal steps.

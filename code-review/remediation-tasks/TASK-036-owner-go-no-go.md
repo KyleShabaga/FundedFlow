@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r3) |
+| Status | Proposed (r4; awaiting independent review) |
 | Type | Owner Decision |
 | Audit priority | Gate |
 | Roadmap lane | P0-18 (V1) |
@@ -17,7 +17,7 @@
 | Verification platform | N/A |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a7310fd (application source identical to 92e7980) |
-| Specification revision | r3 (2026-10-22; r2 + currency update for approved decisions) |
+| Specification revision | r4 (2026-10-22; r3 + inputs from the approved-task audit fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -49,6 +49,9 @@ Decision only.
    - TASK-002 follow-ups: TASK-037 (synthetic `Performance.csv` fixture and Rust tests), TASK-038 (remove two unreferenced real exports), TASK-039 (Git-history exposure assessment), Kyle's separate disposition of TASK-039's result and, if he chose option B (make private) or option C (rewrite history), the Verified state of its separate execution task; TASK-041 (value-level copies of real rows) with Kyle's ruling on it (remove, or accept as residual low-risk) and, if removal, its state.
    - TASK-008 follow-up: TASK-040 (`cargo fmt` formatting-only change and CI check).
    - TASK-010 outcome (whether ISSUE-002 was escalated to P0).
+   - TASK-030 step 4: the owner-run real-export import result (TASK-007 r4 condition on the P0-05 waiver).
+   - TASK-042 (fees-recorded flag), TASK-043 (rollback with an older safety copy) and TASK-044 (recovery-copy retention disclosure), each Verified (TASK-009 r3).
+   - TASK-023 state: Verified, closed Not Needed with evidence, or still Deferred; if Deferred, Kyle explicitly accepts or rejects the window-close gap here (TASK-029 r6).
 2. Record Kyle's decision verbatim.
 
 ## Prerequisites, dependencies and conflicts
@@ -77,6 +80,9 @@ Kyle's explicit choice recorded verbatim with date and source (trusted conversat
 - Independent review (review3_B), blocking: step 1 now includes, if TASK-039 option B or C is chosen, the Verified state of its execution task; Prerequisites likewise.
 - Independent review (review3_B), blocking: replaced the stale "no repository specification yet" wording; TASK-037..040 have r1 repository specifications (commit 4ff16f5).
 - Independent review (review3_B), nit: TASK-041 (split from TASK-037: value-level copies of real rows) and Kyle's ruling on it listed as an input.
+
+## Changes in r4
+- Inputs now include the TASK-030 real-export import result (TASK-007 r4), TASK-042/043/044 (TASK-009 r3) and the TASK-023 state with Kyle's explicit acceptance of the window-close gap if it stays Deferred (TASK-029 r6).
 
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r3) |
+| Status | Proposed (r4; awaiting independent review) |
 | Type | Verification |
 | Audit priority | Gate |
 | Roadmap lane | NA-2 / NA-5 |
@@ -17,7 +17,7 @@
 | Verification platform | Windows only |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | b01e2b9 (application source identical to 92e7980) |
-| Specification revision | r3 (2026-10-22; r2 + Block 4 corrections from 10 §8.2/§8.3) |
+| Specification revision | r4 (2026-10-22; r3 + real-export import check required by TASK-007 r4) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -42,6 +42,7 @@ Fixing failures (new tasks).
 1. Verify EXE SHA-256.
 2. Run every checklist step including offline steps 3–10 and the TASK-028 added steps B1–B7 (junction, OneDrive, close, ticked uninstall, second instance, DPI, install without WebView2 online and offline). This card executes B4 and B7 but does not own V-023; TASK-028 owns it (08 §D, G2).
 3. Record Pass/Fail per step with screenshots.
+4. Real-format import check (TASK-007 r4, P0-05 waiver condition): Kyle imports one current real export from his broker into the installed candidate on the VM. Record only: exporter name, file row count, imported trade count, duplicate/skip count, any warning or error text, and pass/fail. Never commit, attach or copy the file or its values; delete the VM journal afterwards. Mandatory: Yes (a failed import is Failed; not run is Blocked).
 
 **Pass rule (r3).** The gate is **Passed** only if every mandatory step below is run on the candidate and its observed result matches the expected result written in the TASK-028 checklist, on both a clean Windows 11 VM and a clean Windows 10 22H2 VM (B7 needs an image without WebView2; one such image is enough). A "known limitation (V1.1)" result counts as a pass only where the checklist says that is the expected result. Any mandatory step that fails gives **Failed**; any mandatory step not run (for example, no image without WebView2 available) gives **Blocked** or **Not Run**, never Passed.
 - Mandatory: 1 (hash matches `SHA256SUMS.txt`), 2 (install, no UAC), 3 (offline from here to step 10), 4 (first-run agreement → Accept → Today, offline), 4a (installed legal files and in-app notices), 5 (journal path), 6 (data survives reopen), 7 (no developer tools), 8 (unticked uninstall keeps the journal), 9 (reinstall opens the data), 10 (over-install keeps the journal), B1–B7.
@@ -54,6 +55,7 @@ Fixing failures (new tasks).
 
 ## Acceptance criteria (pass/fail)
 - [ ] Every step recorded Pass/Fail with SHA, EXE hash, Windows build, WebView2 version, tester, date; gate state set by the pass rule above (Passed only if every listed mandatory step, including B1–B7, passes on both VMs).
+- [ ] Step 4 real-format import recorded with counts only (no file, no values) and pass/fail.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
 ## Verification plan
@@ -70,6 +72,9 @@ Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE
 - Expect the legal re-prompt after an upgrade; a same-version reinstall does not re-prompt (10 §8.2 TASK-030 and §8.3 TASK-030/031 nit; G9).
 - V-023: this card runs B4 and B7 but no longer claims V-023; TASK-028 owns it (10 §8.1 §D; G2).
 - Fixture rule: `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`) (10 §8.3 fixture nit).
+
+## Changes in r4
+- Added the owner-run real-export import check (step 4, mandatory, counts only, nothing committed), required by TASK-007 r4 because TASK-037 removes the last real-format fixture and P0-05 is waived (approved-task audit SHOULD).
 
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).

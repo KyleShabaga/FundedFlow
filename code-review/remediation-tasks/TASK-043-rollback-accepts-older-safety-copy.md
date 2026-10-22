@@ -1,0 +1,91 @@
+# TASK-043 — Fix: restore rollback accepts a safety copy at an older schema version (B2-1)
+
+| Field | Value |
+|---|---|
+| Status | Proposed (r1; awaiting independent review) |
+| Type | Fix |
+| Audit priority | P1 (V1: hard prerequisite of the TASK-042 migration; was P2 while no V1 migration existed, 07 §F.1) |
+| Roadmap lane | Unassigned (owner) |
+| Mandatory gate | No |
+| Severity | Medium (an interrupted restore followed by an app update blocks every start) |
+| Confidence | High (lead-confirmed read, 07 §F.1; re-read at 9430f2a) |
+| Canonical issue | ISSUE-018 (B2-1 planning constraint) (see `code-review/remediation-findings-ledger.md`; `code-review/07-stage2-priorities-and-dependencies.md` §F.1; `code-review/08-stage2-remediation-task-index.md:93`) |
+| Original Stage 1 finding IDs | None (B2-1 was found in Block 2, 07 §A/§F.1) |
+| Source card / date | Approved-task audit 2026-10-22 (TASK-009 fee decision needs a V1 migration; 08:93 "Any future migration task must list B2-1 as its prerequisite") |
+| Wave | W1 tail (serial on `restore.rs` after TASK-012, TASK-014, TASK-016 and TASK-017); must be Verified before TASK-042 opens |
+| Effort / risk | S / Low |
+| Verification platform | Any OS |
+| Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
+| Inspected source revision | 9430f2a (application source identical to 92e7980) |
+| Specification revision | r1 (2026-10-22; created from the approved-task audit) |
+| Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
+| Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
+| Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 9430f2a (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
+| Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
+
+## Purpose / risk
+A restore that is interrupted in the `installing` phase is rolled back at the next start from the operation's `safety.db`. `rollback()` validates that copy at `db::latest_version()` (`src-tauri/src/data_controls/restore.rs:345-349`). If the next start runs a newer build that adds a migration (TASK-042 adds 0022), the safety copy is one version behind, `validate_database` fails with `Integrity` (`src-tauri/src/data_controls/archive.rs:476-481`), the pending marker stays, and every start is blocked with "A pending restore could not finish recovery" (`src-tauri/src/runtime.rs:336-340`). The user's own pre-restore journal is then reachable only by hand.
+
+## Trigger / reproduction
+1. Build N: start a restore; the process dies after `pending.phase = "installing"` is written (`restore.rs:319-320`), or the install fails and `rollback` itself is interrupted.
+2. Install build N+1, which adds a migration.
+3. Start: `runtime.rs:336` → `restore::recover` → `"installing"` branch (`restore.rs:336-337`) → `rollback` → `validate_database(safety.db, latest_version())` → `Integrity` → start blocked.
+
+Test reproduction without a new migration: write a `safety.db` at version `latest_version() - 1` (`db::migrate_with(&mut conn, &db::MIGRATIONS[..(latest-1)])`, as `db/tests.rs:359` and `db/rulebook_tests.rs:207` do) into the operation folder, set the marker to `installing` (as `data_controls/tests.rs:280-286` does), and call `restore::recover`.
+
+## Root cause / evidence
+- `restore.rs:345-349`: `rollback()` calls `archive::validate_database(&op.join("safety.db"), db::latest_version())` before `replace_attachments` and `replace_database`.
+- `archive.rs:476-487`: `validate_database(path, version)` requires `user_version == version` and compares `schema()` with a fresh reference built from `db::MIGRATIONS[..version]`. It already supports older versions: `inspect` validates archives at their own `manifest.schema_version` (`archive.rs:392, 419`).
+- After `replace_database`, the next step in `Runtime::open` is `db::open_file` (`runtime.rs:351`), which writes the `fundedflow.db.before-v<N>.bak` pre-upgrade copy and migrates (`src-tauri/src/db/mod.rs:266-286`). So an older safety copy is upgraded normally once it is back in place.
+
+## Expected change scope
+- `src-tauri/src/data_controls/restore.rs` (`rollback` only): read the safety copy's `user_version` read-only; refuse it unless it is in `3..=db::latest_version()` (the same range `inspect` accepts, `archive.rs:392`); validate it with `archive::validate_database(&safety, own_version)`; then install it as today. Never install a safety copy newer than this build.
+- `src-tauri/src/data_controls/tests.rs`: new tests (below).
+
+## Out of scope
+- The `"prepared"` branch (`restore.rs:307-318`) validates `candidate.db` at `latest_version()`. A candidate staged by an older build is therefore abandoned (marker removed, operation folder kept, original journal opens). That is safe because nothing has been replaced; leave it unchanged and note it in the PR.
+- Pruning of operation folders and other ISSUE-018 parts (V1.1).
+- Any migration (TASK-042).
+
+## Implementation approach
+1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
+2. Rebase on the merged W1 `restore.rs` cards first. TASK-017 changes `rollback` (preserved attachment bytes must stay available after rollback); keep its behaviour intact and change only the version check.
+3. In `rollback`, open `safety.db` read-only (reuse the `readonly` helper `validate_database` uses), read `user_version`, reject anything outside `3..=db::latest_version()` with an error that keeps the pending marker (so the operation folder is preserved and the existing recovery message applies), then call `validate_database` at that version.
+4. Tests in `data_controls/tests.rs`:
+   - **Older safety copy rolls back.** Prepare a restore through the normal path, replace the operation's `safety.db` with a copy at `latest_version() - 1` holding a known account, rewrite the marker to `installing`, overwrite the live file, call `restore::recover` → `Ok`; the live journal is at `latest_version() - 1`; `db::open_file` then upgrades it to `latest_version()`, writes `fundedflow.db.before-v<latest>.bak`, and the account is present; the marker is gone. Fails before the change (`Integrity`).
+   - **Newer safety copy is refused.** Same setup with `user_version` set to `latest_version() + 1` → `recover` returns an error; the marker and the operation folder remain.
+   - **Tampered older safety copy is refused.** An older copy with an extra table → `recover` returns an error (schema compared at its own version).
+   - The existing `failed_swap_and_interrupted_install_restore_the_original_journal` (`data_controls/tests.rs:251-295`) still passes unchanged.
+
+## Prerequisites, dependencies and conflicts
+- Prerequisites: TASK-012, TASK-014, TASK-016 and TASK-017 merged (all edit `restore.rs`; W1 is strictly serial on that file, 07 §D). TASK-040 (cargo fmt) merged first if approved.
+- Blocks: TASK-042 (any new migration; 07 §F.1, 08:93).
+- Likely shared-file conflicts: `data_controls/restore.rs` (`rollback`) with TASK-017 (rollback preserves changed attachment bytes; owner amendment) and TASK-012 (adds a previous-version rollback test, step 6); `data_controls/tests.rs` with TASK-012, TASK-014, TASK-015, TASK-016 and TASK-017.
+
+## Acceptance criteria (pass/fail)
+- [ ] The older-safety-copy test passes and fails on the pre-fix code (record both runs).
+- [ ] Newer and tampered safety copies are refused; the marker and operation folder remain (tests).
+- [ ] `apps/desktop/src-tauri`: `cargo test --offline --locked data_controls` → exit 0, including `failed_swap_and_interrupted_install_restore_the_original_journal` and TASK-012's previous-version rollback test if merged.
+- [ ] Full Rust checks → exit 0.
+- [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed. This card names none; `packages/domain/test/fixtures/data-controls-wire.json` must not change.
+
+## Verification plan
+Targeted: `cargo test --offline --locked data_controls`, then the full suite.
+
+Standard checks (run serially, frontend build before Rust):
+- Repository root: `npm run check:boundaries -w @fundedflow/domain` → exit 0
+- Repository root: `npm run typecheck` → exit 0
+- Repository root: `npm test` → exit 0 (domain + desktop Vitest incl. journeys/axe, test:notices, test:ci-scripts)
+- Repository root: `npm run build` → exit 0 (includes the dev-tools dist check)
+- Repository root: `npm run check:dist -w @fundedflow/domain` → exit 0
+- `apps/desktop/src-tauri`: `cargo test --offline --locked` → exit 0 (after `npm run build`, run serially)
+- `apps/desktop/src-tauri`: `cargo clippy --offline --locked --all-targets -- -D warnings` → exit 0
+
+## Safety, rollback and side effects
+Use only disposable test journals and temporary directories created by tests. Never open, migrate, copy, seed or reset the real `%APPDATA%\com.fundedflow.desktop` journal. Do not edit shipped migrations, `test_csvimport/*.csv` or `src-tauri/src/db/fixtures/*.db`. Side effect: after a rollback to an older copy, the next open writes a pre-upgrade copy (`fundedflow.db.before-v<N>.bak`), one more recovery copy covered by TASK-044's disclosure.
+
+## Definition of done
+Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUDE.md; diff reviewed; new regression tests fail before and pass after the change; every acceptance criterion has recorded evidence (command, directory, exit code); Windows-only criteria have owner/VM evidence. Compiling or passing unrelated tests is not completion.
+
+## Independent review notes
+Not yet reviewed. Created from the approved-task audit (TASK-009 MUST: the fee decision needs a V1 migration, and B2-1 "must precede any new migration", 07 §A and §F.1). Board and index follow-ups (not done here): add TASK-043 to 08 §A, the 09 waves and TASK-029's dependencies.
