@@ -46,15 +46,37 @@ The open GitHub issues endpoint returned only PR #107 on 2026-10-22. The branch 
 
 Before distribution, smoke-test the actual packaged Windows installer (with/without WebView2), old acceptance record prompt, Settings documents, restore/cleanup interruption, whole-journal erasure and uninstall retention. Source and jsdom verification do not establish packaged behavior. Record results and owner decision here before changing draft status.
 
-## Verification results for this revision
+## Verification results for 0.2.1-draft
 
-- PASS: 77 tests across bundled legal documents, third-party legal UI, data controls, first-run/Settings journey and axe accessibility (5 files).
-- PASS: 557 domain tests (17 files); typecheck; production build; domain boundary/dist checks; third-party notice generation check; notice tests (6); CI audit-guard tests (8); diff whitespace check.
-- The initial full desktop run completed with 1215 passing and 3 failures, all obsolete wording/version assertions affected by this change. Those assertions were updated and all affected suites now pass. A later complete desktop run stalled and was stopped; a final whole-suite pass is not claimed.
-- Rust test attempt: 359 passed, 29 failed, 2 ignored. Failures include Access denied in unchanged attachment filesystem code; environment confinement is a possible cause, not a demonstrated baseline result. No Rust source changed. Clippy compilation explicitly failed with Windows error 112 (disk full). A subsequent frontend build also encountered ENOSPC; generated Rust target files were removed, then build/typecheck/check were rerun successfully. Rust checks still require a clean CI run; no baseline exemption is claimed.
-- jsdom emits its known unimplemented canvas getContext warning during axe checks; focused tests still pass. Production build emits a chunk-size warning.
-- Packaged installer/runtime, uninstall and interrupted-cleanup smoke checks remain unperformed. No distribution approval is recorded.
+Application source commit: `d3e263f` (owner-authorized acknowledgment flow). Subsequent report-only changes do not alter the bundled application.
 
-## Authorized follow-up verification (2026-10-22)
+| Check | Result |
+|---|---|
+| Full domain suite | PASS: 557 tests in 17 files |
+| Full desktop suite, including document digests, acknowledgment/first-run, Settings and accessibility | PASS: 1,218 tests in 85 files |
+| Focused legal/data-control/first-run/Settings/accessibility rerun | PASS: 77 tests in 5 files |
+| Third-party-notice tests | PASS: 10 tests |
+| CI audit-guard tests | PASS: 8 tests |
+| Rust tests outside filesystem confinement, reduced debug-symbol build | PASS: 388 passed, 0 failed, 2 ignored |
+| Clippy, all targets, warnings denied | PASS |
+| Typecheck, production build, domain boundaries/dist | PASS |
+| Generated third-party-notice check | PASS; inventory unchanged |
 
-The owner adopted the revised P0-13 criteria and authorized acknowledgment wording in this chat. Both documents are now 0.2.1-draft, with new digests. The existing schema and IDs are intentionally retained. All 77 focused document, acknowledgment, Settings, data-control and accessibility tests pass after this change. Rust tests rerun outside filesystem confinement with debug symbols disabled: 388 passed, 0 failed, 2 ignored. This resolves the earlier confined Rust test failures for this source revision; no Rust source fix was needed. Clippy and broader test/packaged checks are recorded below as results become available.
+The full test command was rerun sequentially and exited successfully. Earlier frontend attempts overlapped builds that clean the shared domain output, causing missing-package errors and invalidating those attempts. They are not evidence of product regressions or baseline defects. The earlier confined Rust attempt had filesystem access failures; the successful unconfined rerun needed no Rust source changes. An initial Clippy attempt exhausted disk; generated build files were cleared and Clippy subsequently passed with reduced debug symbols. No tests or checks were weakened to obtain these results.
+
+Warnings: jsdom emits an unimplemented canvas getContext warning during axe checks; the tests pass. The production build emits a chunk-size warning. Two Rust tests remain ignored as in the repository configuration; they are not counted as passes.
+
+## Packaged release verification still required
+
+CI and the Windows installer workflow for `d3e263f` were running when this report was prepared. Dependency audit had passed; a completed full CI or installer result is not inferred from local passes. This repository builds unsigned test installers as artifacts without publishing a release.
+
+Use a disposable Windows environment or separate test user so these checks cannot alter an existing journal or installation. Record artifact filename, source SHA, SHA-256, OS/WebView2 version and observations:
+
+1. Install on a machine with WebView2; verify bundled LICENSE and THIRD_PARTY_NOTICES.txt match the source and Settings. Separately test a clean machine without WebView2 and observe the Microsoft bootstrap download. Do not remove the user's runtime to simulate that case.
+2. First launch: draft status, two current notices, keyboard focus and disclosure order, Close, and Acknowledge and continue. Verify that closing writes no acknowledgment; the background journal runtime can still create/migrate its local database.
+3. Upgrade using a copied old acceptance record: both changed documents are named and re-prompted. Acknowledgment stores the same stable IDs and acceptedAt schema; reopening skips the prompt. Settings shows the correct versions, dates and acknowledgment time.
+4. With synthetic data only, export and restore; verify plaintext content and retained safety copies. Interrupt a restore/cleanup operation and verify recovery or cleanup-pending messaging without claiming deletion has finished.
+5. Delete one synthetic account; verify recovery copies remain. Erase the synthetic whole journal; verify managed copies are removed on completion and external exports, acceptance/acknowledgment file and WebView stores remain outside that operation.
+6. Uninstall the test installation and inventory the remaining app data, WebView data and external exports. Record each available uninstall option rather than assuming that uninstall erases data. Reinstall and confirm whether the retained acknowledgment still suppresses the prompt.
+
+The Windows computer-use helper is available, but no FundedFlow window was running during inspection. No packaged runtime, uninstall, missing-WebView2 or interrupted-operation smoke check is claimed as completed. Those checks and explicit owner approval of document content and release commit/scope remain release blockers under the adopted P0-13 criteria. No release is authorized by this report.
