@@ -1106,9 +1106,9 @@
  {
   "id": "027",
   "slug": "TASK-027-release-workflow-gating-version.md",
-  "sha256": "d522077eb3cb06ee08774744b6bb7d7264a9f4a9b4d7cf7605e065b2e2ae3a39",
+  "sha256": "9fe61aed69cf112d6743c1b1667017d13d6840db294a5c03436071d0b35b7dbb",
   "props": {
-   "Name": "TASK-027 \u2014 Fix (process): release build gated on CI for the same SHA; unique version per candidate",
+   "Name": "TASK-027 \u2014 Fix (process): installer packaging gated on in-job checks of the exact source SHA; unique version per candidate",
    "Task ID": "TASK-027",
    "Stable Key": "KyleShabaga/FundedFlow:TASK-027",
    "Finding IDs": "WIN-006, WIN-004, WIN-008, TEST-010; TEST-001 (dup \u2192 ISSUE-040)",
@@ -1120,21 +1120,21 @@
    "Roadmap Lane": "NA-2 / P0-06 (release)",
    "Wave": "W3b",
    "Approval": "Pending Review",
-   "Spec Readiness": "Ready for Approval (r4)",
+   "Spec Readiness": "Ready for Approval (r5)",
    "Execution Status": "Not Started",
    "Finding Verification": "Confirmed",
    "Release Blocking": "Yes",
    "Gate State": "N/A",
    "Source Card": ".github/workflows/release-installer.yml; ci.yml; Stage 1 2026-10-22",
-   "Specification Revision": "r4 \u00b7 sha256 d522077eb3cb06ee",
-   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD 5e843a2); cards 5e843a2",
-   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-027 at spec r4 (sha256 d522077eb3cb), scope exactly as the card; prerequisites must be complete.",
-   "Effort": "S\u2013M",
-   "Risk": "Low",
+   "Specification Revision": "r5 \u00b7 sha256 9fe61aed69cf112d",
+   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD 55b70c1); cards 55b70c1",
+   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-027 at spec r5 (sha256 9fe61aed69cf), scope exactly as the card; prerequisites must be complete.",
+   "Effort": "M",
+   "Risk": "Low\u2013Medium (workflow restructure)",
    "Verification Platform": "Any OS (CI)",
    "Proposed First Batch": "__NO__",
    "Needs Owner Decision": "__NO__",
-   "Decision Notes": "Updated to r4 by Claude in the currency pass for the approved decisions (independently reviewed, 2026-10-22). Not an approval."
+   "Decision Notes": "Updated to r5 by Claude at Kyle's direction: installer packaging gated on in-job checks via a reusable workflow on the exact SOURCE_SHA (independently reviewed, 2026-10-22). Not an approval."
   },
   "corr": [
    "Add `apps/desktop/src/journeys/recovery.journey.test.tsx:66`. Add \"if TASK-006 = B or C, set `webviewInstallMode` (`tauri.conf.json:49-52`)\" and TASK-006 as a prerequisite. Consider adding `producerVersion` to `normalize()` (`wire_tests.rs:9-17`) so the fixture doesn't change on every bump. Merge after 017 and before 029. (G4, G13)"
@@ -1142,7 +1142,7 @@
   "nits": [],
   "ready": true,
   "r3": true,
-  "rev": "r4",
+  "rev": "r5",
   "deps": [
    "005",
    "006"
@@ -1197,7 +1197,7 @@
  {
   "id": "029",
   "slug": "TASK-029-build-and-record-candidate.md",
-  "sha256": "0e8692cda366f2acb160e5f693e5d18cbd64efef71fe3080f6e3d17d32965391",
+  "sha256": "039c1eee30620453095eb9ab93907dd20fc49cda84f491986330355907be1da0",
   "props": {
    "Name": "TASK-029 \u2014 Gate: build and record the release candidate (CI green, advisory result, EXE SHA-256)",
    "Task ID": "TASK-029",
@@ -1211,21 +1211,21 @@
    "Roadmap Lane": "NA-2 / P0-06",
    "Wave": "W4",
    "Approval": "Pending Review",
-   "Spec Readiness": "Ready for Approval (r4)",
+   "Spec Readiness": "Ready for Approval (r5)",
    "Execution Status": "Not Started",
    "Finding Verification": "N/A (gate/decision)",
    "Release Blocking": "Yes",
    "Gate State": "Not Run",
    "Source Card": "Final Push V1 \u2014 https://app.notion.com/p/4001bd4b6bde8044ab04f75d167950cd; .github/workflows/ci.yml, release-installer.yml",
-   "Specification Revision": "r4 \u00b7 sha256 0e8692cda366f2ac",
-   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD 5e843a2); cards 5e843a2",
-   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-029 at spec r4 (sha256 0e8692cda366), scope exactly as the card; prerequisites must be complete.",
+   "Specification Revision": "r5 \u00b7 sha256 039c1eee30620453",
+   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD 55b70c1); cards 55b70c1",
+   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-029 at spec r5 (sha256 039c1eee3062), scope exactly as the card; prerequisites must be complete.",
    "Effort": "S",
    "Risk": "Low",
    "Verification Platform": "GitHub Actions + Windows (hash check)",
    "Proposed First Batch": "__NO__",
    "Needs Owner Decision": "__NO__",
-   "Decision Notes": "Updated to r4 by Claude in the currency pass for the approved decisions (independently reviewed, 2026-10-22). Not an approval."
+   "Decision Notes": "Updated to r5 by Claude at Kyle's direction: installer packaging gated on in-job checks via a reusable workflow on the exact SOURCE_SHA (independently reviewed, 2026-10-22). Not an approval."
   },
   "corr": [
    "Prerequisites: add \"TASK-008 decided; the fmt task Verified if the gate is kept\". CI evidence: a push-to-main or `workflow_dispatch` run on the exact SHA (not a PR merge commit). `--fail-on-outage` is applied automatically on dispatch (`ci.yml:109, 124`) and cannot be passed in. Drop the WebView2 field from its Definition of Done. (G5, G14)"
@@ -1233,7 +1233,7 @@
   "nits": [],
   "ready": true,
   "r3": true,
-  "rev": "r4",
+  "rev": "r5",
   "deps": [
    "001",
    "002",
@@ -1712,7 +1712,7 @@
  {
   "id": "040",
   "slug": "TASK-040-adopt-cargo-fmt.md",
-  "sha256": "07cc5493a340236f235b9ab169d1e748995b42a2c9bb35b8208f1478a97adf98",
+  "sha256": "c730a4bcda5cf71e8a698c5e1b4b6b513ed838fd858b9949c55420b21df670be",
   "props": {
    "Name": "TASK-040 \u2014 Fix: adopt `cargo fmt` in a dedicated formatting-only change and enforce it in CI",
    "Task ID": "TASK-040",
@@ -1726,27 +1726,27 @@
    "Roadmap Lane": "Build 10.5 gates (historical, V1)",
    "Wave": "W0-Fmt",
    "Approval": "Pending Review",
-   "Spec Readiness": "Ready for Approval (r1)",
+   "Spec Readiness": "Ready for Approval (r2)",
    "Execution Status": "Not Started",
    "Finding Verification": "N/A (gate/decision)",
    "Release Blocking": "Yes",
    "Gate State": "N/A",
    "Source Card": "Notion draft TASK-040 r1 (https://app.notion.com/p/4011bd4b6bde81e9852df4e2e2831d21), created 2026-10-22 under TASK-008 r3 (\"Approve with option a for both\")",
-   "Specification Revision": "r1 \u00b7 sha256 07cc5493a340236f",
-   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD 5e843a2); cards 5e843a2",
-   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-040 at spec r1 (sha256 07cc5493a340), scope exactly as the card; prerequisites must be complete.",
+   "Specification Revision": "r2 \u00b7 sha256 c730a4bcda5cf71e",
+   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD 55b70c1); cards 55b70c1",
+   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-040 at spec r2 (sha256 c730a4bcda5c), scope exactly as the card; prerequisites must be complete.",
    "Effort": "S",
    "Risk": "Low (mechanical, but a wide diff that conflicts with any open Rust branch)",
    "Verification Platform": "Any OS locally; Windows CI (`ci.yml`, windows-latest)",
    "Proposed First Batch": "__NO__",
    "Needs Owner Decision": "__NO__",
-   "Decision Notes": "Updated to r1 by Claude in the currency pass for the approved decisions (independently reviewed, 2026-10-22). Not an approval."
+   "Decision Notes": "Updated to r2 by Claude at Kyle's direction: installer packaging gated on in-job checks via a reusable workflow on the exact SOURCE_SHA (independently reviewed, 2026-10-22). Not an approval."
   },
   "corr": [],
   "nits": [],
   "ready": true,
   "r3": true,
-  "rev": "r1",
+  "rev": "r2",
   "deps": [
    "008"
   ]
