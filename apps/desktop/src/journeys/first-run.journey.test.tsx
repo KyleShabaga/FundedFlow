@@ -62,7 +62,7 @@ describe("first launch", () => {
       await user.click(summary);
       const article = within(main).getByRole("article", { name: doc.title });
       expect(within(article).getByText("Draft")).toBeTruthy();
-      expect(within(article).getByText(new RegExp(`Version ${doc.version.replace(/\./g, "\\.")}`))).toBeTruthy();
+      expect(within(article).getByText(`Version ${doc.version} · Draft dated October 21, 2026`)).toBeTruthy();
     }
     // Keyboard only: from the title, Tab reaches the expanders, then Decline, then Accept.
     title.focus();
