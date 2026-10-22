@@ -1,8 +1,8 @@
-# TASK-027 — Fix (process): release build gated on CI for the same SHA; unique version per candidate
+# TASK-027 — Fix (process): installer packaging gated on in-job checks of the exact source SHA; unique version per candidate
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r4) |
+| Status | Proposed (r5; awaiting independent review) |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | NA-2 / P0-06 (release) |
@@ -13,35 +13,42 @@
 | Original Stage 1 finding IDs | WIN-006, WIN-004, WIN-008, TEST-010; TEST-001 (dup → ISSUE-040) |
 | Source card / date | .github/workflows/release-installer.yml; ci.yml; Stage 1 2026-10-22 |
 | Wave | W3 |
-| Effort / risk | S–M / Low |
+| Effort / risk | M / Low–Medium (workflow restructure) |
 | Verification platform | Any OS (CI) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | b01e2b9 (application source identical to 92e7980) |
-| Specification revision | r4 (2026-10-22; r3 + currency update for approved decisions) |
+| Inspected source revision | a9be03f (application source identical to 92e7980) |
+| Specification revision | r5 (2026-10-22; r4 + owner-directed CI gate: reusable check workflow run in the installer workflow on the exact `SOURCE_SHA`) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
 
 ## Purpose / risk
-Release workflow runs no tests, tags are not gated on CI, PR path filter omits `apps/desktop/src/**`/`packages/**`/`apps/desktop/THIRD_PARTY_NOTICES.txt`, every build is 0.1.0, toolchain versions are not logged.
+Release workflow runs no tests, tags are not gated on CI, PR path filter omits `apps/desktop/src/**`/`packages/**`/`apps/desktop/THIRD_PARTY_NOTICES.txt`, every build is 0.1.0, toolchain versions are not logged. A green pull-request CI run does not prove the packaged source was tested: on `pull_request`, the default checkout is GitHub's temporary merge commit (GitHub docs, "Events that trigger workflows" → `pull_request`), while the installer packages the pull request's head commit.
 
 ## Trigger / reproduction
 Building a candidate from an untested SHA; downgrade testing.
 
 ## Root cause / evidence
-Workflow design; fixed version.
+Workflow design; fixed version. `.github/workflows/release-installer.yml:39-43` sets `SOURCE_SHA` to `github.event.pull_request.head.sha || github.sha` and checks out that commit; `.github/workflows/ci.yml:27` uses the default checkout (the merge commit on `pull_request`). The installer job runs no checks before `npm run tauri -- build` (`release-installer.yml:76`).
 
 ## Expected change scope
-`.github/workflows/release-installer.yml` (require a successful `ci.yml` run on the same SHA or run the CI steps in-job; widen PR paths; log rustc/node/npm/@tauri-apps/cli versions to the summary), version fields `apps/desktop/package.json:22` (pinned `"@fundedflow/domain": "0.1.0"`, changes with `packages/domain/package.json:3` if the workspace versions are bumped), `apps/desktop/src-tauri/tauri.conf.json:4`, `apps/desktop/src-tauri/Cargo.toml:3`, root `package.json:5` and `apps/desktop/package.json:5` — all set per TASK-005 Option A: the first candidate is `0.1.1`, and each later candidate gets a new, strictly increasing version (`0.1.2`, …). Full version knock-on (all in the same PR): `Cargo.lock`, `package-lock.json`, `npm run notices` (cargo-about 0.9.2; regenerates the notices `appVersion`), `producerVersion` in `packages/domain/test/fixtures/data-controls-wire.json:89` (reviewed diff), and the version assertion `expect(text).toContain("FundedFlow version: 0.1.0")` at `apps/desktop/src/journeys/recovery.journey.test.tsx:66`. WebView2 install mode: TASK-006 = Option A, so `bundle.windows.webviewInstallMode` (`apps/desktop/src-tauri/tauri.conf.json:49-52`, `downloadBootstrapper`, `silent: true`) stays unchanged; this card makes no installer-mode change. Option for the implementer (not mandated): add `"producerVersion"` to the volatile keys in `normalize()` (`apps/desktop/src-tauri/src/data_controls/wire_tests.rs:9-17`, the match arms inside `normalize()` at 4-28) so the wire fixture stops changing on every version bump; if taken, the fixture's `producerVersion` becomes a fixed placeholder in this one reviewed diff (the contract is `z.string()`, `packages/domain/src/contracts/data-controls.ts:39`), and the choice is recorded in the PR. TEST-010 `check:engine-runtimes`: explicitly deferred to V1.1 (not in this card).
+new reusable workflow `.github/workflows/checks.yml` (`on: workflow_call`); `.github/workflows/ci.yml` (calls it; behaviour unchanged); `.github/workflows/release-installer.yml` (run the required checks in the same workflow run on the exact `SOURCE_SHA` through a reusable workflow, and package only when they succeed; widen PR paths; log rustc/node/npm/@tauri-apps/cli versions to the summary), version fields `apps/desktop/package.json:22` (pinned `"@fundedflow/domain": "0.1.0"`, changes with `packages/domain/package.json:3` if the workspace versions are bumped), `apps/desktop/src-tauri/tauri.conf.json:4`, `apps/desktop/src-tauri/Cargo.toml:3`, root `package.json:5` and `apps/desktop/package.json:5` — all set per TASK-005 Option A: the first candidate is `0.1.1`, and each later candidate gets a new, strictly increasing version (`0.1.2`, …). Full version knock-on (all in the same PR): `Cargo.lock`, `package-lock.json`, `npm run notices` (cargo-about 0.9.2; regenerates the notices `appVersion`), `producerVersion` in `packages/domain/test/fixtures/data-controls-wire.json:89` (reviewed diff), and the version assertion `expect(text).toContain("FundedFlow version: 0.1.0")` at `apps/desktop/src/journeys/recovery.journey.test.tsx:66`. WebView2 install mode: TASK-006 = Option A, so `bundle.windows.webviewInstallMode` (`apps/desktop/src-tauri/tauri.conf.json:49-52`, `downloadBootstrapper`, `silent: true`) stays unchanged; this card makes no installer-mode change. Option for the implementer (not mandated): add `"producerVersion"` to the volatile keys in `normalize()` (`apps/desktop/src-tauri/src/data_controls/wire_tests.rs:9-17`, the match arms inside `normalize()` at 4-28) so the wire fixture stops changing on every version bump; if taken, the fixture's `producerVersion` becomes a fixed placeholder in this one reviewed diff (the contract is `z.string()`, `packages/domain/src/contracts/data-controls.ts:39`), and the choice is recorded in the PR. TEST-010 `check:engine-runtimes`: explicitly deferred to V1.1 (not in this card).
 
 ## Out of scope
 Signing; updater; pinning actions by SHA (optional, V1.1).
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
-2. Implement the CI gate (e.g. `workflow_run`/`needs` or a pre-check using the GitHub API for the SHA) — choose the simplest that works with `contents: read`.
-3. Widen PR paths to `apps/desktop/**` and `packages/**`.
+2. CI gate (owner-directed, r5): in-job checks through one reusable workflow, so the installer gate and ordinary CI cannot drift.
+   a. Move all steps of `ci.yml`'s `build-and-test` and `dependency-audit` jobs (including the toolchain and cargo-about/cargo-audit installs and the audit-guard tests) into `.github/workflows/checks.yml` with `on: workflow_call` and inputs: `ref` (string, default empty = default checkout), `expected-sha` (string, default empty), `run-build-and-test` (boolean), `fail-on-outage` (boolean). Inside a called workflow `github.event_name` is the caller's event, so the audit steps use the `fail-on-outage` input instead of the current `github.event_name` expression (`ci.yml:109, 124`). Keep the step order (frontend `npm run build` before cargo) and every existing check: boundaries, typecheck, `npm test`, `npm run build`, `check:dist`, `cargo test`, `cargo clippy -D warnings`, `check:notices`, npm audit, cargo audit, and `cargo fmt --check` once TASK-040 has added it.
+   b. Every job in `checks.yml` checks out `inputs.ref` and, when `expected-sha` is set, fails unless `git rev-parse HEAD` equals it; it prints the checked-out commit to the job summary. Each job sets `timeout-minutes`, so a hung check fails instead of hanging (`timeout-minutes` is not allowed on a caller job with `uses:`, so it lives in `checks.yml`). `checks.yml` declares no `concurrency`: the callers' groups suffice, and a group inside a called workflow is evaluated with the caller's context and could collide.
+   c. `ci.yml` keeps its triggers, `concurrency` and `permissions: contents: read`, and calls `checks.yml` with an empty `ref` (unchanged merge-commit checkout on `pull_request`), `run-build-and-test: ${{ github.event_name != 'schedule' }}` and `fail-on-outage: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}` — the same behaviour as today.
+   d. `release-installer.yml` calls `checks.yml` from a job (e.g. `checks`) with `ref` and `expected-sha` both set to `${{ github.event.pull_request.head.sha || github.sha }}` — a `uses:` job's `with:` cannot read the `env` context, so the expression is passed directly; the packaging job keeps its `SOURCE_SHA` env (`:39`) with the same expression — `run-build-and-test: true` and `fail-on-outage: ${{ github.event_name != 'pull_request' }}` (a candidate from `workflow_dispatch` or a `v*` tag cannot pass on an audit that did not run; pull-request test builds keep the warning-only rule). The packaging job declares `needs: [checks]` (the caller job; jobs inside a called workflow cannot be named in `needs`) with the default `if: success()`, so a failed, cancelled or timed-out called workflow skips packaging and no artifact is uploaded. A job skipped by its own `if` inside `checks.yml` counts as success to the caller, which is why the release call always passes `run-build-and-test: true`. The packaging job also sets `timeout-minutes`. The packaging job also verifies `git rev-parse HEAD` = `SOURCE_SHA` before building, and the summary and `SHA256SUMS.txt` keep the `source_sha` line.
+   e. `permissions: contents: read` stays in both callers; no GitHub API call or `actions: read` is needed.
+   f. Owner action at merge time: check names change to the `<caller job> / <called job>` form. If branch protection requires the old names, the TASK-027 PR itself would wait forever on them, so update the required-check names in the repository settings while merging this PR (record in the execution log).
+   g. TASK-040 order: if TASK-040 has merged, move its `rustfmt` component and `cargo fmt --check` step into `checks.yml`; if TASK-040 merges after this card (its fallback order), TASK-040 adds them to `checks.yml` instead of `ci.yml`.
+3. Widen PR paths to `apps/desktop/**`, `packages/**` and `.github/workflows/checks.yml`.
 4. Add a summary step printing toolchain versions.
 5. Apply TASK-005 Option A: set every version field above to `0.1.1` for the first candidate (a later candidate gets the next increasing version); keep the tag-equals-version check (`release-installer.yml:65-69`, so the tag is `v0.1.1`) and the `source_sha`/`version` lines in `SHA256SUMS.txt` (`release-installer.yml:96-100`); update `recovery.journey.test.tsx:66` and the wire fixture `producerVersion` (or take the `normalize()` option above).
 6. Not applicable (TASK-006 = Option A): leave `webviewInstallMode` unchanged.
@@ -51,13 +58,18 @@ Signing; updater; pinning actions by SHA (optional, V1.1).
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-005 decided — Option A, approved 2026-10-22 on the Notion approval board; TASK-006 decided — Option A, approved 2026-10-22 on the Notion approval board (no config change follows from it).
 - Merge order: after TASK-017 (the last W1 wire-fixture edit; 013 → 015 (option B only) → 016 → 017 → 027 on `data-controls-wire.json`) and before TASK-029 (candidate).
-- Likely shared-file conflicts: Version files with TASK-029 (candidate); `packages/domain/test/fixtures/data-controls-wire.json` with TASK-013, 015 (option B), 016, 017.
+- Likely shared-file conflicts: `.github/workflows/ci.yml` with TASK-040 (its `cargo fmt --check` step and `rustfmt` component; TASK-040 merges first, so this card moves that step into `checks.yml`); version files with TASK-029 (candidate); `packages/domain/test/fixtures/data-controls-wire.json` with TASK-013, 015 (option B), 016, 017.
 
 ## Acceptance criteria (pass/fail)
 - [ ] Domain package version rule: `packages/domain/package.json:3` and the pin `apps/desktop/package.json:22` either both stay `0.1.0` or both become `0.1.1`; the PR records which.
 - [ ] If the optional `normalize()` change in `src-tauri/src/data_controls/wire_tests.rs` is taken and TASK-040 has merged, `cargo fmt --check` in `apps/desktop/src-tauri` → exit 0.
 - [ ] Workflow lint/dry run: a PR changing only `apps/desktop/src/**` triggers the installer build (observed in Actions).
-- [ ] A dispatch on a SHA without green CI fails with a clear message (observed).
+- [ ] `.github/workflows/checks.yml` exists with `on: workflow_call`; `ci.yml` and `release-installer.yml` both call it; no check step is duplicated outside it (diff review; the packaging job's own dev-tools check, `release-installer.yml:80-85`, is exempt).
+- [ ] Ordinary CI is unchanged in effect: a pull request, a push to `main`, the daily schedule (audit only) and a `ci.yml` dispatch each run the same checks as before, and the audit outage rule is unchanged per event (diff review of the inputs passed by `ci.yml`, plus one observed PR run and one observed dispatch run; the schedule is checked at its next run and recorded).
+- [ ] Every check job and the packaging job in a release run print the checked-out commit, and it equals `SOURCE_SHA`; on a pull-request installer run this is the PR head commit, not the merge commit (observed).
+- [ ] A deliberately failing check blocks packaging: on a throwaway branch with one failing assertion, a `release-installer.yml` `workflow_dispatch` run ends with the packaging job skipped and no artifact uploaded (observed, run URL recorded); the branch is then deleted. No earlier green CI run is needed when the same run performs the checks.
+- [ ] A release run whose checks all pass uploads the artifact, and `SHA256SUMS.txt` and the summary show `source_sha` = `SOURCE_SHA` (observed).
+- [ ] On a `workflow_dispatch` or tag release run, an audit with no result fails the run (the `fail-on-outage` input is true; checked in the workflow diff).
 - [ ] Summary shows toolchain versions; SHA256SUMS.txt still contains the EXE hash and the `source_sha` and `version` lines.
 - [ ] `tauri.conf.json:4`, `Cargo.toml:3`, root `package.json:5` and `apps/desktop/package.json:5` all read `0.1.1` (TASK-005 Option A, first candidate).
 - [ ] Root standard checks and `npm run check:notices` → exit 0 after the version bump; `Cargo.lock`/`package-lock.json` diffs limited to the version fields.
@@ -97,6 +109,15 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - TASK-006 approved as Option A (2026-10-22, Notion approval board): the B/C `webviewInstallMode` branch is removed from scope, step 6 is marked not applicable, and the criterion now requires `tauri.conf.json:49-52` unchanged.
 - Prerequisites record both decisions as made (TASK-005 A, TASK-006 A).
 - Independent review nits: fixed rule for the domain package version; later candidates need their own version-bump PR repeating step 5; `cargo fmt --check` criterion if the optional Rust change is taken after TASK-040.
+
+## Changes in r5
+- Owner-directed (Kyle, 2026-10-22): a green pull-request CI run tests GitHub's merge commit, while the installer packages the PR head commit (`release-installer.yml:39-43` vs `ci.yml:27`), so the gate runs the checks in the same workflow run on the exact `SOURCE_SHA`.
+- Step 2 now specifies a reusable workflow `checks.yml` (`workflow_call`) called by both `ci.yml` and `release-installer.yml`, so the two cannot drift; the `workflow_run` and API pre-check options are removed.
+- Each job verifies `git rev-parse HEAD` equals `SOURCE_SHA` and records it; packaging `needs:` the checks, so failed, cancelled or timed-out checks block it; `timeout-minutes` on every job.
+- Audit outage rule passed as an input (a called workflow sees the caller's event): candidates from dispatch or tag runs fail on an audit that did not run; pull-request test builds keep warning-only.
+- Acceptance: the old "dispatch on a SHA without green CI fails" criterion is replaced by a deliberately failing check that must block packaging, plus criteria for unchanged ordinary CI, SHA verification and the audit rule.
+- Conflict with TASK-040 on `ci.yml` named; owner note on branch-protection required-check names; effort/risk raised to M / Low–Medium.
+- Independent review fixes: SHA passed to the called workflow by expression (no `env` in `with:`); `needs: [checks]` on the caller job and `run-build-and-test: true` for releases; `timeout-minutes` on the packaging job; no `concurrency` in `checks.yml`; `checks.yml` added to the PR path filter; required-check names updated at merge time; TASK-040 order handled both ways; all steps moved (incl. installs and audit-guard tests); acceptance wording for unchanged CI and the dev-tools-check exemption.
 
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.

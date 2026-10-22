@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r1) |
+| Status | Proposed (r2; awaiting independent review) |
 | Type | Fix |
 | Audit priority | Gate |
 | Roadmap lane | Build 10.5 gates (historical, V1) |
@@ -17,7 +17,7 @@
 | Verification platform | Any OS locally; Windows CI (`ci.yml`, windows-latest) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | 1012d63 (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22; from the Notion draft, Block 3 format) |
+| Specification revision | r2 (2026-10-22; r1 + alignment with TASK-027 r5 reusable check workflow) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 1012d63 (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -41,7 +41,7 @@ Read-only facts at 1012d63:
 - Commit 2 (CI): `.github/workflows/ci.yml` — add `rustfmt` to the toolchain step's `components` (`clippy, rustfmt`) and a step `cargo fmt --check` with `working-directory: apps/desktop/src-tauri`, placed after `Swatinem/rust-cache` and before `cargo test` so it fails fast.
 
 ## Out of scope
-`rustfmt.toml` or any style option; pinning the toolchain; `.git-blame-ignore-revs`; adding fmt to `CLAUDE.md`/`README.md` check lists or to `release-installer.yml` (record as Triage cards if wanted; TASK-027 owns the release workflow); behaviour, schema, dependency, fixture or refactoring changes; formatting `.rs.txt` generators.
+`rustfmt.toml` or any style option; pinning the toolchain; `.git-blame-ignore-revs`; adding fmt to `CLAUDE.md`/`README.md` check lists (record as Triage cards if wanted); editing `release-installer.yml` (TASK-027 owns it; through TASK-027 r5 the installer runs the same `checks.yml`, so the fmt check reaches packaging without a separate edit); behaviour, schema, dependency, fixture or refactoring changes; formatting `.rs.txt` generators.
 
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
@@ -54,7 +54,7 @@ Read-only facts at 1012d63:
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-008 approved (done, Option A); this card's own approval; Rust toolchain with the `rustfmt` component available locally.
 - **Merge order (recommended: first).** Merge this PR before any W1–W3 Rust branch is opened (TASK-012…020, TASK-025 (`src-tauri/src/legal.rs`), TASK-027 (`data_controls/wire_tests.rs`, optional part), TASK-034 code, TASK-037, TASK-038, TASK-041, all Not Started at spec time). Reason: a formatting-only PR touches nearly every Rust file and conflicts with every concurrent Rust branch; at the start nothing is open, so it merges conflict-free, and from then on the CI check keeps each later functional diff free of formatting noise. Doing it last would also be conflict-free but leaves every W1–W3 review mixed with incidental formatting and still requires a full re-check of the crate just before TASK-029. Fallback: if any Rust branch is already open when this card is approved, merge this immediately after the last W1–W3 Rust PR and before TASK-029, and do not open new Rust branches meanwhile. If TASK-039 option C (history rewrite) is scheduled before W1, run that first; if it is scheduled after TASK-037/038/041 merge (TASK-039's recommendation), this commit is simply rewritten with the rest.
-- Likely shared-file conflicts: every Rust file (all W1–W3 Rust tasks incl. TASK-025 and TASK-027, TASK-037, TASK-038, TASK-041); `ci.yml` (no other card edits it at spec time; TASK-027 reads it).
+- Likely shared-file conflicts: every Rust file (all W1–W3 Rust tasks incl. TASK-025 and TASK-027, TASK-037, TASK-038, TASK-041); `ci.yml` with TASK-027 r5, which moves the CI check steps into a reusable `.github/workflows/checks.yml`: if this card merges first (recommended), TASK-027 moves its fmt step into `checks.yml`; if this card merges after TASK-027, add the `rustfmt` component and the `cargo fmt --check` step to `checks.yml` instead of `ci.yml`.
 - Dependants: TASK-029 (Blocked until this is Verified; verification resolves only this blocker).
 
 ## Acceptance criteria (pass/fail)
@@ -87,6 +87,9 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 ## Changes in r1 (after independent review)
 - Independent review (review3_B), nit: Rust-touching card list now includes TASK-025 (`src-tauri/src/legal.rs`) and TASK-027 (`data_controls/wire_tests.rs`, optional), plus the new TASK-041; conflicts line updated to match.
 - TASK-039 option C ordering wording aligned with TASK-039 r1 (one rewrite after TASK-037/038/041 is now its recommendation).
+
+## Changes in r2
+- Aligned with TASK-027 r5 (owner-directed reusable check workflow): the `ci.yml` conflict line now covers both merge orders, and the out-of-scope line records that the fmt check reaches the installer through `checks.yml` (independent review of TASK-027 r5).
 
 ## Independent review notes
 Not yet reviewed. r1 written from the Notion draft; command scope made concrete from source (single crate, `cargo fmt --check` in `apps/desktop/src-tauri`, add `rustfmt` component). Reviewer to confirm the "merge first" order against the actual state of W1 branches at approval time.
