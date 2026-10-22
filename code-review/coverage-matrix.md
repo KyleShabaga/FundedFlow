@@ -6,7 +6,7 @@
 | Baseline revision | `92e79802593f97d907bdf8b403a088304e203676` on branch `claude/practical-turing-wmii06` |
 | Working tree at baseline | Clean (no tracked or untracked changes before the audit) |
 | Host | Linux container (not Windows, not WSL) |
-| Last updated by | Phase 5 (2026-10-22, HEAD aad865f; app source identical to 92e7980) |
+| Last updated by | **Phase 6 final** (2026-10-22, HEAD 7ca8c7f; app source identical to 92e7980) |
 
 ## How later phases update this file
 
@@ -131,3 +131,16 @@
 | 3 | 2026-10-22 | feb00e2 | None in application source (`feb00e2` added the Phase 2 report, committed at the stop hook's request) | Phase 3 Tauri/Rust/IPC/security: TR-001 to TR-020. No checks run (no offline crates or node_modules). Rows A1, A5, A9, A15, A17–A19, B3, B14, E1 updated. |
 | 4 | 2026-10-22 | feb00e2 (+ uncommitted 02 report) | None in application source | Phase 4 React/TS: UI-001 to UI-020. No checks run (no node_modules). Rows B1–B15, C1–C4, D11 and W2, W3–W11, W15 updated. |
 | 5 | 2026-10-22 | aad865f | None in application source (`aad865f` added Phase 3/4 reports at the stop hook's request) | Phase 5: WIN-001–012, TEST-001–011, gate register. Executed: check:boundaries, test:dev-scripts, test:ci-scripts, test:notices (all pass). Blocked: typecheck, vitest, build, check:dist, cargo test/clippy, collector (no installed deps). |
+| 6 | 2026-10-22 | 7ca8c7f | None in application source (`7ca8c7f` added the Phase 5 report at the stop hook's request) | Final consolidation: findings merged into F-01–F-31 plus O-01 (05 §D). Adversarial verifier confirmed C1–C9, C12, C13; partially C10, C11. No new checks executed. |
+
+## Final coverage status (Phase 6)
+
+| Group | Final status | Notes |
+|---|---|---|
+| A. Rust host and storage | **Inspected** (A1–A3, A5, A7–A13, A15, A17, A18); **Partially inspected** (A4 tests not run, A6 store internals for catalogue/authoring/offers/evidence sampled, A14 `domain.rs` traced for trading day/P&L only, A16, A19) | No Rust tests executed (no offline crates) |
+| B. Frontend | **Inspected** (B1–B10, B12–B14); **Partially inspected** (B11 evidence/ledger UI absent by design, B15 build config) | No Vitest executed (no node_modules) |
+| C. Domain | **Inspected** (C1, C2); **Partially inspected** (C3 engine rule algorithms not line-reviewed, C4 catalogue/rulebook contracts sampled, C5, C6) | `check:boundaries` executed: OK |
+| D. Tooling/CI/docs | **Inspected** (D1–D7, D10, D13); **Partially inspected** (D8 fixture rows deliberately unread, D9, D11 seven specs read); **Excluded** (D12) | Script tests executed: 38/38 pass |
+| E. Collector | **Partially inspected** (static, secondary) | No checks run (no venv) |
+| Workflows | W1, W2, W12–W15 traced end to end at source level; W3–W11 traced UI→IPC→store; **W16 install/upgrade/uninstall: config/docs only, packaged run Not Run**; W17 dev tools traced | — |
+| Significant remaining gaps | Executed TS/Rust test results at HEAD; any Windows/WebView2/NSIS runtime behaviour; engine rule-algorithm line review; CI log content | See 05 §O |
