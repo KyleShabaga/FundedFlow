@@ -11,9 +11,10 @@ vi.mock("@tauri-apps/plugin-dialog", async () => (await import("../test/boundari
 
 import { WRITE_TIMEOUT_MS } from "../features/shared/submissions";
 import { createAppStore, makeAccount, makeTrade, type AppStore } from "../test/app-store";
-import { installBrowserShims, renderApp, resetHarness } from "../test/harness";
+import { installBrowserShims, renderApp, resetHarness, warmUpApp } from "../test/harness";
 
 beforeAll(installBrowserShims);
+beforeAll(warmUpApp);
 afterEach(resetHarness);
 
 const lostAnswer = () => new RepositoryError({ kind: "database", message: "disk I/O error" });

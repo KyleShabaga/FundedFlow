@@ -28,9 +28,10 @@ vi.mock("../features/insights/components/InsightsPage", async importOriginal => 
 import { COMMAND_TIMEOUT_MS, type RuntimeStatus } from "../lib/data/runtime";
 import { createAppStore, makeAccount } from "../test/app-store";
 import { boundary, deferredFor, readyStatus } from "../test/boundaries";
-import { installBrowserShims, renderApp, resetHarness } from "../test/harness";
+import { installBrowserShims, renderApp, resetHarness, warmUpApp } from "../test/harness";
 
 beforeAll(installBrowserShims);
+beforeAll(warmUpApp);
 beforeEach(() => { fault.on = false; });
 afterEach(resetHarness);
 

@@ -16,10 +16,11 @@ import { LAST_EXPORT_SETTING } from "../features/data-controls/api/data-controls
 import { DataControlFailure } from "../lib/data/data-controls";
 import { archivePreview, createAppStore, makeAccount, makeTrade } from "../test/app-store";
 import { boundary, initializingStatus, readyStatus } from "../test/boundaries";
-import { currentPath, installBrowserShims, renderApp, resetHarness } from "../test/harness";
+import { currentPath, installBrowserShims, renderApp, resetHarness, warmUpApp } from "../test/harness";
 import { deferred } from "../test/runtime-fixtures";
 
 beforeAll(installBrowserShims);
+beforeAll(warmUpApp);
 afterEach(resetHarness);
 
 const BACKUP = "C:\\Users\\trader\\Backups\\fundedflow-2026-10-21.ffj.zip";

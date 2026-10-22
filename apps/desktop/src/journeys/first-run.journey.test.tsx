@@ -17,11 +17,12 @@ import { preloadLegalAcceptance, primeLegalAcceptance } from "../lib/data/legal"
 import { archivePreview, createAppStore, makeAccount, makeTrade } from "../test/app-store";
 import { expectNoAxeViolations } from "../test/axe";
 import { boundary, initializingStatus, readyStatus } from "../test/boundaries";
-import { installBrowserShims, renderApp, resetHarness } from "../test/harness";
+import { installBrowserShims, renderApp, resetHarness, warmUpApp } from "../test/harness";
 import { ACCEPTED_AT, acceptedRecord } from "../test/legal";
 import { failed } from "../test/runtime-fixtures";
 
 beforeAll(installBrowserShims);
+beforeAll(warmUpApp);
 beforeEach(() => {
   close.mockReset().mockResolvedValue(undefined);
   primeLegalAcceptance(null); // First launch unless a test says otherwise.

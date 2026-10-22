@@ -11,6 +11,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import type { RuntimeState } from "../../app/RuntimeProvider";
 import { ToastProvider } from "../../design-system";
+import { warmUp } from "../../test/warm-up";
 import { ACTIVE_ACCOUNT_SETTING } from "./active-account";
 import { AccountDetailPage } from "./components/AccountDetailPage";
 import { AccountsPage } from "./components/AccountsPage";
@@ -61,11 +62,19 @@ function renderApp(path = "/accounts", extra?: ReactNode) {
   );
 }
 
-beforeEach(() => {
+/** Fresh runtime, query cache and store for each test. */
+function fresh() {
   ready();
   runtime.check.mockReset().mockResolvedValue(undefined);
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
   holder.store = createTestStore();
+}
+beforeEach(fresh);
+// One-time costs are paid here, not by the first test (see test/warm-up.ts).
+beforeAll(async () => {
+  fresh();
+  await warmUp(() => renderApp(), () => screen.findByText("Add your first trading account"));
+  client.clear();
 });
 afterEach(() => {
   cleanup();
@@ -74,15 +83,22 @@ afterEach(() => {
 });
 
 /**
- * Fills the minimum fields. Values are pasted (Build 26.7): typing them key by key cost ~20 ms a key and pushed
- * these tests past 5 s under CPU contention. Per-key field behaviour is covered by the design-system tests.
+ * Replaces a field's value in one paste (Build 26.7): typing key by key cost ~20 ms a key, and each keystroke into
+ * the time zone combobox re-filters the zone list, which pushed these tests past 5 s under CPU contention. Per-key
+ * field behaviour is covered by the design-system tests.
  */
+async function enter(user: ReturnType<typeof userEvent.setup>, field: HTMLElement, text: string) {
+  await user.clear(field);
+  await user.click(field);
+  await user.paste(text);
+}
+
+/** Fills the minimum fields. */
 async function fillMinimumAccount(user: ReturnType<typeof userEvent.setup>, name = "Eval 50K") {
   const dialog = await screen.findByRole("dialog", { name: "Add account" });
-  const enter = async (field: HTMLElement, text: string) => { await user.clear(field); await user.click(field); await user.paste(text); };
-  await enter(within(dialog).getByRole("textbox", { name: /Account name/ }), name);
-  await enter(within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
-  await enter(within(dialog).getByRole("combobox", { name: /Time zone/ }), "America/New_York");
+  await enter(user, within(dialog).getByRole("textbox", { name: /Account name/ }), name);
+  await enter(user, within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
+  await enter(user, within(dialog).getByRole("combobox", { name: /Time zone/ }), "America/New_York");
   return dialog;
 }
 
@@ -137,13 +153,9 @@ describe("first run and onboarding", () => {
     renderApp();
     await user.click((await screen.findAllByRole("button", { name: "Add account" }))[0]);
     const dialog = await screen.findByRole("dialog", { name: "Add account" });
-    await user.type(within(dialog).getByRole("textbox", { name: /Starting balance/ }), "1,000");
-    const currency = within(dialog).getByRole("combobox", { name: /Currency/ });
-    await user.clear(currency);
-    await user.type(currency, "XQQ");
-    const zone = within(dialog).getByRole("combobox", { name: /Time zone/ });
-    await user.clear(zone);
-    await user.type(zone, "Mars/Olympus");
+    await enter(user, within(dialog).getByRole("textbox", { name: /Starting balance/ }), "1,000");
+    await enter(user, within(dialog).getByRole("combobox", { name: /Currency/ }), "XQQ");
+    await enter(user, within(dialog).getByRole("combobox", { name: /Time zone/ }), "Mars/Olympus");
     await user.click(within(dialog).getByRole("button", { name: "Add account" }));
     const summary = await within(dialog).findByRole("alert");
     expect(summary.textContent).toMatch(/Fix 4 problems/);
@@ -284,9 +296,7 @@ describe("editing", () => {
     const dialog = await screen.findByRole("dialog", { name: "Edit PA-48213" });
     expect((within(dialog).getByRole("textbox", { name: /Notes/ }) as HTMLTextAreaElement).value).toBe("Keep it small");
     expect((within(dialog).getByRole("combobox", { name: /Prop firm/ }) as HTMLInputElement).value).toBe("Apex");
-    const zone = within(dialog).getByRole("combobox", { name: /Time zone/ });
-    await user.clear(zone);
-    await user.type(zone, "Europe/London");
+    await enter(user, within(dialog).getByRole("combobox", { name: /Time zone/ }), "Europe/London");
     expect(await within(dialog).findByText(/re-derives the trading day and P&L of 12 recorded trades/)).toBeTruthy();
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
     const confirm = await screen.findByRole("alertdialog", { name: "Discard your changes?" });
@@ -363,8 +373,8 @@ describe("new attempt", () => {
     expect((await within(dialog).findAllByText(/Confirm how the previous attempt ended/)).length).toBeGreaterThan(0);
     await user.click(within(dialog).getByRole("radio", { name: "Failed" }));
     await user.click(within(dialog).getByRole("button", { name: "Next" }));
-    await user.type(within(dialog).getByRole("textbox", { name: /Account number/ }), ref);
-    await user.type(within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
+    await enter(user, within(dialog).getByRole("textbox", { name: /Account number/ }), ref);
+    await enter(user, within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
     await user.click(within(dialog).getByRole("button", { name: "Next" }));
     await user.click(await within(dialog).findByRole("radio", { name: /Decide later/ }));
     await user.click(within(dialog).getByRole("button", { name: "Next" }));
