@@ -276,7 +276,8 @@ function AccountFormDialogBody({ mode, account, tradeCount, open, onOpenChange, 
           <RuntimeInlineRecovery />
           <ValidationSummary issues={summary} title={summary.length === 1 ? "Fix 1 problem before saving" : undefined} />
           {mutation.outcome === "uncertain-outcome"
-            ? <AccountWriteReview write={mutation} {...(mode === "create" ? { created: values.name } : { accountId: account?.id })} />
+            // The name that was sent stays with the lock, so a form reopened after the uncertain save reviews it, not its own empty field.
+            ? <AccountWriteReview write={mutation} {...(mode === "create" ? { created: create.submitted?.name ?? values.name } : { accountId: account?.id })} />
             : feedback.status !== "idle" && feedback.status !== "submitting" && feedback.status !== "success" && <MutationFeedback state={feedback} />}
           <FormSection title="Account" description="How you recognise this account. Never your broker password or keys.">
             <TextField id={fieldId(base, "name")} label={FIELD_LABELS.name} required value={values.name} onChange={e => set("name")(e.target.value)} error={errorFor("name")} maxLength={100} placeholder="PA-48213 or Eval #2" autoFocus />

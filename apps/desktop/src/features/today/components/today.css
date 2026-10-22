@@ -62,6 +62,31 @@
 .td-card-line { margin: 0; display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 .td-card-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); margin-top: auto; }
 
+/* P0-D23: Cards / List. Both views render the same entry (head, estimate, rulebook and setup, reset note, actions);
+   List lays it out as one compact row per account: four aligned groups from 880 px of the section's own width, and
+   below that the name with its actions on top and the rest wrapping under them. Long names wrap, never truncate. The
+   actions column has a fixed width so the groups line up from row to row whether a row says Show or Shown below. */
+.td-overview-head { align-items: center; }
+.td-overview-title { display: grid; gap: 2px; min-width: 0; }
+.td-card-estimate { display: grid; gap: var(--space-2); justify-items: start; min-width: 0; }
+.td-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.td-row {
+  padding: var(--space-3) var(--space-4); align-items: start; column-gap: var(--space-4); row-gap: var(--space-2);
+  grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "head foot" "est est" "setup setup" "note note";
+}
+.td-row > .td-card-head { grid-area: head; flex-direction: column; flex-wrap: nowrap; gap: var(--space-1); }
+.td-row > .td-card-estimate { grid-area: est; gap: var(--space-1); }
+.td-row > .td-card-setup { grid-area: setup; }
+.td-row > .td-card-note { grid-area: note; }
+.td-row > .td-card-foot { grid-area: foot; justify-content: flex-end; gap: var(--space-3); margin-top: 0; }
+@container td-overview (min-width: 880px) {
+  .td-row {
+    grid-template-columns: minmax(10rem, 1.1fr) minmax(13rem, 1.6fr) minmax(11rem, 1.2fr) 11rem;
+    grid-template-areas: "head est setup foot" "note note note foot";
+  }
+  .td-row > .td-card-foot { align-self: center; }
+}
+
 /* Explanations and the checkpoint dialog */
 .td-explain { display: grid; gap: var(--space-3); min-width: 0; }
 .td-explain-value { display: grid; gap: 4px; justify-items: start; }

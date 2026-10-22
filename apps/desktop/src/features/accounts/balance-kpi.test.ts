@@ -9,7 +9,7 @@ const usd = (amount: string) => ({ amount, currency: "USD" });
 describe("Current balance KPI", () => {
   it("is — when no live account has a current balance, and says how many were looked at", () => {
     expect(currentBalanceKpi([null, null, null])).toEqual({
-      value: { kind: "unavailable", reason: "None of the 3 live accounts has a current estimate. Calculate on Today; each account shows its checkpoints." },
+      value: { kind: "unavailable", reason: "None of the 3 live accounts has a current estimate. Calculate on Today; the table's Current balance shows each account's latest checkpoint or why it has none." },
       sub: "0 of 3 live accounts · none current",
     });
     expect(currentBalanceKpi([null]).value).toMatchObject({ kind: "unavailable", reason: expect.stringContaining("The live account has no current estimate.") });

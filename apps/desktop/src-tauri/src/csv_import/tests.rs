@@ -414,3 +414,6 @@ mod identity;
 
 #[path = "wire_limit_tests.rs"]
 mod wire_limits;
+
+#[path = "direction_pnl_tests.rs"]
+mod direction_pnl;

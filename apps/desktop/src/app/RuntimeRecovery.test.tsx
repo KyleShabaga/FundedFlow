@@ -131,8 +131,9 @@ it("keeps recovery and Settings available on safe and unknown routes", async () 
   expect(screen.getAllByRole("alert")).toHaveLength(1);
   expect(screen.getByText(/Keep your journal and pre-upgrade backup in place/)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
-  // The header Import menu stays available as navigation; the import wizard itself is behind the runtime gate.
-  expect(screen.getByRole("button", { name: "Import" })).toBeTruthy();
+  // Quick Import and Import Wizard stay available as navigation; the import pages themselves are behind the runtime gate.
+  expect(screen.getByRole("button", { name: "Quick Import" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Import Wizard" })).toBeTruthy();
   expect(screen.queryByRole("heading", { name: /Choose a CSV file/ })).toBeNull();
 });
 

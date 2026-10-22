@@ -16,6 +16,7 @@ import { makeAccount } from "../accounts/test-store";
 import { closedTrade } from "../rulebooks/test-store";
 import { featureKeys } from "../shared/query-keys";
 import { TodayPage } from "./components/TodayPage";
+import { TODAY_ACCOUNTS_VIEW_SETTING } from "./components/AccountsOverview";
 import { SESSION_SKIPS_SETTING } from "./view-models/session-prompt";
 import { createTodayStore, drawdownOutcome } from "./test-store";
 
@@ -699,6 +700,123 @@ describe("session plan / review prompt (P0-D27)", () => {
     await screen.findByText("Choose an account");
     expect(screen.queryByText("Checking today's trading day…")).toBeNull();
     expect(screen.queryByRole("region", { name: /Before-session plan|After-session review|Session plan/ })).toBeNull();
+  });
+});
+
+describe("Cards / List (P0-D23)", () => {
+  const overview = () => screen.getByRole("region", { name: "Active accounts" });
+  const layout = () => within(overview()).getByRole("group", { name: "Active accounts layout" });
+  const entries = () => within(overview()).getAllByRole("article");
+  const isList = () => entries().every(e => e.classList.contains("td-row") && e.closest("ul")!.classList.contains("td-rows"));
+
+  it("defaults to Cards, and List shows the same accounts, in the same order, with the same facts and actions", async () => {
+    await assign(A);
+    await saveSafe();
+    const user = userEvent.setup();
+    renderToday();
+    await waitFor(async () => expect(await headlineText()).toContain("Safe (estimate)"));
+    expect(within(layout()).getByRole("button", { name: "Cards" }).getAttribute("aria-pressed")).toBe("true");
+    expect(entries().some(e => e.classList.contains("td-row"))).toBe(false);
+    await waitFor(() => expect(within(entries()[1]).getByText("Unknown")).toBeTruthy());
+    const cards = entries().map(e => ({ name: e.getAttribute("aria-labelledby"), text: e.textContent }));
+
+    await user.click(within(layout()).getByRole("button", { name: "List" }));
+    expect(within(layout()).getByRole("button", { name: "List" }).getAttribute("aria-pressed")).toBe("true");
+    expect(isList()).toBe(true);
+    expect(entries().map(e => ({ name: e.getAttribute("aria-labelledby"), text: e.textContent }))).toEqual(cards);
+    // Each row keeps its own status: A's Safe is A's, B stays Unknown (never Safe because of the layout).
+    expect(within(entries()[0]).getByText("Safe (estimate)")).toBeTruthy();
+    expect(within(entries()[1]).getByText("Unknown")).toBeTruthy();
+    expect(within(entries()[1]).queryByText(/Safe/)).toBeNull();
+    expect(within(overview()).getByText("Each account is estimated on its own; there is no combined status.")).toBeTruthy();
+    expect(within(overview()).queryByText(/all clear/i)).toBeNull();
+  });
+
+  it("switching never changes the selected account or the details below", async () => {
+    await assign(A);
+    await saveSafe();
+    const user = userEvent.setup();
+    renderToday();
+    await waitFor(async () => expect(await headlineText()).toContain("Safe (estimate)"));
+    const details = screen.getByRole("region", { name: "Example · Eval A" });
+    await user.click(within(layout()).getByRole("button", { name: "List" }));
+    const [a, b] = entries();
+    expect(a.getAttribute("aria-current")).toBe("true");
+    expect(a.classList.contains("is-selected")).toBe(true);
+    expect(within(a).getByText("Shown below")).toBeTruthy();
+    expect(b.getAttribute("aria-current")).toBeNull();
+    expect(screen.getByRole("region", { name: "Example · Eval A" })).toBe(details);
+    expect(await headlineText()).toContain("Safe (estimate)");
+    expect(holder.store.settings.get(ACTIVE_ACCOUNT_SETTING)).toBe(A);
+    await user.click(within(layout()).getByRole("button", { name: "Cards" }));
+    expect(entries()[0].getAttribute("aria-current")).toBe("true");
+    expect(holder.store.settings.get(ACTIVE_ACCOUNT_SETTING)).toBe(A);
+  });
+
+  it("names every repeated action after its account, in both views, and Show still switches from a row", async () => {
+    const user = userEvent.setup();
+    renderToday();
+    await screen.findByRole("region", { name: "Active accounts" });
+    for (const view of ["Cards", "List"]) {
+      await user.click(within(layout()).getByRole("button", { name: view }));
+      expect(within(overview()).getByRole("link", { name: "Account: Example · Eval A" }).getAttribute("href")).toBe(`/accounts/${A}`);
+      expect(within(overview()).getByRole("link", { name: "Account: Eval B" }).getAttribute("href")).toBe(`/accounts/${B}`);
+      expect(within(overview()).getByRole("button", { name: "Show Eval B" })).toBeTruthy();
+      expect(within(overview()).queryByRole("button", { name: "Show Example · Eval A" })).toBeNull();
+    }
+    await user.click(within(overview()).getByRole("button", { name: "Show Eval B" }));
+    await screen.findByRole("heading", { name: "Eval B", level: 2 });
+    expect(isList()).toBe(true);
+    expect(entries()[1].getAttribute("aria-current")).toBe("true");
+  });
+
+  it("saves the choice and opens in it next time, without touching the account choice", async () => {
+    const user = userEvent.setup();
+    renderToday();
+    await screen.findByRole("region", { name: "Active accounts" });
+    await user.click(within(layout()).getByRole("button", { name: "List" }));
+    await waitFor(() => expect(holder.store.settings.get(TODAY_ACCOUNTS_VIEW_SETTING)).toBe("list"));
+    expect(holder.store.settings.get(ACTIVE_ACCOUNT_SETTING)).toBe(A);
+    // A restart: a new query cache over the same saved settings.
+    cleanup();
+    client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
+    renderToday();
+    await screen.findByRole("region", { name: "Active accounts" });
+    await waitFor(() => expect(isList()).toBe(true));
+    expect(within(layout()).getByRole("button", { name: "List" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("an unknown saved value falls back to Cards", async () => {
+    holder.store.settings.set(TODAY_ACCOUNTS_VIEW_SETTING, "grid");
+    renderToday();
+    await screen.findByRole("region", { name: "Active accounts" });
+    expect(within(layout()).getByRole("button", { name: "Cards" }).getAttribute("aria-pressed")).toBe("true");
+    expect(entries().some(e => e.classList.contains("td-row"))).toBe(false);
+  });
+
+  it("if the choice can't be saved, it still applies and says so", async () => {
+    holder.store.repository.settings.set = async () => { throw new Error("disk full"); };
+    const user = userEvent.setup();
+    renderToday();
+    await screen.findByRole("region", { name: "Active accounts" });
+    await user.click(within(layout()).getByRole("button", { name: "List" }));
+    expect(isList()).toBe(true);
+    expect(await screen.findByText("The layout wasn't saved")).toBeTruthy();
+  });
+
+  it("keeps a long name readable and every setup state in a row", async () => {
+    const long = "Evaluation attempt with an unusually long descriptive name that keeps going";
+    seed([makeAccount({ id: A, name: "Eval A" }), makeAccount({ id: B, name: long })]);
+    await assign(A);
+    const user = userEvent.setup();
+    renderToday();
+    await screen.findByRole("region", { name: "Active accounts" });
+    await user.click(within(layout()).getByRole("button", { name: "List" }));
+    const row = within(overview()).getByRole("article", { name: long });
+    expect(within(row).getByRole("heading", { name: long, level: 3 }).textContent).toBe(long);
+    await waitFor(() => expect(within(row).getByText("Not set up")).toBeTruthy());
+    expect(within(row).getByText("Needs setup")).toBeTruthy();
+    expect(within(row).getByText("No estimate saved")).toBeTruthy();
   });
 });
 

@@ -30,6 +30,7 @@ import type { AccountViewModel } from "../../accounts/view-models/account";
 import { retryRead, toAsyncState } from "../../shared/presentation";
 import { useInsightsDataset } from "../hooks/insights";
 import {
+  dayLabel,
   type Drill,
   type InsightsState,
   isFiltered,
@@ -43,7 +44,7 @@ import {
 } from "../view-models/insights";
 import { AttemptsSection } from "./AttemptsSection";
 import { BreakdownsSection, TagsSection } from "./BreakdownSections";
-import { CalendarSection } from "./CalendarSection";
+import { type CalendarFilters, CalendarSection } from "./CalendarSection";
 import { ContributingTradesDrawer } from "./ContributingTrades";
 import { OverviewSection } from "./OverviewSection";
 import { BASIS_LABEL, DrillButton, type SectionProps } from "./shared";
@@ -127,10 +128,17 @@ function Body({ dataset, ids, state, update, onTags }: { dataset: InsightsDatase
   const allClosed = selection.candidates.length + selection.excluded.filteredOut;
   const clear = () => update({ filter: { ...state.filter, from: null, to: null, symbol: null, side: "all", strategyId: null, tagId: null, source: "all" }, day: null });
   useEffect(() => onTags(hasTags), [hasTags, onTags]);
+  // P0-D18: the Calendar shows the same filter bar behind its own Filters button instead of above the tabs. Only
+  // when the calendar itself is on screen: an empty or mixed-currency result keeps the bar here, so filters stay
+  // reachable. One bar either way, and the filters stay in the URL, so moving or hiding it changes nothing.
+  const shown = state.section === "tags" && !hasTags ? "overview" : state.section;
+  const calendarOwnsFilters = shown === "calendar" && selection.currency !== null && selection.candidates.length > 0;
+  const filterBar = (title: boolean) => <FilterBar dataset={dataset} state={state} update={update} currencies={selection.currencies} onClear={clear} title={title} />;
+  const calendarFilters: CalendarFilters = { panel: filterBar(false), applied: appliedFilters(dataset, state.filter), onClear: clear };
 
   return (
     <div className="in-body">
-      <FilterBar dataset={dataset} state={state} update={update} currencies={selection.currencies} onClear={clear} />
+      {!calendarOwnsFilters && filterBar(true)}
       <p className="ds-faint in-prov" aria-live="polite">
         {selection.accounts.length === 1 ? selection.accounts[0]!.name : `${selection.accounts.length} attempts`} · {tradesText(selection.trades.length)} included
         {selection.currency ? ` · ${selection.currency}` : ""} · {BASIS_LABEL[state.basis]} · journal read {formatInstant(selection.dataAsOf, { timeZone: zone })} · definitions {selection.version}
@@ -173,7 +181,7 @@ function Body({ dataset, ids, state, update, onTags }: { dataset: InsightsDatase
       ) : (
         <>
           <TabPanel value="overview" heading="Overview">{selection.currency ? <OverviewSection {...props} /> : <ChooseCurrency />}</TabPanel>
-          <TabPanel value="calendar" heading="Calendar">{selection.currency ? <CalendarSection {...props} /> : <ChooseCurrency />}</TabPanel>
+          <TabPanel value="calendar" heading="Calendar">{selection.currency ? <CalendarSection {...props} filters={calendarFilters} /> : <ChooseCurrency />}</TabPanel>
           <TabPanel value="breakdowns" heading="Breakdowns">{selection.currency ? <BreakdownsSection {...props} /> : <ChooseCurrency />}</TabPanel>
           {hasTags && <TabPanel value="tags" heading="Tags">{selection.currency ? <TagsSection {...props} /> : <ChooseCurrency />}</TabPanel>}
           <TabPanel value="attempts" heading="Attempts"><AttemptsSection {...props} /></TabPanel>
@@ -192,11 +200,8 @@ function ChooseCurrency() {
   );
 }
 
-function FilterBar({ dataset, state, update, currencies, onClear }: {
-  dataset: InsightsDataset; state: InsightsState; update: (p: Partial<InsightsState>) => void; currencies: string[]; onClear: () => void;
-}) {
-  const f = state.filter;
-  const set = (patch: Partial<InsightsState["filter"]>) => update({ filter: { ...f, ...patch }, day: null });
+/** The symbols, strategies and tags the filters offer, from every loaded trade. */
+function filterChoices(dataset: InsightsDataset) {
   const symbols = [...new Set(dataset.trades.map(t => t.symbolRoot ?? t.symbol))].sort();
   const strategies = new Map<string, string>();
   const tags = new Map<string, string>();
@@ -204,10 +209,43 @@ function FilterBar({ dataset, state, update, currencies, onClear }: {
     if (t.review?.strategyId) strategies.set(t.review.strategyId, t.review.strategyName ?? "Strategy");
     for (const tag of t.review?.tags ?? []) tags.set(tag.tagId, `${tag.label} (${tag.kind})`);
   }
+  return { symbols, strategies, tags };
+}
+
+const SIDE_TEXT = { long: "Long only", short: "Short only" } as const;
+const SOURCE_TEXT = { csv_import: "Imported only", manual: "Manual only" } as const;
+
+/**
+ * One phrase per filter group that Clear filters resets and that is not at its default (P0-D18): the trading-day
+ * range counts once, and accounts, currency, basis and the calendar's cell choice are not filters here.
+ */
+export function appliedFilters(dataset: InsightsDataset, f: InsightsState["filter"]): string[] {
+  const { strategies, tags } = filterChoices(dataset);
+  const short = (d: string) => dayLabel(d).replace(/^\w+, /, "");
+  const out: string[] = [];
+  if (f.from && f.to) out.push(`${short(f.from)} to ${short(f.to)}`);
+  else if (f.from) out.push(`From ${short(f.from)}`);
+  else if (f.to) out.push(`To ${short(f.to)}`);
+  if (f.symbol) out.push(f.symbol);
+  if (f.side !== "all") out.push(SIDE_TEXT[f.side]);
+  if (f.strategyId) out.push(f.strategyId === NO_STRATEGY ? "No strategy" : `Strategy: ${strategies.get(f.strategyId) ?? "not in these trades"}`);
+  if (f.tagId) out.push(`Tag: ${tags.get(f.tagId) ?? "not in these trades"}`);
+  if (f.source !== "all") out.push(SOURCE_TEXT[f.source]);
+  return out;
+}
+
+function FilterBar({ dataset, state, update, currencies, onClear, title = true }: {
+  dataset: InsightsDataset; state: InsightsState; update: (p: Partial<InsightsState>) => void; currencies: string[]; onClear: () => void;
+  /** The "Filters" label; off where a Filters button already names the panel (Calendar, P0-D18). */
+  title?: boolean;
+}) {
+  const f = state.filter;
+  const set = (patch: Partial<InsightsState["filter"]>) => update({ filter: { ...f, ...patch }, day: null });
+  const { symbols, strategies, tags } = filterChoices(dataset);
   const allCurrencies = [...new Set([...currencies, ...dataset.accounts.map(a => a.currency)])].sort();
   return (
     <section className="ds-card in-filters" aria-label="Filters">
-      <span className="in-filters-title"><Filter size={14} aria-hidden="true" /> Filters</span>
+      {title && <span className="in-filters-title"><Filter size={14} aria-hidden="true" /> Filters</span>}
       <TextField type="date" label="From trading day" value={f.from ?? ""} onChange={e => set({ from: e.target.value || null })} />
       <TextField type="date" label="To trading day" value={f.to ?? ""} onChange={e => set({ to: e.target.value || null })} />
       <Select size="sm" label="Symbol" value={f.symbol ?? ANY} onValueChange={v => set({ symbol: v === ANY ? null : v })}

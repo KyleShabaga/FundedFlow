@@ -2,13 +2,22 @@ name: Release installer
 
 # Build 26.75 / NA-2: builds the unsigned NSIS installer and uploads it with its SHA-256 as a workflow artifact.
 # Nothing is published: no GitHub release, no secrets, no signing, no updater (owner decision 2026-10-21).
+# Pull requests that touch bundler inputs get a test build; their artifact is kept for 3 days, tag and manual runs 30.
 on:
   workflow_dispatch:
   push:
     tags: ['v*']
   pull_request:
     paths:
-      - 'apps/desktop/src-tauri/tauri.conf.json'
+      # Bundler inputs: the Tauri crate (Cargo.toml/lock, icons, capabilities, migrations, Rust sources), the
+      # frontend build that beforeBuildCommand runs, the dependency manifests and the dev-tools check.
+      - 'apps/desktop/src-tauri/**'
+      - 'apps/desktop/package.json'
+      - 'apps/desktop/vite.config.ts'
+      - 'apps/desktop/index.html'
+      - 'apps/desktop/scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/release-installer.yml'
 
 concurrency:
@@ -104,4 +113,4 @@ jobs:
             ${{ steps.installer.outputs.path }}
             ${{ steps.installer.outputs.sums }}
           if-no-files-found: error
-          retention-days: 30
+          retention-days: ${{ github.event_name == 'pull_request' && 3 || 30 }}

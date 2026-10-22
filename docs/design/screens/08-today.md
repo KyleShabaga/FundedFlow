@@ -31,7 +31,19 @@ Today fills the shared content frame ([window-support.md](../window-support.md))
 - The freshness list shows two columns of label/value rows when each gets 420 px, so values stay near their labels.
 - Active accounts: 1 to 4 columns by the section's own width (from 560, 880 and 1200 px); cards stay about
   270–560 px wide.
-- Freshness disclosure and a Cards/List view are separate cards; this layout leaves room for both.
+- Freshness disclosure is a separate card; this layout leaves room for it.
+
+## Cards / List (P0-D23)
+- A **Cards | List** segmented control (`SegmentedControl`, named "Active accounts layout") sits beside the Active
+  accounts heading. Cards is the default; the choice is saved in settings as `today.accounts_view` (`"cards"` or
+  `"list"`, anything else reads as Cards) and applies at once even if the save fails (a toast says so).
+- Both views render the same entry per account, in the same order: name and lifecycle status, the estimate status
+  (Safe / Caution / Stop / Unknown) with its last recorded and last estimate lines, rulebook and setup, the reset note,
+  and Show (or "Shown below") with the Account link. Repeated actions are named for their account ("Show Eval B",
+  "Account: Eval B"). Switching views never selects an account or changes the details below.
+- List: one compact row per account. From 880 px of the section's own width the row has four aligned groups
+  (identity, estimate, rulebook and setup, actions in a fixed 11rem column); below that the name and actions share the
+  first line and the rest wraps under them. Long names wrap; nothing truncates.
 
 ## States (all distinct)
 No account, needs setup, unknown rulebook, no trades, import processing, partially supported rule, stale input,
