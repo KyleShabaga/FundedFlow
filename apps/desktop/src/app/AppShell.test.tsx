@@ -61,7 +61,8 @@ it("navigates all pages with one persistent sidebar, active item and runtime own
   render(<App />);
   await screen.findByRole("heading", { name: "Today is not built yet" });
   const nav = screen.getByRole("navigation", { name: "Primary navigation" });
-  expect(within(nav).getAllByRole("link")).toHaveLength(5);
+  // The five sections plus Import Wizard (P0-D07), which opens the real wizard and is covered below.
+  expect(within(nav).getAllByRole("link")).toHaveLength(6);
   for (const [name, path] of paths.slice(1)) {
     await user.click(within(nav).getByRole("link", { name }));
     await screen.findByRole("heading", { name: `${name} is not built yet` });
@@ -155,18 +156,16 @@ it("keeps navigation and Settings available when runtime fails and never enables
   invoke.mockRejectedValue(new Error("bridge unavailable"));
   render(<App />);
   await screen.findByRole("alert");
-  // The header Import menu offers Quick import and the full wizard; both stay behind the runtime gate, so nothing is read or sent.
+  // Quick Import (header) and Import Wizard (sidebar) both stay behind the runtime gate, so nothing is read or sent.
   const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: "Import" }));
-  await user.click(await screen.findByRole("menuitem", { name: /Quick import/ }));
+  await user.click(screen.getByRole("button", { name: "Quick Import" }));
   await waitFor(() => expect(window.location.hash).toBe("#/import/quick"));
   expect(await screen.findByRole("heading", { level: 1, name: "Quick import" })).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Import" }));
-  await user.click(await screen.findByRole("menuitem", { name: /Full wizard/ }));
+  expect(current()).toHaveLength(0);
+  await user.click(screen.getByRole("link", { name: "Import Wizard" }));
   await waitFor(() => expect(window.location.hash).toBe("#/import"));
   expect(await screen.findByRole("heading", { level: 1, name: "Import trades" })).toBeTruthy();
-  expect(screen.queryByRole("link", { name: "Import" })).toBeNull();
-  expect(screen.queryByRole("navigation", { name: "Primary navigation" })!.querySelector('[aria-current="page"]')).toBeNull();
+  expect(current()[0].getAttribute("aria-label")).toBe("Import Wizard");
   await userEvent.setup().click(screen.getByRole("link", { name: "Settings" }));
   await screen.findByRole("heading", { name: "Settings is not built yet" });
   await waitFor(() => expect(invoke.mock.calls).toEqual([["runtime_status"]]));
@@ -181,7 +180,7 @@ it("puts the header and the page body on one shared content frame (P0-D29)", asy
   const bodyFrame = main.querySelector(":scope > .ds-content-frame")!;
   // Title, account selector and Import all sit inside the header's frame; the route content inside the body's.
   expect(within(headerFrame as HTMLElement).getByRole("heading", { level: 1, name: "Today" })).toBeTruthy();
-  expect(within(headerFrame as HTMLElement).getByRole("button", { name: "Import" })).toBeTruthy();
+  expect(within(headerFrame as HTMLElement).getByRole("button", { name: "Quick Import" })).toBeTruthy();
   expect(within(bodyFrame as HTMLElement).getByRole("heading", { name: "Today is not built yet" })).toBeTruthy();
   // Both frames live in the main column beside the sidebar (the ds-main container), never around the sidebar.
   const column = document.querySelector(".ds-app-column")!;
@@ -291,23 +290,61 @@ it("draws one selected-route indicator that follows the active route, not the po
   await user.hover(within(nav).getByRole("link", { name: "Accounts" }));
   expect(current()[0].getAttribute("aria-label")).toBe("Today");
   expect(nav.querySelectorAll(".shell-nav-indicator")).toHaveLength(1);
-  // Pages without a sidebar item (Import) have no indicator.
+  // Pages without a sidebar item (Import history, Quick import) have no indicator.
   window.location.hash = "/import/history";
   await waitFor(() => expect(nav.querySelector(".shell-nav-indicator")).toBeNull());
   expect(nav.classList.contains("has-indicator")).toBe(false);
 });
 
-it("uses a compact, text-only Import action that still opens the import menu", async () => {
+it("puts Import Wizard directly below Accounts and opens the full wizard from it (P0-D07)", async () => {
   const user = userEvent.setup();
   render(<App />);
   await screen.findByRole("heading", { name: "Today is not built yet" });
-  const button = screen.getByRole("button", { name: "Import" });
-  expect(button.textContent).toBe("Import");
-  expect(button.querySelector("svg")).toBeNull();
-  expect(button.classList.contains("ds-btn-primary")).toBe(false);
-  await user.click(button);
-  // NA-4: Quick import says what it does; nothing about the file or its settings is remembered.
-  expect(await screen.findByRole("menuitem", { name: "Quick import: check and import a CSV in one step" })).toBeTruthy();
+  const nav = screen.getByRole("navigation", { name: "Primary navigation" });
+  const main = nav.querySelector(".shell-nav-main")!;
+  expect(within(main as HTMLElement).getAllByRole("link").map(link => link.getAttribute("aria-label")))
+    .toEqual(["Today", "Journal", "Insights", "Accounts", "Import Wizard"]);
+  // Settings stays in the footer.
+  expect(within(nav.querySelector(".shell-nav-footer") as HTMLElement).getByRole("link", { name: "Settings" })).toBeTruthy();
+  const wizard = within(nav).getByRole("link", { name: "Import Wizard" });
+  expect(wizard.getAttribute("href")).toBe("#/import");
+  expect(wizard.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+  // Keyboard: Accounts, then Import Wizard; Enter opens the wizard and marks it current.
+  within(nav).getByRole("link", { name: "Accounts" }).focus();
+  await user.tab();
+  expect(document.activeElement).toBe(wizard);
+  await user.keyboard("{Enter}");
+  await waitFor(() => expect(window.location.hash).toBe("#/import"));
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Import trades");
+  expect(current()[0].getAttribute("aria-label")).toBe("Import Wizard");
+  // The icon rail keeps a named, titled link.
+  await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+  expect(within(nav).getByRole("link", { name: "Import Wizard" }).title).toBe("Import Wizard");
+});
+
+it("uses a Quick Import button with a lightning icon that opens Quick import (P0-D07)", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole("heading", { name: "Today is not built yet" });
+  const button = screen.getByRole("button", { name: "Quick Import" });
+  expect(button.textContent).toBe("Quick Import");
+  // A filled, bordered secondary surface, not a text-only ghost button.
+  expect(button.classList.contains("ds-btn-secondary")).toBe(true);
+  expect(button.classList.contains("ds-btn-ghost")).toBe(false);
+  // The lightning icon is decorative and comes before the label, so it never adds to the name.
+  const icon = button.querySelector("svg")!;
+  expect(icon.classList.contains("lucide-zap")).toBe(true);
+  expect(icon.getAttribute("aria-hidden")).toBe("true");
+  expect(button.firstElementChild).toBe(icon);
+  // It is a button, not a menu: no popup, and no old Import menu.
+  expect(button.getAttribute("aria-haspopup")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Import" })).toBeNull();
+  button.focus();
+  await user.keyboard("{Enter}");
+  await waitFor(() => expect(window.location.hash).toBe("#/import/quick"));
+  expect(screen.getByRole("button", { name: "Quick Import" }).getAttribute("aria-current")).toBe("page");
+  // Quick import is not a sidebar section, so nothing in the sidebar claims it.
+  expect(current()).toHaveLength(0);
+  // NA-4: nothing about a previous file or its settings is remembered.
   expect(screen.queryByText(/imported before/)).toBeNull();
-  expect(screen.getByRole("menuitem", { name: /Full wizard/ })).toBeTruthy();
 });
