@@ -38,7 +38,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `components/charts.tsx` | `WinGauge`, `Sparkline`, `EquityCurve` |
 | `components/journal.tsx` | `PnlCalendar`, `monthWeeks`, `DayCard`, `TradeTable`, `tradeResult` |
 | `components/forms.tsx` | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select` (Radix), `FieldGroup`, `FormSection`, `FieldError`, `ValidationSummary`, `focusFirstInvalid`, `focusFirstInvalidWhenShown` (Build 26), `FileDropzone`, `dragHasFiles`, `useWindowFileDropGuard`, `formatFileSize` |
-| `components/overlays.tsx` | `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `OverlayClose`, `DropdownMenu`, `Tooltip` (Radix Dialog, Dropdown Menu, Tooltip) |
+| `components/overlays.tsx` | `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `OverlayClose`, `DropdownMenu`, `Tooltip`, `InfoTip` (Radix Dialog, Dropdown Menu, Tooltip) |
 | `components/feedback.tsx` | `InlineNotice`, `ToastProvider` + `useToast`, `StatusIndicator` |
 | `components/async-states.tsx` | `AsyncState`, `StateBoundary`, `Skeleton`, `LoadingState`, `EmptyState`, `ErrorState`, `UnavailableState`, `StaleDataNotice`, `RefreshingIndicator`, `MutationState`, `MutationFeedback`, `isMutationBusy`, `hasData` |
 | `components/data.tsx` | `DataTable`, `MetricCard`, `MetricValue` + `MetricValueView`, `MoneyCell`, `UnknownValue`, `LabeledValue`, `StatList`, `Stepper`, `MonthYearPicker` |
