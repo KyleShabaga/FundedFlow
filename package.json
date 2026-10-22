@@ -14,7 +14,7 @@
     "dev": "npm run dev -w @fundedflow/desktop",
     "build": "npm run build -w @fundedflow/domain && npm run build:app -w @fundedflow/desktop",
     "typecheck": "npm run build -w @fundedflow/domain && npm run typecheck -w @fundedflow/domain && npm run typecheck -w @fundedflow/desktop",
-    "test": "npm run test -w @fundedflow/domain && npm run test -w @fundedflow/desktop",
+    "test": "npm run test -w @fundedflow/domain && npm run test -w @fundedflow/desktop && npm run test:notices",
     "check": "npm run check:boundaries -w @fundedflow/domain && npm run check:dist -w @fundedflow/domain",
     "dev:domain": "npm run dev -w @fundedflow/domain",
     "tauri": "npm run tauri -w @fundedflow/desktop --",
@@ -22,6 +22,9 @@
     "dev:another-window": "node scripts/dev-test-journal.mjs window",
     "seed:test-journal": "node scripts/dev-test-journal.mjs seed",
     "reset:test-journal": "node scripts/dev-test-journal.mjs reset",
-    "test:dev-scripts": "node --test scripts/reset-test-data.test.mjs scripts/dev-reset-handoff.test.mjs"
+    "test:dev-scripts": "node --test scripts/reset-test-data.test.mjs scripts/dev-reset-handoff.test.mjs",
+    "notices": "node scripts/third-party-notices.mjs",
+    "check:notices": "node scripts/third-party-notices.mjs --check",
+    "test:notices": "node --test scripts/third-party-notices.test.mjs"
   }
 }

@@ -12,7 +12,7 @@ vi.mock("@tauri-apps/plugin-dialog", async () => (await import("../test/boundari
 const close = vi.hoisted(() => vi.fn<() => Promise<void>>());
 vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => ({ close }) }));
 
-import { CURRENT_LEGAL_DOCUMENTS, currentAcceptance } from "../legal";
+import { CURRENT_LEGAL_DOCUMENTS, currentAcceptance, THIRD_PARTY_SUMMARY } from "../legal";
 import { preloadLegalAcceptance, primeLegalAcceptance } from "../lib/data/legal";
 import { archivePreview, createAppStore, makeAccount, makeTrade } from "../test/app-store";
 import { expectNoAxeViolations } from "../test/axe";
@@ -234,7 +234,13 @@ describe("Settings → Privacy & legal", () => {
     }
     expect(within(section).getByRole("article", { name: privacy.title })).toBeTruthy();
     expect(within(section).getByText("Copyright (c) 2026 Kyle Shabaga. All rights reserved.")).toBeTruthy();
-    expect(within(section).getByText("Not included in this build yet.")).toBeTruthy();
+    // Build 26.78: the real notices, loaded from THIRD_PARTY_NOTICES.txt when opened.
+    expect(within(section).queryByText(/Not included in this build yet/)).toBeNull();
+    expect(within(section).getByText(new RegExp(`includes ${THIRD_PARTY_SUMMARY.total} third-party components`))).toBeTruthy();
+    expect(within(section).queryByRole("article", { name: /^Rust crates/ })).toBeNull();
+    await user.click(within(section).getByText("Read the third-party notices"));
+    expect(await within(section).findByRole("article", { name: `Rust crates (${THIRD_PARTY_SUMMARY.rust})` }, { timeout: 5000 })).toBeTruthy();
+    expect(within(section).getByRole("article", { name: `Fonts (${THIRD_PARTY_SUMMARY.fonts})` })).toBeTruthy();
     await expectNoAxeViolations();
   });
 });

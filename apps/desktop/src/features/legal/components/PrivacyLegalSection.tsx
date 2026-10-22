@@ -1,9 +1,11 @@
 // Settings → Privacy & legal (NA-3): the privacy summary, the bundled documents, what was accepted and when,
-// and the licence. Needs no journal: it reads only bundled text and the per-install acceptance record.
+// and the licence with the third-party notices (Build 26.78). Needs no journal: it reads only bundled text and the
+// per-install acceptance record.
 import { Disclosure, formatInstant, FormSection, InlineNotice, StatList } from "../../../design-system";
 import { CURRENT_LEGAL_DOCUMENTS, LICENSE_SUMMARY, PRIVACY_SUMMARY } from "../../../legal";
 import { isCurrent, useLegalAcceptance } from "../hooks";
 import { documentMeta, LegalDocumentDisclosure } from "./LegalDocuments";
+import { ThirdPartyNotices } from "./ThirdPartyNotices";
 import "./legal.css";
 
 export function PrivacyLegalSection() {
@@ -34,7 +36,7 @@ export function PrivacyLegalSection() {
           <p>{LICENSE_SUMMARY.notice}</p>
           {LICENSE_SUMMARY.terms.map(text => <p key={text}>{text}</p>)}
           <h3 className="ds-title">Third-party notices</h3>
-          <p>{LICENSE_SUMMARY.thirdPartyNotices ?? "Not included in this build yet."}</p>
+          <ThirdPartyNotices />
         </div>
       </Disclosure>
     </FormSection>

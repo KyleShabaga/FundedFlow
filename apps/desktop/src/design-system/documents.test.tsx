@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -79,5 +79,26 @@ describe("DocumentView and Disclosure", () => {
     const section = heading.closest("section")!;
     await userEvent.click(within(section).getByRole("button", { name: "Accept" }));
     expect(within(section).getByRole("status").textContent).toBe("Example answer: Accepted");
+    expect(within(section).queryByRole("article", { name: "Example licence" })).toBeNull();
+    await userEvent.click(within(section).getByText("Read an example licence"));
+    expect(await within(section).findByRole("article", { name: "Example licence" })).toBeTruthy();
+  });
+
+  it("reports each open and close to onToggle", async () => {
+    const calls: boolean[] = [];
+    render(<Disclosure summary="Notices" onToggle={open => calls.push(open)}><p>Body</p></Disclosure>);
+    const summary = document.querySelector("summary")!;
+    await userEvent.click(summary);
+    await waitFor(() => expect(calls).toEqual([true]));
+    await userEvent.click(summary);
+    await waitFor(() => expect(calls).toEqual([true, false]));
+  });
+
+  it("keeps line breaks in preformatted documents and still renders text, not markup", () => {
+    render(<DocumentView preformatted headingLevel={3} title="Licence" sections={[{ heading: "MIT", paragraphs: ["Line one\n  indented <i>two</i>"] }]} />);
+    const article = screen.getByRole("article", { name: "Licence" });
+    expect(article.classList.contains("is-preformatted")).toBe(true);
+    expect(within(article).getByText(/indented <i>two<\/i>/).textContent).toBe("Line one\n  indented <i>two</i>");
+    expect(article.querySelector("i")).toBeNull();
   });
 });

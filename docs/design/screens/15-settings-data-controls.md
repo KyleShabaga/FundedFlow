@@ -28,7 +28,8 @@ page; its wording now lives once, in the **Privacy & legal** section.) Five `For
    journal*.
 5. **Privacy & legal** (NA-3, [16 First run](16-first-run.md)): the privacy summary, a draft notice while the documents
    are drafts, a `StatList` of each document's version and date and when this install accepted them, each document
-   in a `Disclosure` (`DocumentView`), and the licence summary with third-party notices (not bundled yet).
+   in a `Disclosure` (`DocumentView`), and the licence summary with third-party notices (Build 26.78, see
+   [16 First run → Licence and third-party notices](16-first-run.md#licence-and-third-party-notices)).
 
 The Accounts row and detail menus also offer **Delete permanently…** after **Archive…** (and after **Restore from
 archive** for archived accounts). It opens the same deletion dialog.

@@ -78,3 +78,13 @@ jobs:
       - name: cargo audit
         working-directory: apps/desktop/src-tauri
         run: cargo audit --deny unsound
+
+      # Build 26.78: THIRD_PARTY_NOTICES.txt must match the locked dependencies. Regenerates it in a temp folder
+      # (cargo-about for the Windows crates, package-lock.json for the npm packages and fonts) and fails on any
+      # difference, telling the contributor to run `npm run notices`. Also fails on a licence outside the allow-list.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about@0.9.2
+
+      - name: Third-party notices are up to date
+        run: npm run check:notices

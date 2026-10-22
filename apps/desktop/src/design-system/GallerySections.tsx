@@ -531,10 +531,16 @@ const SAMPLE_DOCUMENT = [
   { heading: "What leaves this computer", paragraphs: ["Example text: nothing."] },
 ];
 
+const SAMPLE_LICENCE = [
+  { heading: "example-package 1.0.0", paragraphs: ["Licence: MIT\nCopyright (c) 2026 Example Authors"] },
+  { heading: "[T1] MIT", paragraphs: ["Permission is hereby granted, free of charge, to any person obtaining a copy\nof this software (example text, line breaks kept).", "  An indented line, and a very long line that wraps inside the column instead of scrolling the page sideways at 800 px."] },
+];
+
 export function DocumentsSection() {
   const [answer, setAnswer] = useState<string | null>(null);
+  const [licenceOpened, setLicenceOpened] = useState(false);
   return (
-    <Section title="GatePage, DocumentView and Disclosure (NA-3)" note="GatePage is a whole-window step shown instead of the app frame: it owns the h1 and main landmark, focuses its title on mount and keeps its actions in view. Here it is a preview (a section with an h2). DocumentView shows bundled long-form text; Disclosure is a native expander with optional screen-reader context.">
+    <Section title="GatePage, DocumentView and Disclosure (NA-3)" note="GatePage is a whole-window step shown instead of the app frame: it owns the h1 and main landmark, focuses its title on mount and keeps its actions in view. Here it is a preview (a section with an h2). DocumentView shows bundled long-form text (preformatted for licence texts, Build 26.78); Disclosure is a native expander with optional screen-reader context and an onToggle callback for loading its body on first open.">
       <GatePage preview eyebrow="Example step" title="Before you start"
         actions={<><Button variant="secondary" onClick={() => setAnswer("Declined")}>Decline</Button><Button variant="primary" onClick={() => setAnswer("Accepted")}>Accept</Button></>}>
         <p>A short plain-language summary goes first.</p>
@@ -543,6 +549,9 @@ export function DocumentsSection() {
         </Disclosure>
         <p role="status" className="ds-faint">{answer ? `Example answer: ${answer}` : ""}</p>
       </GatePage>
+      <Disclosure summary="Read an example licence" onToggle={open => open && setLicenceOpened(true)}>
+        {licenceOpened && <DocumentView preformatted headingLevel={3} title="Example licence" sections={SAMPLE_LICENCE} />}
+      </Disclosure>
     </Section>
   );
 }

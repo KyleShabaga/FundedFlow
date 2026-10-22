@@ -54,6 +54,7 @@ npm run tauri build
 | `npm run typecheck` | Builds domain, type-checks domain sources/tests and the desktop app |
 | `npm test` | Domain unit/parity tests and desktop component tests (Vitest) |
 | `npm run check` | Domain boundary check and a plain-Node import of the built package |
+| `npm run notices` / `npm run check:notices` | Regenerate `apps/desktop/THIRD_PARTY_NOTICES.txt` (shipped in the installer and shown in Settings) after any dependency change, or check it is current as CI does. Needs `cargo install cargo-about --version 0.9.2 --locked --features cli` |
 | `npm run dev:domain` | `tsc --watch` for `packages/domain` on its own |
 | `npm run dev:test-journal` | `tauri dev` on an isolated, git-ignored test journal, with the developer-only **Add Fake Data** and **Reset All Data** sidebar actions enabled ([`docs/development/dev-tools.md`](docs/development/dev-tools.md)) |
 | `npm run seed:test-journal` / `npm run reset:test-journal` | Seed or reset that test journal from the command line (FundedFlow closed) |

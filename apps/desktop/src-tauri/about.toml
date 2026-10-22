@@ -1,0 +1,29 @@
+# cargo-about configuration for THIRD_PARTY_NOTICES.txt (Build 26.78). Run through `npm run notices`, which calls
+# `cargo about generate --format json --offline --locked --fail` (offline: only the files packaged in each crate, no
+# git or ClearlyDefined lookups, so the output is reproducible) and merges the result with the npm packages and
+# fonts (scripts/third-party-notices.mjs). Keep this allow-list identical to ALLOWED_LICENSES in that script.
+
+# Only the shipped Windows build: the one target V1 is built for, without dev- or build-only dependencies.
+targets = ["x86_64-pc-windows-msvc"]
+ignore-dev-dependencies = true
+ignore-build-dependencies = true
+# FundedFlow's own crate (publish = false) is covered by the root LICENSE, not by the notices.
+private = { ignore = true }
+
+# Permissive licences only. For a crate offering a choice ("MIT OR Apache-2.0") cargo-about picks the first licence
+# in this list that the expression allows, so MIT is preferred, then Apache-2.0. Anything else (copyleft, unknown,
+# unlicensed) fails generation: list it for the owner and counsel instead of adding it here.
+accepted = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "MPL-2.0",
+    "CC0-1.0",
+    "0BSD",
+    "OFL-1.1",
+]
