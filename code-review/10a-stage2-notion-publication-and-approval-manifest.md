@@ -148,3 +148,20 @@ The update was made on 2026-10-22. The repository side is in commits `6961900` t
 - **Follow-up cards** TASK-037 to 040 were created in that session as r1 drafts (Pending Review). TASK-040 is the `cargo fmt` task that TASK-029 waits on.
 - **Claude** recorded no approval and changed none.
 
+
+## 9. Currency pass and approvals (2026-10-22, later)
+
+**Currency pass:**
+- 10 pending cards were updated for the approved decisions: 013 r4, 014 r3, 017 r4, 025 r3, 027 r4, 028 r4, 029 r4, 031 r4, 034 r4 and 036 r3.
+- Repository specs were written for TASK-037 to 040 (r1).
+- TASK-041 (r1) was split from TASK-037 after a review found value-only copies of real export rows in tests, fixtures and mockups.
+- Two independent reviewers plus a re-check returned READY.
+- A privacy scan of `code-review/` found no real export values.
+- The board was updated and the TASK-041 page created: https://app.notion.com/p/4011bd4b6bde81f6877ae85e49be27bf
+
+**Approvals by Kyle** (recorded on the board through his separate session):
+- 25 cards are approved: 001–022 except 023, plus 024, 025 and 026.
+- Every approved SHA-256 equals the committed card file (checked by script). **These 25 card files must not be edited.**
+- Owner amendments (009, 016, 017, 021) are recorded only in the board's Decision Notes.
+
+**Still Pending Review:** 023, 027–041.
