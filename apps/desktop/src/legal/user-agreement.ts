@@ -2,8 +2,8 @@ import type { LegalDocument } from "./document";
 
 export const userAgreement: LegalDocument = {
   "id": "user-agreement",
-  "title": "User agreement (draft)",
-  "version": "0.2.0-draft",
+  "title": "License and product information (draft)",
+  "version": "0.2.1-draft",
   "effectiveDate": "2026-10-22",
   "draft": true,
   "summary": "MIT supplies the software permissions. This document explains record-keeping limits, trading risks and backup responsibilities without adding license restrictions.",
@@ -11,7 +11,7 @@ export const userAgreement: LegalDocument = {
     {
       "heading": "About this draft",
       "paragraphs": [
-        "Prepared 2026-10-22. This complete draft remains unreviewed by a lawyer and pending owner release approval. It contains product information, not an additional commercial license. The current app records acceptance of both displayed documents; that record does not replace or limit the MIT License."
+        "Prepared 2026-10-22. This complete draft remains unreviewed by a lawyer and pending owner approval of its content and release scope. It provides product information, not an additional commercial license. The app records acknowledgment that these notices were displayed; this does not replace or limit the MIT License."
       ]
     },
     {
@@ -49,5 +49,5 @@ export const userAgreement: LegalDocument = {
       ]
     }
   ],
-  "digest": "8ea84f30136970bb84b0aadda50197e7634b9cd84f01d33ac950e68c183f1d9c"
+  "digest": "96894603aff89db92b60b307f85693756d0e540f03851c2d39568a441c68911a"
 };

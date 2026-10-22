@@ -12,7 +12,7 @@ Third-party dependencies, fonts, captured pages/PDFs and other externally author
 terms. User journals, imported CSVs and screenshots are not licensed under MIT simply by being processed by
 the app. Dependency allow-lists, collector source-permission checks and AGPL exclusions are unchanged.
 
-## Implementation
+## Initial transition implementation (historical)
 
 - Root LICENSE contains the standard MIT text with Kyle's copyright. The collector carries an identical copy
   for its standalone Python distribution, declared through its package metadata.
@@ -39,27 +39,11 @@ does not change dependency versions or broaden the accepted license list. The no
 production dependencies and retains their separate license texts. Its checks cover the desktop inventory,
 not a legal audit of the Python collector, its downloaded content, or all development tooling.
 
-## Privacy, product terms and release status
+## Privacy, product information and release status
 
-The bundled privacy notice and user agreement remain visibly marked drafts, with no claim of lawyer review.
-MIT permission to use the software is distinct from the unfinished privacy/product documents. The existing
-[first-run specification](design/screens/16-first-run.md) records counsel sign-off as a distribution gate. This
-transition does not record that sign-off, waive the gate, approve distribution, or create a release.
+The owner adopted revised P0-13 criteria on 2026-10-22: factual and packaged verification, passing relevant checks, explicit approval of document versions and release scope, recorded remaining risks, and optional independent review. This is policy approval, not lawyer review or release approval.
 
-Remaining work before a release decision:
-
-1. Verify privacy wording against the packaged app and installer, including external downloads, logs, temporary
-   files, migration/recovery copies, attachments and the precise limits of deletion. Resolve any open remediation
-   affecting those claims before finalizing them.
-2. Add the owner's chosen contact route. Explain that users should not attach private trading data to public
-   GitHub issues. Review the separate handling of information voluntarily sent for support.
-3. Finish the product information about calculation limits, broker/prop-firm verification and backups. Keep
-   it consistent with MIT permissions and avoid claims that disclaimers eliminate all liability.
-4. Seek an affordable/free review where available, or have the owner explicitly decide and record revised
-   release criteria and remaining risk. Owner approval must not be described as counsel review. No such change
-   to the existing gate is inferred from approving this license migration.
-5. Replace finalized document text, versions, dates and digests together; update the draft-only test assertions
-   when the document status is actually finalized, then verify first-run and Settings in the packaged build.
+Both bundled documents are complete editorial drafts at `0.2.1-draft`, dated 2026-10-22. The owner authorized the title “License and product information” and acknowledgment flow. Stable document IDs, native command names and serialized `acceptedAt` remain for compatibility. Changes to versions and digests prompt existing installs again. See [verification and recorded owner decisions](privacy-product-verification.md) for storage/deletion evidence and remaining release checks. Content and release approval remain pending.
 
 For a possible no-cost review, the University of Alberta's [Entrepreneurial Law Clinic](https://www.ualberta.ca/en/law/student-services/experiential-learning/entrepreneurial-law-clinic/index.html)
 describes services for early-stage businesses in the greater Edmonton area that cannot afford legal services.
@@ -67,7 +51,3 @@ Eligibility, capacity and review scope need confirmation. A focused request can 
 licensing section, the two bundled documents, the first-run specification and this note.
 
 Reference license: [Open Source Initiative: MIT](https://opensource.org/license/mit).
-
-## Completed document drafting follow-up (2026-10-22)
-
-Both bundled documents are now complete editorial drafts at `0.2.0-draft`, dated 2026-10-22, with recomputed digests. Earlier version references above describe the initial MIT transition. See [verification and proposed owner decision](privacy-product-verification.md) for actual storage/deletion limits, evidence, acceptance assessment and a concrete proposed P0-13 revision. That proposal is unapproved; the original release gate remains effective. Acceptance mechanics remain unchanged and both changed documents prompt existing installs again.

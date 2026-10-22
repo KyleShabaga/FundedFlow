@@ -3,7 +3,7 @@ import type { LegalDocument } from "./document";
 export const privacyNotice: LegalDocument = {
   "id": "privacy-notice",
   "title": "Privacy notice (draft)",
-  "version": "0.2.0-draft",
+  "version": "0.2.1-draft",
   "effectiveDate": "2026-10-22",
   "draft": true,
   "summary": "The desktop journal is stored locally without app encryption. The app has no sign-in or telemetry; installer downloads, external services and files you share have separate privacy implications.",
@@ -11,14 +11,14 @@ export const privacyNotice: LegalDocument = {
     {
       "heading": "About this draft",
       "paragraphs": [
-        "Prepared 2026-10-22 for the current Windows desktop product maintained by Kyle Shabaga. This complete draft has not been reviewed by a lawyer or approved for release. Its displayed date identifies this revision, not release approval. The existing release gate remains in force."
+        "Prepared 2026-10-22 for the current Windows desktop product maintained by Kyle Shabaga. This complete draft has not been reviewed by a lawyer or approved for release. Its displayed date identifies this revision, not release approval. Release requires factual and packaged verification, passing relevant checks, explicit owner approval of document versions and release scope, and recorded remaining risks. Independent review is optional."
       ]
     },
     {
       "heading": "Local storage and purpose",
       "paragraphs": [
         "FundedFlow stores accounts, trades, imported CSV records, journal and review text, rulebooks, source metadata, screenshots and settings to provide a trading journal and calculations. The journal is SQLite at %APPDATA%\\com.fundedflow.desktop\\fundedflow.db, with attachments beside it. SQLite may also create journal or WAL sidecar files.",
-        "The separate legal-acceptance.json records document IDs, versions, digests and acceptance time. WebView local storage holds UI preferences; session storage can hold edits you choose to keep for rulebooks and reviews. These stores are separate from journal backups and erasure.",
+        "The separate legal-acceptance.json records document IDs, versions, digests and acknowledgment time (stored as acceptedAt for compatibility). WebView local storage holds UI preferences; session storage can hold edits you choose to keep for rulebooks and reviews. These stores are separate from journal backups and erasure.",
         "The app does not encrypt the journal, attachments, exports, temporary working files or recovery copies. Filesystem permissions and any Windows or disk encryption you enable provide separate protection. People and software with access to these files may read or copy them. Screenshot content and metadata may contain private information."
       ]
     },
@@ -62,5 +62,5 @@ export const privacyNotice: LegalDocument = {
       ]
     }
   ],
-  "digest": "62ce8843ab50f2ad56a01f1aaae385d7c57702d665cf95f9eff30cbe87c2c2ce"
+  "digest": "8b83157f3e1075a64fb631e39616c37e5b70cc3c70e54f473c05ec9d0db1c392"
 };

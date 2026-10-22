@@ -70,14 +70,14 @@ describe("first launch", () => {
     title.focus();
     const order: string[] = [];
     for (let i = 0; i < 4; i++) { await user.tab(); order.push(document.activeElement!.textContent ?? ""); }
-    expect(order).toEqual([expect.stringMatching(/^Read the privacy notice/), expect.stringMatching(/^Read the user agreement/), "Decline and close", "Accept and continue"]);
+    expect(order).toEqual([expect.stringMatching(/^Read the privacy notice/), expect.stringMatching(/^Read the license and product information/), "Close", "Acknowledge and continue"]);
     await expectNoAxeViolations();
   });
 
   it("Accept stores the current versions and digests, opens the app, and a reopen goes straight in", async () => {
     const store = store1();
     const { user } = renderApp("/", store);
-    await user.click(screen.getByRole("button", { name: "Accept and continue" }));
+    await user.click(screen.getByRole("button", { name: "Acknowledge and continue" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Today" })).toBeTruthy();
     expect(nav()).toBeTruthy();
     expect(boundary.legal.record).toEqual({ documents: currentAcceptance(), acceptedAt: boundary.legal.now });
@@ -92,7 +92,7 @@ describe("first launch", () => {
     const store = store1();
     const listAccounts = vi.spyOn((store.repository as unknown as { accounts: { list: () => unknown } }).accounts, "list");
     const { user } = renderApp("/", store);
-    await user.click(screen.getByRole("button", { name: "Decline and close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
     expect(close).toHaveBeenCalledTimes(1);
     expect(boundary.legal.record).toBeNull();
     expect(boundary.invocations).not.toContain("record_legal_acceptance");
@@ -105,9 +105,9 @@ describe("first launch", () => {
   it("if the window can't close, says so and still offers both choices", async () => {
     close.mockRejectedValue(new Error("not allowed"));
     const { user } = renderApp("/");
-    await user.click(screen.getByRole("button", { name: "Decline and close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
     expect(await screen.findByText("FundedFlow couldn't close itself")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Accept and continue" }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole("button", { name: "Acknowledge and continue" }) as HTMLButtonElement).disabled).toBe(false);
     expect(nav()).toBeNull();
   });
 
@@ -115,7 +115,7 @@ describe("first launch", () => {
     boundary.legal.writeError = new Error("disk full");
     const store = store1();
     const { user } = renderApp("/", store);
-    await user.click(screen.getByRole("button", { name: "Accept and continue" }));
+    await user.click(screen.getByRole("button", { name: "Acknowledge and continue" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Today" })).toBeTruthy();
     expect(await screen.findByText("Your answer couldn't be saved")).toBeTruthy();
     await user.click(screen.getByRole("link", { name: "Settings" }));
@@ -130,7 +130,7 @@ describe("first launch", () => {
     boundary.statusAnswers = [failed("open_failed")];
     const { user } = renderApp("/");
     expect(gate()).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Accept and continue" }));
+    await user.click(screen.getByRole("button", { name: "Acknowledge and continue" }));
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Your journal couldn't be opened" })).toBeTruthy();
     expect(boundary.legal.record).not.toBeNull();
@@ -151,10 +151,10 @@ describe("a later launch", () => {
     const store = store1();
     await reopen("/", store);
     const main = gate();
-    expect(within(main).getByRole("heading", { level: 1, name: "The privacy notice or agreement has changed" })).toBeTruthy();
-    expect(within(main).getByText(`Updated since you last accepted: ${privacy.title} (version ${privacy.version}).`)).toBeTruthy();
+    expect(within(main).getByRole("heading", { level: 1, name: "The privacy or product notice has changed" })).toBeTruthy();
+    expect(within(main).getByText(`Updated since your last acknowledgment: ${privacy.title} (version ${privacy.version}).`)).toBeTruthy();
     expect(nav()).toBeNull();
-    await act(async () => { screen.getByRole("button", { name: "Accept and continue" }).click(); });
+    await act(async () => { screen.getByRole("button", { name: "Acknowledge and continue" }).click(); });
     expect(await screen.findByRole("heading", { level: 1, name: "Today" })).toBeTruthy();
     expect(boundary.legal.record!.documents).toEqual(currentAcceptance());
   });
@@ -224,7 +224,7 @@ describe("Settings → Privacy & legal", () => {
     const heading = await screen.findByRole("heading", { level: 2, name: "Privacy & legal" });
     const section = heading.closest("section")!;
     expect(within(section).getByText(/Your desktop journal is local and unencrypted/)).toBeTruthy();
-    const list = section.querySelector<HTMLElement>("dl[aria-label='Accepted documents']")!;
+    const list = section.querySelector<HTMLElement>("dl[aria-label='Acknowledged documents']")!;
     for (const doc of CURRENT_LEGAL_DOCUMENTS) {
       expect(within(list).getAllByText(`Version ${doc.version} · Draft dated ${formatDocumentDate(doc.effectiveDate)}`)).toBeTruthy();
     }
@@ -233,7 +233,7 @@ describe("Settings → Privacy & legal", () => {
     expect(ACCEPTED_AT).toBe("2026-10-21T18:00:00.000Z");
     // The static local-only paragraph is gone: the wording lives here once.
     expect(screen.getAllByText(/Your desktop journal is local and unencrypted/)).toHaveLength(1);
-    for (const name of [/^Read the privacy notice/, /^Read the user agreement/, /^Licence and third-party notices/]) {
+    for (const name of [/^Read the privacy notice/, /^Read the license and product information/, /^Licence and third-party notices/]) {
       await user.click(within(section).getByText(name));
     }
     expect(within(section).getByRole("article", { name: privacy.title })).toBeTruthy();

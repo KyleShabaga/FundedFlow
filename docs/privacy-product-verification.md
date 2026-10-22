@@ -1,6 +1,6 @@
 # Privacy and product documents: verification and owner decision
 
-Status: complete editorial drafts, unreviewed; owner approval NOT recorded. Revision 0.2.0-draft, 2026-10-22. PR #107 was open and unmerged when inspected. Work continues its existing branch; MIT distribution permissions do not themselves approve a release.
+Status: complete editorial drafts, unreviewed; owner content/release approval NOT recorded. Revision 0.2.1-draft, 2026-10-22. PR #107 was open and unmerged when inspected. Work continues its existing branch; MIT distribution permissions do not themselves approve a release.
 
 ## Evidence map
 
@@ -20,23 +20,19 @@ Status: complete editorial drafts, unreviewed; owner approval NOT recorded. Revi
 
 GitHub support text describes public service use and voluntary disclosure, not app collection. GitHub's own policy governs GitHub processing: https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement . Maintainer-specific download visibility must not be confused with GitHub's server-side access logs.
 
-## Acceptance assessment (proposal only)
+## Acknowledgment flow — authorized 2026-10-22
 
-A license and product-information notice would be clearer than a separate user contract: MIT already supplies permissions and there are no additional negotiated obligations here. Recommended later change: title “License and product information”; button “Acknowledge and continue”; exit “Close”; acceptance metadata described as acknowledgment. Retain document IDs and version/digest matching for migration. This PR does NOT implement that substantial behavior change or claim consent is necessary for MIT permission. The existing Accept/Decline gate remains, with clear separation of MIT rights in the text. Owner must decide before changing that flow.
+The owner explicitly authorized “License and product information”, “Acknowledge and continue” and “Close” on 2026-10-22. Implemented in this revision. The record indicates notice acknowledgment, not an additional MIT permission condition. Stable IDs and serialized schema remain compatible; both documents are bumped to 0.2.1-draft and require a fresh acknowledgment.
 
-## Proposed replacement for P0-13 — NOT APPROVED
+## P0-13 replacement — adopted by owner 2026-10-22
 
-Proposed decision text for the owner to adopt or reject:
+The owner selected “Adopt the proposed criteria” in response to the exact criteria presented in this chat:
 
 “Replace the requirement for counsel sign-off with the following release criteria: documented factual verification against the release source and packaged Windows behavior; passing relevant document, acceptance, Settings, accessibility and repository checks; explicit owner approval of identified document versions, release commit and distribution scope; and a recorded list of unresolved factual and legal risks and their disposition. Independent legal review is optional and must never be represented as completed unless actually obtained. Owner approval is not legal review or certification. A release remains blocked until the owner records these approvals and resolves or expressly accepts each remaining risk.”
 
-The original P0-13 counsel gate remains effective until the owner explicitly adopts a revision. Technical completion, MIT transition approval and merging this PR must not be recorded as approval of this proposal or a release.
+This explicit decision replaces the original counsel-sign-off requirement. It is policy approval only: it does not approve document content or a release. Independent review remains optional; no such review is recorded.
 
-Separate owner decisions:
-
-1. Adopt the proposed gate, retain the original counsel requirement, or provide alternative wording. Recommendation: adopt the explicit owner-controlled criteria above.
-2. Approve the 0.2.0-draft content and a named release scope after packaged verification, or request changes. Recommendation: keep draft status until that decision; no approval is inferred here.
-3. Authorize the acknowledgment flow described above or retain acceptance. Recommendation: acknowledgment, in a subsequent explicitly authorized implementation.
+Remaining owner decision: approve the identified document revision and a named release commit/distribution scope after required verification, or request changes. Recommendation: retain draft status and withhold release approval until packaged checks and CI results are recorded. Owner content/release approval is NOT recorded.
 
 Contact decision recorded in this chat: owner selected public GitHub Issues. No private address or separate business identity has been invented.
 
@@ -58,3 +54,7 @@ Before distribution, smoke-test the actual packaged Windows installer (with/with
 - Rust test attempt: 359 passed, 29 failed, 2 ignored. Failures include Access denied in unchanged attachment filesystem code; environment confinement is a possible cause, not a demonstrated baseline result. No Rust source changed. Clippy compilation explicitly failed with Windows error 112 (disk full). A subsequent frontend build also encountered ENOSPC; generated Rust target files were removed, then build/typecheck/check were rerun successfully. Rust checks still require a clean CI run; no baseline exemption is claimed.
 - jsdom emits its known unimplemented canvas getContext warning during axe checks; focused tests still pass. Production build emits a chunk-size warning.
 - Packaged installer/runtime, uninstall and interrupted-cleanup smoke checks remain unperformed. No distribution approval is recorded.
+
+## Authorized follow-up verification (2026-10-22)
+
+The owner adopted the revised P0-13 criteria and authorized acknowledgment wording in this chat. Both documents are now 0.2.1-draft, with new digests. The existing schema and IDs are intentionally retained. All 77 focused document, acknowledgment, Settings, data-control and accessibility tests pass after this change. Rust tests rerun outside filesystem confinement with debug symbols disabled: 388 passed, 0 failed, 2 ignored. This resolves the earlier confined Rust test failures for this source revision; no Rust source fix was needed. Clippy and broader test/packaged checks are recorded below as results become available.
