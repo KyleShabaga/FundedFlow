@@ -219,9 +219,11 @@
 /* Opening and closing animate the sidebar track; contents keep their own fixed alignment so nothing jumps. */
 .ds-app-frame { transition: grid-template-columns 200ms ease-out; }
 @media (prefers-reduced-motion: reduce) { .ds-app-frame { transition: none; } }
-/* The sidebar itself doesn't scroll (its edge control would be clipped); its inner area does. */
-.ds-app-sidebar { position: sticky; top: 0; z-index: 3; height: 100dvh; min-width: 0; box-sizing: border-box; background: var(--bg-100); border-right: 1px solid var(--line-100); }
-.ds-app-sidebar-scroll { display: flex; flex-direction: column; height: 100%; min-width: 0; overflow-x: hidden; overflow-y: auto; }
+/* The sidebar itself doesn't scroll (its edge control would be clipped); its inner area does. The header row stays
+   above that area, so a scrollbar in a short window never narrows the brand. */
+.ds-app-sidebar { position: sticky; top: 0; z-index: 3; display: flex; flex-direction: column; height: 100dvh; min-width: 0; box-sizing: border-box; background: var(--bg-100); border-right: 1px solid var(--line-100); }
+.ds-app-sidebar-header { flex: none; min-width: 0; }
+.ds-app-sidebar-scroll { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; overflow-x: hidden; overflow-y: auto; }
 /* Inside the sidebar's header (P0-D08): top-right beside the brand when expanded; centred under the brand mark in the
    icon rail. The host sets the offsets to line up with its brand row; nothing straddles the border. */
 .ds-app-sidebar-edge { position: absolute; z-index: 1; top: var(--ds-app-edge-top, var(--space-6)); right: var(--ds-app-edge-inset, var(--space-3)); display: grid; }

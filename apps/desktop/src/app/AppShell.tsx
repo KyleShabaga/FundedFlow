@@ -118,6 +118,15 @@ function useActiveIndicator(nav: RefObject<HTMLElement | null>, layoutKey: strin
   return box;
 }
 
+/** The sidebar's brand row: mark and wordmark, the mark alone in the icon rail. AppFrame keeps it above the scrolling links. */
+export function SidebarBrand({ collapsed }: { collapsed: boolean }) {
+  return (
+    <div className="shell-brand">
+      <BrandLogo showName={!collapsed} />
+    </div>
+  );
+}
+
 export function SidebarNav({ collapsed }: { collapsed: boolean }) {
   const { pathname, search } = useLocation();
   const activePath = normalizePath(pathname);
@@ -178,9 +187,6 @@ export function SidebarNav({ collapsed }: { collapsed: boolean }) {
   };
   return (
     <>
-      <div className="shell-brand">
-        <BrandLogo showName={!collapsed} />
-      </div>
       <nav ref={nav} id="primary-navigation" aria-label="Primary navigation" className={`shell-nav${indicator ? " has-indicator" : ""}`}>
         {indicator && <span aria-hidden="true" className={`shell-nav-indicator${indicator.slide ? " is-sliding" : ""}`}
           style={{ transform: `translateY(${indicator.top}px)`, height: indicator.height }} />}
@@ -252,7 +258,8 @@ export function AppShell() {
         event.preventDefault();
         document.getElementById("main-content")?.focus();
       }}>Skip to main content</a>
-      <AppFrame collapsed={sidebar.collapsed} sidebar={<SidebarNav collapsed={sidebar.collapsed} />} sidebarEdge={<SidebarToggle {...sidebar} />}
+      <AppFrame collapsed={sidebar.collapsed} sidebar={<SidebarNav collapsed={sidebar.collapsed} />}
+        sidebarHeader={<SidebarBrand collapsed={sidebar.collapsed} />} sidebarEdge={<SidebarToggle {...sidebar} />}
         header={<PageHeader title={title} />}>
         <main id="main-content" tabIndex={-1} className="shell-content">
           <ContentFrame>

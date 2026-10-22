@@ -10,6 +10,30 @@ import { expectNoAxeViolations } from "../test/axe";
 
 afterEach(cleanup);
 
+describe("AppFrame", () => {
+  it("keeps the sidebar header above the scrolling area and the edge control outside it", () => {
+    const { container } = render(
+      <AppFrame collapsed={false} sidebarHeader={<BrandLogo />} sidebarEdge={<button type="button">Collapse</button>}
+        sidebar={<nav aria-label="Primary">Links</nav>} header={null}>
+        <main>Body</main>
+      </AppFrame>,
+    );
+    const sidebar = container.querySelector(".ds-app-sidebar")!;
+    const header = sidebar.querySelector(".ds-app-sidebar-header")!;
+    const scroll = sidebar.querySelector(".ds-app-sidebar-scroll")!;
+    expect(header.textContent).toBe("FundedFlow");
+    expect(scroll.contains(header)).toBe(false);
+    expect(scroll.contains(screen.getByRole("button", { name: "Collapse" }))).toBe(false);
+    // DOM order: header, edge control, then the scrolling links.
+    expect([...sidebar.children].map(child => child.className)).toEqual(["ds-app-sidebar-header", "ds-app-sidebar-edge", "ds-app-sidebar-scroll"]);
+  });
+
+  it("renders no header row when the host gives none", () => {
+    const { container } = render(<AppFrame collapsed sidebar={<p>Links</p>} header={null}>Body</AppFrame>);
+    expect(container.querySelector(".ds-app-sidebar-header")).toBeNull();
+  });
+});
+
 describe("ContentFrame", () => {
   it("adds the shared frame to a header and a body inside the main column, and passes attributes through", async () => {
     const { container } = render(

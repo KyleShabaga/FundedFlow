@@ -226,6 +226,9 @@ it("keeps the collapse toggle in the sidebar header beside the logo, first in ke
   // Brand row: the decorative FundedFlow mark beside the name, which still reads "FundedFlow".
   const brand = sidebar.querySelector(".shell-brand")!;
   expect(brand.textContent).toBe("FundedFlow");
+  // Above the scrolling links, so a scrollbar in a short window never narrows the wordmark.
+  expect(brand.closest(".ds-app-sidebar-header")).toBeTruthy();
+  expect(sidebar.querySelector(".ds-app-sidebar-scroll")!.contains(brand)).toBe(false);
   expect(brand.querySelector("svg.ds-brand-mark")?.getAttribute("aria-hidden")).toBe("true");
   await user.hover(toggle);
   expect((await screen.findAllByText("Collapse sidebar (Ctrl+B)")).length).toBeGreaterThan(0);
