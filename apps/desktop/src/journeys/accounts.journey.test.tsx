@@ -12,12 +12,22 @@ vi.mock("@tauri-apps/plugin-dialog", async () => (await import("../test/boundari
 
 import { ACTIVE_ACCOUNT_SETTING } from "../features/accounts/active-account";
 import { createAppStore, makeAccount, makeTrade } from "../test/app-store";
-import { currentPath, installBrowserShims, renderApp, resetHarness } from "../test/harness";
+import { currentPath, installBrowserShims, renderApp, resetHarness, warmUpApp } from "../test/harness";
 
 beforeAll(installBrowserShims);
+beforeAll(warmUpApp);
 afterEach(resetHarness);
 
 const nav = () => screen.getByRole("navigation", { name: "Primary navigation" });
+/**
+ * Replaces a field's value in one paste: per-keystroke field behaviour is the Accounts feature tests' job, and
+ * typing key by key cost ~0.3–0.8 s a field under CPU load.
+ */
+const fill = async (user: ReturnType<typeof renderApp>["user"], field: HTMLElement, text: string) => {
+  await user.clear(field);
+  await user.click(field);
+  await user.paste(text);
+};
 const risk = () => screen.getByRole("region", { name: "Risk estimate" });
 
 describe("first run to a configured account", () => {
@@ -31,12 +41,11 @@ describe("first run to a configured account", () => {
 
     await user.click((await screen.findAllByRole("button", { name: "Add account" }))[0]);
     const dialog = await screen.findByRole("dialog", { name: "Add account" });
-    // Pasted, not typed key by key: per-keystroke field behaviour is the Accounts feature tests' job, and each
-    // keystroke into the zone combobox re-filters the zone list (slow in jsdom on a busy runner).
-    const fill = async (field: HTMLElement, text: string) => { await user.clear(field); await user.click(field); await user.paste(text); };
-    await fill(within(dialog).getByRole("textbox", { name: /Account name/ }), "Eval 50K");
-    await fill(within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
-    await fill(within(dialog).getByRole("combobox", { name: /Time zone/ }), "America/New_York");
+    // Pasted, not typed key by key: each keystroke into the zone combobox re-filters the zone list (slow in jsdom
+    // on a busy runner).
+    await fill(user, within(dialog).getByRole("textbox", { name: /Account name/ }), "Eval 50K");
+    await fill(user, within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
+    await fill(user, within(dialog).getByRole("combobox", { name: /Time zone/ }), "America/New_York");
     await user.click(within(dialog).getByRole("button", { name: "Add account" }));
     await waitFor(() => expect(currentPath()).toBe("/accounts/acct-1"));
     await waitFor(() => expect(store.settings.get(ACTIVE_ACCOUNT_SETTING)).toBe("acct-1"));
@@ -57,8 +66,7 @@ describe("first run to a configured account", () => {
     await user.click(screen.getAllByRole("button", { name: "Assign a version…" })[0]);
     const assign = await screen.findByRole("dialog", { name: "Assign a rulebook version" });
     const day = within(assign).getByLabelText(/First trading day/);
-    await user.clear(day);
-    await user.type(day, "2026-10-19");
+    await fill(user, day, "2026-10-19");
     // The button names the typed day once React has rendered the input; wait for it rather than assume it.
     await user.click(await within(assign).findByRole("button", { name: /Assign from 2026-10-19/ }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -76,8 +84,8 @@ describe("first run to a configured account", () => {
     const { user } = renderApp("/accounts", store);
     await user.click((await screen.findAllByRole("button", { name: "Add account" }))[0]);
     const dialog = await screen.findByRole("dialog", { name: "Add account" });
-    await user.type(within(dialog).getByRole("textbox", { name: /Account name/ }), "Eval 50K");
-    await user.type(within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
+    await fill(user, within(dialog).getByRole("textbox", { name: /Account name/ }), "Eval 50K");
+    await fill(user, within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
     const rejected = store.hold("accounts.create");
     await user.click(within(dialog).getByRole("button", { name: "Add account" }));
     await act(() => rejected.fail(new RepositoryError({ kind: "validation", message: "invalid", issues: [{ field: "name", message: "An account with this name already exists" }] })));
@@ -109,8 +117,8 @@ describe("first run to a configured account", () => {
     const { user } = renderApp("/accounts", store);
     await user.click((await screen.findAllByRole("button", { name: "Add account" }))[0]);
     const dialog = await screen.findByRole("dialog", { name: "Add account" });
-    await user.type(within(dialog).getByRole("textbox", { name: /Account name/ }), "Eval 50K");
-    await user.type(within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
+    await fill(user, within(dialog).getByRole("textbox", { name: /Account name/ }), "Eval 50K");
+    await fill(user, within(dialog).getByRole("textbox", { name: /Starting balance/ }), "50000");
     const lost = store.hold("accounts.create");
     await user.click(within(dialog).getByRole("button", { name: "Add account" }));
     await act(() => lost.fail(new RepositoryError({ kind: "database", message: "disk I/O error at C:\journal.db" })));

@@ -12,6 +12,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import golden from "../../../../../test_csvimport/build17/normalization-v1.json";
 import type { RuntimeState } from "../../app/RuntimeProvider";
 import { ToastProvider } from "../../design-system";
+import { warmUp } from "../../test/warm-up";
 import { ACTIVE_ACCOUNT_SETTING } from "../accounts/active-account";
 import { createTestStore, makeAccount } from "../accounts/test-store";
 import { featureKeys } from "../shared/query-keys";
@@ -80,10 +81,18 @@ async function checkFile(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: "Check the file" }));
 }
 
-beforeEach(() => {
+/** Fresh runtime, query cache and store for each test. */
+function fresh() {
   runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 14, supportedSchemaVersion: 14, created: false, failure: null } } as unknown as RuntimeState;
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
   setup();
+}
+beforeEach(fresh);
+// One-time costs are paid here, not by the first test (see test/warm-up.ts).
+beforeAll(async () => {
+  fresh();
+  await warmUp(() => renderAt(), () => screen.findByRole("combobox", { name: "Import into" }));
+  client.clear();
 });
 afterEach(() => {
   cleanup();
@@ -258,8 +267,10 @@ describe("mapping and review", () => {
     await screen.findByRole("heading", { name: "Match columns" });
     await user.click(screen.getByRole("button", { name: "Back" }));
     const zone = screen.getByRole("textbox", { name: /Times in the file are in/ });
+    // Pasted: each keystroke into the zone field re-renders the wizard (~0.8 s for this name under load).
     await user.clear(zone);
-    await user.type(zone, "Asia/Tokyo");
+    await user.click(zone);
+    await user.paste("Asia/Tokyo");
     await checkFile(user);
     await waitFor(() => expect(last(imports.previews)).toMatchObject({ timezone: "Asia/Tokyo" }));
     expect(imports.previews).toHaveLength(2);

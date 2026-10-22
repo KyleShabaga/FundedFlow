@@ -9,6 +9,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import type { RuntimeState } from "../../app/RuntimeProvider";
 import { ToastProvider } from "../../design-system";
+import { warmUp } from "../../test/warm-up";
 import { makeAccount } from "../accounts/test-store";
 import { JournalPage } from "./components/JournalPage";
 import { TradeDetailPage } from "./components/TradeDetailPage";
@@ -65,18 +66,36 @@ const seed = () => [
   trade({ id: "tb", accountId: B, symbol: "ESZ6", entryAt: "2026-10-19T13:30:00.000Z", exitAt: "2026-10-19T14:00:00.000Z", tradingDay: "2026-10-19", realizedPnl: "1000" }),
 ];
 
-beforeEach(() => {
+/** Fresh runtime, query cache and store for each test. */
+function fresh() {
   runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 17, supportedSchemaVersion: 17, created: false, failure: null } } as unknown as RuntimeState;
   runtime.check.mockReset().mockResolvedValue(undefined);
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false } } });
   holder.store = createJournalStore(accounts(), seed());
   try { sessionStorage.clear(); } catch { /* jsdom has it */ }
+}
+beforeEach(fresh);
+// One-time costs are paid here, not by the first test (see test/warm-up.ts).
+beforeAll(async () => {
+  fresh();
+  await warmUp(() => renderAt("/journal?view=log"), () => screen.findByRole("tablist", { name: "Journal views" }));
+  client.clear();
 });
 afterEach(() => {
   cleanup();
   client.clear();
   vi.restoreAllMocks();
 });
+
+/**
+ * Replaces a field's value in one paste (the CPU-contention trim): typed key by key, each value cost ~0.3–0.8 s
+ * under load in these forms. The values are the subject here, not their keystrokes.
+ */
+async function pasteInto(user: ReturnType<typeof userEvent.setup>, field: HTMLElement, text: string) {
+  await user.clear(field);
+  await user.click(field);
+  await user.paste(text);
+}
 
 async function chooseOption(user: ReturnType<typeof userEvent.setup>, label: RegExp | string, option: RegExp | string, scope: HTMLElement = document.body) {
   await user.click(within(scope).getByRole("combobox", { name: label }));
@@ -155,12 +174,12 @@ describe("Journal", () => {
     renderAt("/journal");
     await user.click(await screen.findByRole("button", { name: "Add trade" }));
     const dialog = await screen.findByRole("dialog", { name: "Add a manual trade" });
-    await user.type(within(dialog).getByLabelText(/^Symbol/), "esz6");
+    await pasteInto(user, within(dialog).getByLabelText(/^Symbol/), "esz6");
     fireEvent.change(within(dialog).getByLabelText(/^Entry time/), { target: { value: "2026-10-21T09:30" } });
-    await user.type(within(dialog).getByLabelText(/^Entry price/), "5000");
+    await pasteInto(user, within(dialog).getByLabelText(/^Entry price/), "5000");
     fireEvent.change(within(dialog).getByLabelText(/^Exit time/), { target: { value: "2026-10-21T09:45" } });
-    await user.type(within(dialog).getByLabelText(/^Exit price/), "5004");
-    await user.type(within(dialog).getByLabelText(/^Fees/), "4.12");
+    await pasteInto(user, within(dialog).getByLabelText(/^Exit price/), "5004");
+    await pasteInto(user, within(dialog).getByLabelText(/^Fees/), "4.12");
     await user.click(within(dialog).getByRole("button", { name: "Add trade" }));
     await waitFor(() => expect(location).toMatch(/^\/journal\/trades\/trade-/));
     const create = holder.store.calls.find(c => c.method === "trades.create")!.args[0] as Record<string, unknown>;
@@ -175,7 +194,7 @@ describe("Journal", () => {
     renderAt("/journal");
     await user.click(await screen.findByRole("button", { name: "Add trade" }));
     const dialog = await screen.findByRole("dialog", { name: "Add a manual trade" });
-    await user.type(within(dialog).getByLabelText(/^Symbol/), "ES");
+    await pasteInto(user, within(dialog).getByLabelText(/^Symbol/), "ES");
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
     expect(await screen.findByRole("alertdialog", { name: "Discard this trade?" })).toBeTruthy();
   });
@@ -206,10 +225,8 @@ describe("Trade detail", () => {
     renderAt("/journal/trades/t1");
     await user.click(await screen.findByRole("button", { name: "Correct trade" }));
     const dialog = await screen.findByRole("dialog", { name: /Correct ESZ6 trade/ });
-    const fees = within(dialog).getByLabelText(/^Fees/);
-    await user.clear(fees);
-    await user.type(fees, "6");
-    await user.type(within(dialog).getByLabelText(/^Reason/), "statement");
+    await pasteInto(user, within(dialog).getByLabelText(/^Fees/), "6");
+    await pasteInto(user, within(dialog).getByLabelText(/^Reason/), "statement");
     await user.click(within(dialog).getByRole("button", { name: "Save correction" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: /Correct ESZ6/ })).toBeNull());
     const [, input, options] = holder.store.calls.find(c => c.method === "trades.update")!.args as [string, Record<string, unknown>, Record<string, unknown>];
@@ -243,7 +260,7 @@ describe("Review", () => {
     await user.click(within(within(card).getByRole("radiogroup", { name: "Stop below range" })).getByRole("radio", { name: "Missed" }));
     await user.click(within(within(card).getByRole("group", { name: "Mistakes" })).getByRole("button", { name: "Chased" }));
     await user.click(within(within(card).getByRole("radiogroup", { name: "Execution rating" })).getByRole("radio", { name: "4" }));
-    await user.type(within(card).getByLabelText(/^Notes and reflection/), "Entered late.");
+    await pasteInto(user, within(card).getByLabelText(/^Notes and reflection/), "Entered late.");
     await user.click(within(card).getByRole("checkbox", { name: /Reviewed/ }));
     await user.click(within(card).getByRole("button", { name: "Save review" }));
     await waitFor(() => expect(holder.store.reviews.get("t1")?.revision).toBe(1));
@@ -261,14 +278,12 @@ describe("Review", () => {
     const risk = await within(card).findByLabelText(/^Planned risk/);
     const refused = "Planned risk: must be greater than zero (leave it empty when unknown)";
     for (const value of ["0.000", "0.0000001"]) {
-      await user.clear(risk);
-      await user.type(risk, value);
+      await pasteInto(user, risk, value);
       await user.click(within(card).getByRole("button", { name: "Save review" }));
       expect((await screen.findAllByText(refused)).length).toBeGreaterThan(0);
     }
     expect(holder.store.calls.some(c => c.method === "reviews.save")).toBe(false);
-    await user.clear(risk);
-    await user.type(risk, "0.000001");
+    await pasteInto(user, risk, "0.000001");
     await user.click(within(card).getByRole("button", { name: "Save review" }));
     await waitFor(() => expect(holder.store.calls.some(c => c.method === "reviews.save")).toBe(true));
   });
@@ -285,7 +300,7 @@ describe("Review", () => {
     const user = userEvent.setup();
     renderAt("/journal/trades/t1");
     const card = await screen.findByRole("region", { name: "Review" });
-    await user.type(await within(card).findByLabelText(/^Notes and reflection/), "mine");
+    await pasteInto(user, await within(card).findByLabelText(/^Notes and reflection/), "mine");
     // Someone else saves first.
     await act(() => holder.store.repository.reviews.save({ accountId: A, tradeId: "t1", expectedRevision: null, reflection: "theirs", reviewed: false, tagIds: [], checklistResults: [] }));
     await user.click(within(card).getByRole("button", { name: "Save review" }));
@@ -297,7 +312,7 @@ describe("Review", () => {
     const user = userEvent.setup();
     renderAt("/journal/trades/t1");
     const card = await screen.findByRole("region", { name: "Review" });
-    await user.type(await within(card).findByLabelText(/^Plan and thesis/), "plan");
+    await pasteInto(user, await within(card).findByLabelText(/^Plan and thesis/), "plan");
     await user.click(screen.getAllByRole("link", { name: "Journal" })[0]);
     expect(await screen.findByRole("alertdialog", { name: "Leave without saving the review?" })).toBeTruthy();
     expect(location).toBe("/journal/trades/t1");
@@ -309,7 +324,7 @@ describe("Screenshots", () => {
     const user = userEvent.setup();
     renderAt("/journal/trades/t1");
     const card = await screen.findByRole("region", { name: "Review" });
-    await user.type(await within(card).findByLabelText(/^Notes and reflection/), "keep me");
+    await pasteInto(user, await within(card).findByLabelText(/^Notes and reflection/), "keep me");
     const input = card.querySelector('input[type="file"]') as HTMLInputElement;
     await user.upload(input, new File([pngBytes(1)], "entry.png", { type: "image/png" }));
     expect(await within(card).findByRole("img", { name: "Screenshot entry.png" })).toBeTruthy();
@@ -339,7 +354,7 @@ describe("Library", () => {
     renderAt("/journal?view=library&section=playbooks");
     await user.click(await screen.findByRole("button", { name: "New playbook" }));
     const dialog = await screen.findByRole("dialog", { name: "New playbook" });
-    await user.type(within(dialog).getByLabelText(/^Name/), "VWAP pullback");
+    await pasteInto(user, within(dialog).getByLabelText(/^Name/), "VWAP pullback");
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
     expect(await screen.findByText("VWAP pullback")).toBeTruthy();
     await user.click(screen.getByRole("tab", { name: /Tags/ }));

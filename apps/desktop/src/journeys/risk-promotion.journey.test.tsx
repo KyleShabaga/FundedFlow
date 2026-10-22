@@ -11,9 +11,10 @@ vi.mock("../lib/data/api", async () => (await import("../test/boundaries")).apiM
 vi.mock("@tauri-apps/plugin-dialog", async () => (await import("../test/boundaries")).dialogPluginMock);
 
 import { createAppStore, makeAccount, makeTrade, type AppStore } from "../test/app-store";
-import { installBrowserShims, renderApp, resetHarness } from "../test/harness";
+import { installBrowserShims, renderApp, resetHarness, warmUpApp } from "../test/harness";
 
 beforeAll(installBrowserShims);
+beforeAll(warmUpApp);
 beforeEach(() => { vi.useFakeTimers({ now: new Date("2026-10-20T14:00:00.000Z"), shouldAdvanceTime: true, toFake: ["Date"] }); });
 afterEach(resetHarness);
 

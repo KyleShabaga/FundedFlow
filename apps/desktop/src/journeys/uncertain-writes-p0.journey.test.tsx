@@ -16,9 +16,10 @@ import { catalogueRules } from "../features/rulebooks/test-store";
 import { pngBytes } from "../features/journal/test-store";
 import { WRITE_TIMEOUT_MS } from "../features/shared/submissions";
 import { createAppStore, makeAccount, makeTrade, type AppStore } from "../test/app-store";
-import { installBrowserShims, renderApp, resetHarness } from "../test/harness";
+import { installBrowserShims, renderApp, resetHarness, warmUpApp } from "../test/harness";
 
 beforeAll(installBrowserShims);
+beforeAll(warmUpApp);
 // The fake stores stamp records from 2026-10-20T15:00Z; the app's clock starts before that, as on one machine.
 const NOW = new Date("2026-10-20T14:00:00.000Z");
 beforeEach(() => { vi.useFakeTimers({ now: NOW, shouldAdvanceTime: true, toFake: ["Date"] }); });
@@ -75,12 +76,23 @@ interface Surface {
   /** One repository read the review re-reads. */
   read: string;
   seed?: (store: AppStore) => Promise<void>;
+  /**
+   * Where the app starts for account A (default Today). Starting on the surface's own route skips mounting Today
+   * and its reads first, which every case of a non-Today surface paid for nothing (cases run ~3x slower under load).
+   */
+  start?: (store: AppStore) => string;
   /** Opens the surface for the account and returns where its form and review are. */
   open: (user: User, store: AppStore, account: Account) => Promise<HTMLElement>;
   /** Enters what the trader wants saved (kept through the review). */
   edit: (user: User, scope: HTMLElement) => Promise<void>;
   edited: (scope: HTMLElement) => void;
   submit: (user: User, scope: HTMLElement) => Promise<void>;
+  /**
+   * Presses whatever would send the write while it is locked (default: submit). A surface whose submit waits for
+   * a confirmation sets this to press without waiting: a locked control opens none, and waiting for it spent the
+   * whole 1 s findBy budget on every such press.
+   */
+  press?: (user: User, scope: HTMLElement) => Promise<void>;
   /** After the uncertain answer: where the review is (a confirmation may need closing first). */
   review?: (user: User, scope: HTMLElement) => Promise<HTMLElement>;
   /** The control that would send the write again. */
@@ -97,6 +109,7 @@ interface Surface {
 const draftSave: Surface = {
   name: "rulebook draft save", write: "rulebooks.updateDraft", read: "rulebooks.listEvents",
   seed: async store => { await seedDraft(store, A); await seedDraft(store, B); },
+  start: store => `/accounts/${A}/rulebook/versions/${draftOf(store, A).version.id}`,
   open: async (_user, store, account) => {
     window.location.hash = `/accounts/${account}/rulebook/versions/${draftOf(store, account).version.id}`;
     await screen.findByRole("heading", { name: `${names[account]} rules · v1` });
@@ -117,7 +130,7 @@ const draftSave: Surface = {
 
 const publish: Surface = {
   name: "rulebook publish", write: "rulebooks.publish", read: "rulebooks.listEvents",
-  seed: draftSave.seed,
+  seed: draftSave.seed, start: draftSave.start,
   open: async (user, store, account) => {
     await draftSave.open(user, store, account);
     await user.click(screen.getByRole("tab", { name: "Review and publish" }));
@@ -132,6 +145,11 @@ const publish: Surface = {
     if (!understood.checked) await user.click(understood);
     await user.click(within(scope).getByRole("button", { name: "Publish…" }));
     await user.click(within(await screen.findByRole("alertdialog", { name: /Publish Eval [AB] rules v1/ })).getByRole("button", { name: "Publish" }));
+  },
+  press: async (user, scope) => {
+    await user.click(within(scope).getByRole("button", { name: "Publish…" }));
+    const confirm = screen.queryByRole("alertdialog", { name: /Publish Eval [AB] rules v1/ });
+    if (confirm) await user.click(within(confirm).getByRole("button", { name: "Publish" }));
   },
   review: async (user, scope) => {
     const confirm = screen.getByRole("alertdialog", { name: /Publish/ });
@@ -160,7 +178,7 @@ const openAssign = async (user: User, account: Account) => {
   return screen.findByRole("dialog", { name: "Assign a rulebook version" });
 };
 const assign: Surface = {
-  name: "rulebook assignment", write: "rulebooks.assign", read: "rulebooks.listAssignments",
+  name: "rulebook assignment", write: "rulebooks.assign", read: "rulebooks.listAssignments", start: () => `/accounts/${A}/rulebook`,
   open: (user, _store, account) => openAssign(user, account),
   edit: async (user, scope) => {
     await paste(user, within(scope).getByLabelText(/First trading day/), "2026-10-21");
@@ -187,7 +205,7 @@ const openStart = async (user: User, account: Account) => {
   return screen.findByRole("dialog", { name: "Start your own rules" });
 };
 const startDraft: Surface = {
-  name: "start draft", write: "rulebooks.createDraft", read: "rulebooks.listEvents",
+  name: "start draft", write: "rulebooks.createDraft", read: "rulebooks.listEvents", start: () => `/accounts/${A}/rulebook`,
   open: (user, _store, account) => openStart(user, account),
   edit: (user, scope) => paste(user, within(scope).getByRole("textbox", { name: /What changes and why/ }), "My own limits"),
   edited: scope => expect((within(scope).getByRole("textbox", { name: /What changes and why/ }) as HTMLTextAreaElement).value).toBe("My own limits"),
@@ -262,7 +280,7 @@ const checkpoint: Surface = {
 
 const tradeOf: Record<Account, string> = { [A]: "t-a", [B]: "t-b" };
 const screenshots: Surface = {
-  name: "screenshots", write: "reviews.addScreenshot", read: "reviews.get",
+  name: "screenshots", write: "reviews.addScreenshot", read: "reviews.get", start: () => `/journal/trades/${tradeOf[A]}`,
   open: async (_user, _store, account) => {
     if (account !== A) {
       window.location.hash = "/";
@@ -290,7 +308,7 @@ const SURFACES = [draftSave, publish, assign, startDraft, calculation, checkpoin
 async function setup(surface: Surface, options: { fakeTimers?: boolean } = {}) {
   const store = newStore();
   await surface.seed?.(store);
-  const { user } = renderApp("/", store, options);
+  const { user } = renderApp(surface.start?.(store) ?? "/", store, options);
   await screen.findByRole("heading", { level: 1 });
   const scope = await surface.open(user, store, A);
   await surface.edit(user, scope);
@@ -350,7 +368,7 @@ describe.each(SURFACES)("uncertain $name", surface => {
     await waitFor(() => expect(hold.calls).toHaveLength(1));
     expect(locked(surface, scope)).toBe(true);
     // Whatever the trader can still reach (a disabled control, or one behind the open confirmation) sends nothing.
-    await surface.submit(user, scope).catch(() => {});
+    await (surface.press ?? surface.submit)(user, scope).catch(() => {});
     expect(hold.calls).toHaveLength(1);
     await act(() => hold.release());
     await waitFor(() => expect(surface.stored(store, A)).toBe(1));
@@ -381,7 +399,7 @@ describe.each(SURFACES)("uncertain $name", surface => {
     const { store, user, scope } = await setup(surface);
     const { hold, at } = await uncertain(surface, store, user, scope, false);
     expect(surface.stored(store, A)).toBe(0);
-    await surface.submit(user, at).catch(() => {});
+    await (surface.press ?? surface.submit)(user, at).catch(() => {});
     expect(hold.calls).toHaveLength(1);
     await user.click(within(at).getByRole("button", { name: "Check result" }));
     expect((await within(at).findAllByText(surface.notSavedReview)).length).toBeGreaterThan(0);
@@ -500,18 +518,14 @@ describe("shared rulebook lock", () => {
 describe("Today comparison", () => {
   it("an uncertain comparison shows the stored comparisons and checkpoints, then releases the evidence lock", async () => {
     const store = newStore();
-    const { user } = renderApp("/", store);
-    const dialog = await checkpoint.open(user, store, A);
-    await user.click(within(dialog).getByRole("radio", { name: /Current balance/ }));
-    await checkpoint.edit(user, dialog);
-    await user.click(within(dialog).getByRole("checkbox", { name: /confirm it/ }));
-    // Compare needs a confirmed opening checkpoint other than this one.
+    // Compare needs a confirmed opening checkpoint other than this one. Seeded before the app starts: seeding it
+    // with the dialog open meant filling the form twice (~0.5 s alone) with nothing asserted in between.
     await repo(store).evidence.create({
       accountId: A, kind: "opening_balance", value: "50000", currency: "USD", basis: "balance", observedAt: "2026-10-19T12:00:00.000Z",
       sourceCategory: "firm_dashboard", sourceReference: "Opening", confirmation: "user_confirmed", confidence: "user_reported",
       validUntil: null, actor: "local_user", note: null,
     });
-    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    const { user } = renderApp("/", store);
     const again = await checkpoint.open(user, store, A);
     await user.click(within(again).getByRole("radio", { name: /Current balance/ }));
     await checkpoint.edit(user, again);

@@ -17,9 +17,10 @@ import { ACTIVE_ACCOUNT_SETTING } from "../features/accounts/active-account";
 import { goldenCase } from "../features/imports/test-store";
 import { drawdownOutcome } from "../features/today/test-store";
 import { createAppStore, makeAccount, makeTrade, type AppStore } from "../test/app-store";
-import { currentPath, installBrowserShims, renderApp, resetHarness } from "../test/harness";
+import { currentPath, installBrowserShims, renderApp, resetHarness, warmUpApp } from "../test/harness";
 
 beforeAll(installBrowserShims);
+beforeAll(warmUpApp);
 afterEach(resetHarness);
 
 const nav = () => screen.getByRole("navigation", { name: "Primary navigation" });
@@ -164,7 +165,8 @@ describe("Today's risk across features", () => {
     const fees = within(dialog).getByLabelText(/^Fees/);
     await user.clear(fees);
     await user.type(fees, "9");
-    await user.type(within(dialog).getByLabelText(/^Reason/), "statement");
+    await user.click(within(dialog).getByLabelText(/^Reason/));
+    await user.paste("statement");
     await user.click(within(dialog).getByRole("button", { name: "Save correction" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 

@@ -10,6 +10,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import type { RuntimeState } from "../../app/RuntimeProvider";
 import { ToastProvider } from "../../design-system";
+import { warmUp } from "../../test/warm-up";
 import { makeAccount } from "../accounts/test-store";
 import { RulebookPage } from "./components/RulebookPage";
 import { RulebookVersionPage } from "./components/RulebookVersionPage";
@@ -52,13 +53,22 @@ function renderAt(path: string) {
 
 const A = "acct-a";
 const B = "acct-b";
-beforeEach(() => {
+/** Fresh runtime, query cache and store for each test. */
+function fresh() {
   vi.useFakeTimers({ now: new Date("2026-10-21T15:00:00Z"), shouldAdvanceTime: true, toFake: ["Date"] });
   runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 15, supportedSchemaVersion: 15, created: false, failure: null } } as unknown as RuntimeState;
   runtime.check.mockReset().mockResolvedValue(undefined);
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
   holder.store = createRulebookStore([makeAccount({ id: A, name: "Eval A", propFirm: "Example" }), makeAccount({ id: B, name: "Eval B" })]);
   try { sessionStorage.clear(); } catch { /* jsdom always has it */ }
+}
+beforeEach(fresh);
+// One-time costs are paid here, not by the first test (see test/warm-up.ts).
+beforeAll(async () => {
+  fresh();
+  await warmUp(() => renderAt(`/accounts/${A}/rulebook`), () => screen.findByText("No rulebook assigned"));
+  client.clear();
+  vi.useRealTimers();
 });
 afterEach(() => {
   cleanup();
@@ -96,6 +106,37 @@ async function startOwnDraft(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole("heading", { name: /Eval A rules · v1/ });
 }
 
+/**
+ * The account's own draft as startOwnDraft creates it (owner, provider, name, reason, rules, superseding nothing),
+ * written through the same repository call; only the generated slug and copied provider dates differ.
+ */
+function seedOwnDraft(rules: RuleDefinitionInput[] = catalogueRules()) {
+  return holder.store.repository.rulebooks.createDraft({
+    rulebookId: null, newRulebook: { providerId: PROVIDER, ownerAccountId: A, slug: "account-accta", displayName: "Eval A rules", description: null },
+    supersedesVersionId: null, changeReason: "Copied from Example 50K v1", capturedAt: "2026-10-01T00:00:00.000Z", effectiveFrom: null, effectiveTo: null,
+    rules, applicability: [],
+  }, { actor: "local_user", reason: null });
+}
+
+/**
+ * Seeds the account's own draft and opens it straight in the editor. Tests whose subject isn't the start-draft
+ * dialog begin here: the overview and the dialog cost ~0.6 s alone, and tests run ~3x slower under CPU contention.
+ */
+async function openOwnDraft(rules?: RuleDefinitionInput[]) {
+  const draft = await seedOwnDraft(rules);
+  renderAt(`/accounts/${A}/rulebook/versions/${draft.version.id}`);
+  await screen.findByRole("heading", { name: /Eval A rules · v1/ });
+  return draft;
+}
+
+/**
+ * The catalogue drawdown counting realized P&L with no lock. With the method stated (static) it is supported;
+ * with the method unknown it needs setup (the method is a value the engine needs).
+ */
+const statedDrawdown = (method: "static" | "unknown") => catalogueRules().map(r => r.ruleKey === "max_drawdown"
+  ? { ...r, supportStatus: method === "static" ? "supported" : "needs_setup", parameters: { amount: { state: "value", value: "2000" }, method, basis: "realized", lock: { state: "explicit_none" } } } as RuleDefinitionInput
+  : r);
+
 describe("rulebook overview", () => {
   it("distinguishes no rulebook from an assigned, verified one and keeps manual rules out of calculations", async () => {
     const user = userEvent.setup();
@@ -130,7 +171,7 @@ describe("rulebook overview", () => {
     expect(await within(dialog).findByText(/Trading days run Monday to Friday/)).toBeTruthy();
     expect(holder.store.writes).toEqual(["assign"].slice(0, 0));
     await pasteInto(user, day, "2026-10-19");
-    await user.type(within(dialog).getByRole("textbox", { name: /Reason/ }), "Evaluation started");
+    await pasteInto(user, within(dialog).getByRole("textbox", { name: /Reason/ }), "Evaluation started");
     await user.click(within(dialog).getByRole("button", { name: /Assign from 2026-10-19/ }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(holder.store.assignments).toHaveLength(1);
@@ -176,21 +217,19 @@ describe("rulebook overview", () => {
 });
 
 describe("draft, compare, preview, publish and assign", () => {
-  // One journey in two tests (Build 26): as a single test it took ~1.7 s locally and timed out at 5 s on a busy
-  // Windows CI runner. Nothing hung; it was ~17 jsdom interactions in a row. The second half starts from the
-  // saved draft the first half produces, built through the same repository calls.
-  it("edits, compares and previews a draft without writing, then saves it, without changing the version it started from", async () => {
+  // One journey in three tests (Build 26, then the CPU-contention trim): as a single test it took ~1.7 s locally
+  // and timed out at 5 s on a busy Windows CI runner. Nothing hung; it was ~17 jsdom interactions in a row. Each
+  // part starts from the draft startOwnDraft creates (or the one the part before saved), built through the same
+  // repository calls; the start dialog itself is covered by the tests below that use startOwnDraft. The target is
+  // pasted: in the draft editor every keystroke re-renders the form (~190 ms a key alone).
+  it("edits, compares and previews a draft without writing, and keeps the edit through the tabs", async () => {
     await assignCatalogue();
     const before = structuredClone(holder.store.versions.get(holder.store.verifiedVersionId));
     const user = userEvent.setup();
-    renderAt(`/accounts/${A}/rulebook`);
-    await startOwnDraft(user);
-    expect(location).toMatch(/\/rulebook\/versions\//);
+    await openOwnDraft();
 
     // Edit: lower the target.
-    const target = screen.getByRole("textbox", { name: "Target" });
-    await user.clear(target);
-    await user.type(target, "2500");
+    await pasteInto(user, screen.getByRole("textbox", { name: "Target" }), "2500");
     expect(screen.getByText("Unsaved changes")).toBeTruthy();
 
     // Compare includes the unsaved edit, in words.
@@ -210,9 +249,18 @@ describe("draft, compare, preview, publish and assign", () => {
     expect(holder.store.writes).toEqual(writesBefore);
     expect(holder.store.snapshots).toHaveLength(0);
 
-    // The edit survived the tab switches; save it.
+    // The edit survived the tab switches (saving it: the next test).
     await user.click(screen.getByRole("tab", { name: "Edit rules" }));
     expect((screen.getByRole("textbox", { name: "Target" }) as HTMLInputElement).value).toBe("2500");
+    expect(holder.store.versions.get(holder.store.verifiedVersionId)).toEqual(before);
+  });
+
+  it("saves the edited draft without changing the version it started from", async () => {
+    await assignCatalogue();
+    const before = structuredClone(holder.store.versions.get(holder.store.verifiedVersionId));
+    const user = userEvent.setup();
+    await openOwnDraft();
+    await pasteInto(user, screen.getByRole("textbox", { name: "Target" }), "2500");
     await user.click(screen.getByRole("button", { name: "Save draft" }));
     expect(await screen.findByText("All changes saved")).toBeTruthy();
     const mine = [...holder.store.versions.values()].find(v => v.rulebook.ownerAccountId === A)!;
@@ -225,11 +273,7 @@ describe("draft, compare, preview, publish and assign", () => {
     await assignCatalogue();
     const before = structuredClone(holder.store.versions.get(holder.store.verifiedVersionId));
     const rules = catalogueRules().map(r => r.ruleKey === "profit_target" ? { ...r, parameters: { ...r.parameters, amount: { state: "value" as const, value: "2500" } } } as RuleDefinitionInput : r);
-    const draft = await holder.store.repository.rulebooks.createDraft({
-      rulebookId: null, newRulebook: { providerId: PROVIDER, ownerAccountId: A, slug: "account-accta", displayName: "Eval A rules", description: null },
-      supersedesVersionId: null, changeReason: "Copied from Example 50K v1", capturedAt: "2026-10-01T00:00:00.000Z", effectiveFrom: null, effectiveTo: null,
-      rules: catalogueRules(), applicability: [],
-    }, { actor: "local_user", reason: null });
+    const draft = await seedOwnDraft();
     await holder.store.repository.rulebooks.updateDraft(draft.version.id, draft.version.updatedAt, {
       changeReason: draft.version.changeReason, capturedAt: draft.version.capturedAt, effectiveFrom: null, effectiveTo: null, rules, applicability: [],
     }, { actor: "local_user", reason: null });
@@ -268,8 +312,7 @@ describe("draft, compare, preview, publish and assign", () => {
   it("validates before saving and writes nothing when a value is unknown on a supported rule", async () => {
     await assignCatalogue();
     const user = userEvent.setup();
-    renderAt(`/accounts/${A}/rulebook`);
-    await startOwnDraft(user);
+    await openOwnDraft();
     const writes = holder.store.writes.length;
     await chooseOption(user, /^Support/, "Can be calculated", screen.getByRole("region", { name: "Max Drawdown" }));
     await user.click(screen.getByRole("button", { name: "Save draft" }));
@@ -281,16 +324,13 @@ describe("draft, compare, preview, publish and assign", () => {
   it("keeps the edits and offers a reload when the draft was saved elsewhere", async () => {
     await assignCatalogue();
     const user = userEvent.setup();
-    renderAt(`/accounts/${A}/rulebook`);
-    await startOwnDraft(user);
+    await openOwnDraft();
     const draft = [...holder.store.versions.values()].find(v => v.rulebook.ownerAccountId === A)!;
     // Another window saves first.
     await holder.store.repository.rulebooks.updateDraft(draft.version.id, draft.version.updatedAt,
       { changeReason: "Other window", capturedAt: draft.version.capturedAt, effectiveFrom: null, effectiveTo: null, rules: draft.rules.map(({ id: _i, rulebookVersionId: _v, ...r }) => r), applicability: [] },
       { actor: "local_user", reason: "Other window" });
-    const target = screen.getByRole("textbox", { name: "Target" });
-    await user.clear(target);
-    await user.type(target, "2400");
+    await pasteInto(user, screen.getByRole("textbox", { name: "Target" }), "2400");
     await user.click(screen.getByRole("button", { name: "Save draft" }));
     expect(await screen.findByText("This draft changed somewhere else")).toBeTruthy();
     expect((screen.getByRole("textbox", { name: "Target" }) as HTMLInputElement).value).toBe("2400");
@@ -304,9 +344,7 @@ describe("draft, compare, preview, publish and assign", () => {
     const user = userEvent.setup();
     renderAt(`/accounts/${A}/rulebook`);
     await startOwnDraft(user);
-    const target = screen.getByRole("textbox", { name: "Target" });
-    await user.clear(target);
-    await user.type(target, "2222");
+    await pasteInto(user, screen.getByRole("textbox", { name: "Target" }), "2222");
     await user.click(screen.getByRole("link", { name: /Rulebook overview/ }));
     const ask = await screen.findByRole("alertdialog", { name: "Leave without saving?" });
     expect(location).toMatch(/\/versions\//);
@@ -349,12 +387,13 @@ describe("draft, compare, preview, publish and assign", () => {
     const user = userEvent.setup();
     renderAt(`/accounts/${A}/rulebook`);
     await startOwnDraft(user);
+    expect(location).toMatch(/\/rulebook\/versions\//);
     await user.click(screen.getByRole("tab", { name: "Review and publish" }));
     await user.click(await screen.findByRole("button", { name: "Discard draft…" }));
     const confirm = await screen.findByRole("alertdialog", { name: /Discard draft v1/ });
     await user.click(within(confirm).getByRole("button", { name: "Discard draft" }));
     expect(await within(confirm).findByText("Say why you're discarding it.")).toBeTruthy();
-    await user.type(within(confirm).getByRole("textbox", { name: "Why" }), "Not needed");
+    await pasteInto(user, within(confirm).getByRole("textbox", { name: "Why" }), "Not needed");
     await user.click(within(confirm).getByRole("button", { name: "Discard draft" }));
     await waitFor(() => expect(location).toBe(`/accounts/${A}/rulebook`));
     expect(await screen.findByText("Discarded draft")).toBeTruthy();
@@ -425,13 +464,13 @@ describe("engine integration", () => {
     await assignCatalogue();
     holder.store.trades.set(A, [closedTrade(A, 1, "-500")]);
     const user = userEvent.setup();
-    renderAt(`/accounts/${A}/rulebook`);
-    await startOwnDraft(user);
-    // Make the drawdown calculable: static, realized, no lock.
+    // The saved draft counts realized P&L with no lock, but its method is unknown, so it needs setup: only the
+    // unsaved edits below (static, calculable) make it calculable, so the figures prove the preview uses the form,
+    // not the stored draft. Choosing the basis and lock in the form, and saving them: "saves the drawdown's method
+    // from the form" below.
+    await openOwnDraft(statedDrawdown("unknown"));
     const dd = screen.getByRole("region", { name: "Max Drawdown" });
     await chooseOption(user, "Method", "Static", dd);
-    await chooseOption(user, "Counts", "Realized P&L", dd);
-    await chooseOption(user, /Trail lock: what the source says/, /None/, dd);
     await chooseOption(user, /^Support/, "Can be calculated", dd);
     const writes = [...holder.store.writes];
     await user.click(screen.getByRole("tab", { name: "Preview" }));
@@ -505,12 +544,13 @@ describe("engine integration", () => {
     expect(holder.store.snapshots[1]!.inputsHash).not.toBe(saved.inputsHash);
   });
 
-  it("your published account rules are confirmed by you and assigned from the day you choose", async () => {
+  // One journey in three tests (Build 26.7, then the CPU-contention trim): make the drawdown calculable and save
+  // it; publish and assign it; evaluate it for real. Each later part starts from the rules the part before saved,
+  // written through the same repository calls with the parameters the form saved.
+  it("saves the drawdown's method from the form: static, realized, no lock, and calculable", async () => {
     await assignCatalogue();
-    holder.store.trades.set(A, [closedTrade(A, 1, "-500")]);
     const user = userEvent.setup();
-    renderAt(`/accounts/${A}/rulebook`);
-    await startOwnDraft(user);
+    await openOwnDraft();
     const dd = screen.getByRole("region", { name: "Max Drawdown" });
     await chooseOption(user, "Method", "Static", dd);
     await chooseOption(user, "Counts", "Realized P&L", dd);
@@ -518,6 +558,17 @@ describe("engine integration", () => {
     await chooseOption(user, /^Support/, "Can be calculated", dd);
     await user.click(screen.getByRole("button", { name: "Save draft" }));
     await screen.findByText("All changes saved");
+    const mine = [...holder.store.versions.values()].find(v => v.rulebook.ownerAccountId === A)!;
+    const drawdown = mine.rules.find(r => r.ruleKey === "max_drawdown");
+    expect(drawdown?.parameters).toEqual({ amount: { state: "value", value: "2000" }, method: "static", basis: "realized", lock: { state: "explicit_none" } });
+    expect(drawdown?.supportStatus).toBe("supported");
+  });
+
+  it("your published account rules are confirmed by you and assigned from the day you choose", async () => {
+    await assignCatalogue();
+    holder.store.trades.set(A, [closedTrade(A, 1, "-500")]);
+    const user = userEvent.setup();
+    await openOwnDraft(statedDrawdown("static"));
     await user.click(screen.getByRole("tab", { name: "Review and publish" }));
     await user.click(await screen.findByRole("checkbox", { name: /These are my rules for this account/ }));
     await user.click(screen.getByRole("button", { name: "Publish…" }));
@@ -529,23 +580,13 @@ describe("engine integration", () => {
     await waitFor(() => expect(location).toBe(`/accounts/${A}/rulebook`));
     const mine = [...holder.store.versions.values()].find(v => v.rulebook.ownerAccountId === A)!;
     expect(mine.version.userConfirmedAt).not.toBeNull();
-    expect(mine.rules.find(r => r.ruleKey === "max_drawdown")?.parameters).toEqual({ amount: { state: "value", value: "2000" }, method: "static", basis: "realized", lock: { state: "explicit_none" } });
     expect(holder.store.assignments.find(x => x.rulebookVersionId === mine.version.id)?.effectiveFrom).toBe("2026-10-20");
   });
 
-  // Build 26.7: the second half of the journey above (as one test it took ~2.8 s). It starts from the rules that
-  // test publishes and assigns, written through the same repository calls with the parameters the form saved.
   it("assigned account rules you published evaluate for real: recorded, not simulated, and never a false Safe", async () => {
     await assignCatalogue();
     holder.store.trades.set(A, [closedTrade(A, 1, "-500")]);
-    const rules = catalogueRules().map(r => r.ruleKey === "max_drawdown"
-      ? { ...r, supportStatus: "supported" as const, parameters: { amount: { state: "value", value: "2000" }, method: "static", basis: "realized", lock: { state: "explicit_none" } } } as RuleDefinitionInput
-      : r);
-    const draft = await holder.store.repository.rulebooks.createDraft({
-      rulebookId: null, newRulebook: { providerId: PROVIDER, ownerAccountId: A, slug: "account-accta", displayName: "Eval A rules", description: null },
-      supersedesVersionId: null, changeReason: "Copied from Example 50K v1", capturedAt: "2026-10-01T00:00:00.000Z", effectiveFrom: null, effectiveTo: null,
-      rules, applicability: [],
-    }, { actor: "local_user", reason: null });
+    const draft = await seedOwnDraft(statedDrawdown("static"));
     const published = await holder.store.repository.rulebooks.publish(draft.version.id, null, { expectedUpdatedAt: draft.version.updatedAt, context: { actor: "local_user", reason: null } });
     expect(published.version.userConfirmedAt).not.toBeNull();
     const open = holder.store.assignments.find(x => x.effectiveTo === null)!;

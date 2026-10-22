@@ -122,7 +122,8 @@ describe("account overview cards", () => {
     await showCards(user);
     await user.click(within(card(/Eval A/)).getByRole("button", { name: "More actions for Eval A" }));
     await user.click(await screen.findByRole("menuitem", { name: "Quick import into this attempt" }));
-    expect(where).toBe("/import/quick");
+    // The menu navigates as it closes, after the click resolves; under CPU load a check made at once raced it.
+    await waitFor(() => expect(where).toBe("/import/quick"));
     expect(state).toEqual({ accountId: A });
   });
 

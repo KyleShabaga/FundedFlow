@@ -199,8 +199,9 @@ it("previews the reset, requires typing RESET exactly, and cancels without actin
   const dialog = await screen.findByRole("dialog", { name: "Reset All Data" });
   expect(await within(dialog).findByText("This erases the whole test journal")).toBeTruthy();
   expect(within(dialog).getByTestId("dev-target-dir").textContent).toBe(TEST_DIR);
-  await within(dialog).findByText("What will be erased", { exact: false }).catch(() => null);
-  expect(within(dialog).getByText("532")).toBeTruthy();
+  // Wait for the preview's counts themselves ("What will be erased" is the list's label, not text, so waiting for
+  // it as text always ran out its whole 1 s budget).
+  expect(await within(dialog).findByText("532")).toBeTruthy();
   expect(within(dialog).getAllByText(new RegExp(preview.backupPattern.replace(/[.*+?^${}()|[\]\\<>]/g, "\\$&"))).length).toBeGreaterThan(0);
   expect(within(dialog).getByText(/reset-test-data.mjs --all --yes/)).toBeTruthy();
   const reset = within(dialog).getByRole("button", { name: "Reset" });
