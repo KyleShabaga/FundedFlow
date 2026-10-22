@@ -16,6 +16,7 @@
 | `AccountOverviewCard`, `ProgressMeter` | Accounts, Cards view (Build 18.5; `AccountCard` stays in the gallery) |
 | `WinGauge` | Dashboard win-rate tile |
 | `EquityCurve` | Dashboard balance, Journal day, Trade detail |
+| `RunningTotalChart` | Insights closed-trade P&L (labelled axes, Stepped / Smooth) |
 | `PnlCalendar` | Home (small); the Calendar screen extends it (see MonthYearPicker) |
 | `DayCard` | Journal recent days, Home |
 | `TradeTable` | Simple trade lists; the Journal uses `DataTable` with trade columns |

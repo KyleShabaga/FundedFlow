@@ -35,7 +35,7 @@ from the developer panel's `ff-` classes. The product root does not define anoth
 | `components/rules.tsx` | `RuleMeter`, `ruleState`, `AccountCard` |
 | `components/account-overview.tsx` | `AccountOverviewCard`, `ProgressMeter`, `meterFraction` (Build 18.5) |
 | `components/documents.tsx`, `documents.css` | `GatePage`, `DocumentView`, `Disclosure` (NA-3) |
-| `components/charts.tsx` | `WinGauge`, `Sparkline`, `EquityCurve` |
+| `components/charts.tsx` | `WinGauge`, `Sparkline`, `EquityCurve`, `RunningTotalChart` (axes, zero line, stepped or monotone smooth), `PnlBars`, `ChartPanel` |
 | `components/journal.tsx` | `PnlCalendar`, `monthWeeks`, `DayCard`, `TradeTable`, `tradeResult` |
 | `components/forms.tsx` | `TextField`, `Textarea`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`, `Select` (Radix), `FieldGroup`, `FormSection`, `FieldError`, `ValidationSummary`, `focusFirstInvalid`, `focusFirstInvalidWhenShown` (Build 26), `FileDropzone`, `dragHasFiles`, `useWindowFileDropGuard`, `formatFileSize` |
 | `components/overlays.tsx` | `Dialog`, `ConfirmDialog`, `Drawer`, `Popover`, `OverlayClose`, `DropdownMenu`, `ActionPill` (P0-D12), `Tooltip`, `InfoTip` (Radix Dialog, Dropdown Menu, Tooltip) |

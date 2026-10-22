@@ -36,6 +36,13 @@
   .ds-switch-input:checked { forced-color-adjust: none; background: Highlight; border-color: Highlight; }
   .ds-switch-input:checked::after { background: HighlightText; }
 
+  /* RunningTotalChart: the line, axes and labels take system text colour; the area fill drops out. */
+  .ds-rt-line, .ds-rt-axis, .ds-rt-zero, .ds-rt-cursor, .ds-rt-grid { stroke: CanvasText; }
+  .ds-rt-tick, .ds-rt-title, .ds-rt-end { fill: CanvasText; }
+  .ds-rt-area { fill: none; }
+  .ds-rt-active { fill: Canvas; stroke: Highlight; }
+  .ds-rt-tip { border-color: CanvasText; }
+
   /* Buttons keep their border; disabled reads as GrayText rather than faded colour. */
   .ds-btn, .ds-icon-btn, .ds-tab, .ds-action-pill-menu { border: 1px solid ButtonBorder; }
   .ds-btn:disabled, .ds-icon-btn:disabled, .ds-tab:disabled { color: GrayText; border-color: GrayText; opacity: 1; }
