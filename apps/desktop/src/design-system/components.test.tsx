@@ -4,11 +4,35 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AccountCard, AccountOverviewCard, AppFrame, BrandLogo, ContentFrame, OverviewFigure, BrandMark, meterFraction, Pnl, PnlBars, PnlCalendar, ProgressMeter, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
+import { AccountCard, AccountOverviewCard, AppFrame, BrandLogo, ContentFrame, EquityCurve, OverviewFigure, BrandMark, meterFraction, Pnl, PnlBars, PnlCalendar, ProgressMeter, RuleMeter, ruleState, TabPanel, Tabs, TradeTable, tradeResult } from "./index";
 import { monthWeeks } from "./components/journal";
 import { expectNoAxeViolations } from "../test/axe";
 
 afterEach(cleanup);
+
+describe("AppFrame", () => {
+  it("keeps the sidebar header above the scrolling area and the edge control outside it", () => {
+    const { container } = render(
+      <AppFrame collapsed={false} sidebarHeader={<BrandLogo />} sidebarEdge={<button type="button">Collapse</button>}
+        sidebar={<nav aria-label="Primary">Links</nav>} header={null}>
+        <main>Body</main>
+      </AppFrame>,
+    );
+    const sidebar = container.querySelector(".ds-app-sidebar")!;
+    const header = sidebar.querySelector(".ds-app-sidebar-header")!;
+    const scroll = sidebar.querySelector(".ds-app-sidebar-scroll")!;
+    expect(header.textContent).toBe("FundedFlow");
+    expect(scroll.contains(header)).toBe(false);
+    expect(scroll.contains(screen.getByRole("button", { name: "Collapse" }))).toBe(false);
+    // DOM order: header, edge control, then the scrolling links.
+    expect([...sidebar.children].map(child => child.className)).toEqual(["ds-app-sidebar-header", "ds-app-sidebar-edge", "ds-app-sidebar-scroll"]);
+  });
+
+  it("renders no header row when the host gives none", () => {
+    const { container } = render(<AppFrame collapsed sidebar={<p>Links</p>} header={null}>Body</AppFrame>);
+    expect(container.querySelector(".ds-app-sidebar-header")).toBeNull();
+  });
+});
 
 describe("ContentFrame", () => {
   it("adds the shared frame to a header and a body inside the main column, and passes attributes through", async () => {
@@ -148,6 +172,27 @@ describe("PnlCalendar", () => {
     rerender(<PnlCalendar year={2026} month={10} days={days} display="trades" onSelectDay={() => {}} title={<span>Custom title</span>} />);
     expect(screen.getByText("Custom title")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Mon Oct 5/ }).querySelector(".ds-cal-pnl")?.textContent).toBe("3");
+  });
+});
+
+describe("EquityCurve", () => {
+  const eq = (container: HTMLElement) => container.querySelector<HTMLElement>(".ds-eq")!;
+
+  it("plots across the full width with no label gutter when there is no floor or target", () => {
+    const { container } = render(<EquityCurve points={["0", "10", "-5", "20"]} label="Closed-trade net P&L" />);
+    expect(eq(container).style.getPropertyValue("--ds-eq-gutter")).toBe("0px");
+    // The last step lands on the viewBox's right edge, not short of it.
+    expect(container.querySelector(".ds-eq-line")!.getAttribute("d")).toMatch(/H640\.0V[\d.]+$/);
+    expect(container.querySelector<HTMLElement>(".ds-eq-dot")!.style.left).toBe("calc(1 * (100% - 0px))");
+    expect(container.querySelector(".ds-eq-lbl")).toBeNull();
+  });
+
+  it("keeps a fixed pixel gutter for the floor and target labels", () => {
+    const { container } = render(<EquityCurve points={["100", "104"]} floor="97" target="106" label="Balance" />);
+    expect(eq(container).style.getPropertyValue("--ds-eq-gutter")).toBe("64px");
+    expect(screen.getByText("Max DD")).toBeTruthy();
+    expect(screen.getByText("Target")).toBeTruthy();
+    expect(container.querySelector<HTMLElement>(".ds-eq-dot")!.style.left).toBe("calc(1 * (100% - 64px))");
   });
 });
 

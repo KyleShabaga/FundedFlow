@@ -14,7 +14,8 @@ use super::risk_promotion::{self, BEFORE_PROMOTION_COMMIT, MID_CAPTURE, RiskCapt
 use super::snapshots::{self, SnapshotInput, canonical_engine_json};
 use super::tests::{account_input, db, trade_input};
 use super::{accounts, catalogue, rulebooks, trades};
-use crate::catalogue::{PhaseEventSource, PhaseKey};
+use crate::catalogue::{AccountFieldSource, PhaseEventSource, PhaseKey};
+use crate::data_controls;
 use crate::error::AppError;
 use crate::rulebook::{AssignmentInput, SourceConflictInput};
 
@@ -1111,4 +1112,346 @@ fn promotion_command_wire_fixture() {
     )
     .unwrap();
     assert_eq!(stored, payloads);
+}
+
+// Writers outside the generic matrix loop (rows 16 and 19–22). Each promotes, runs the writer directly, then checks
+// the result reads not current (or is gone) and that a deliberate new calculation promotes.
+
+/// Pins `updated_at` to a fixed past instant so a writer that only stamps "now" cannot coincide with it.
+fn pin_updated_at(c: &Connection, account: &str) {
+    c.execute(
+        "UPDATE accounts SET updated_at = ?2 WHERE id = ?1",
+        params![account, AT],
+    )
+    .unwrap();
+}
+
+fn promoted_and_current(c: &mut Connection, account: &str) -> snapshots::Snapshot {
+    let promoted = promote_now(c, account, CUTOFF, false).unwrap();
+    assert_eq!(unchanged(c, account), Some(true));
+    promoted
+}
+
+fn current_id(c: &mut Connection, account: &str) -> Option<String> {
+    risk_promotion::current(c, account)
+        .unwrap()
+        .snapshot
+        .map(|s| s.id)
+}
+
+#[test]
+fn archive_and_restore_account_driven_directly_invalidate_and_a_new_calculation_promotes() {
+    let mut c = db();
+    let ctx = seeded(&mut c);
+    pin_updated_at(&c, &ctx.account);
+    let promoted = promoted_and_current(&mut c, &ctx.account);
+    accounts::archive(&mut c, &ctx.account).unwrap();
+    assert_eq!(unchanged(&mut c, &ctx.account), Some(false), "archive");
+    accounts::restore(&mut c, &ctx.account).unwrap();
+    // Back in the lists, but the account's revision moved on: still not current.
+    assert_eq!(current_id(&mut c, &ctx.account), Some(promoted.id));
+    assert_eq!(unchanged(&mut c, &ctx.account), Some(false), "restore");
+    assert_eq!(unchanged(&mut c, &ctx.other), None);
+    promote_now(&mut c, &ctx.account, CUTOFF, false).unwrap();
+    assert_eq!(unchanged(&mut c, &ctx.account), Some(true));
+}
+
+#[test]
+fn an_attempt_reset_invalidates_the_predecessor_and_both_attempts_promote_afresh() {
+    let mut c = db();
+    let ctx = seeded(&mut c);
+    let promoted = promoted_and_current(&mut c, &ctx.account);
+    let other = promoted_and_current(&mut c, &ctx.other);
+    let pending = capture(&mut c, &ctx.account, CUTOFF);
+    let reset = super::attempts::reset(
+        &mut c,
+        super::attempts::ResetInput {
+            predecessor_account_id: ctx.account.clone(),
+            prior_outcome: "failed".into(),
+            effective_at: "2026-10-20T21:00:00Z".into(),
+            reason: Some("daily loss".into()),
+            source: "user_entered".into(),
+            name: "Eval A (2)".into(),
+            external_ref: None,
+            starting_balance: "50000".into(),
+            catalogue: None,
+            rulebook: super::attempts::RulebookDecision::DecideLater,
+            notes: None,
+        },
+    )
+    .unwrap();
+    assert_eq!(reset.predecessor.status, "failed");
+    assert!(is_conflict(risk_promotion::promote(
+        &mut c,
+        calc(&pending, false)
+    )));
+    assert_eq!(current_id(&mut c, &ctx.account), Some(promoted.id));
+    assert_eq!(unchanged(&mut c, &ctx.account), Some(false));
+    // The new attempt starts with no result; an unrelated account is untouched.
+    assert_eq!(current_id(&mut c, &reset.successor.id), None);
+    assert_eq!(current_id(&mut c, &ctx.other), Some(other.id));
+    assert_eq!(unchanged(&mut c, &ctx.other), Some(true));
+    promote_now(&mut c, &ctx.account, CUTOFF, false).unwrap();
+    assert_eq!(unchanged(&mut c, &ctx.account), Some(true));
+    promote_now(&mut c, &reset.successor.id, CUTOFF, false).unwrap();
+    assert_eq!(unchanged(&mut c, &reset.successor.id), Some(true));
+}
+
+#[test]
+fn a_catalogue_link_change_invalidates_and_a_new_calculation_promotes() {
+    let mut c = db();
+    let ctx = seeded(&mut c);
+    pin_updated_at(&c, &ctx.account);
+    let promoted = promoted_and_current(&mut c, &ctx.account);
+    let size_source = match catalogue::get_link(&c, &ctx.account).unwrap().size_source {
+        AccountFieldSource::Imported => AccountFieldSource::UserEntered,
+        _ => AccountFieldSource::Imported,
+    };
+    let pending = capture(&mut c, &ctx.account, CUTOFF);
+    catalogue::set_link(
+        &mut c,
+        catalogue::AccountLinkInput {
+            account_id: ctx.account.clone(),
+            programme_variant_id: None,
+            catalogue_version_id: None,
+            selected_phase_path_id: None,
+            size_source,
+        },
+    )
+    .unwrap();
+    assert!(is_conflict(risk_promotion::promote(
+        &mut c,
+        calc(&pending, false)
+    )));
+    assert_eq!(current_id(&mut c, &ctx.account), Some(promoted.id));
+    assert_eq!(unchanged(&mut c, &ctx.account), Some(false));
+    promote_now(&mut c, &ctx.account, CUTOFF, false).unwrap();
+    assert_eq!(unchanged(&mut c, &ctx.account), Some(true));
+}
+
+fn export_archive(c: &Connection, file: &JournalFile, dest: &std::path::Path) {
+    data_controls::export_journal(
+        c,
+        &file.0,
+        data_controls::ExportRequest {
+            destination: dest.to_string_lossy().into(),
+            acknowledge_plaintext: true,
+        },
+    )
+    .unwrap();
+}
+
+/// `restore_journal_archive` end to end: prepare under the open connection, close it, install at the next open.
+fn restore_archive(c: Connection, file: &JournalFile, archive: &std::path::Path) -> Connection {
+    let source: String = archive.to_string_lossy().into();
+    let preview = data_controls::inspect_restore(
+        &c,
+        &file.0,
+        data_controls::InspectRequest {
+            source: source.clone(),
+        },
+    )
+    .unwrap();
+    data_controls::prepare_restore(
+        &c,
+        &file.0,
+        data_controls::RestoreRequest {
+            source,
+            preview_token: preview.preview_token,
+            confirmation: "REPLACE ENTIRE JOURNAL".into(),
+        },
+    )
+    .unwrap();
+    drop(c);
+    data_controls::recover(&file.0, &file.0.join(crate::db::DB_FILE_NAME)).unwrap();
+    file.open()
+}
+
+#[test]
+fn a_journal_restore_keeps_a_result_current_only_when_its_sources_are_byte_identical() {
+    let file = JournalFile::new();
+    let archives = tempfile::tempdir().unwrap();
+    let mut c = file.open();
+    let ctx = seeded(&mut c);
+    // Archive 1 holds a promotion and, unchanged, every source it froze.
+    let first = promoted_and_current(&mut c, &ctx.account);
+    let identical = archives.path().join("identical.zip");
+    export_archive(&c, &file, &identical);
+    trades::create(&mut c, trade_input(&ctx.account)).unwrap();
+    assert_eq!(unchanged(&mut c, &ctx.account), Some(false));
+    let mut c = restore_archive(c, &file, &identical);
+    assert_eq!(current_id(&mut c, &ctx.account), Some(first.id.clone()));
+    assert_eq!(
+        unchanged(&mut c, &ctx.account),
+        Some(true),
+        "byte-identical sources verify"
+    );
+    // Archive 2 holds the same promotion but a later source write.
+    trades::create(&mut c, trade_input(&ctx.account)).unwrap();
+    let changed = archives.path().join("changed.zip");
+    export_archive(&c, &file, &changed);
+    // Results promoted after that archive was taken are gone once it is restored.
+    let later = promoted_and_current(&mut c, &ctx.account);
+    let other = promoted_and_current(&mut c, &ctx.other);
+    let mut c = restore_archive(c, &file, &changed);
+    assert!(
+        risk_promotion::freshness(&mut c, &later.id).is_err(),
+        "the pre-restore result is not in the restored journal"
+    );
+    assert!(risk_promotion::freshness(&mut c, &other.id).is_err());
+    assert_eq!(current_id(&mut c, &ctx.account), Some(first.id));
+    assert_eq!(unchanged(&mut c, &ctx.account), Some(false));
+    assert_eq!(current_id(&mut c, &ctx.other), None);
+    promote_now(&mut c, &ctx.account, CUTOFF, false).unwrap();
+    assert_eq!(unchanged(&mut c, &ctx.account), Some(true));
+    promote_now(&mut c, &ctx.other, CUTOFF, false).unwrap();
+    assert_eq!(unchanged(&mut c, &ctx.other), Some(true));
+}
+
+/// `permanently_delete_data` as the desktop calls it: preview, then delete with the preview's token and phrase.
+fn delete_data(c: &mut Connection, root: &std::path::Path, scope: Value) {
+    let preview = data_controls::preview_deletion(
+        c,
+        root,
+        serde_json::from_value(json!({ "scope": scope })).unwrap(),
+    )
+    .unwrap();
+    assert!(preview.blockers.is_empty(), "{:?}", preview.blockers);
+    let request = serde_json::from_value(json!({
+        "scope": scope, "previewToken": preview.preview_token, "confirmation": preview.required_confirmation,
+    }))
+    .unwrap();
+    let result = data_controls::delete_data(c, root, request).unwrap();
+    assert_eq!(result.state, "completed");
+}
+
+#[test]
+fn permanently_deleting_an_account_removes_its_results_and_leaves_others_current() {
+    let root = tempfile::tempdir().unwrap();
+    let mut c = db();
+    let ctx = seeded(&mut c);
+    // An account with no shared rulebook history, so deletion is not blocked.
+    let doomed = accounts::create(&mut c, account_input("Eval C")).unwrap().id;
+    trades::create(&mut c, trade_input(&doomed)).unwrap();
+    let gone = promoted_and_current(&mut c, &doomed);
+    let pending = capture(&mut c, &doomed, CUTOFF);
+    let other = promoted_and_current(&mut c, &ctx.other);
+    delete_data(
+        &mut c,
+        root.path(),
+        json!({ "kind": "account", "accountId": doomed }),
+    );
+    assert!(matches!(
+        risk_promotion::current(&mut c, &doomed),
+        Err(AppError::NotFound { .. })
+    ));
+    assert!(risk_promotion::freshness(&mut c, &gone.id).is_err());
+    assert!(risk_promotion::promote(&mut c, calc(&pending, false)).is_err());
+    let left: i64 = c
+        .query_row(
+            "SELECT count(*) FROM risk_promotions WHERE account_id = ?1",
+            [&doomed],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(left, 0);
+    assert_eq!(current_id(&mut c, &ctx.other), Some(other.id));
+    assert_eq!(unchanged(&mut c, &ctx.other), Some(true));
+    promote_now(&mut c, &ctx.other, CUTOFF, false).unwrap();
+    assert_eq!(unchanged(&mut c, &ctx.other), Some(true));
+}
+
+#[test]
+fn erasing_the_whole_journal_removes_every_result_and_a_new_journal_promotes() {
+    let root = tempfile::tempdir().unwrap();
+    let mut c = db();
+    let ctx = seeded(&mut c);
+    promoted_and_current(&mut c, &ctx.account);
+    promoted_and_current(&mut c, &ctx.other);
+    let pending = capture(&mut c, &ctx.account, CUTOFF);
+    delete_data(&mut c, root.path(), json!({ "kind": "journal" }));
+    assert_eq!(
+        (count(&c, "risk_promotions"), count(&c, "account_snapshots")),
+        (0, 0)
+    );
+    for id in [&ctx.account, &ctx.other] {
+        assert!(matches!(
+            risk_promotion::current(&mut c, id),
+            Err(AppError::NotFound { .. })
+        ));
+    }
+    assert!(risk_promotion::promote(&mut c, calc(&pending, false)).is_err());
+    let fresh = seeded(&mut c);
+    promote_now(&mut c, &fresh.account, CUTOFF, false).unwrap();
+    assert_eq!(unchanged(&mut c, &fresh.account), Some(true));
+}
+
+/// Commands that write nothing a calculation could read: queries, previews, inspections and exports.
+const READ_COMMANDS: &[&str] = &[
+    "list_accounts", "list_active_accounts", "get_account", "get_account_history", "get_account_lineage",
+    "preview_account_deletion", "list_trades", "list_deleted_trades", "get_trade_detail", "get_trade_review",
+    "list_trade_review_summaries", "read_trade_screenshot", "get_review_library", "list_journal_entries",
+    "preview_csv_import", "list_csv_imports", "list_csv_import_problem_rows", "list_rulebooks", "list_rulebook_versions",
+    "get_rulebook_version", "get_applicable_rulebook", "list_rulebook_events", "validate_rulebook_draft",
+    "list_account_rulebook_assignments", "get_catalogue", "list_account_offer_selections", "get_account_catalogue_link",
+    "list_account_phase_events", "list_ledger_entries", "get_ledger_balance_adjustment", "get_setting", "list_settings",
+    "list_account_snapshots", "get_latest_account_snapshot", "capture_account_risk", "get_current_account_risk",
+    "get_account_snapshot_freshness", "runtime_status", "get_account_risk_inputs", "get_financial_observation",
+    "list_financial_observations", "get_ledger_history", "list_financial_reconciliations",
+    "list_reconciliation_resolutions", "export_journal_archive", "export_trade_csv", "inspect_journal_archive",
+    "preview_permanent_deletion", "get_daily_review", "list_daily_reviews", "get_insights_dataset", "dev_tools_status",
+    "dev_reset_preview", "get_legal_acceptance",
+];
+
+/// Every `#[tauri::command]` is either a listed read or a write the §3 command table classifies (a matrix row, or
+/// "not a source"), so a new writer cannot skip the matrix silently. Listed names that no longer exist fail too.
+#[test]
+fn every_write_command_is_classified_for_risk_promotion() {
+    let sources = [
+        include_str!("../commands.rs"),
+        include_str!("../dev_tools/mod.rs"),
+        include_str!("../legal.rs"),
+    ];
+    let doc = include_str!("../../../../../docs/architecture/p0-02-risk-promotion.md");
+    let defined: Vec<&str> = sources
+        .iter()
+        .flat_map(|s| s.split("#[tauri::command]").skip(1))
+        .filter_map(|chunk| chunk.split("fn ").nth(1)?.split('(').next())
+        .map(str::trim)
+        .collect();
+    assert!(defined.len() > 100, "found {} commands", defined.len());
+    let section = doc
+        .split("## 3.")
+        .nth(1)
+        .and_then(|s| s.split("\n## ").next())
+        .expect("§3 of the P0-02 doc");
+    let classified: Vec<&str> = section
+        .lines()
+        .filter_map(|l| l.strip_prefix("| `")?.split('`').next())
+        .collect();
+    for name in &defined {
+        let read = READ_COMMANDS.contains(name);
+        let write = classified.contains(name);
+        assert!(
+            read != write,
+            "{name}: list it as a read in READ_COMMANDS, or as a write in the §3 command table (not both)"
+        );
+    }
+    for name in READ_COMMANDS.iter().chain(&classified) {
+        assert!(defined.contains(name), "{name} is classified but is not a command");
+    }
+    // Each table entry names a matrix row (or rows) that exists, or says why it is not a source.
+    let rows: Vec<&str> = section
+        .lines()
+        .filter_map(|l| l.strip_prefix("| ")?.split(' ').next())
+        .filter(|n| n.parse::<u32>().is_ok())
+        .collect();
+    for line in section.lines().filter(|l| l.starts_with("| `")) {
+        let row = line.split('|').nth(2).unwrap().trim();
+        let known = match row.split_once('–') {
+            Some((a, b)) => rows.contains(&a) && rows.contains(&b),
+            None => rows.contains(&row) || matches!(row, "not a source" | "new account"),
+        };
+        assert!(known, "{line}: names no matrix row");
+    }
 }

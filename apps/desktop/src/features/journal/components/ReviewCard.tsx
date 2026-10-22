@@ -2,7 +2,8 @@
 // mindset/general tags, the plan (entry, stop, target, risk), thesis and reflection; screenshots below.
 // The review keeps the labels it was made with; renamed or archived templates show both. Process (checklist) and
 // outcome (P&L) are shown apart. A save names the revision it started from, so a stale form is a conflict. Unsaved
-// edits are guarded (links and window close) and kept per account and trade for the window's session.
+// edits are guarded (links and window close) and kept per account and trade for the window's session. An uncertain
+// save is checked against the review as stored now before saving is allowed again.
 import { toMicros, type Library, type ReviewInput, type TradeReview } from "@fundedflow/domain";
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -24,6 +25,7 @@ import {
   Pnl,
   RadioGroup,
   Select,
+  StatList,
   Textarea,
   TextField,
   useToast,
@@ -35,6 +37,7 @@ import { useLibrary } from "../../library/hooks/library";
 import { useSaveTradeReview, useTradeReview } from "../../reviews/hooks/reviews";
 import { useLeaveGuard } from "../../shared/hooks/use-leave-guard";
 import { fieldErrors, retryRead, toMutationState } from "../../shared/presentation";
+import { UncertainOutcomeReview, type UncertainWrite } from "../../shared/UncertainOutcomeReview";
 import type { TradeViewModel } from "../../trades/view-models/trade";
 import { Screenshots } from "./Screenshots";
 
@@ -116,12 +119,39 @@ function kept(accountId: string, tradeId: string): Kept | null {
 
 /* ---------- Card ---------- */
 
+/**
+ * What an uncertain review save is checked against: the trade's review as stored now (stored values only). It sits
+ * outside the form, which starts again from each stored revision, so the check survives a save that did land.
+ */
+function ReviewWriteReview({ write, account, trade }: { write: UncertainWrite; account: AccountViewModel; trade: TradeViewModel }) {
+  const review = useTradeReview(account.id, trade.id);
+  const r = review.data;
+  const text = (value: string | null | undefined) => (value?.trim() ? value : "None");
+  return (
+    <UncertainOutcomeReview write={write} what="the saved review" reviewReady={r !== undefined && !review.error} readReviewed={review.refresh}>
+      {r
+        ? <StatList label="The review as saved now" items={[
+          { label: "Status", value: r.reviewedAt ? `Reviewed ${formatInstant(r.reviewedAt, { timeZone: account.timezone, year: true })}` : "Not reviewed" },
+          { label: "Last saved", value: formatInstant(r.updatedAt, { timeZone: account.timezone, year: true, zoneName: true }) },
+          { label: FIELD_LABELS.executionRating, value: r.executionRating == null ? "None" : `${r.executionRating} of 5` },
+          { label: FIELD_LABELS.strategyId, value: r.strategy?.label ?? "None" },
+          { label: FIELD_LABELS.tagIds, value: r.tags.length ? r.tags.map(t => t.label).join(", ") : "None" },
+          { label: FIELD_LABELS.thesis, value: text(r.thesis) },
+          { label: FIELD_LABELS.reflection, value: text(r.reflection) },
+        ]} />
+        : <p>No review is saved for this trade.</p>}
+    </UncertainOutcomeReview>
+  );
+}
+
 export function ReviewCard({ account, trade }: { account: AccountViewModel; trade: TradeViewModel }) {
   const review = useTradeReview(account.id, trade.id);
   const library = useLibrary();
+  const save = useSaveTradeReview(account.id, trade.id);
   return (
     <section className="ds-card jr-section jr-review" aria-labelledby="jr-review-title">
       <h3 id="jr-review-title">Review</h3>
+      {save.outcome === "uncertain-outcome" && <ReviewWriteReview write={save} account={account} trade={trade} />}
       {review.data === undefined ? (
         review.error ? (
           <ErrorState title="The review couldn't be loaded" message="The trade's own values above are unaffected." onRetry={retryRead(review.refresh)} />
@@ -173,6 +203,7 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
   const set = <K extends keyof ReviewFormValues>(key: K, value: ReviewFormValues[K]) => setValues(v => ({ ...v, [key]: value }));
   const server = fieldErrors(save.error);
   const conflict = save.error?.category === "conflict";
+  const uncertain = save.outcome === "uncertain-outcome"; // Checked above the form (ReviewWriteReview).
 
   const strategies = (library?.strategies ?? []).filter(s => !s.archived || s.id === values.strategyId);
   const checklists = (library?.checklists ?? []).filter(c => c.scope === "trade" && (!c.archived || c.id === values.checklistId))
@@ -256,7 +287,7 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
             actions={<Button size="sm" onClick={() => { keep(account.id, trade.id, { revision, values }); reload(); }}>Reload the review</Button>}>
             Nothing was saved. Reload to see the stored review; your edits stay available to restore.
           </InlineNotice>
-        ) : feedback.status !== "idle" && feedback.status !== "submitting" && feedback.status !== "success" && <MutationFeedback state={feedback} />}
+        ) : !uncertain && feedback.status !== "idle" && feedback.status !== "submitting" && feedback.status !== "success" && <MutationFeedback state={feedback} />}
 
         <fieldset className="ds-fieldset jr-review-body" disabled={readOnly} aria-label="Review fields">
           <div className="jr-form-row">
@@ -318,7 +349,7 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
           {dirty && <span className="ds-faint" role="status">Unsaved changes</span>}
           <Button disabled={!dirty || save.isPending} onClick={() => { setValues(initial); forget(account.id, trade.id); }}>Discard changes</Button>
           <Button type="submit" variant="primary" loading={save.isPending} disabled={readOnly || (!save.canSubmit && !save.isPending)}
-            disabledReason={readOnly ? "Archived accounts are read-only" : !save.canSubmit && !save.isPending ? "Saving isn't available right now" : undefined}>
+            disabledReason={readOnly ? "Archived accounts are read-only" : uncertain ? "Check the result of the last save first" : !save.canSubmit && !save.isPending ? "Saving isn't available right now" : undefined}>
             {save.isPending ? "Saving…" : review ? "Save review" : "Save review"}
           </Button>
         </div>

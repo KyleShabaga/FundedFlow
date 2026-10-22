@@ -9,7 +9,8 @@ Mockup: `Calendar.dc.html` (picker open by default). References: `tw-calendar.pn
 See P&L by trading day, week, month and year, and jump to any of them.
 
 ## Layout
-1. Page head with a segmented control: Net P&L / Trades / Win rate (what the cells show).
+1. Page head with a segmented control: Net P&L / Trades / Win rate (what the cells show), then a **Filters** button
+   (P0-D18) that opens the Insights filters in an inline panel below that toolbar.
 2. Month card: previous, **month title button** (opens `MonthYearPicker`), next, Today; month P&L and
    "n trades · n trading days" on the right.
 3. Grid: Monday–Friday plus a Week column. Each day: date, compact P&L, trade count; tinted `profit-soft` /
@@ -44,6 +45,16 @@ months without trades dimmed but selectable. Picking a month closes the popover.
 - The selected-day panel links each attempt's daily review (`/journal/days/:day?account=`) with its status.
 - Open question resolved: the week cell shows P&L and trade count; win rate shows in the cell only in Win rate mode.
 
+## As built (P0-D18)
+- The Calendar shows the page's one Insights filter bar behind a `DisclosureButton` (funnel icon, "Filters") beside
+  the cell choice, set apart by a rule. It starts closed on each visit; open, the same controls sit in flow between the
+  toolbar and the month. Filters stay in the URL, so closing only hides them.
+- The count is the number of filter groups not at their default that Clear filters resets: the trading-day range
+  counts once; accounts, currency, basis and the cell choice never count. Closed with filters applied, a summary
+  ("Filtered by Oct 1, 2026 to Oct 31, 2026 · Long only · Manual only") and Clear filters stay in view.
+- When the calendar has nothing to show (no match, or a currency to choose), the bar returns above the tabs as on the
+  other sections, so filters stay reachable. Screenshots: [p0-d18](p0-d18/README.md).
+
 ## As built (P0-D17)
 - Proportions: the panel column is 300–380 px (was 280–340), and day cells follow their width at 5:4 between 76 and
   128 px tall (were a fixed 64 px minimum), so a cell is about 107 × 86 px at a 1440 px window. The Week column and
@@ -56,5 +67,6 @@ months without trades dimmed but selectable. Picking a month closes the popover.
   `summarize`, the same figure as Breakdowns' "Avg trade" and parity-tested against Rust. It is the sum of known net
   (after fees) or gross results divided by the trades with a known P&L; unknown results are left out, never zero.
   Below the 5-trade minimum it reads "Insufficient data" with "n of 5 needed"; with only unknown results, "Unknown";
-  with a value, a note says what it averaged ("Over 5 of 6 trades; 1 with an unknown P&L left out"). The note moves to
-  an info pop-up once MetricCard's help pattern exists. Screenshots: [p0-d17](p0-d17/README.md).
+  with a value, a note says what it averaged ("Over 5 of 6 trades; 1 with an unknown P&L left out"). An `InfoTip` "i"
+  (the P0-D14 pattern on MetricCard) gives the definition and coverage in every state. Screenshots:
+  [p0-d17](p0-d17/README.md).

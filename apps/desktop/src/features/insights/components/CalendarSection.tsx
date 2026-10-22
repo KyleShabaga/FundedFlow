@@ -2,15 +2,19 @@
 // MonthYearPicker, the Monday–Friday grid with week totals, the selected day or week, and yearly performance. Every
 // cell is a summary of the included trades of that stored trading day (each account's own day rule), and opens them.
 // A day with an unknown P&L shows a dash and no tint. Daily reviews (Build 22) are linked as process context only.
-import { addMoney, basisAmount, byPeriod, monthOf, summarize, type Group, type InsightsAccount, type Summary } from "@fundedflow/domain";
-import { useMemo, useState } from "react";
+import { addMoney, basisAmount, byPeriod, INSIGHTS_MIN_SAMPLE, monthOf, summarize, type Group, type InsightsAccount, type Summary } from "@fundedflow/domain";
+import { Filter } from "lucide-react";
+import { type ReactNode, useId, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import {
+  Button,
   type CalendarDay,
   type CalendarDisplay,
   formatMoneyCompact,
   currencySymbol,
+  DisclosureButton,
+  InfoTip,
   moneySign,
   MonthYearPicker,
   type MonthSummary,
@@ -28,8 +32,16 @@ import { barValue, BASIS_LABEL, DrillButton, MetricText, type SectionProps } fro
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function CalendarSection(props: SectionProps) {
-  const { selection, basis, currency, state, update, drill } = props;
+/** The page's one filter bar and what it has applied, shown behind the calendar's Filters button (P0-D18). */
+export interface CalendarFilters {
+  panel: ReactNode;
+  /** One phrase per active filter group; its length is the count on the button. */
+  applied: string[];
+  onClear: () => void;
+}
+
+export function CalendarSection(props: SectionProps & { filters: CalendarFilters }) {
+  const { selection, basis, currency, state, update, drill, filters } = props;
   const trades = selection.trades;
   const days = useMemo(() => byPeriod(trades, "day"), [trades]);
   const months = useMemo(() => byPeriod(trades, "month"), [trades]);
@@ -63,11 +75,7 @@ export function CalendarSection(props: SectionProps) {
 
   return (
     <div className="in-section">
-      <div className="in-cal-bar">
-        <SegmentedControl<CalendarDisplay> label="Calendar cells show" value={state.display} onValueChange={display => update({ display })}
-          options={[{ value: "pnl", label: BASIS_LABEL[basis] }, { value: "trades", label: "Trades" }, { value: "winRate", label: "Win rate" }]} />
-        <span className="ds-faint">Trading days run Monday to Friday in each account's zone; weekend activity counts toward Monday.</span>
-      </div>
+      <CalendarBar display={state.display} onDisplay={display => update({ display })} basis={basis} filters={filters} />
       <div className="in-cal">
         <PnlCalendar year={year} month={month} days={cells} today={todayDay} currency={currency} display={state.display}
           selectedDay={selectedDay} onSelectDay={d => { setWeek(null); update({ day: d }); }}
@@ -86,6 +94,34 @@ export function CalendarSection(props: SectionProps) {
         </aside>
       </div>
       <YearlyTable months={byMonth} basis={basis} currency={currency} onMonth={go} drill={drill} scope={scope} />
+    </div>
+  );
+}
+
+/**
+ * What the cells show, then the Filters action (P0-D18). The panel starts closed on each visit and closing it only
+ * hides it: the filters live in the URL. Closed with filters applied, a summary and Clear filters stay in view.
+ */
+function CalendarBar({ display, onDisplay, basis, filters }: { display: CalendarDisplay; onDisplay: (d: CalendarDisplay) => void; basis: SectionProps["basis"]; filters: CalendarFilters }) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const count = filters.applied.length;
+  return (
+    <div className="in-cal-toolbar">
+      <div className="in-cal-bar">
+        <SegmentedControl<CalendarDisplay> label="Calendar cells show" value={display} onValueChange={onDisplay}
+          options={[{ value: "pnl", label: BASIS_LABEL[basis] }, { value: "trades", label: "Trades" }, { value: "winRate", label: "Win rate" }]} />
+        <DisclosureButton size="sm" className="in-cal-filters-btn" icon={<Filter size={14} aria-hidden="true" />} expanded={open} controls={panelId}
+          count={count} countLabel={n => (n === 1 ? "1 filter applied" : `${n} filters applied`)} onClick={() => setOpen(o => !o)}>Filters</DisclosureButton>
+        <span className="ds-faint in-cal-note">Trading days run Monday to Friday in each account's zone; weekend activity counts toward Monday.</span>
+      </div>
+      {!open && count > 0 && (
+        <p className="in-cal-applied">
+          <span className="ds-faint">Filtered by</span> {filters.applied.join(" · ")}
+          <Button size="sm" variant="ghost" onClick={filters.onClear}>Clear filters</Button>
+        </p>
+      )}
+      <div id={panelId} className="in-cal-filters" hidden={!open}>{open && filters.panel}</div>
     </div>
   );
 }
@@ -123,7 +159,15 @@ function PeriodPanel({ title, trades, day, selection, basis, currency, drill, sc
         { label: "Trades", value: { kind: "count", value: s.closed } },
         ...(s.unknownPnl ? [{ label: "Unknown P&L (not in the sum)", value: { kind: "count" as const, value: s.unknownPnl } }] : []),
         { label: "Win rate", value: <MetricText view={rateView(s.winRate)} /> },
-        { label: AVERAGE_LABEL[basis], value: <MetricText view={averageView(s, basis, currency)} /> },
+        { label: AVERAGE_LABEL[basis], value: (
+          <span className="in-avg">
+            <MetricText view={averageView(s, basis, currency)} />
+            <InfoTip label={`About ${AVERAGE_LABEL[basis]}`}>
+              <p>{BASIS_LABEL[basis]} ÷ trades with a known result · needs {INSIGHTS_MIN_SAMPLE}</p>
+              <p>{s.unknownPnl ? `${s.eligible} of ${s.closed} closed trades with a known P&L` : `${tradesText(s.closed)}, all with a known P&L`}</p>
+            </InfoTip>
+          </span>
+        ) },
         { label: "Fees", value: <MetricText view={moneyView(s.fees, currency, false)} /> },
         { label: accounts.length === 1 ? "Account" : "Accounts", value: accounts.map(a => a.name).join(", ") },
       ]} />
@@ -140,7 +184,8 @@ const AVERAGE_LABEL: Record<SectionProps["basis"], string> = { net: "Average net
 /**
  * P0-D17: the period's average result per trade, the same expectancy Insights shows everywhere (Breakdowns' Avg trade):
  * the known net (after fees) or gross results over the trades with a known P&L, withheld below the minimum sample.
- * With a value, the note says what it was averaged over; until MetricCard's info pop-up exists, this is the plain text.
+ * With a value, the note says what it was averaged over; the "i" (InfoTip, as on MetricCard) gives the definition and
+ * coverage in every state.
  */
 function averageView(s: Summary, basis: SectionProps["basis"], currency: string | null): MetricView {
   const view = moneyView(basis === "net" ? s.expectancy : s.expectancyGross, currency);

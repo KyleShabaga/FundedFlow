@@ -18,7 +18,7 @@ export function currentBalanceKpi(balances: readonly CurrentBalance[]): { value:
   if (current.length === 0) {
     // MetricCard shows an unavailable value's reason in place of the sub line, so the count goes in the reason.
     const none = total === 0 ? "No live accounts." : total === 1 ? "The live account has no current estimate." : `None of the ${total} live accounts has a current estimate.`;
-    return { value: { kind: "unavailable", reason: total === 0 ? none : `${none} Calculate on Today; each account shows its checkpoints.` }, sub: `${of} · none current` };
+    return { value: { kind: "unavailable", reason: total === 0 ? none : `${none} Calculate on Today; the table's Current balance shows each account's latest checkpoint or why it has none.` }, sub: `${of} · none current` };
   }
   const byCurrency = new Map<string, string[]>();
   for (const b of current) byCurrency.set(b.currency, [...(byCurrency.get(b.currency) ?? []), b.amount]);

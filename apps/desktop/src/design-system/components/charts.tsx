@@ -75,9 +75,14 @@ export interface EquityCurveProps {
   label: string;
 }
 
+/** Pixel width beside the plot for the floor and target labels. */
+const EQ_LABEL_GUTTER = 64;
+
 export function EquityCurve({ points, floor, target, height = 200, step = true, floorLabel = "Max DD", targetLabel = "Target", label }: EquityCurveProps) {
+  // The plot spans the whole viewBox and the SVG stretches to the card. The
+  // floor and target labels get a fixed pixel gutter beside it, only when shown,
+  // so the line reaches the card's edge at any width.
   const W = 640;
-  const padR = 64;
   const padY = 12;
   const pts = points.map(moneyToNumberForDisplay).map((x) => x ?? 0);
   const floorArr = floor == null ? null : (Array.isArray(floor) ? floor : pts.map(() => floor)).map((x) => moneyToNumberForDisplay(x) ?? 0);
@@ -89,7 +94,8 @@ export function EquityCurve({ points, floor, target, height = 200, step = true, 
   const pad = (hi - lo || 1) * 0.06;
   lo -= pad;
   hi += pad;
-  const iw = W - padR;
+  const gutter = floorArr || tgt != null ? EQ_LABEL_GUTTER : 0;
+  const iw = W;
   const ih = height - padY * 2;
   const X = (i: number) => (pts.length > 1 ? (i / (pts.length - 1)) * iw : 0);
   const Y = (v: number) => padY + (1 - (v - lo) / (hi - lo)) * ih;
@@ -98,7 +104,7 @@ export function EquityCurve({ points, floor, target, height = 200, step = true, 
   const line = path(pts, step);
   const last = pts[pts.length - 1];
   return (
-    <div className="ds-eq">
+    <div className="ds-eq" style={{ ["--ds-eq-gutter" as string]: `${gutter}px` }}>
       <svg viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none" width="100%" height={height} role="img" aria-label={label}>
         <path d={`${line}V${height - padY}H0Z`} className="ds-eq-area" />
         <path d={line} className="ds-eq-line" />
@@ -106,7 +112,7 @@ export function EquityCurve({ points, floor, target, height = 200, step = true, 
         {tgt != null && <line x1={0} x2={iw} y1={Y(tgt)} y2={Y(tgt)} className="ds-eq-target" />}
       </svg>
       {/* Labels and the end dot are HTML so the stretched SVG does not distort them. */}
-      <span className="ds-eq-dot" style={{ left: `${(X(pts.length - 1) / W) * 100}%`, top: `${(Y(last) / height) * 100}%` }} />
+      <span className="ds-eq-dot" style={{ left: `calc(${X(pts.length - 1) / W} * (100% - ${gutter}px))`, top: `${(Y(last) / height) * 100}%` }} />
       {floorArr && (
         <span className="ds-eq-lbl ds-eq-lbl-loss" style={{ top: `${(Y(floorArr[floorArr.length - 1]) / height) * 100}%` }}>
           {floorLabel}

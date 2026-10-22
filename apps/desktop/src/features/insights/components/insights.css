@@ -65,6 +65,18 @@
 /* Two-column page grids stack below 880 px of main column (docs/design/window-support.md). */
 @container ds-main (max-width: 879px) { .in-cal { grid-template-columns: minmax(0, 1fr); } }
 
+/* ---------- P0-D18: Calendar Filters button and its panel (Calendar session) ---------- */
+/* The toolbar groups the cell choice, the Filters action and the panel, so the section's gap doesn't split them. */
+.in-cal-toolbar { display: grid; gap: var(--space-2); min-width: 0; }
+/* A gap and a rule set Filters apart from the segmented control: it is an action, not a fourth metric. */
+.in-cal-filters-btn { position: relative; margin-left: var(--space-2); }
+.in-cal-filters-btn::before { content: ""; position: absolute; left: calc(-1 * var(--space-3) - 1px); top: 4px; bottom: 4px; border-left: 1px solid var(--line-200); }
+.in-cal-note { flex: 1 1 260px; min-width: 0; }
+.in-cal-applied { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin: 0; font-size: 12.5px; min-width: 0; overflow-wrap: anywhere; }
+.in-cal-filters[hidden] { display: none; }
+/* In flow, so date pickers and select menus have room; the bar's own title is replaced by the button. */
+.in-cal-filters .in-filters { margin: 0; }
+
 /* ---------- P0-D17: calendar proportions and a full-height day panel (Calendar session) ---------- */
 /* A narrower month next to a slightly wider panel, and the two cards share one row height while side by side. */
 .in-cal { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); align-items: stretch; }
@@ -77,6 +89,8 @@
 /* The panel fills the card: date and statistics at the top, links in one action area at the bottom. */
 .in-cal-side { display: flex; flex-direction: column; }
 .in-cal-side > .in-period { flex: 1 1 auto; display: flex; flex-direction: column; gap: var(--space-3); }
+/* The average's value with its "i" after it, aligned like the other values. */
+.in-avg { display: inline-flex; align-items: flex-start; gap: 4px; }
 .in-period-actions { display: grid; gap: var(--space-2); justify-items: start; margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--line-100); }
 /* Stacked below 880 px of main column (P0-D29): restated here, after the wider columns above. */
 @container ds-main (max-width: 879px) { .in-cal { grid-template-columns: minmax(0, 1fr); align-items: start; } }

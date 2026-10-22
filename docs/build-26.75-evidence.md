@@ -133,15 +133,16 @@ Machine: a fresh Windows 11 VM or Windows Sandbox with **no** Node, Rust, Visual
 | 2 | Run the installer. SmartScreen shows "Windows protected your PC" because it is unsigned: choose **More info → Run anyway**. | No UAC prompt (per-user install). Installs to `%LOCALAPPDATA%\FundedFlow`; Start menu entry created. Publisher shows "Kyle Shabaga" in Installed apps. | | |
 | 3 | Disconnect the network (disable the adapter, or in Sandbox turn networking off). | Offline from here to step 10. | | |
 | 4 | First launch. | The runtime gate shows briefly, then Today's empty state. No error, no network prompt. | | |
+| 4a | Check the installed legal files: `dir $env:LOCALAPPDATA\FundedFlow`, then `notepad $env:LOCALAPPDATA\FundedFlow\THIRD_PARTY_NOTICES.txt`. In the app, open Settings → Privacy & legal → **Licence and third-party notices** → **Read the third-party notices**. | The folder lists `LICENSE` and `THIRD_PARTY_NOTICES.txt` next to `fundedflow.exe`. The notices file opens in Notepad (starts "FundedFlow third-party notices"). The in-app notices, offline, show the same text (Rust crates, npm packages, Fonts and Licence texts sections with the same counts). | | |
 | 5 | Record the exact journal path (`dir $env:APPDATA\com.fundedflow.desktop`). | `fundedflow.db` exists under `%APPDATA%\com.fundedflow.desktop`. Write the full path. | | |
 | 6 | Create an account, import a small synthetic CSV (a few rows; not real trading data), close the app, reopen. | Account and trades are still there after reopening. | | |
 | 7 | Look for developer tools: sidebar has no **Add Fake Data** / **Reset All Data**; `#/settings/developer` is not reachable; F12 / Ctrl+Shift+I do nothing. | None visible. | | |
-| 8 | Uninstall from Installed apps, leaving "Delete the application data" **unchecked**. List what remains: `%LOCALAPPDATA%\FundedFlow`, `%APPDATA%\com.fundedflow.desktop`, `%LOCALAPPDATA%\com.fundedflow.desktop`, Start menu, `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall`. | Program files, shortcuts and the uninstall entry are gone; the journal folder remains. Record exactly what is left. | | |
+| 8 | Uninstall from Installed apps, leaving "Delete the application data" **unchecked**. List what remains: `%LOCALAPPDATA%\FundedFlow`, `%APPDATA%\com.fundedflow.desktop`, `%LOCALAPPDATA%\com.fundedflow.desktop`, Start menu, `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall`. | Program files (including `LICENSE` and `THIRD_PARTY_NOTICES.txt`), shortcuts and the uninstall entry are gone; the journal folder remains. Record exactly what is left. | | |
 | 9 | Reinstall with the same installer and launch. | The step-6 account and trades open. | | |
 | 10 | Run the same installer again over the existing install (choose the reinstall option if offered). Launch. | Install completes; the journal is kept. | | |
 | 11 | Optional: with the network reconnected, run Resource Monitor (Network tab) or Wireshark while using the app for a few minutes. No connections from `fundedflow.exe` or its `msedgewebview2.exe` children to non-Microsoft hosts. WebView2 itself may contact Microsoft (for example SmartScreen); record any such hosts. | | |
 
-Attach screenshots of steps 2, 4, 5, 8 and 9. Any failure gets a Triage card.
+Attach screenshots of steps 2, 4, 4a, 5, 8 and 9. Any failure gets a Triage card.
 
 ## Install and verify (for the NA-7 release notes)
 

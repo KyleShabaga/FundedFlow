@@ -3,7 +3,7 @@ import { lazy, type RefObject, Suspense, useCallback, useEffect, useLayoutEffect
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { RuntimeRecoveryNotice } from "../components/RuntimeGate";
-import { AppFrame, BrandLogo, Button, ContentFrame, DropdownMenu, Tooltip, useWindowFileDropGuard } from "../design-system";
+import { AppFrame, BrandLogo, Button, ContentFrame, Tooltip, useWindowFileDropGuard } from "../design-system";
 import { AccountSwitcher } from "../features/accounts/components/AccountSwitcher";
 import "./shell.css";
 
@@ -12,6 +12,8 @@ const routes = [
   { path: "/journal", label: "Journal", icon: BookOpen },
   { path: "/insights", label: "Insights", icon: ChartNoAxesCombined },
   { path: "/accounts", label: "Accounts", icon: Wallet },
+  // P0-D07: the full guided wizard (account, file, columns, review). Quick Import is the header button.
+  { path: "/import", label: "Import Wizard", icon: Workflow },
   { path: "/settings", label: "Settings", icon: Settings },
 ];
 /**
@@ -94,7 +96,7 @@ export function SidebarToggle({ collapsed, narrow, toggle }: { collapsed: boolea
  * The selected route's background and left accent, drawn once for the whole nav so a route change slides it from
  * the old item to the new one. It follows the active route only (never hover). Its position is measured from the
  * DOM on every route, width and submenu change, so fast navigation can't leave it on a stale item. It appears in
- * place, without sliding, when the previous page had no sidebar item (Import, not found).
+ * place, without sliding, when the previous page had no sidebar item (Quick Import, Import history, not found).
  */
 function useActiveIndicator(nav: RefObject<HTMLElement | null>, layoutKey: string) {
   const [box, setBox] = useState<{ top: number; height: number; slide: boolean } | null>(null);
@@ -116,6 +118,15 @@ function useActiveIndicator(nav: RefObject<HTMLElement | null>, layoutKey: strin
     return () => observer.disconnect();
   }, [nav, measure]);
   return box;
+}
+
+/** The sidebar's brand row: mark and wordmark, the mark alone in the icon rail. AppFrame keeps it above the scrolling links. */
+export function SidebarBrand({ collapsed }: { collapsed: boolean }) {
+  return (
+    <div className="shell-brand">
+      <BrandLogo showName={!collapsed} />
+    </div>
+  );
 }
 
 export function SidebarNav({ collapsed }: { collapsed: boolean }) {
@@ -178,16 +189,13 @@ export function SidebarNav({ collapsed }: { collapsed: boolean }) {
   };
   return (
     <>
-      <div className="shell-brand">
-        <BrandLogo showName={!collapsed} />
-      </div>
       <nav ref={nav} id="primary-navigation" aria-label="Primary navigation" className={`shell-nav${indicator ? " has-indicator" : ""}`}>
         {indicator && <span aria-hidden="true" className={`shell-nav-indicator${indicator.slide ? " is-sliding" : ""}`}
           style={{ transform: `translateY(${indicator.top}px)`, height: indicator.height }} />}
-        <div className="shell-nav-main">{routes.slice(0, 4).map(item)}</div>
+        <div className="shell-nav-main">{routes.filter(route => route.path !== "/settings").map(item)}</div>
         <div className="shell-nav-footer">
           {DevSidebarTools && <Suspense fallback={null}><DevSidebarTools collapsed={collapsed} /></Suspense>}
-          {link(routes[4])}
+          {link(routes.find(route => route.path === "/settings")!)}
           <p className="shell-local" title="Saved on this computer">
             <span aria-hidden="true">•</span>
             <span className={collapsed ? "ds-sr-only" : "shell-nav-label"}>Saved on this computer</span>
@@ -209,7 +217,7 @@ export function PageHeader({ title }: { title: string }) {
   }, [pathname]);
   return (
     <header className="shell-header">
-      {/* Same frame as the page body (P0-D29), so Import ends where the content ends. */}
+      {/* Same frame as the page body (P0-D29), so Quick Import ends where the content ends. */}
       <ContentFrame className="shell-header-frame">
         <div className="shell-header-context">
           <h1 ref={heading} tabIndex={-1}>{title}</h1>
@@ -217,13 +225,10 @@ export function PageHeader({ title }: { title: string }) {
           <div className="shell-account-context"><AccountSwitcher /></div>
         </div>
         <div className="shell-import">
-          {/* Quick import (Build 18.5) or the full wizard (Build 18); each shows its own runtime and account states. */}
-          <DropdownMenu label="Import" trigger={
-            <Button variant="ghost" aria-current={pathname === "/import" || pathname === "/import/quick" ? "page" : undefined}>Import</Button>
-          } items={[
-            { label: "Quick import: check and import a CSV in one step", icon: <Zap size={16} aria-hidden="true" />, onSelect: () => navigate("/import/quick") },
-            { label: "Full wizard: first-time or custom files", icon: <Workflow size={16} aria-hidden="true" />, onSelect: () => navigate("/import") },
-          ]} />
+          {/* Quick import (Build 18.5; button since P0-D07). The page shows its own runtime and account states and
+              keeps the account confirmation and check before anything is saved. The full wizard is in the sidebar. */}
+          <Button icon={<Zap size={16} aria-hidden="true" />} title="Check and import a CSV in one step"
+            aria-current={normalizePath(pathname) === "/import/quick" ? "page" : undefined} onClick={() => navigate("/import/quick")}>Quick Import</Button>
         </div>
       </ContentFrame>
     </header>
@@ -237,7 +242,7 @@ export function AppShell() {
   const { pathname } = useLocation();
   const normalizedPath = normalizePath(pathname);
   // Accounts (account detail) and Journal (trade detail, daily review) have nested pages; other unknown sub-paths stay "Page not found".
-  // Import has no sidebar item: it opens from the header's Import menu.
+  // Quick import and Import history have no sidebar item: Quick Import is the header button.
   const title = import.meta.env.DEV && normalizedPath === "/settings/developer"
     ? "Developer tools"
     : normalizedPath === "/import" ? "Import trades"
@@ -252,7 +257,8 @@ export function AppShell() {
         event.preventDefault();
         document.getElementById("main-content")?.focus();
       }}>Skip to main content</a>
-      <AppFrame collapsed={sidebar.collapsed} sidebar={<SidebarNav collapsed={sidebar.collapsed} />} sidebarEdge={<SidebarToggle {...sidebar} />}
+      <AppFrame collapsed={sidebar.collapsed} sidebar={<SidebarNav collapsed={sidebar.collapsed} />}
+        sidebarHeader={<SidebarBrand collapsed={sidebar.collapsed} />} sidebarEdge={<SidebarToggle {...sidebar} />}
         header={<PageHeader title={title} />}>
         <main id="main-content" tabIndex={-1} className="shell-content">
           <ContentFrame>

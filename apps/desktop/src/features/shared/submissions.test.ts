@@ -32,3 +32,13 @@ it("unlocks definite failures and keeps malformed/unconfirmed writes uncertain",
   await expect(state.execute("a", async () => { throw new Error("unrecognized bridge failure"); })).rejects.toMatchObject({ category: "uncertain-outcome" });
   expect(state.status("a")).toBe("uncertain");
 });
+it("keeps what was submitted with the lock until it is released, so a reopened form reviews the submission", async () => {
+  const state = submissionsFor(new QueryClient()); const response = deferred<number>();
+  const promise = state.execute("accounts-create", () => response.promise, { name: "Eval 50K" });
+  expect(state.submitted("accounts-create")).toEqual({ name: "Eval 50K" });
+  response.reject(new Error("unrecognized bridge failure"));
+  await expect(promise).rejects.toMatchObject({ category: "uncertain-outcome" });
+  expect(state.submitted("accounts-create")).toEqual({ name: "Eval 50K" });
+  state.acknowledge("accounts-create", { recordsReviewed: true });
+  expect(state.submitted("accounts-create")).toBeUndefined();
+});
