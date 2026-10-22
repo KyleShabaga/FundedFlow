@@ -6,7 +6,7 @@
 | Baseline revision | `92e79802593f97d907bdf8b403a088304e203676` on branch `claude/practical-turing-wmii06` |
 | Working tree at baseline | Clean (no tracked or untracked changes before the audit) |
 | Host | Linux container (not Windows, not WSL) |
-| Last updated by | Phase 1 |
+| Last updated by | Phase 2 (2026-10-22, HEAD 4fee79e; app source identical to 92e7980) |
 
 ## How later phases update this file
 
@@ -26,18 +26,18 @@
 | # | Area / file group | Purpose | Phase(s) | Risk | Status (Phase 1) | Depth / evidence | Remaining | Findings |
 |---|---|---|---|---|---|---|---|---|
 | A1 | `src/lib.rs`, `src/main.rs` | Entry, plugin setup, command registry, debug gating | 3, 5 | High | Inspected | Read in full at 92e7980 | Shutdown and lifecycle (R-09); debug gating (R-27) | — |
-| A2 | `src/runtime.rs`, `runtime/tests.rs` | Readiness state, single connection, lock, restore handoff | 2, 3 | High | Partially inspected | Lock, initialize and open flow read; tests counted (14) | Failure paths, poison handling, R-05 | — |
-| A3 | `src/db/mod.rs`, `db/steps.rs`, `migrations/*.sql` (1–21) | PRAGMAs, migrations, pre-upgrade backup | 2 | High | Partially inspected | Backup and PRAGMA code read; migration table mapped; SQL bodies not read | Per-step transactions, Rust steps 5/7/10/16, R-06, R-28 | — |
-| A4 | `src/db/*_tests.rs`, `db/fixtures/*.db` | Upgrade, catalogue and rulebook tests; synthetic legacy journals | 2, 5 | Medium | Partially inspected | Counted (about 70 tests); fixtures not opened (read-only) | Coverage vs failure modes | — |
+| A2 | `src/runtime.rs`, `runtime/tests.rs` | Readiness state, single connection, lock, restore handoff | 2, 3 | High | Inspected (Phase 2) | P2: initialize/open/recover/with/prepare_restore read in full; tests mapped (14) | Phase 3: async/blocking, lifecycle | DATA-001, DATA-005, DATA-007 |
+| A3 | `src/db/mod.rs`, `db/steps.rs`, `migrations/*.sql` (1–21) | PRAGMAs, migrations, pre-upgrade backup | 2 | High | Inspected (Phase 2) | P2: `db/mod.rs:145-286` read; steps idempotency and migration SQL for PRAGMA/BEGIN/rebuilds checked (L1) | Run upgrade tests (Phase 5) | DATA-010, DATA-011, DATA-016, DATA-017, DATA-019 |
+| A4 | `src/db/*_tests.rs`, `db/fixtures/*.db` | Upgrade, catalogue and rulebook tests; synthetic legacy journals | 2, 5 | Medium | Partially inspected | P2: test names and coverage mapped (01 §9); not run (no offline crates); fixtures not opened | Execute in Phase 5 | — |
 | A5 | `src/commands.rs` | 108 IPC command wrappers | 3 | High | Partially inspected | Async model and wrapper pattern verified | Per-command argument validation; R-01 | — |
-| A6 | `src/store/*` (21 repositories + 12 test files) | Accounts, trades, reviews, attachments, library, ledger, evidence, reconciliation, snapshots, risk promotion, rulebooks, catalogue, settings, freshness, insights, daily reviews | 2, 3 | High | Partially inspected | Outlined by specialist; unwrap sites listed | Transaction bundles, attachments (R-02), panics (R-10) | — |
-| A7 | `src/store/attachments.rs` | Screenshot bytes outside the DB | 2, 3 | High | Partially inspected | Write ordering mapped | R-02, R-03 | — |
-| A8 | `src/csv_import/*` | Parse, detect, normalize, dedup, target, commit | 2, 3, 4 | High | Partially inspected | Pipeline and token mapped | Commit atomicity, failed-batch record, lineage | — |
-| A9 | `src/data_controls/archive.rs` | Export ZIP v1 / CSV, inspect | 2, 3 | High | Partially inspected | Format and limits mapped | R-07, R-08, ZIP parsing safety | — |
-| A10 | `src/data_controls/restore.rs` | Staged restore and recovery | 2, 3 | High | Partially inspected | Phases mapped | R-03, R-04, R-05 | — |
-| A11 | `src/data_controls/deletion.rs` | Account and journal permanent deletion, cleanup queue | 2, 3 | High | Partially inspected | Flow mapped | R-05, R-06, R-09 | — |
-| A12 | `src/data_controls/filesystem.rs`, `mod.rs` | Path, symlink and space checks; lock | 2, 3, 5 | High | Partially inspected | `sync_dir` and lock verified | R-03, R-08, Windows hard links | — |
-| A13 | `src/legal.rs` | `legal-acceptance.json` | 2, 3, 5 | Medium | Partially inspected | Writer mapped | Sync command I/O; export/restore/erase boundary | — |
+| A6 | `src/store/*` (21 repositories + 12 test files) | Accounts, trades, reviews, attachments, library, ledger, evidence, reconciliation, snapshots, risk promotion, rulebooks, catalogue, settings, freshness, insights, daily reviews | 2, 3 | High | Partially inspected | P2: write paths of trades, accounts, reviews, daily_reviews, rulebooks, journal, ledger, library, settings, attachments traced for transactions and revisions (L3, L1); catalogue/authoring/offers/evidence internals sampled only | Phase 3: panics (R-10), argument validation | DATA-006, DATA-015 |
+| A7 | `src/store/attachments.rs` | Screenshot bytes outside the DB | 2, 3 | High | Inspected (Phase 2) | P2: `:190-300`, `:374-383` read | — | DATA-002, DATA-003 |
+| A8 | `src/csv_import/*` | Parse, detect, normalize, dedup, target, commit | 2, 3, 4 | High | Inspected (Phase 2, persistence) | P2: commit atomicity, token binding, retry/duplicate behaviour, failed-batch record traced (L3; lead read `mod.rs:608-624`) | Phase 3: input validation/limits; Phase 4: UI | DATA-007, DATA-013, DATA-020 |
+| A9 | `src/data_controls/archive.rs` | Export ZIP v1 / CSV, inspect | 2, 3 | High | Inspected (Phase 2) | P2: dump/inventory/caps read; inspect safeguards mapped (L2) | Phase 3: path trust (R-08) | DATA-003, DATA-004, DATA-018 |
+| A10 | `src/data_controls/restore.rs` | Staged restore and recovery | 2, 3 | High | Inspected (Phase 2) | P2: `:68-360` state machine read; R-04 not an issue | Phase 3: path trust | DATA-001, DATA-002, DATA-012, DATA-014 |
+| A11 | `src/data_controls/deletion.rs` | Account and journal permanent deletion, cleanup queue | 2, 3 | High | Inspected (Phase 2) | P2: preview/execute/recover_cleanup traced; lead read key ranges | — | DATA-001, DATA-004, DATA-012, DATA-018 |
+| A12 | `src/data_controls/filesystem.rs`, `mod.rs` | Path, symlink and space checks; lock | 2, 3, 5 | High | Inspected (Phase 2, persistence) | P2: write_new, sync_dir, publish, lock read | Phase 3: R-08 path trust; Phase 5: Windows semantics | DATA-001, DATA-017 |
+| A13 | `src/legal.rs` | `legal-acceptance.json` | 2, 3, 5 | Medium | Inspected (Phase 2, persistence) | P2: atomic write and corrupt-record behaviour; boundary vs export/restore/erase confirmed | Phase 3: sync command I/O | — (no finding) |
 | A14 | `src/domain.rs` | Trading day, P&L, money rules | 2, 4 | High | Not yet inspected | — | Parity with TS; DST and reset | — |
 | A15 | `src/rulebook.rs`, `src/catalogue.rs`, `src/error.rs` | DTOs, `AppError` | 3 | Medium | Not yet inspected | `catalogue.rs:25` `panic!` noted | Error mapping to TS | — |
 | A16 | `src/parity.rs`, `src/wire_contract.rs`, `src/insights.rs` (test only) | Fixture generators | 4, 5 | Medium | Partially inspected | Role mapped; `FUNDEDFLOW_UPDATE_FIXTURES` checks noted (R-24) | — | — |
@@ -52,12 +52,12 @@
 | B1 | `main.tsx`, `App.tsx`, `app/` (providers, shell, RuntimeProvider, error boundary) | Boot, routing, runtime state | 4 | High | Inspected (map) | Boot and gates traced | Lifecycle and cleanup | — |
 | B2 | `components/` (RuntimeGate, recovery notice, AccountLifecycle, CsvImportSection, DataModelPanel, ConfirmDialog) | Shared gates and legacy panels | 4 | Medium | Partially inspected | Gate behaviour verified | DataModelPanel dev-only status | — |
 | B3 | `lib/data/` (tauri-repository, api, runtime, legal, freshness, data-controls, calculate-risk, schemas, wire tests) | IPC bridge | 3, 4 | High | Partially inspected | All invoke sites listed; freshness and calc-risk verified | Contract mismatches; R-14, R-16 | — |
-| B4 | `features/shared/` (submissions, operations, query keys, mutation and query hooks, errors, UncertainOutcomeReview) | Read/write lifecycle | 4 | High | Partially inspected | Mapped | R-11, R-12, R-13 | — |
+| B4 | `features/shared/` (submissions, operations, query keys, mutation and query hooks, errors, UncertainOutcomeReview) | Read/write lifecycle | 4 | High | Partially inspected | P2: write lifecycle traced for persistence effects (L3); failed save never shows success | Phase 4: R-13, UI behaviour | DATA-006, DATA-007, DATA-008 |
 | B5 | `features/accounts`, `features/rulebooks` | Accounts, attempts, rulebook editor | 4 | High | Not yet inspected | Imports only | W3, W8, R-17, R-29 | — |
 | B6 | `features/today`, `features/insights` | Dashboard, risk, analytics | 4 | High | Not yet inspected | Imports only | W9, W11, R-16 | — |
-| B7 | `features/journal`, `features/daily-reviews`, `features/reviews`, `features/library`, `features/trades` | Journal, trade detail, reviews, drafts | 4 | High | Not yet inspected | Draft storage noted | W4, W6, W7, R-18 | — |
-| B8 | `features/imports` | CSV wizard | 4 | High | Not yet inspected | Raw preview mutation noted | W5 | — |
-| B9 | `features/data-controls`, `features/settings` | Export, restore, deletion, display zone | 4 | High | Partially inspected | Lock and dialog use noted | W12–W14, R-14 | — |
+| B7 | `features/journal`, `features/daily-reviews`, `features/reviews`, `features/library`, `features/trades` | Journal, trade detail, reviews, drafts | 4 | High | Partially inspected | P2: draft storage, leave guard, revision handling in ReviewCard/DailyReviewPage/TradeFormDialog (L3) | Phase 4: full UI review | DATA-008, DATA-009 |
+| B8 | `features/imports` | CSV wizard | 4 | High | Partially inspected | P2: commit scope and uncertain review path (L3) | Phase 4 | DATA-007, DATA-013 |
+| B9 | `features/data-controls`, `features/settings` | Export, restore, deletion, display zone | 4 | High | Partially inspected | P2: error messages, lock, settings validation (L2, L3) | Phase 4 | DATA-002, DATA-007 |
 | B10 | `features/legal`, `legal/` | First run and documents | 4, 5 | Medium | Partially inspected | Fail-open and draft tests verified | R-15, R-23 | — |
 | B11 | `features/evidence`, `features/ledger`, `features/references` | Financial evidence data hooks | 4 | Medium | Not yet inspected | — | W10 | — |
 | B12 | `design-system/` (incl. `format.ts`) | Components, money and time formatting | 4 | Medium | Partially inspected | `format.ts` money/time functions mapped | R-17 | — |
@@ -113,11 +113,11 @@
 
 | Workflow | Phases | End-to-end traced? (Phase 1) |
 |---|---|---|
-| W1 startup, upgrade, recovery | 2, 3, 5 | Mapped at the module level |
+| W1 startup, upgrade, recovery | 2, 3, 5 | **Traced end to end (Phase 2)** |
 | W2 first run | 3, 4, 5 | Mapped |
-| W3–W11 journal features | 2, 4 | Command mapping only |
-| W12–W14 export, restore, delete | 2, 3, 4 | Mapped at the module level |
-| W15 uncertain writes | 4 | Mapped |
+| W3–W11 journal features | 2, 4 | Persistence traced for W3–W8 and W10 writes (Phase 2); UI in Phase 4 |
+| W12–W14 export, restore, delete | 2, 3, 4 | **Traced end to end at the native level (Phase 2)**; UI in Phase 4 |
+| W15 uncertain writes | 4 | Persistence effects traced (Phase 2) |
 | W16 install, upgrade, uninstall | 5 | Docs only |
 | W17 dev tools | 3, 5 | Mapped |
 
@@ -127,3 +127,4 @@
 |---|---|---|---|---|
 | 1 | 2026-10-22 | 92e7980 | — (baseline) | Created. No checks executed. |
 | 1 (verification pass) | 2026-10-22 | 92e7980 | None | Added the drift from `8c3dd34` (116 commits: migrations, db, runtime, data_controls and capabilities unchanged; `lib.rs` +1 command; `tauri.conf.json` minimum window size 800×480 and bundled resources; workflows changed). Added §9.1 confidence ratings and §9.2 test-gap mapping to the discovery report. Reports committed as `24e5c9e` at the stop hook's request (see discovery §11.2). |
+| 2 | 2026-10-22 | 4fee79e | None in application source (only `code-review/`) | Phase 2 data integrity: DATA-001 to DATA-020. No tests run (no offline crates or node_modules). Rows A2–A4, A6–A13, B4, B7–B9 and W1, W3–W15 updated. |
