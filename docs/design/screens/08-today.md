@@ -63,6 +63,14 @@ discrepancy with the firm dashboard, calculation error, mixed multi-account stat
 - No risk formulas in React: values come from Build 16 snapshots via Build 14 hooks.
 - Rule display follows `RuleState` ([components.md](../components.md#rulestate)).
 
+## Display time zone (P0-D05)
+"Checked against your records at", "Last trade recorded" and "Last import" show in the display time zone (Settings →
+Date and time; default: the computer's zone), converting the whole instant with that date's offset and labelled with
+it ("Oct 22, 2026, 00:13 GMT+1"). A line under the list names the zone and that the other times and trading days use
+the account's zone. Until the preference is read those three show "…", never a time in another zone. "Trading day
+now", the checkpoint and estimate times stay in the account's zone. Other timestamps in the app (Accounts, Journal,
+imports, rulebooks) are unchanged: follow-up.
+
 ## As built (Build 21)
 Details, traceability and the "current" rules: [build-21-today.md](../../architecture/build-21-today.md).
 - The selected account is the header's active account; the all-accounts cards appear when there are several active

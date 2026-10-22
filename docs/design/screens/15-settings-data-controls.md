@@ -9,7 +9,7 @@ The Settings page (sidebar **Settings**) opens on this page. Mockups: [`mockups/
 ## Layout
 
 One column, max 960 px. (NA-3 removed the static local-only notice that opened the
-page; its wording now lives once, in the **Privacy & legal** section.) Five `FormSection`s:
+page; its wording now lives once, in the **Privacy & legal** section.) Six `FormSection`s:
 
 1. **Your data on this computer**: a `StatList` saying the journal is stored in FundedFlow's app-data folder for the
    Windows user; that the only automatic copy is the one FundedFlow saves in the same folder **before upgrading the
@@ -26,7 +26,15 @@ page; its wording now lives once, in the **Privacy & legal** section.) Five `For
 4. **Delete data permanently**: a bordered danger area with two rows, each with its own button:
    *Delete one trading account* (account `Select` with status and archived state) and *Erase the entire local
    journal*.
-5. **Privacy & legal** (NA-3, [16 First run](16-first-run.md)): the privacy summary, a draft notice while the documents
+5. **Date and time** (P0-D05, `features/settings/components/DisplayTimeZoneSection.tsx`): the display time zone.
+   `RadioGroup` "Use desktop time zone" (default; follows Windows, re-read when the window regains focus) or "Choose
+   time zone" (a `SearchField` filtering a `Select` of the runtime's named IANA zones, each with its offset now).
+   Each choice saves at once to the setting `display.time_zone` as `{ "mode": "desktop" }` or
+   `{ "mode": "zone", "zone": "<IANA id>" }`; desktop mode is stored as a mode, never as today's zone. A `StatList`
+   shows the zone in effect and an example time. Description: "Changes displayed times. Account trading days and rule
+   calculations use the account's time zone." A saved zone this runtime doesn't support (or an unreadable value)
+   falls back to desktop time with a warning; a failed save shows an error and keeps the zone in effect.
+6. **Privacy & legal** (NA-3, [16 First run](16-first-run.md)): the privacy summary, a draft notice while the documents
    are drafts, a `StatList` of each document's version and date and when this install accepted them, each document
    in a `Disclosure` (`DocumentView`), and the licence summary with third-party notices (Build 26.78, see
    [16 First run → Licence and third-party notices](16-first-run.md#licence-and-third-party-notices)).

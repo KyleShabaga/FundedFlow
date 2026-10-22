@@ -1,13 +1,15 @@
 // Freshness first (Build 21, docs/design/screens/08-today.md): the times behind today's estimate, each labelled,
 // because they are not interchangeable. A recent recalculation never makes an old checkpoint look new: the newest
 // trade, the newest import, the newest firm checkpoint, the data in the last estimate, when it was calculated and
-// the Rust trading day now are shown separately, in the account's zone.
+// the Rust trading day now are shown separately. P0-D05: the last trade, the last import and the check time show in
+// the display time zone (Settings → Date and time); the other times and the trading day stay in the account's zone.
 import type { FinancialObservation } from "@fundedflow/domain";
 import { Link } from "react-router-dom";
 
 import { Badge, formatInstant, formatMoney, InlineNotice, StatList, StatusIndicator, type StatItem } from "../../../design-system";
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import type { ImportViewModel } from "../../imports/view-models/import";
+import { displayZoneName, useDisplayTimeZone } from "../../settings/display-time-zone";
 import { tradePath, zoneLabel } from "../../journal/components/presentation";
 import { reasonText } from "../../rulebooks/view-models/engine-wording";
 import type { TodayAccount } from "../hooks/today";
@@ -31,6 +33,10 @@ export function FreshnessPanel({ account, today, imports, importing, checkedAt }
 }) {
   const tz = account.timezone;
   const at = (v: string | null | undefined) => formatInstant(v, { timeZone: tz, year: true, zoneName: true });
+  // The display zone converts the whole instant, date included, with that date's offset. Until the preference is
+  // read nothing is converted, so a time never jumps from one zone to another.
+  const display = useDisplayTimeZone();
+  const shown = (v: string) => display.kind === "resolved" ? formatInstant(v, { timeZone: display.zone, year: true, zoneName: "offset" }) : "…";
   const facts = today.facts.data?.inputs;
   const factsFailed = today.facts.error !== null && facts === undefined;
   const snapshot = today.snapshot.data ?? null;
@@ -49,14 +55,14 @@ export function FreshnessPanel({ account, today, imports, importing, checkedAt }
       label: "Last trade recorded",
       value: trade === undefined ? (factsFailed ? <StatusIndicator status="unknown" variant="inline" label="Unknown" detail="Trades couldn't be read" /> : faint("Checking…"))
         : trade === null ? faint("No trades yet")
-        : <span>{at(trade.exitAt ?? trade.entryAt)} · <Link to={tradePath(trade.id)}>{trade.symbol} {trade.exitAt ? "exit" : "entry (open)"}</Link></span>,
+        : <span>{shown(trade.exitAt ?? trade.entryAt)} · <Link to={tradePath(trade.id)}>{trade.symbol} {trade.exitAt ? "exit" : "entry (open)"}</Link></span>,
     },
     {
       label: "Last import",
       value: importing ? <StatusIndicator status="local" variant="inline" label="Import being saved…" />
         : lastImport === undefined ? faint("Checking…")
         : lastImport === null ? (imports === null ? <StatusIndicator status="unknown" variant="inline" label="Unknown" detail="Import history couldn't be read" /> : faint("No imports yet"))
-        : <span>{at(lastImport.completedAt)} · {lastImport.fileName}{" "}
+        : <span>{shown(lastImport.completedAt)} · {lastImport.fileName}{" "}
             {lastImport.status === "failed" ? <Badge tone="loss">Failed</Badge>
               : lastImport.importedCount === 0 ? <Badge tone="warn">No new trades ({lastImport.duplicateCount} duplicates)</Badge>
               : <Badge tone="flow">{lastImport.importedCount} added</Badge>}</span>,
@@ -93,9 +99,16 @@ export function FreshnessPanel({ account, today, imports, importing, checkedAt }
     <section className="ds-card td-panel td-fresh" aria-labelledby="td-fresh-title">
       <div className="td-panel-head">
         <h2 id="td-fresh-title" className="ds-title">How fresh this is</h2>
-        <span className="ds-faint">Checked against your records at {formatInstant(checkedAt, { timeZone: tz, zoneName: true })}</span>
+        <span className="ds-faint">Checked against your records at {display.kind === "resolved" ? formatInstant(checkedAt, { timeZone: display.zone, zoneName: "offset" }) : "…"}</span>
       </div>
       <StatList label="Data freshness" items={items} />
+      {display.kind === "resolved" && (
+        <p className="ds-faint td-fresh-zone">
+          Last trade, last import and the check time show in {displayZoneName(display)}
+          {display.source === "fallback" ? ", because the saved time zone can't be used" : ""}. Other times and trading days use the account's zone, {zoneLabel(tz)}.{" "}
+          <Link to="/settings">Change in Settings</Link>
+        </p>
+      )}
       {checkpoints && checkpoints.conflicts.length > 0 && (
         <InlineNotice tone="warning" title="Checkpoints disagree">
           {checkpoints.conflicts.length === 1 ? "Two checkpoints" : `${checkpoints.conflicts.length} sets of checkpoints`} for the same moment have different values, so balances that use them are Unknown. Record a correction with the figure from the firm's dashboard.

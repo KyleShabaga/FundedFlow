@@ -1,0 +1,2 @@
+/* Settings → Date and time (P0-D05). Every value comes from tokens.css; components come from the design system. */
+.st-zone-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: var(--space-3); max-width: 640px; }
