@@ -26,6 +26,7 @@ import {
 } from "../../../design-system";
 import { useActiveAccount } from "../../accounts/active-account";
 import type { AccountViewModel } from "../../accounts/view-models/account";
+import { useGuardedNavigate } from "../../shared/hooks/use-leave-guard";
 import { retryRead, toAsyncState } from "../../shared/presentation";
 import { useRemoveTrade, useRestoreTrade, useTradeRecord } from "../../trades/hooks/trades";
 import type { TradeRecordView } from "../../trades/api/trades";
@@ -131,6 +132,8 @@ function TradeLoading() {
 
 function TradeView({ account, record, named = false }: { account: AccountViewModel; record: TradeRecordView; named?: boolean }) {
   const navigate = useNavigate();
+  // Previous/Next ask first while the review has unsaved edits, as links do.
+  const go = useGuardedNavigate();
   const toast = useToast();
   const t = record.trade;
   const tz = account.timezone;
@@ -158,9 +161,9 @@ function TradeView({ account, record, named = false }: { account: AccountViewMod
         </div>
         <div className="jr-detail-actions">
           <Button size="sm" icon={<ChevronLeft size={14} aria-hidden="true" />} disabled={!record.previousTradeId}
-            onClick={() => record.previousTradeId && navigate(tradePath(record.previousTradeId, named ? account.id : undefined))}>Previous trade</Button>
+            onClick={() => record.previousTradeId && go(tradePath(record.previousTradeId, named ? account.id : undefined))}>Previous trade</Button>
           <Button size="sm" icon={<ChevronRight size={14} aria-hidden="true" />} disabled={!record.nextTradeId}
-            onClick={() => record.nextTradeId && navigate(tradePath(record.nextTradeId, named ? account.id : undefined))}>Next trade</Button>
+            onClick={() => record.nextTradeId && go(tradePath(record.nextTradeId, named ? account.id : undefined))}>Next trade</Button>
           <Button size="sm" icon={<Pencil size={14} aria-hidden="true" />} onClick={() => setEditing(true)} disabled={readOnly} disabledReason={readOnly ? "Archived accounts are read-only" : undefined}>Correct trade</Button>
           <Button size="sm" variant="ghost" icon={<Trash2 size={14} aria-hidden="true" />} onClick={() => setDeleting(true)} disabled={readOnly} disabledReason={readOnly ? "Archived accounts are read-only" : undefined}>Delete</Button>
         </div>
