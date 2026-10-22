@@ -5,7 +5,7 @@
 | Date | 2026-10-22 |
 | Repository and branch | `KyleShabaga/FundedFlow`, `claude/practical-turing-wmii06` |
 | Input revision | `b01e2b91cf5d5314a22ea7416f908ff7587431e3` (reports 00–10, ledger, coverage matrix, 36 cards at spec r2). Application source is identical to `92e7980`. |
-| Publication status | **Partial** as an approval package: everything is published, but 18 cards carry unresolved Block 4 corrections (10 §8) and need a Block 3 rerun (r3). |
+| Publication status | **Complete** after the Block 3 rerun (2026-10-22). It was Partial at first publication, when 18 cards still carried Block 4 corrections. Those cards are now at spec r3, independently reviewed (commit `9470f99`), and their board cards are updated. |
 | Human approvals recorded | **None.** No card is Approved, Rejected or Deferred. No gate is Passed. |
 
 ## 1. Notion objects
@@ -116,3 +116,27 @@ Three cosmetic issues do not block anything:
   - set Spec Readiness to Ready (r3) and update the Specification Revision;
   - return Approval to Pending Review, which only Claude may do for a Changes Requested card that it set, with a note.
 - **Then:** Kyle approves cards on the board (handoff page §8). Block 5 starts only from Approved cards and separately approved enabling actions.
+
+## 8. Block 3 rerun update (spec r3)
+
+The update was made on 2026-10-22. The repository side is in commits `6961900` to `9470f99`: 18 cards at r3 and the 08 index corrections, with the review record in 08 §H "r3 record".
+
+**Notion schema:** the option "Ready for Approval (r3)" was added to Spec Readiness.
+
+**Notion cards** (007, 008, 011, 013, 015–018, 021, 023, 027–034):
+- the body was replaced with the r3 card (`notion-handoff/card__TASK-*.md`);
+- Spec Readiness was set to "Ready for Approval (r3)";
+- Specification Revision was set to `r3 · sha256 <prefix>`, with Evidence Revision and Approval Scope updated;
+- Approval was returned to Pending Review by Claude, with a note in Decision Notes saying it was not done by Kyle;
+- Dependencies were extended: 027 +006, 028 +011, 029 +008.
+
+**Handoff page:**
+- the status is now Complete;
+- the approval state and counts show Pending Review 36, with r2 18 and r3 18;
+- §6 now lists the resolved corrections and the r3 choices Kyle should confirm.
+
+**Not done:**
+- The §8.3 nits on the r2 cards (009, 010, 012, 022, 024, 026, 035) were not applied, so their r2 approval revisions stay stable.
+- The Source Reports attachment of 08 remains the r2 version (295c89f). The current index is in the repository.
+
+**Approvals recorded:** none.
