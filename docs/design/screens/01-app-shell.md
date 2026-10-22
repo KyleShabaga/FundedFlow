@@ -15,6 +15,7 @@ panel and Design system gallery stay reachable from Settings › Developer in de
 | Journal | `/journal` | Trades, sessions, import history, daily reviews, library sub-view |
 | Insights | `/insights` | Metrics, calendar, equity views, drill-down |
 | Accounts | `/accounts` | Accounts, rulebooks |
+| Import Wizard | `/import` | The full guided import (P0-D07). Active on `/import` only; Quick import and Import history have no item |
 | Settings | `/settings` | Local data controls |
 
 - `HashRouter` (Build 12). Unknown routes show a not-found state with a way back.
@@ -42,7 +43,9 @@ panel and Design system gallery stay reachable from Settings › Developer in de
 - Below 900 px of window (Build 26.85; was 760 px), the icon rail is enforced and the toggle is disabled with an
   explanatory accessible name, so the page always keeps the 640 px compact main column. On wider windows, restore the
   user's locally saved collapse preference. Minimum window 800 × 480 ([window-support.md](../window-support.md)). Ctrl+B leaves editable fields alone.
-- Footer: Settings and a "Saved on this computer" status (local-first promise). No Import item in the sidebar.
+- Import Wizard (P0-D07) sits directly below Accounts, with the same link, icon (`Workflow`), tooltip and icon-rail
+  behaviour as the other items, and no submenu.
+- Footer: Settings and a "Saved on this computer" status (local-first promise).
   Development builds only (Build 26.9): **Add Fake Data** and **Reset All Data** directly above Settings, same
   height, icon size and focus style, icon-only with tooltips when collapsed; absent from production builds
   ([`docs/development/dev-tools.md`](../../development/dev-tools.md)).
@@ -54,8 +57,10 @@ panel and Design system gallery stay reachable from Settings › Developer in de
 - Left: page title; reserved space for the **AccountContextBar** (account selector and filters; behaviour owned
   by feature cards and Build 14).
 - Account selector sits `space-3` below the title (P0-D03).
-- Right: **Import**, a compact text-only ghost button (no icon or chevron; P0-D02). It opens a menu (Build 18.5):
-  "Quick import: check and import a CSV in one step" and Full wizard (first-time or custom files).
+- Right: **Quick Import** (P0-D07, replacing P0-D02's text-only Import menu): a secondary `Button` (filled `bg-200`
+  surface, `line-200` border, `radius-md`) with a decorative lightning (`Zap`) icon before the label. It opens
+  `/import/quick` directly and is `aria-current="page"` there; its tooltip is "Check and import a CSV in one step".
+  Quick import keeps its own account confirmation, check and confirm step; the full wizard is the sidebar item.
 - Reserved, not in Build 12: GlobalFreshnessIndicator (Build 21 data), day-ending timer (Triage).
 
 ## Route lifecycle

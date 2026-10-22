@@ -8,6 +8,7 @@ import {
   Button,
   Checkbox,
   ChipGroup,
+  DisclosureButton,
   FieldGroup,
   FileDropzone,
   focusFirstInvalid,
@@ -64,6 +65,41 @@ describe("Button", () => {
   it("names icon-only buttons", () => {
     render(<IconButton label="Next month" icon={<span aria-hidden="true">›</span>} />);
     expect(screen.getByRole("button", { name: "Next month" })).toBeTruthy();
+  });
+});
+
+describe("DisclosureButton (P0-D18)", () => {
+  function Harness({ count }: { count?: number | null }) {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <DisclosureButton expanded={open} controls="panel" count={count} countLabel={n => `${n} filters applied`} onClick={() => setOpen(o => !o)}>Filters</DisclosureButton>
+        <section id="panel" aria-label="Panel" hidden={!open}>Body</section>
+      </>
+    );
+  }
+  it("links to its region, reports the open state and toggles with the keyboard", async () => {
+    render(<Harness />);
+    const btn = screen.getByRole("button", { name: "Filters" });
+    expect(btn.getAttribute("aria-controls")).toBe("panel");
+    expect(btn.getAttribute("aria-expanded")).toBe("false");
+    expect(btn.className).not.toMatch(/is-expanded/);
+    btn.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(btn.getAttribute("aria-expanded")).toBe("true");
+    expect(btn.className).toMatch(/is-expanded/);
+    expect(screen.getByRole("region", { name: "Panel" })).toBeTruthy();
+    await userEvent.keyboard(" ");
+    expect(btn.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("region", { name: "Panel" })).toBeNull();
+  });
+  it("shows a count with its words for screen readers, and none for zero", () => {
+    render(<Harness count={3} />);
+    const btn = screen.getByRole("button", { name: "Filters, 3 filters applied" });
+    expect(btn.textContent).toContain("· 3");
+    cleanup();
+    render(<Harness count={0} />);
+    expect(screen.getByRole("button", { name: "Filters" }).textContent).not.toContain("·");
   });
 });
 
