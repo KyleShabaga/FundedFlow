@@ -19,6 +19,13 @@ Learn from traceable evidence: every metric resolves to the exact trades that pr
   setups and mistakes table.
 - Width (P0-D29): the shared content frame, up to 1600 px; the calendar's day panel moves under the month below
   880 px of main column (was 1100 px of window). [window-support.md](../window-support.md).
+- Closed-trade P&L curve (P0-D13): `RunningTotalChart`. Y axis "Cumulative net P&L" or "Cumulative gross P&L" with
+  the selection's currency code; X axis "Closed trades (exit order)" with trade-number ticks, equally spaced, from 0 at
+  the start of the selection. A zero line, ticks thinned to the width, and a tooltip on hover or arrow keys that reads
+  each observed trade (number, symbol, trading day, result, running total), matching the Table view. A Stepped |
+  Smooth control (Stepped by default) is saved in settings as `insights.curve_style`. Smooth is a monotone cubic
+  through the same points, so it never rises above or dips below the two trades it joins; a note under the chart
+  says positions between points are not results. Unknown-P&L trades are left out, as before, never bridged as zero.
 - Every number, bar and row is clickable and opens the contributing trades (drill-down to Build 20).
 
 ## Metric rules (from Build 23)

@@ -15,7 +15,8 @@ import {
 } from "@fundedflow/domain";
 import { useMemo, useState } from "react";
 
-import { ChartPanel, type DataColumn, DataTable, EquityCurve, formatMoney, MetricCard, MoneyCell, PnlBars, SegmentedControl, StatList } from "../../../design-system";
+import { ChartPanel, type DataColumn, DataTable, formatMoney, MetricCard, MoneyCell, PnlBars, RunningTotalChart, SegmentedControl, StatList } from "../../../design-system";
+import { useCurveStyle } from "../hooks/curve-style";
 import { dayLabel, monthLabel, moneyView, numberView, rateView, tradesText } from "../view-models/insights";
 import { barValue, BASIS_LABEL, DrillButton, GroupTable, groupDetail, MetricText, type SectionProps } from "./shared";
 
@@ -137,10 +138,15 @@ function fmtFees(s: SectionProps["summary"], currency: string | null) {
 
 function CurvePanel({ selection, basis, currency, drill }: SectionProps) {
   const [show, setShow] = useState<"chart" | "table">("chart");
+  const curve = useCurveStyle();
   const points = useMemo(() => closedTradeCurve(selection.trades, basis), [selection.trades, basis]);
   const accounts = new Map(selection.accounts.map(a => [a.id, a.name]));
   const trades = new Map(selection.trades.map(t => [t.id, t]));
   const label = basis === "net" ? "Closed-trade net P&L" : "Closed-trade gross P&L";
+  const tradeText = (p: (typeof points)[number]) => {
+    const t = trades.get(p.tradeId);
+    return selection.accounts.length > 1 ? `${t?.symbol ?? ""} · ${accounts.get(t?.accountId ?? "") ?? ""}` : (t?.symbol ?? "");
+  };
   const columns: DataColumn<(typeof points)[number]>[] = [
     { id: "n", header: "#", align: "end", cell: p => points.indexOf(p) + 1 },
     { id: "day", header: "Trading day", cell: p => dayLabel(p.tradingDay), rowHeader: true },
@@ -152,13 +158,19 @@ function CurvePanel({ selection, basis, currency, drill }: SectionProps) {
     <ChartPanel title={label} minHeight={220}
       subtitle="Running total of known closed-trade results in exit order, from 0 at the start of the selection. Not an account balance, equity or drawdown."
       actions={<>
+        {show === "chart" && <SegmentedControl label="Line style" value={curve.style} onValueChange={curve.choose} options={[{ value: "step", label: "Stepped" }, { value: "smooth", label: "Smooth" }]} />}
         <SegmentedControl label="Show the curve as" value={show} onValueChange={setShow} options={[{ value: "chart", label: "Chart" }, { value: "table", label: "Table" }]} />
         <DrillButton ids={points.map(p => p.tradeId)} title={label} basis="Known closed trades in exit order" drill={drill}>{`View ${tradesText(points.length)}`}</DrillButton>
       </>}
       state={points.length ? { status: "success", data: points } : { status: "empty", kind: "no-records" }}
       empty={{ "no-records": "No closed trade with a known result to draw." }}>
       {data => show === "chart"
-        ? <EquityCurve points={data.map(p => p.cumulative)} step label={`${label}: ${data.length} trades, ending at ${formatMoney(data[data.length - 1]?.cumulative ?? null, { currency })}. Use the table view for each point.`} />
+        ? <div className="in-curve">
+            <RunningTotalChart curve={curve.style} currency={currency} label={`${label}: ${data.length} trades, ending at ${formatMoney(data[data.length - 1]?.cumulative ?? null, { currency })}. Arrow keys read each trade; the table view lists them all.`}
+              yTitle={basis === "net" ? "Cumulative net P&L" : "Cumulative gross P&L"} xTitle="Closed trades (exit order)" startLabel="Start of the selection"
+              points={data.map((p, i) => ({ key: p.tradeId, value: p.cumulative, label: `Trade ${i + 1} · ${tradeText(p)} · ${dayLabel(p.tradingDay)}`, detail: `Result ${formatMoney(p.amount, { currency })}` }))} />
+            {curve.style === "smooth" && <p className="ds-faint in-curve-note">Smooth joins the same closed-trade points with curves. Positions between points are not results.</p>}
+          </div>
         : <DataTable label={`${label} by trade`} columns={columns} rows={data} getRowId={p => p.tradeId}
             onRowClick={p => drill({ title: `${label}: trade ${points.indexOf(p) + 1}`, basis: "One closed trade", ids: [p.tradeId] })} />}
     </ChartPanel>

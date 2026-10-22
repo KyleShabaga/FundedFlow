@@ -41,6 +41,16 @@ describe("DesignSystemGallery", () => {
     expect(within(section).getByText("Flow").closest(".ds-brand-name")?.textContent).toBe("FundedFlow");
     expect(section.querySelectorAll("svg.ds-brand-mark").length).toBe(4);
   });
+  it("shows the running-total chart with axis titles and switches it between stepped and smooth", async () => {
+    const user = userEvent.setup();
+    render(<DesignSystemGallery />);
+    const section = screen.getByRole("heading", { name: "RunningTotalChart" }).closest("section")!;
+    const chart = within(section).getByRole("group", { name: "Example running total of 14 closed trades" });
+    expect(within(chart).getByText("Cumulative net P&L (USD)")).toBeTruthy();
+    expect(chart.querySelector(".ds-rt-line")?.getAttribute("d")).not.toContain("C");
+    await user.click(within(section).getByRole("button", { name: "Smooth" }));
+    expect(chart.querySelector(".ds-rt-line")?.getAttribute("d")).toContain("C");
+  });
   it("switches the example async state without showing numbers while loading", async () => {
     render(<DesignSystemGallery />);
     const group = screen.getByRole("group", { name: "Example state" });

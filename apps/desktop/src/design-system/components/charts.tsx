@@ -1,9 +1,9 @@
 // Small SVG charts. Money comes in as decimal text and is converted to
 // floats only to place marks (moneyToNumberForDisplay).
 
-import { type ReactNode, useId } from "react";
+import { type KeyboardEvent, type ReactNode, useId, useLayoutEffect, useRef, useState } from "react";
 
-import { formatInstant, formatMoney, moneySign, moneyToNumberForDisplay } from "../format";
+import { currencySymbol, formatInstant, formatMoney, formatMoneyCompact, moneySign, moneyToNumberForDisplay } from "../format";
 import { type AsyncState, type EmptyKind, hasData, LoadingState, StateBoundary } from "./async-states";
 import { cx } from "./cx";
 import type { HeadingLevel } from "./primitives";
@@ -192,6 +192,235 @@ export function PnlBars({ items, label, onSelect, selectedKey, currency, maxHeig
         );
       })}
     </ul>
+  );
+}
+
+/* ---------- RunningTotalChart ---------- */
+
+/** How a RunningTotalChart joins its observed points. */
+export type CurveStyle = "step" | "smooth";
+
+export interface RunningTotalPoint {
+  key: string;
+  /** Running total after this point, as decimal text. */
+  value: string;
+  /** Context in the tooltip ("Trade 12 · ES · Thu, Aug 20, 2026"). */
+  label: string;
+  /** A second tooltip line ("Result +$12.50"). */
+  detail?: string;
+}
+
+export interface RunningTotalChartProps {
+  /** Observed points in order, equally spaced. The chart draws the zero start before the first. */
+  points: readonly RunningTotalPoint[];
+  /** ISO 4217 code of the amounts: named in the Y-axis title and used for the symbol. */
+  currency?: string | null;
+  /** Y-axis title without the currency ("Cumulative net P&L"). */
+  yTitle: string;
+  /** X-axis title matching the spacing ("Closed trades (exit order)"). */
+  xTitle: string;
+  /** Tooltip context of the zero start. */
+  startLabel?: string;
+  /** Steps by default: a running total changes at each point, not in between. */
+  curve?: CurveStyle;
+  /** Total height in px, axes included. Default 240. */
+  height?: number;
+  /** Accessible name of the chart. */
+  label: string;
+}
+
+/** The smallest round step at or above `raw`: 1, 2, 2.5 or 5 times a power of ten. Whole-number steps skip 2.5 below 10. */
+export function niceStep(raw: number, integer = false): number {
+  if (!(raw > 0) || !Number.isFinite(raw)) return 1;
+  const power = 10 ** Math.floor(Math.log10(raw));
+  const nice = integer && power < 10 ? [1, 2, 5, 10] : [1, 2, 2.5, 5, 10];
+  const step = (nice.find((m) => m * power >= raw - power * 1e-9) ?? 10) * power;
+  return integer ? Math.max(1, Math.round(step)) : step;
+}
+
+/** Round ticks covering lo..hi (zero always inside), about `count` of them. */
+export function valueTicks(lo: number, hi: number, count: number): { ticks: number[]; step: number } {
+  let a = Math.min(lo, 0);
+  let b = Math.max(hi, 0);
+  if (a === b) b = 1;
+  const step = niceStep((b - a) / Math.max(1, count));
+  a = Math.floor(a / step) * step;
+  b = Math.ceil(b / step) * step;
+  const ticks: number[] = [];
+  for (let i = 0; a + i * step <= b + step / 1e6; i++) ticks.push(Number((a + i * step).toFixed(10)));
+  return { ticks, step };
+}
+
+/**
+ * SVG path through the points. "step" holds each value until the next point; "smooth" is a monotone cubic
+ * (Steffen's method, as d3's curveMonotoneX): every control point stays within its segment's values, so the curve
+ * never rises above or dips below the two observations it joins.
+ */
+export function curvePath(xs: readonly number[], ys: readonly number[], curve: CurveStyle): string {
+  const f = (n: number) => Number(n.toFixed(2));
+  if (xs.length === 0) return "";
+  let d = `M${f(xs[0])} ${f(ys[0])}`;
+  if (curve === "step") {
+    for (let i = 1; i < xs.length; i++) d += `H${f(xs[i])}V${f(ys[i])}`;
+    return d;
+  }
+  if (xs.length === 2) return `${d}L${f(xs[1])} ${f(ys[1])}`;
+  const n = xs.length;
+  const slope = (i: number) => (ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i] || 1);
+  const sign = (v: number) => (v > 0 ? 1 : v < 0 ? -1 : 0);
+  const t: number[] = new Array(n).fill(0);
+  for (let i = 1; i < n - 1; i++) {
+    const h0 = xs[i] - xs[i - 1];
+    const h1 = xs[i + 1] - xs[i];
+    const s0 = slope(i - 1);
+    const s1 = slope(i);
+    const p = (s0 * h1 + s1 * h0) / (h0 + h1 || 1);
+    t[i] = (sign(s0) + sign(s1)) * Math.min(Math.abs(s0), Math.abs(s1), 0.5 * Math.abs(p)) || 0;
+  }
+  t[0] = (3 * slope(0) - t[1]) / 2;
+  t[n - 1] = (3 * slope(n - 2) - t[n - 2]) / 2;
+  for (let i = 0; i < n - 1; i++) {
+    const dx = (xs[i + 1] - xs[i]) / 3;
+    d += `C${f(xs[i] + dx)} ${f(ys[i] + dx * t[i])} ${f(xs[i + 1] - dx)} ${f(ys[i + 1] - dx * t[i + 1])} ${f(xs[i + 1])} ${f(ys[i + 1])}`;
+  }
+  return d;
+}
+
+/** Decimal places that write every multiple of `step` exactly (2.5 needs one, 0.25 two). */
+const stepDecimals = (step: number) => {
+  for (let d = 0; d < 6; d++) if (Math.abs(Math.round(step * 10 ** d) - step * 10 ** d) < 1e-9) return d;
+  return 6;
+};
+
+/** Tick value as decimal text for format.ts (the tick is a drawing position, not a stored amount). */
+const tickText = (v: number, step: number) => v.toFixed(stepDecimals(step));
+
+/**
+ * A running total with labelled axes: equally spaced observations on X (with their count as ticks), the amount on Y
+ * with a zero line, and a tooltip on hover or keyboard focus that reads the observed point, never a value sampled
+ * along the line. Tick density follows the measured width. Amounts are converted to floats only to place marks.
+ */
+export function RunningTotalChart({ points, currency, yTitle, xTitle, startLabel = "Start", curve = "step", height = 240, label }: RunningTotalChartProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [measured, setMeasured] = useState(0);
+  const [active, setActive] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    setMeasured(el.clientWidth);
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setMeasured(el.clientWidth));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const width = measured || 640;
+  const all = [{ key: "start", value: "0", label: startLabel } as RunningTotalPoint, ...points];
+  const values = all.map((p) => moneyToNumberForDisplay(p.value) ?? 0);
+  const n = all.length - 1;
+  const symbol = currency !== undefined ? currencySymbol(currency) : "$";
+  const top = 10;
+  const bottom = 44;
+  const plotH = Math.max(40, height - top - bottom);
+  const y = valueTicks(Math.min(...values), Math.max(...values), Math.max(2, Math.floor(plotH / 44)));
+  // Whole steps read compact ("+$2.5K"); a step with decimals keeps them exactly, at least cents ("+$7.50", "+$0.25").
+  const yLabels = y.ticks.map((v) => (Number.isInteger(y.step) ? formatMoneyCompact(tickText(v, y.step), symbol) : formatMoney(tickText(v, y.step), { currency, dp: Math.max(2, stepDecimals(y.step)) })));
+  const left = 22 + Math.max(...yLabels.map((s) => s.length)) * 6.8 + 8;
+  const right = 14;
+  const plotW = Math.max(40, width - left - right);
+  const lo = y.ticks[0];
+  const hi = y.ticks[y.ticks.length - 1];
+  const X = (i: number) => left + (n ? (i / n) * plotW : plotW / 2);
+  const Y = (v: number) => top + (1 - (v - lo) / (hi - lo || 1)) * plotH;
+  const xStep = niceStep(n / Math.max(1, Math.floor(plotW / 64)), true);
+  const xTicks: number[] = [];
+  for (let i = 0; i <= n; i += xStep) xTicks.push(i);
+  const xs = all.map((_, i) => X(i));
+  const ys = values.map(Y);
+  const line = curvePath(xs, ys, curve);
+  const zero = Y(0);
+  const yAxisTitle = currency ? `${yTitle} (${currency})` : yTitle;
+  const point = active == null ? null : all[active];
+  const describe = (i: number) => {
+    const p = all[i];
+    return `${p.label}${p.detail ? `, ${p.detail}` : ""}, running total ${formatMoney(p.value, { currency })}`;
+  };
+  const nearest = (clientX: number) => {
+    const box = ref.current?.getBoundingClientRect();
+    if (!box) return null;
+    return Math.min(n, Math.max(0, Math.round(((clientX - box.left - left) / plotW) * n)));
+  };
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const at = active ?? n;
+    const next = e.key === "ArrowRight" ? at + 1 : e.key === "ArrowLeft" ? at - 1 : e.key === "Home" ? 0 : e.key === "End" ? n : e.key === "PageUp" ? at + 10 : e.key === "PageDown" ? at - 10 : null;
+    if (next == null) {
+      if (e.key === "Escape") setActive(null);
+      return;
+    }
+    e.preventDefault();
+    setActive(Math.min(n, Math.max(0, next)));
+  };
+  const tipLeft = active == null ? 0 : xs[active];
+  return (
+    <div
+      ref={ref}
+      className="ds-rt"
+      style={{ height }}
+      role="group"
+      aria-roledescription="chart"
+      aria-label={label}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+      onFocus={() => setActive((a) => a ?? n)}
+      onBlur={() => setActive(null)}
+      onPointerMove={(e) => setActive(nearest(e.clientX))}
+      onPointerLeave={() => {
+        if (document.activeElement !== ref.current) setActive(null);
+      }}
+    >
+      <svg width={width} height={height} aria-hidden="true" className="ds-rt-svg">
+        {y.ticks.map((v, i) => (
+          <g key={v}>
+            {v !== 0 && <line x1={left} x2={left + plotW} y1={Y(v)} y2={Y(v)} className="ds-rt-grid" />}
+            <text x={left - 8} y={Y(v)} className="ds-rt-tick" textAnchor="end" dominantBaseline="middle">
+              {yLabels[i]}
+            </text>
+          </g>
+        ))}
+        <path d={`${line}V${zero}H${xs[0]}Z`} className="ds-rt-area" />
+        <line x1={left} x2={left + plotW} y1={zero} y2={zero} className="ds-rt-zero" />
+        <line x1={left} x2={left + plotW} y1={top + plotH} y2={top + plotH} className="ds-rt-axis" />
+        {xTicks.map((i) => (
+          <g key={i}>
+            <line x1={X(i)} x2={X(i)} y1={top + plotH} y2={top + plotH + 4} className="ds-rt-axis" />
+            <text x={X(i)} y={top + plotH + 16} className="ds-rt-tick" textAnchor="middle">
+              {i}
+            </text>
+          </g>
+        ))}
+        <path d={line} className="ds-rt-line" />
+        {active != null && <line x1={xs[active]} x2={xs[active]} y1={top} y2={top + plotH} className="ds-rt-cursor" />}
+        <circle cx={xs[n]} cy={ys[n]} r={4} className="ds-rt-end" />
+        {active != null && <circle cx={xs[active]} cy={ys[active]} r={4.5} className="ds-rt-active" />}
+        <text x={left + plotW / 2} y={height - 6} className="ds-rt-title" textAnchor="middle">
+          {xTitle}
+        </text>
+        <text transform={`translate(12 ${top + plotH / 2}) rotate(-90)`} className="ds-rt-title" textAnchor="middle" dominantBaseline="middle">
+          {yAxisTitle}
+        </text>
+      </svg>
+      {point && active != null && (
+        <div className={cx("ds-rt-tip", tipLeft > width / 2 && "is-left")} style={{ left: tipLeft, top: Math.max(0, Math.min(ys[active] - 24, top + plotH - 64)) }} aria-hidden="true">
+          <div className="ds-rt-tip-label">{point.label}</div>
+          {point.detail && <div className="ds-faint">{point.detail}</div>}
+          <div>
+            Running total <span className={cx("ds-mono", `ds-text-${moneySign(point.value)}`)}>{formatMoney(point.value, { currency })}</span>
+          </div>
+        </div>
+      )}
+      <span className="ds-sr-only" aria-live="polite">
+        {active != null ? describe(active) : ""}
+      </span>
+    </div>
   );
 }
 

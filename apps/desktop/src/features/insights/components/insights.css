@@ -64,3 +64,7 @@
 
 /* Two-column page grids stack below 880 px of main column (docs/design/window-support.md). */
 @container ds-main (max-width: 879px) { .in-cal { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- Overview: closed-trade curve (P0-D13, ui-insights-overview) ---- */
+.in-curve { display: grid; gap: var(--space-2); min-width: 0; }
+.in-curve-note { margin: 0; }

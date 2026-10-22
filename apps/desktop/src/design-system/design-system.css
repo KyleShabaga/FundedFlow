@@ -130,6 +130,24 @@
 .ds-eq-lbl-loss { color: var(--loss); }
 .ds-eq-lbl-profit { color: var(--profit); }
 
+/* RunningTotalChart */
+.ds-rt { position: relative; min-width: 0; border-radius: var(--radius-sm); }
+.ds-rt:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.ds-rt-svg { display: block; overflow: visible; }
+.ds-rt-grid { stroke: var(--line-100); stroke-width: 1; }
+.ds-rt-zero { stroke: var(--ink-faint); stroke-width: 1; stroke-dasharray: 4 3; }
+.ds-rt-axis { stroke: var(--line-200); stroke-width: 1; }
+.ds-rt-tick { fill: var(--ink-muted); font: 500 11px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.ds-rt-title { fill: var(--ink-muted); font: 500 11px/1 var(--font-sans); }
+.ds-rt-line { fill: none; stroke: var(--chart-1); stroke-width: 2; stroke-linejoin: round; }
+.ds-rt-area { fill: var(--flow-soft); }
+.ds-rt-cursor { stroke: var(--line-200); stroke-width: 1; }
+.ds-rt-end { fill: var(--chart-1); stroke: var(--bg-100); stroke-width: 2; }
+.ds-rt-active { fill: var(--bg-100); stroke: var(--chart-1); stroke-width: 2; }
+.ds-rt-tip { position: absolute; z-index: 5; transform: translateX(12px); max-width: 260px; padding: 6px var(--space-2); border-radius: var(--radius-sm); background: var(--bg-300); border: 1px solid var(--line-200); color: var(--ink); font: 500 12px/16px var(--font-sans); box-shadow: var(--shadow-pop); pointer-events: none; white-space: nowrap; }
+.ds-rt-tip.is-left { transform: translateX(calc(-100% - 12px)); }
+.ds-rt-tip-label { font-weight: 600; }
+
 /* PnlCalendar */
 .ds-cal { display: grid; gap: var(--space-2); }
 .ds-cal-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-1); }
