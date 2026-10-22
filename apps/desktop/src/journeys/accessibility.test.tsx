@@ -12,9 +12,10 @@ vi.mock("@tauri-apps/plugin-dialog", async () => (await import("../test/boundari
 
 import { createAppStore, makeAccount, makeTrade, type AppStoreSeed } from "../test/app-store";
 import { expectNoAxeViolations } from "../test/axe";
-import { currentPath, installBrowserShims, pageHeading, renderApp, resetHarness } from "../test/harness";
+import { currentPath, installBrowserShims, pageHeading, renderApp, resetHarness, warmUpApp } from "../test/harness";
 
 beforeAll(installBrowserShims);
+beforeAll(warmUpApp);
 afterEach(resetHarness);
 
 const populated = (): AppStoreSeed => ({

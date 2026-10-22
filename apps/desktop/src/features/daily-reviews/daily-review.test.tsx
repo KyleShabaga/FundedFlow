@@ -10,6 +10,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import type { RuntimeState } from "../../app/RuntimeProvider";
 import { ToastProvider } from "../../design-system";
+import { warmUp } from "../../test/warm-up";
 import { makeAccount } from "../accounts/test-store";
 import { JournalPage } from "../journal/components/JournalPage";
 import { createJournalStore, trade } from "../journal/test-store";
@@ -65,12 +66,20 @@ const seed = () => [
   trade({ id: "tb", accountId: B, symbol: "ESZ6", tradingDay: "2026-10-19", realizedPnl: "1000" }),
 ];
 
-beforeEach(() => {
+/** Fresh runtime, query cache and store for each test. */
+function fresh() {
   runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 18, supportedSchemaVersion: 18, created: false, failure: null } } as unknown as RuntimeState;
   runtime.check.mockReset().mockResolvedValue(undefined);
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false } } });
   holder.store = createJournalStore(accounts(), seed());
   try { sessionStorage.clear(); } catch { /* jsdom has it */ }
+}
+beforeEach(fresh);
+// One-time costs are paid here, not by the first test (see test/warm-up.ts).
+beforeAll(async () => {
+  fresh();
+  await warmUp(() => renderAt(dayPath("2026-10-19")), () => screen.findByRole("form", { name: "Daily review" }));
+  client.clear();
 });
 afterEach(() => {
   cleanup();
@@ -86,8 +95,18 @@ async function dailyChecklist() {
   });
 }
 
+/** Replaces a field's value in one paste: typed key by key, amounts and dates cost ~0.3–1 s each under load. */
+async function pasteInto(user: ReturnType<typeof userEvent.setup>, input: HTMLElement, text: string) {
+  await user.clear(input);
+  await user.click(input);
+  await user.paste(text);
+}
+
 describe("daily review", () => {
-  it("starts, saves as draft, resumes after a restart, completes and reopens a review with the keyboard", async () => {
+  // One journey in two tests (the CPU-contention trim): as one test it took ~3 s in a full unloaded run and timed
+  // out at 5 s under load. The second part starts from the draft the first saves, written through the same
+  // repository call, which is what the restart in the first part reads back.
+  it("starts, saves as draft and resumes it after a restart", async () => {
     const user = userEvent.setup();
     const view = renderAt(dayPath("2026-10-19"));
     expect(await screen.findByRole("heading", { name: /Daily review · Mon, Oct 19, 2026/ })).toBeTruthy();
@@ -106,6 +125,13 @@ describe("daily review", () => {
     // Restart: a new query cache over the same store reads the saved draft back.
     view.unmount();
     client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false } } });
+    renderAt(dayPath("2026-10-19"));
+    expect(await screen.findByDisplayValue("Only A+ setups")).toBeTruthy();
+  });
+
+  it("completes a resumed draft and reopens it, with the keyboard", async () => {
+    await holder.store.repository.dailyReviews.save({ accountId: A, tradingDay: "2026-10-19", expectedRevision: null, plan: { focus: "Only A+ setups" }, reflection: {}, noTradeDay: false, answers: [], action: "save" });
+    const user = userEvent.setup();
     renderAt(dayPath("2026-10-19"));
     expect(await screen.findByDisplayValue("Only A+ setups")).toBeTruthy();
 
@@ -199,7 +225,7 @@ describe("daily review", () => {
     await screen.findByRole("form", { name: "Daily review" });
     holder.store.daily.failing.add("save");
     await user.click(field(/Mistakes/));
-    await user.keyboard("Chased the open");
+    await user.paste("Chased the open");
     await user.click(within(form()).getByRole("button", { name: "Save draft" }));
     expect(await screen.findByText("It isn't certain the review was saved")).toBeTruthy();
     expect(screen.getByDisplayValue("Chased the open")).toBeTruthy();
@@ -219,14 +245,12 @@ describe("daily review", () => {
     await screen.findByRole("form", { name: "Daily review" });
     const refused = "Maximum risk for the day: enter an amount greater than zero, or leave it empty";
     for (const value of ["0.000", "0.0000001", "99999999999999999999"]) {
-      await user.clear(field(/^Maximum risk for the day/));
-      await user.type(field(/^Maximum risk for the day/), value);
+      await pasteInto(user, field(/^Maximum risk for the day/), value);
       await user.click(within(form()).getByRole("button", { name: "Save draft" }));
       expect((await screen.findAllByText(refused)).length).toBeGreaterThan(0);
     }
     expect(holder.store.daily.reviews.size).toBe(0);
-    await user.clear(field(/^Maximum risk for the day/));
-    await user.type(field(/^Maximum risk for the day/), "0.000001");
+    await pasteInto(user, field(/^Maximum risk for the day/), "0.000001");
     await user.click(within(form()).getByRole("button", { name: "Save draft" }));
     await waitFor(() => expect(holder.store.daily.reviews.size).toBe(1));
   });
@@ -255,7 +279,7 @@ describe("daily review", () => {
     renderAt(dayPath("2026-10-19"));
     await screen.findByRole("form", { name: "Daily review" });
     await user.click(field(/Focus for the session/));
-    await user.keyboard("draft text");
+    await user.paste("draft text");
     await user.click(screen.getByRole("button", { name: "Next day" }));
     expect(await screen.findByRole("alertdialog", { name: "Leave without saving the review?" }).catch(() => screen.findByRole("dialog", { name: "Leave without saving the review?" }))).toBeTruthy();
     expect(location).toBe(dayPath("2026-10-19"));
@@ -323,12 +347,10 @@ describe("entry points", () => {
     renderAt("/journal?view=day");
     const chooser = await screen.findByRole("form", { name: "Review a day" });
     const input = within(chooser).getByLabelText("Review a day");
-    await user.clear(input);
-    await user.type(input, "2026-10-17");
+    await pasteInto(user, input, "2026-10-17");
     await user.click(within(chooser).getByRole("button", { name: "Open" }));
     expect(within(chooser).getByText(/Choose a weekday/)).toBeTruthy();
-    await user.clear(input);
-    await user.type(input, "2026-10-14");
+    await pasteInto(user, input, "2026-10-14");
     await user.click(within(chooser).getByRole("button", { name: "Open" }));
     expect(location).toBe(dayPath("2026-10-14"));
   });

@@ -115,6 +115,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/**
+ * Replaces the confirmation phrase in one paste, as the Data controls journeys do. The phrase is the subject, not
+ * its keystrokes: typed key by key, each phrase cost ~0.7–1.3 s and pushed these tests past 5 s under CPU load.
+ */
+async function typePhrase(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement, text: string) {
+  const box = within(dialog).getByRole("textbox", { name: /Type the confirmation/ });
+  await user.clear(box);
+  await user.click(box);
+  await user.paste(text);
+}
+
 describe("data information and export", () => {
   it("says the journal is local, is copied only before an upgrade and that exports are not encrypted", async () => {
     renderPage();
@@ -227,10 +238,9 @@ describe("restore", () => {
     expect(within(dialog).getByText(/3 accounts, including archived, failed and passed attempts/)).toBeTruthy();
     const replace = within(dialog).getByRole("button", { name: "Replace entire journal" }) as HTMLButtonElement;
     expect(replace.disabled).toBe(true);
-    await user.type(within(dialog).getByRole("textbox", { name: /Type the confirmation/ }), "replace entire journal");
+    await typePhrase(user, dialog, "replace entire journal");
     expect(replace.disabled).toBe(true);
-    await user.clear(within(dialog).getByRole("textbox", { name: /Type the confirmation/ }));
-    await user.type(within(dialog).getByRole("textbox", { name: /Type the confirmation/ }), "REPLACE ENTIRE JOURNAL");
+    await typePhrase(user, dialog, "REPLACE ENTIRE JOURNAL");
     expect(replace.disabled).toBe(false);
     await user.click(replace);
     await waitFor(() => expect(controls.restoreArchive).toHaveBeenCalledWith({
@@ -251,7 +261,7 @@ describe("restore", () => {
     await user.click(screen.getByRole("button", { name: "Choose backup to restore…" }));
     const dialog = await screen.findByRole("dialog", { name: "Replace the journal with this archive?" });
     await within(dialog).findByText("Checksums, version and contents verified");
-    await user.type(within(dialog).getByRole("textbox", { name: /Type the confirmation/ }), "REPLACE ENTIRE JOURNAL");
+    await typePhrase(user, dialog, "REPLACE ENTIRE JOURNAL");
     await user.click(within(dialog).getByRole("button", { name: "Replace entire journal" }));
     expect(await screen.findByRole("dialog", { name: "The restore didn't finish installing" })).toBeTruthy();
     expect(screen.queryByRole("dialog", { name: "Journal restored" })).toBeNull();
@@ -288,10 +298,9 @@ describe("permanent deletion", () => {
     expect(within(dialog).getByText(/1 screenshot or file \(2\.0 KB\) removed from disk/)).toBeTruthy();
     expect(within(dialog).getByText(/Failed/)).toBeTruthy();
     const confirm = within(dialog).getByRole("button", { name: "Delete account permanently" }) as HTMLButtonElement;
-    await user.type(within(dialog).getByRole("textbox", { name: /Type the confirmation/ }), "ERASE ENTIRE JOURNAL");
+    await typePhrase(user, dialog, "ERASE ENTIRE JOURNAL");
     expect(confirm.disabled).toBe(true);
-    await user.clear(within(dialog).getByRole("textbox", { name: /Type the confirmation/ }));
-    await user.type(within(dialog).getByRole("textbox", { name: /Type the confirmation/ }), "DELETE ACCOUNT acct-a");
+    await typePhrase(user, dialog, "DELETE ACCOUNT acct-a");
     await user.click(confirm);
     await waitFor(() => expect(controls.deletePermanently).toHaveBeenCalledWith({
       scope: { kind: "account", accountId: "acct-a" }, previewToken: journalPreview.previewToken, confirmation: "DELETE ACCOUNT acct-a",
@@ -304,7 +313,7 @@ describe("permanent deletion", () => {
     controls.deletePermanently.mockRejectedValue(new DataControlFailure({ code: "stale_preview", message: "x" }));
     const dialog = await openAccountDeletion(user);
     await within(dialog).findByText("What will be deleted");
-    await user.type(within(dialog).getByRole("textbox", { name: /Type the confirmation/ }), "DELETE ACCOUNT acct-a");
+    await typePhrase(user, dialog, "DELETE ACCOUNT acct-a");
     await user.click(within(dialog).getByRole("button", { name: "Delete account permanently" }));
     expect(await within(dialog).findByText(/Your data changed after this preview/)).toBeTruthy();
   });
@@ -318,7 +327,7 @@ describe("permanent deletion", () => {
     expect(within(dialog).getByText(/removes every account, trade, note/)).toBeTruthy();
     expect(await within(dialog).findByText(/Archives or CSV files you exported yourself are not touched/)).toBeTruthy();
     expect(within(dialog).getByText("ERASE ENTIRE JOURNAL")).toBeTruthy();
-    await user.type(within(dialog).getByRole("textbox", { name: /Type the confirmation/ }), "ERASE ENTIRE JOURNAL");
+    await typePhrase(user, dialog, "ERASE ENTIRE JOURNAL");
     await user.click(within(dialog).getByRole("button", { name: "Erase entire journal" }));
     const pending = await screen.findByRole("dialog", { name: "Deleted, but some files are still on disk" });
     expect(controls.previewDeletion).toHaveBeenCalledWith({ scope: { kind: "journal" } });
@@ -358,7 +367,7 @@ describe("native file chooser and cleanup failures (Build 26)", () => {
     await user.click(screen.getByRole("button", { name: "Erase entire journal…" }));
     const dialog = await screen.findByRole("dialog", { name: "Erase the entire local journal?" });
     await within(dialog).findByText(/Archives or CSV files you exported yourself are not touched/);
-    await user.type(within(dialog).getByRole("textbox", { name: /Type the confirmation/ }), "ERASE ENTIRE JOURNAL");
+    await typePhrase(user, dialog, "ERASE ENTIRE JOURNAL");
     await user.click(within(dialog).getByRole("button", { name: "Erase entire journal" }));
     const pending = await screen.findByRole("dialog", { name: "Deleted, but some files are still on disk" });
     await user.click(within(pending).getByRole("button", { name: "Retry file cleanup" }));

@@ -17,9 +17,10 @@ import { LAST_EXPORT_SETTING } from "../features/data-controls/api/data-controls
 import { WRITE_TIMEOUT_MS } from "../features/shared/submissions";
 import { createAppStore, makeAccount, makeTrade, type AppStore } from "../test/app-store";
 import { boundary } from "../test/boundaries";
-import { installBrowserShims, renderApp, resetHarness } from "../test/harness";
+import { installBrowserShims, renderApp, resetHarness, warmUpApp } from "../test/harness";
 
 beforeAll(installBrowserShims);
+beforeAll(warmUpApp);
 const NOW = new Date("2026-10-20T14:00:00.000Z");
 beforeEach(() => { vi.useFakeTimers({ now: NOW, shouldAdvanceTime: true, toFake: ["Date"] }); });
 afterEach(resetHarness);

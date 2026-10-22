@@ -61,6 +61,20 @@ export function renderApp(path = "/", seed: AppStoreSeed | ReturnType<typeof cre
   return { store, user, view };
 }
 
+/**
+ * Mounts the whole app once over an empty journal and waits for Today, so one-time costs (first-render JIT, the
+ * dev-only lazy shell chunks, first Intl formatters) are paid in the hook rather than by whichever test runs first.
+ * In a full run a file's first test took 3–10x its file's median, and first tests were many of the CPU-contention
+ * timeouts.
+ * Call from beforeAll, after installBrowserShims; it leaves the harness reset.
+ */
+export async function warmUpApp() {
+  renderApp("/");
+  await screen.findByRole("heading", { level: 1 });
+  await Promise.all([import("../app/dev-tools/DevSidebarTools"), import("../app/DeveloperTools")]);
+  resetHarness();
+}
+
 /** The page's h1 (the shell focuses it after navigation). */
 export const pageHeading = () => screen.getByRole("heading", { level: 1 });
 export const currentPath = () => window.location.hash.replace(/^#/, "") || "/";
