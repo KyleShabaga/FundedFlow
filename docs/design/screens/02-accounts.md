@@ -227,3 +227,5 @@ reads `useTodayAccount` for each live account:
 The table view now makes Today's reads for every live account (about seven queries each, as the cards already do).
 A native account-summary command would scale better; see the proposed card in the NA-4 pull request (related to
 Build 27.25).
+
+Screenshots (native debug build, synthetic UI Smoke test journal, before = main 8c3dd34, after = NA-4; 1280, 1024 and 800 px): [`02-accounts-na4/`](02-accounts-na4/).
