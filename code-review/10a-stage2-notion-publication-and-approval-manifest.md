@@ -140,3 +140,11 @@ The update was made on 2026-10-22. The repository side is in commits `6961900` t
 - The Source Reports attachment of 08 remains the r2 version (295c89f). The current index is in the repository.
 
 **Approvals recorded:** none.
+
+**Board state observed after the update** (2026-10-22, about 18:45 UTC; read-only query):
+- **10 cards Approved by Kyle**, recorded on the board through a separate session, with Kyle's words in Decision Notes:
+  - TASK-001 to 006, 009 and 010 at r2;
+  - TASK-007 and 008 at r3. Their approved SHA-256 values equal the committed r3 files (`4f7fab80…`, `3bf6b468…`), so those two card files must not change.
+- **Follow-up cards** TASK-037 to 040 were created in that session as r1 drafts (Pending Review). TASK-040 is the `cargo fmt` task that TASK-029 waits on.
+- **Claude** recorded no approval and changed none.
+
