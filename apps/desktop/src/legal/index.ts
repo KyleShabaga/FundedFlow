@@ -11,8 +11,8 @@ export const CURRENT_LEGAL_DOCUMENTS: readonly LegalDocument[] = [privacyNotice,
 
 /** The plain-language privacy summary shown on the first-run screen and in Settings. */
 export const PRIVACY_SUMMARY = [
-  "FundedFlow keeps your journal only on this computer. Nothing is uploaded: there's no account, no telemetry and no internet connection.",
-  "You can export a full backup, restore one, or permanently delete your data at any time in Settings.",
+  "Your desktop journal is local and unencrypted. The app has no sign-in, telemetry or update checker; the installer may download WebView2 from Microsoft.",
+  "Settings provides exports, restore and deletion controls. Recovery copies, external backups and WebView storage have different deletion limits; read the notice before erasing data.",
 ] as const;
 
 /** A summary of the repository's root LICENSE; the LICENSE file is the authority. */

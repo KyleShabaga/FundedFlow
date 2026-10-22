@@ -131,11 +131,11 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
       )}
       {working && <p role="status" className="dc-working">{working} Other data actions wait until this finishes.</p>}
 
-      <FormSection headingLevel={2} title="Your data on this computer" description="Where your journal lives and what is backed up. Nothing leaves this computer: see Privacy & legal below.">
+      <FormSection headingLevel={2} title="Your data on this computer" description="Where your journal lives and what is backed up. See Privacy & legal below for storage, sharing and deletion limits.">
         <StatList bordered items={[
           { label: "Stored", value: "In FundedFlow's app-data folder for your Windows user account" },
           { label: "Journal version", value: runtime.state.kind === "ready" ? `${runtime.state.status.schemaVersion ?? "Unknown"} (backup format 1)` : null },
-          { label: "Automatic backups", value: "Only before an upgrade. FundedFlow saves a copy of your journal in the same folder before upgrading its format. That copy isn't a substitute for exporting a full backup." },
+          { label: "Automatic backups", value: "FundedFlow keeps pre-upgrade database copies and pre-restore safety copies. These are not a substitute for independent full backups." },
           { label: "Backup protection", value: "Not encrypted. Anyone who can open the file can read your trades, notes and screenshots." },
           { label: "Last export from this journal", value: last ? describeLast(last) : "No export yet" },
         ]} />

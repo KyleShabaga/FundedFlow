@@ -67,3 +67,7 @@ Eligibility, capacity and review scope need confirmation. A focused request can 
 licensing section, the two bundled documents, the first-run specification and this note.
 
 Reference license: [Open Source Initiative: MIT](https://opensource.org/license/mit).
+
+## Completed document drafting follow-up (2026-10-22)
+
+Both bundled documents are now complete editorial drafts at `0.2.0-draft`, dated 2026-10-22, with recomputed digests. Earlier version references above describe the initial MIT transition. See [verification and proposed owner decision](privacy-product-verification.md) for actual storage/deletion limits, evidence, acceptance assessment and a concrete proposed P0-13 revision. That proposal is unapproved; the original release gate remains effective. Acceptance mechanics remain unchanged and both changed documents prompt existing installs again.

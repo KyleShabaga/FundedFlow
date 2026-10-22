@@ -54,7 +54,7 @@ describe("first launch", () => {
     expect(nav()).toBeNull();
     expect(screen.queryByText("MESZ6")).toBeNull();
     expect(listAccounts).not.toHaveBeenCalled();
-    expect(within(main).getByText(/keeps your journal only on this computer/)).toBeTruthy();
+    expect(within(main).getByText(/Your desktop journal is local and unencrypted/)).toBeTruthy();
     expect(within(main).getByText("Draft documents")).toBeTruthy();
     // Headings: h1, then h2 sections; documents open as h3 articles with h4 sections.
     expect(within(main).getAllByRole("heading", { level: 2 }).map(h => h.textContent)).toEqual(["Your privacy", "Documents"]);
@@ -223,16 +223,16 @@ describe("Settings → Privacy & legal", () => {
     const { user } = renderApp("/settings", store1());
     const heading = await screen.findByRole("heading", { level: 2, name: "Privacy & legal" });
     const section = heading.closest("section")!;
-    expect(within(section).getByText(/keeps your journal only on this computer/)).toBeTruthy();
+    expect(within(section).getByText(/Your desktop journal is local and unencrypted/)).toBeTruthy();
     const list = section.querySelector<HTMLElement>("dl[aria-label='Accepted documents']")!;
     for (const doc of CURRENT_LEGAL_DOCUMENTS) {
-      expect(within(list).getByText(`Version ${doc.version} · Draft dated ${formatDocumentDate(doc.effectiveDate)}`)).toBeTruthy();
+      expect(within(list).getAllByText(`Version ${doc.version} · Draft dated ${formatDocumentDate(doc.effectiveDate)}`)).toBeTruthy();
     }
     expect(within(list).getByText(agreement.title)).toBeTruthy();
     expect(within(list).getByText(/Oct 21, 2026/)).toBeTruthy();
     expect(ACCEPTED_AT).toBe("2026-10-21T18:00:00.000Z");
     // The static local-only paragraph is gone: the wording lives here once.
-    expect(screen.getAllByText(/keeps your journal only on this computer/)).toHaveLength(1);
+    expect(screen.getAllByText(/Your desktop journal is local and unencrypted/)).toHaveLength(1);
     for (const name of [/^Read the privacy notice/, /^Read the user agreement/, /^Licence and third-party notices/]) {
       await user.click(within(section).getByText(name));
     }

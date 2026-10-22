@@ -4,7 +4,7 @@ Card: [NA-3 — First-run privacy notice and agreement](https://app.notion.com/p
 (Final Push P0-12 and the engineering half of P0-13). Code: `apps/desktop/src/features/legal`, documents in
 `apps/desktop/src/legal`, native record in `apps/desktop/src-tauri/src/legal.rs`.
 
-> **The documents are DRAFT placeholders (version `0.1.0-draft`).** They are written only from verified facts about
+> **The documents are complete editorial DRAFTS (version `0.2.0-draft`, dated 2026-10-22).** They are written only from verified facts about
 > V1 and have not been reviewed by counsel. They block distribution until the owner records counsel sign-off (P0-13).
 
 The MIT transition updates the license and the agreement’s license section (version `0.1.1-draft`, dated
@@ -90,3 +90,7 @@ Privacy & legal ends with a `Disclosure` **Licence and third-party notices**:
 
 The text comes from `npm run notices` (`scripts/third-party-notices.mjs`); `apps/desktop/src/legal/third-party.ts`
 splits it into parts and sections by its underlined headings.
+
+## Document revision 0.2.0-draft
+
+The complete editorial drafts and revised summaries replace the original placeholders. See [verification and owner proposal](../../privacy-product-verification.md). P0-13 remains unchanged pending explicit owner decision. Versions and digests of both documents changed; existing installs must accept the current pair again. The UI still uses User agreement and Accept/Decline; a proposed acknowledgment flow is documented but not implemented. Draft status does not imply legal review or release approval.
