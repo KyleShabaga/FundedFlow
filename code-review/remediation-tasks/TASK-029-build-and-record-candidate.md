@@ -46,7 +46,7 @@ Installing (TASK-030).
 5. Record all fields in the evidence register.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: All W1–W3 tasks Verified (incl. TASK-025, TASK-026, TASK-027); TASK-001, TASK-002, TASK-005, TASK-006 decided; TASK-008 decided; the fmt task Verified if the `cargo fmt` gate is kept (G5).
+- Prerequisites: All W1–W3 tasks Verified (incl. TASK-025, TASK-026, TASK-027); TASK-001, TASK-002, TASK-005, TASK-006 decided; TASK-008 decided; the fmt task Verified if the `cargo fmt` gate is kept (G5). W1–W3 here means the code and documentation tasks; if TASK-008 keeps the real-journal-copy upgrade gate, the TASK-034 code change (W3c) is merged and contained in the candidate SHA, but its W5 owner run is **not** a prerequisite (it runs on this candidate).
 - Likely shared-file conflicts: None.
 
 ## Acceptance criteria (pass/fail)
@@ -65,6 +65,7 @@ Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE
 
 ## Changes in r3
 - Prerequisites: added "TASK-008 decided; the fmt task Verified if the gate is kept" (10 §8.2 TASK-029; G5).
+- r3 review fix: the TASK-034 code change (W3c) must be in the candidate SHA; its W5 owner run is not a prerequisite, which removes the 029↔034 deadlock (independent r3 review).
 - CI evidence: a `push`-to-`main` or `workflow_dispatch` run on the exact SHA, not a PR merge commit; `--fail-on-outage` is applied automatically on dispatch (`ci.yml:109, 124`, verified at b01e2b9) and cannot be passed in (no `workflow_dispatch` inputs, `ci.yml:11`); added a matching acceptance criterion (10 §8.2 TASK-029; G14).
 - Dropped the WebView2 field from the Definition of Done (10 §8.2 TASK-029; G14).
 - Fixture rule: `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`) (10 §8.3 fixture nit).

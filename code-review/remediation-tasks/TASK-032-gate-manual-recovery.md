@@ -47,6 +47,7 @@ Real journal.
 
 | # | Scenario | Expected result | Mandatory |
 |---|---|---|---|
+| R0 | Destructive round trip (`docs/architecture/build-26-accessibility-journeys.md:220-222`, the §8 destructive case): export a full backup through the real save dialog, erase the journal with its phrase, restore the backup | "Journal restored" appears only after the runtime is Ready; the synthetic account, trades and screenshots match the pre-export state; the export file name, size and SHA-256 are recorded | Yes |
 | R1 | Locked journal (file held open by another process), then unlock and press Retry | Open failure explained with Retry and an allowlisted summary; after unlocking, Retry reaches Ready; data intact (lines 110-112) | Yes |
 | R2 | Corrupt journal (disposable copy) | Failure explained; no empty-journal claim; the file is not reset or overwritten | Yes |
 | R3 | Failed migration simulation (disposable) | Rolled back; the message names the pre-upgrade backup file; the journal opens at its previous state after the cause is fixed | Yes |
@@ -56,6 +57,7 @@ Real journal.
 | R7 | Stray and missing screenshot (TASK-016/017) | A stray file is preserved in the safety folder; a missing screenshot does not block restore or erase | Yes |
 | R8 | Large-journal export (TASK-013/014): synthetic journal with more than 64 MiB of free pages and small live data | Export succeeds (the temporary snapshot is vacuumed, never the live journal) and shows name, size and SHA-256; erase preview and restore inspect succeed. A synthetic journal whose live data exceeds a real cap is refused with a detail naming the component; the journal is unchanged | Yes |
 | R9 | Antivirus lock | Record behaviour if feasible | No |
+| R10 | Uncertain-write acknowledgement on the packaged build for the rulebook, Today checkpoint, calculation and screenshot surfaces (`docs/architecture/build-26.5-26.7-recovery-reliability.md:192-193`, still pending) | Record the behaviour if a reliable way to produce an uncertain outcome exists on the VM; otherwise record Not Run. This item has no other owner: if it is Not Run, the tester adds a Notion Triage card for it | No |
 
 Legal prompt: if the disposable profile already holds an acceptance from an earlier build, the candidate shows the first-run agreement again after the upgrade (`apps/desktop/src/legal/index.ts:40-43`); expect this legal re-prompt and accept it; it is not a failure.
 
@@ -64,7 +66,7 @@ Legal prompt: if the disposable profile already holds an acceptance from an earl
 - Likely shared-file conflicts: None.
 
 ## Acceptance criteria (pass/fail)
-- [ ] Each scenario recorded with expected vs actual; gate state set by the pass rule above (Passed only if R1–R8 all match their expected results without data loss).
+- [ ] Each scenario recorded with expected vs actual; gate state set by the pass rule above (Passed only if R0–R8 all match their expected results without data loss).
 - [ ] R8 records the synthetic journal's size and free-page count, the export result (name, size, SHA-256) and that the live journal was not vacuumed.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
 
@@ -79,6 +81,7 @@ Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE
 
 ## Changes in r3
 - Added an explicit pass rule with mandatory scenarios R1–R8 and optional R9 (10 §8.2 TASK-032; G9).
+- r3 review fix: added mandatory R0 (the build-26 §8 export → erase → restore round trip, which TASK-033 relies on) and record-only R10 (the pending uncertain-write acknowledgement from the cited §5 list, with a Triage card if Not Run) (independent r3 review).
 - Cited `docs/architecture/build-26.5-26.7-recovery-reliability.md:187-194` (verified at b01e2b9: §5 "Pending and owners") and the Block D cases at lines 110-112 (10 §8.2 TASK-032; G9).
 - Gave the expected result for the large-journal export (R8), consistent with TASK-013 r3 (VACUUM of the temporary snapshot mandatory) and TASK-014 (10 §8.2 TASK-032; G9).
 - Expect the legal re-prompt after an upgrade (10 §8.2 TASK-030/032/033; G9).

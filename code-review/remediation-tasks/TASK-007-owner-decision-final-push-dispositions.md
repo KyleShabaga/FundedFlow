@@ -24,7 +24,7 @@
 | Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
 
 ## Purpose / risk
-Four Final Push items have no recorded disposition in the repository (grep finds 0 hits for P0-09/P0-10; D5 is ambiguous: `docs/design/window-support-matrix.md:26` vs `docs/architecture/prop-firm-collector.md:470`; P0-05 cohort: `docs/architecture/p0-04-csv-contracts.md:169`).
+Four Final Push items have no recorded disposition in the repository (grep finds 0 hits for P0-09/P0-10; D5 is ambiguous: `docs/design/window-support-matrix.md:26` vs `docs/architecture/prop-firm-collector.md:471`; P0-05 cohort: `docs/architecture/p0-04-csv-contracts.md:169`).
 
 ## Trigger / reproduction
 N/A.

@@ -56,6 +56,7 @@ Owner run (W5, after TASK-029 is recorded):
 ## Acceptance criteria (pass/fail)
 - [ ] Code change merged before TASK-029's candidate SHA (the candidate SHA contains it).
 - [ ] The `upgrade_tests.rs:428` doc comment names an offline copy for `FUNDEDFLOW_UPGRADE_DB`, not the live `%APPDATA%` path, and no longer suggests `--nocapture` before redaction.
+- [ ] The same command in `docs/data-model.md:571` is corrected the same way (it gives the live `%APPDATA%` path and `--nocapture` today).
 - [ ] Test refuses when the lock is held (unit-tested with a temp lock).
 - [ ] Output contains no trade ids.
 - [ ] Owner-recorded run result (counts, PASS/FAIL).
@@ -84,6 +85,7 @@ Tests merged after review; they fail against a deliberately broken variant or th
 - 10 §8.2 TASK-034 (G7): split into a code change in W3c (merged before TASK-029) and an owner run in W5; Wave field set to `W3c (code) / W5 (owner run)`; prerequisites split accordingly.
 - 10 §8.2 TASK-034 (G7): `FUNDEDFLOW_UPGRADE_DB` is set to the copy, never the live path (step 4 and run-record criterion).
 - 10 §8.2 TASK-034 (G7): fix the doc comment at `upgrade_tests.rs:428` (verified: it gives the live `%APPDATA%` path and `--nocapture`); scope, step 2 and criterion added.
+- r3 review fix: the identical live-path command in `docs/data-model.md:571` is corrected with the doc comment (independent r3 review).
 - Source re-check at b01e2b9: test span corrected from `upgrade_tests.rs:426-457` to `426-459`.
 - 10 §8.3 fixture rule: fixture line says `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`).
 
