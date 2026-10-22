@@ -7,9 +7,12 @@ on:
   # Daily audit so new advisories surface without a code change (runs the dependency-audit job only).
   schedule:
     - cron: "17 6 * * *"
+  # Manual run of both jobs; like the schedule, an audit that can't run fails it.
+  workflow_dispatch:
 
+# The event is part of the group so a scheduled or manual run on main never cancels a push run (or the reverse).
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 # Read-only token: the jobs only check out, build and test.
@@ -83,8 +86,10 @@ jobs:
   # skip typecheck, tests, build or the Rust checks. A real high+ advisory still fails this job; an audit that
   # cannot get an advisory result after retries is reported as "not run" (warning annotation + job summary).
   # scripts/audit-guard.mjs does the retry and the result-versus-outage distinction.
+  # Outage rule: an audit with no result after 3 attempts is "NOT RUN" with a warning. It passes on pull_request and
+  # push, and fails on schedule and workflow_dispatch (--fail-on-outage), so an audit that never ran there is red.
   dependency-audit:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
 
@@ -96,11 +101,13 @@ jobs:
         run: node --test scripts/audit-guard.test.mjs
 
       # Production dependencies only (what ships in the app); fails on high or critical advisories.
-      # `npm audit` reads package-lock.json, so no install is needed.
+      # `npm audit` reads package-lock.json, so no install is needed. Each attempt is killed after 120 s, and npm's
+      # own fetch is capped at 60 s with no internal retries (its defaults, 5 min and 2 retries, hung CI for minutes).
       - name: npm audit (production dependencies)
         run: >
-          node scripts/audit-guard.mjs --label "npm audit" --expect metadata --attempts 3 --backoff 15
-          -- npm audit --omit=dev --audit-level=high --json
+          node scripts/audit-guard.mjs --label "npm audit" --expect metadata --attempts 3 --backoff 15 --timeout 120
+          ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '--fail-on-outage' || '' }}
+          -- npm audit --omit=dev --audit-level=high --json --fetch-timeout=60000 --fetch-retries=0
 
       # RustSec advisories for Cargo.lock. Vulnerabilities and unsound advisories fail; the one ignored advisory
       # (Linux-only glib) is documented in apps/desktop/src-tauri/.cargo/audit.toml.
@@ -108,8 +115,11 @@ jobs:
         with:
           tool: cargo-audit
 
+      # cargo-audit is called directly, not through `cargo`, so a timed-out attempt is killed with nothing left
+      # running (on Windows, killing cargo would leave its cargo-audit child behind).
       - name: cargo audit
         working-directory: apps/desktop/src-tauri
         run: >
           node ../../../scripts/audit-guard.mjs --label "cargo audit" --expect vulnerabilities --attempts 3 --backoff 15
-          -- cargo audit --deny unsound --json
+          --timeout 120 ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '--fail-on-outage' || '' }}
+          -- cargo-audit audit --deny unsound --json

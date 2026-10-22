@@ -138,6 +138,14 @@ cargo test
 cargo clippy --all-targets -- -D warnings
 ```
 
+followed by `npm run check:notices`. A separate `dependency-audit` job runs in parallel (and daily at 06:17 UTC on
+`main`): `npm audit --omit=dev --audit-level=high` and `cargo audit --deny unsound`, each through
+`scripts/audit-guard.mjs`. A high or critical npm advisory, or a RustSec vulnerability or unsound advisory, fails it.
+If npm's advisory endpoint or the RustSec database can't be reached after 3 attempts (each killed after 120 s), the
+audit is reported as **not run** (a warning annotation and a line in the job summary): on pull requests and pushes
+the job still passes, so an outage can't block code checks or merges; on the scheduled and manual
+(`workflow_dispatch`) runs it fails.
+
 `cargo test` covers schema, repositories, CSV import (including the `Performance.csv` fixture) and the golden parity fixtures in `packages/domain/test/fixtures`, which Vitest runs too. After an intentional Rust change, regenerate the expected outputs with `$env:FUNDEDFLOW_UPDATE_FIXTURES=1; cargo test --lib parity` and review the diff.
 
 ## License and ownership
