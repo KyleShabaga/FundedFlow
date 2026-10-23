@@ -897,7 +897,7 @@ fn golden_frozen_v1_encoding() {
     let explanation = json!({ "engine": { "sourceReferences": refs, "rules": [{ "ruleId": "rule1", "ruleKey": "daily_loss", "state": "breached",
         "sourceReferences": ["b1", "c1", "dash", "o1", "o2", "p1", "r1", "t1", "t2", "o1", "target"] }] },
         "inputs": inputs, "policy": policy, "recalculation": "golden" });
-    let encoded = frozen_v1::encode(&c, ACCOUNT, "fundedflow-risk/1", &explanation).unwrap();
+    let encoded = frozen_v1::encode(&c, ACCOUNT, "fundedflow-risk/1", &explanation, None).unwrap();
     assert_eq!(encoded.fallbacks, 0);
     let rows: Vec<String> = c
         .prepare("SELECT s.kind || '|' || s.record_hash || '|' || s.from_generation || '|' || coalesce(s.to_generation, '-') || '|' || s.multiplicity || '|' || r.record_json
@@ -1113,9 +1113,68 @@ fn folder_bytes(dir: &Path) -> u64 {
     total
 }
 
-/// Copies the seed, tops its busiest account up to `n` trades, stores `k` shape (i) calculations and turns the
+/// Migration 23 on a large schema-22 journal, in two processes so the second one's peak memory is the upgrade's
+/// alone: `FF_UPGRADE_PHASE=build` writes the journal (`FF_UPGRADE_RUN=shape:N:K`, default `ii:2000:50`) into
+/// `FF_UPGRADE_DIR`, then `FF_UPGRADE_PHASE=migrate` opens it (backup, migration 23) and prints the time. Needs
+/// `FF_GROWTH_SEED_DB` for the build phase.
+#[test]
+#[ignore = "upgrade timing: needs FF_UPGRADE_PHASE, FF_UPGRADE_DIR and a seed"]
+fn frozen_v1_upgrade_timing() {
+    let dir = std::path::PathBuf::from(std::env::var("FF_UPGRADE_DIR").unwrap());
+    let run = std::env::var("FF_UPGRADE_RUN").unwrap_or_else(|_| "ii:2000:50".into());
+    let parts: Vec<&str> = run.split(':').collect();
+    let (shape, n, k) = (
+        Shape::parse(parts[0]),
+        parts[1].parse::<usize>().unwrap(),
+        parts[2].parse::<usize>().unwrap(),
+    );
+    let path = dir.join(crate::db::DB_FILE_NAME);
+    match std::env::var("FF_UPGRADE_PHASE").unwrap().as_str() {
+        "build" => {
+            let seed = std::path::PathBuf::from(std::env::var("FF_GROWTH_SEED_DB").unwrap());
+            schema_22_seeded(&seed, &dir, shape, n, k);
+            let c = Connection::open(&path).unwrap();
+            let text: i64 = c
+                .query_row(
+                    "SELECT sum(length(CAST(explanation_json AS BLOB))) FROM account_snapshots",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            println!(
+                "built {run} at schema 22: {} bytes, explanation_json {text} bytes",
+                std::fs::metadata(&path).unwrap().len()
+            );
+        }
+        _ => {
+            let t = Instant::now();
+            let c = crate::db::open_file(&path).unwrap();
+            let ms = t.elapsed().as_secs_f64() * 1000.0;
+            let fallbacks = fallbacks();
+            let compact: i64 = c
+                .query_row(
+                    "SELECT count(*) FROM account_snapshots WHERE json_extract(explanation_json, '$.\"$ff\"') IS NOT NULL",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            let breaches: i64 = c
+                .query_row(
+                    "SELECT count(*) FROM account_snapshots WHERE json_extract(explanation_json, '$.breaches') IS NOT NULL",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            println!(
+                "migrated {run}: open + backup + migration 23 {ms:.1} ms; {compact} compact rows, {breaches} with breach pointers, {fallbacks} fallbacks"
+            );
+        }
+    }
+}
+
+/// Copies the seed, tops its busiest account up to `n` trades, stores `k` calculations of `shape` and turns the
 /// journal back into schema 22 (inline rows, as a pre-TASK-045 build stored them).
-fn schema_22_seeded(seed: &Path, root: &Path, n: usize, k: usize) -> String {
+fn schema_22_seeded(seed: &Path, root: &Path, shape: Shape, n: usize, k: usize) -> String {
     std::fs::create_dir_all(root).unwrap();
     std::fs::copy(seed, root.join(crate::db::DB_FILE_NAME)).unwrap();
     let mut c = crate::db::open_file(&root.join(crate::db::DB_FILE_NAME)).unwrap();
@@ -1127,7 +1186,7 @@ fn schema_22_seeded(seed: &Path, root: &Path, n: usize, k: usize) -> String {
             |r| r.get(0),
         )
         .unwrap();
-    run_shape(&mut c, &account, Shape::TaskTen, n, &[k], None);
+    run_shape(&mut c, &account, shape, n, &[k], None);
     before_migration_23(&c);
     c.execute_batch("VACUUM; PRAGMA wal_checkpoint(TRUNCATE)")
         .unwrap();
@@ -1161,7 +1220,7 @@ fn frozen_v1_upgrade_harness() {
     // 1. N = 2,000, K = 50, shape (i): over the 64 MiB cap at schema 22; exports after the upgrade.
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path().join("big");
-    schema_22_seeded(&seed, &root, 2000, 50);
+    schema_22_seeded(&seed, &root, Shape::TaskTen, 2000, 50);
     {
         let c = Connection::open(root.join(crate::db::DB_FILE_NAME)).unwrap();
         let used: i64 = c
@@ -1194,7 +1253,7 @@ fn frozen_v1_upgrade_harness() {
     //    fresh journal. Inspect and prepare each migrate a candidate; the peak is mirrored step by step.
     let dir = tempfile::tempdir().unwrap();
     let source = dir.path().join("source");
-    schema_22_seeded(&seed, &source, 2000, 45);
+    schema_22_seeded(&seed, &source, Shape::TaskTen, 2000, 45);
     let archive = dir.path().join("v22.zip");
     {
         let c = Connection::open(source.join(crate::db::DB_FILE_NAME)).unwrap();
@@ -1332,7 +1391,7 @@ fn migration_23_compacts_eligible_calculations_and_changes_nothing_observable() 
     let rows = frozen_rows(&c);
     {
         let tx = c.transaction().unwrap();
-        frozen_v1::backfill(&tx).unwrap();
+        frozen_v1::backfill(&tx, false).unwrap();
         tx.commit().unwrap();
     }
     assert_eq!(
@@ -1344,6 +1403,130 @@ fn migration_23_compacts_eligible_calculations_and_changes_nothing_observable() 
         texts_now
     );
     assert_eq!(frozen_rows(&c), rows);
+}
+
+/// Before migration 23 nothing is encoded, so the migration wraps every pre-existing explanation with a top-level
+/// "$ff" key, including one shaped exactly like the compact form; each reads back unchanged.
+#[test]
+fn migration_23_wraps_pre_existing_marker_keys() {
+    let file = JournalFile::new();
+    let originals = [
+        json!({ "$ff": 1 }),
+        json!({ "$ff": "frozen-v1", "explanation": { "note": "caller text" } }),
+        json!({ "$ff": "frozen-v1", "inline": { "note": "caller text" } }),
+    ];
+    let mut ids = Vec::new();
+    {
+        let mut c = file.open();
+        let ctx = seeded(&mut c);
+        before_migration_23(&c);
+        for (i, explanation) in originals.iter().enumerate() {
+            let id = format!("00000000-0000-4000-8000-00000000ff0{i}");
+            c.execute(
+                "INSERT INTO account_snapshots(id,account_id,trading_day,is_end_of_day,data_source,calculated_at,engine_version,inputs_hash,status,status_reasons_json,explanation_json)
+                 VALUES(?1,?2,'2026-10-19',0,'manual','2026-10-19T20:00:00.000Z','legacy','h','unknown','[\"caller\"]',?3)",
+                params![id, ctx.account, explanation.to_string()],
+            )
+            .unwrap();
+            ids.push(id);
+        }
+    }
+    let c = file.open();
+    for (id, original) in ids.iter().zip(&originals) {
+        assert_eq!(&snapshots::get(&c, id).unwrap().explanation, original);
+        assert!(stored(&c, id).starts_with(r#"{"$ff":"frozen-v1","inline":"#));
+    }
+}
+
+/// Reading many calculations rebuilds a list only when it changed: with one new settlement per calculation
+/// (shape iv), listing rebuilds `observations` per calculation but `trades` once, and a decoder never keeps more
+/// than `LIST_CACHE` lists (`verify` reads every calculation of a journal with one).
+#[test]
+fn reading_calculations_rebuilds_only_the_lists_that_changed() {
+    const K: usize = frozen_v1::LIST_CACHE + 4;
+    let mut c = db();
+    let ctx = seeded(&mut c);
+    let mut ids = Vec::new();
+    for k in 0..K {
+        if k > 0 {
+            evidence::create(&mut c, synthetic_settlement(&ctx.account, "USD", k)).unwrap();
+        }
+        let cap = capture(&mut c, &ctx.account, CUTOFF);
+        let input = shape_input(&cap, Shape::NewSettlement, true);
+        ids.push(risk_promotion::promote(&mut c, input).unwrap().id);
+    }
+    assert!(ids.iter().all(|id| is_compact(&c, id)));
+    let (trades, observations) = (
+        frozen_v1::list_builds("trades"),
+        frozen_v1::list_builds("observations"),
+    );
+    let listed = snapshots::list(&c, &ctx.account, None, None, false).unwrap();
+    assert_eq!(listed.len(), K);
+    assert_eq!(
+        frozen_v1::list_builds("trades") - trades,
+        1,
+        "trades unchanged"
+    );
+    assert_eq!(
+        frozen_v1::list_builds("observations") - observations,
+        K as u64,
+        "one observations list per calculation"
+    );
+    let mut decoder = frozen_v1::Decoder::new(&c);
+    for id in &ids {
+        decoder
+            .decode(&ctx.account, serde_json::from_str(&stored(&c, id)).unwrap())
+            .unwrap();
+        assert!(decoder.cached_lists() <= frozen_v1::LIST_CACHE);
+    }
+    assert!(frozen_v1::verify(&c).unwrap());
+}
+
+/// Migration 23 finds each carried breach's source among the earlier calculations of the same cutoff,
+/// assignment and rulebook version, newest first, so each lookup parses one row instead of every calculation.
+#[test]
+fn migration_23_parses_one_candidate_per_carried_breach() {
+    const K: usize = 6;
+    let file = JournalFile::new();
+    let ids: Vec<String> = {
+        let mut c = file.open();
+        let ctx = seeded(&mut c);
+        let ids = (0..K)
+            .map(|_| {
+                let cap = capture(&mut c, &ctx.account, CUTOFF);
+                risk_promotion::promote(&mut c, shape_input(&cap, Shape::RealEngine, true))
+                    .unwrap()
+                    .id
+            })
+            .collect();
+        before_migration_23(&c);
+        ids
+    };
+    let before = frozen_v1::breach_candidates();
+    let c = file.open();
+    assert_eq!(
+        frozen_v1::breach_candidates() - before,
+        (K - 1) as u64,
+        "one candidate per carried breach"
+    );
+    let position = |id: &str| -> (String, String) {
+        c.query_row(
+            "SELECT calculated_at, id FROM account_snapshots WHERE id = ?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap()
+    };
+    let mut pointers = 0;
+    for id in &ids {
+        let raw: Value = serde_json::from_str(&stored(&c, id)).unwrap();
+        for b in raw["breaches"].as_array().into_iter().flatten() {
+            let target = b[1].as_str().unwrap();
+            assert!(position(target) < position(id), "an earlier calculation");
+            pointers += 1;
+        }
+    }
+    assert_eq!(pointers, K - 1);
 }
 
 /// Archive round trips: a schema-23 export restores with equal DTOs; schema-22 and schema-21 archives with inline

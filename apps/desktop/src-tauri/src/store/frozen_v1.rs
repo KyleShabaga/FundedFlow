@@ -204,19 +204,37 @@ fn canonical_array(v: &Value) -> Option<Value> {
     serde_json::from_str(&canonical_engine_json(v)).ok()
 }
 
-/// Rebuilds stored explanations. Lists are cached per (account, kind, generation), so reading many
-/// calculations of one account reads each list version once.
+/// How many rebuilt lists a decoder keeps (the most recently used).
+pub(crate) const LIST_CACHE: usize = 16;
+
+/// Parsed record versions of one (account, kind), by hash: the stored text as UTF-16 code units (the sort key)
+/// and the value.
+type Records = HashMap<String, (Rc<[u16]>, Rc<Value>)>;
+type ListKey = (String, String, i64);
+type List = Rc<Vec<Rc<Value>>>;
+
+/// Rebuilds stored explanations. Each record version is parsed once per decoder, and the most recently used
+/// lists are kept, keyed by the generation at which that kind's list last changed (so a list that stayed the
+/// same across generations is shared).
 pub(crate) struct Decoder<'c> {
     conn: &'c Connection,
-    lists: HashMap<(String, String, i64), Rc<Vec<Value>>>,
+    records: HashMap<(String, String), Records>,
+    lists: Vec<(ListKey, List)>,
 }
 
 impl<'c> Decoder<'c> {
     pub(crate) fn new(conn: &'c Connection) -> Self {
         Self {
             conn,
-            lists: HashMap::new(),
+            records: HashMap::new(),
+            lists: Vec::new(),
         }
+    }
+
+    /// Lists this decoder currently keeps (tests).
+    #[cfg(test)]
+    pub(crate) fn cached_lists(&self) -> usize {
+        self.lists.len()
     }
 
     /// The explanation a stored value encodes (an inline explanation is returned as it is).
@@ -224,34 +242,66 @@ impl<'c> Decoder<'c> {
         self.decode_with(account_id, raw, true)
     }
 
-    fn list(&mut self, account_id: &str, kind: &str, generation: i64) -> AppResult<Rc<Vec<Value>>> {
-        let key = (account_id.to_string(), kind.to_string(), generation);
-        if let Some(list) = self.lists.get(&key) {
-            return Ok(list.clone());
+    fn list(&mut self, account_id: &str, kind: &str, generation: i64) -> AppResult<List> {
+        // The list at `generation` is the list at the last generation (at or below it) where a span of this kind
+        // opened or closed.
+        let changed: i64 = self.conn.prepare_cached(
+            "SELECT max(coalesce(max(CASE WHEN from_generation <= ?3 THEN from_generation END), 0),
+                        coalesce(max(CASE WHEN to_generation <= ?3 THEN to_generation END), 0))
+             FROM risk_frozen_spans WHERE account_id = ?1 AND kind = ?2",
+        )?
+        .query_row(params![account_id, kind, generation], |r| r.get(0))?;
+        let key = (account_id.to_string(), kind.to_string(), changed);
+        if let Some(i) = self.lists.iter().position(|(k, _)| *k == key) {
+            let hit = self.lists.remove(i);
+            let list = Rc::clone(&hit.1);
+            self.lists.push(hit);
+            return Ok(list);
         }
-        let mut stmt = self.conn.prepare_cached(
-            "SELECT r.record_json, s.multiplicity FROM risk_frozen_spans s
-             JOIN risk_frozen_records r ON r.account_id = s.account_id AND r.kind = s.kind AND r.record_hash = s.record_hash
-             WHERE s.account_id = ?1 AND s.kind = ?2 AND s.from_generation <= ?3
-               AND (s.to_generation IS NULL OR s.to_generation > ?3)",
-        )?;
-        let mut texts: Vec<Rc<str>> = Vec::new();
-        let mut rows = stmt.query(params![account_id, kind, generation])?;
-        while let Some(row) = rows.next()? {
-            let text: Rc<str> = Rc::from(row.get::<_, String>(0)?);
-            let copies: i64 = row.get(1)?;
+        #[cfg(test)]
+        LIST_BUILDS.with(|b| *b.borrow_mut().entry(kind.to_string()).or_default() += 1);
+        let members: Vec<(String, i64)> = self
+            .conn
+            .prepare_cached(
+                "SELECT record_hash, multiplicity FROM risk_frozen_spans
+                 WHERE account_id = ?1 AND kind = ?2 AND from_generation <= ?3
+                   AND (to_generation IS NULL OR to_generation > ?3)",
+            )?
+            .query_map(params![account_id, kind, generation], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })?
+            .collect::<rusqlite::Result<_>>()?;
+        let mut entries: Vec<(Rc<[u16]>, Rc<Value>)> = Vec::with_capacity(members.len());
+        let records = self
+            .records
+            .entry((account_id.to_string(), kind.to_string()))
+            .or_default();
+        for (hash, copies) in members {
+            if !records.contains_key(&hash) {
+                let text: String = self
+                    .conn
+                    .prepare_cached(
+                        "SELECT record_json FROM risk_frozen_records
+                         WHERE account_id = ?1 AND kind = ?2 AND record_hash = ?3",
+                    )?
+                    .query_row(params![account_id, kind, hash], |r| r.get(0))
+                    .optional()?
+                    .ok_or_else(|| corrupt("record"))?;
+                let value: Value = serde_json::from_str(&text).map_err(|_| corrupt("record"))?;
+                let units: Vec<u16> = text.encode_utf16().collect();
+                records.insert(hash.clone(), (Rc::from(units), Rc::new(value)));
+            }
+            let entry = &records[&hash];
             for _ in 0..copies {
-                texts.push(text.clone());
+                entries.push(entry.clone());
             }
         }
-        texts.sort_by(|a, b| utf16_cmp(a, b));
-        let list = Rc::new(
-            texts
-                .iter()
-                .map(|t| serde_json::from_str(t).map_err(|_| corrupt("record")))
-                .collect::<AppResult<Vec<Value>>>()?,
-        );
-        self.lists.insert(key, list.clone());
+        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        let list: List = Rc::new(entries.into_iter().map(|(_, v)| v).collect());
+        if self.lists.len() >= LIST_CACHE {
+            self.lists.remove(0);
+        }
+        self.lists.push((key, Rc::clone(&list)));
         Ok(list)
     }
 
@@ -285,7 +335,10 @@ impl<'c> Decoder<'c> {
                     .filter(|k| KINDS.contains(k))
                     .ok_or_else(|| corrupt("list kind"))?;
                 let list = self.list(account_id, kind, generation)?;
-                inputs.insert(kind.to_string(), Value::Array(list.as_ref().clone()));
+                inputs.insert(
+                    kind.to_string(),
+                    Value::Array(list.iter().map(|v| Value::clone(v)).collect()),
+                );
             }
         }
         let needs_set = raw.contains_key("refs") || raw.contains_key("rules");
@@ -485,31 +538,83 @@ fn generation(
     Ok(next)
 }
 
-/// The calculation and rule of the same account a carried breach came from, if one matches exactly.
+/// A stored row's position (`calculated_at`, `id`): only calculations before it are breach sources.
+pub(crate) type Before<'a> = Option<(&'a str, &'a str)>;
+
+#[cfg(test)]
+thread_local! {
+    static BREACH_CANDIDATES: Cell<u64> = const { Cell::new(0) };
+    static LIST_BUILDS: std::cell::RefCell<HashMap<String, u64>> = std::cell::RefCell::new(HashMap::new());
+}
+
+/// Rows `breach_source` read back from SQL and parsed, summed over this thread (tests).
+#[cfg(test)]
+pub(crate) fn breach_candidates() -> u64 {
+    BREACH_CANDIDATES.with(Cell::get)
+}
+
+/// Lists of `kind` that decoders on this thread rebuilt from spans (tests).
+#[cfg(test)]
+pub(crate) fn list_builds(kind: &str) -> u64 {
+    LIST_BUILDS.with(|b| b.borrow().get(kind).copied().unwrap_or(0))
+}
+
+/// The engine result of a stored explanation, as SQL sees it: inline, wrapped inline or compact.
+const STORED_ENGINE: &str =
+    "CASE WHEN json_extract(explanation_json, '$.\"$ff\"') IS NULL THEN '$.engine'
+    WHEN json_type(explanation_json, '$.inline') IS NOT NULL THEN '$.inline.engine'
+    ELSE '$.explanation.engine' END";
+
+/// The calculation and rule of the same account a carried breach came from, if one matches exactly. Candidates
+/// are filtered in SQL on the breach's cutoff, assignment and rulebook version and, with `before`, on position,
+/// and read newest first only until one matches, so a lookup parses a few rows rather than every calculation.
 fn breach_source(
     conn: &Connection,
     decoder: &mut Decoder,
     account_id: &str,
     breach: &Value,
+    before: Before,
 ) -> AppResult<Option<(String, String)>> {
-    let mut stmt = conn.prepare_cached(
-        "SELECT id, engine_version, explanation_json FROM account_snapshots WHERE account_id = ?1
-         ORDER BY trading_day DESC, calculated_at DESC, id",
-    )?;
-    let rows: Vec<(String, String, String)> = stmt
-        .query_map([account_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
-        .collect::<rusqlite::Result<_>>()?;
-    for (id, engine_version, text) in rows {
-        if !engine_version.starts_with("fundedflow-risk/") {
-            continue;
-        }
+    let (Some(observed_at), Some(assignment), Some(version)) = (
+        breach["observedAt"].as_str(),
+        breach["assignmentId"].as_str(),
+        breach["rulebookVersionId"].as_str(),
+    ) else {
+        return Ok(None);
+    };
+    let sql = format!(
+        "SELECT id, explanation_json FROM (
+           SELECT id, trading_day, calculated_at, explanation_json, {STORED_ENGINE} AS engine
+           FROM account_snapshots
+           WHERE account_id = ?1
+             AND (?2 IS NULL OR calculated_at < ?2 OR (calculated_at = ?2 AND id < ?3))
+             AND engine_version GLOB 'fundedflow-risk/*')
+         WHERE json_extract(explanation_json, engine || '.asOf') = ?4
+           AND json_extract(explanation_json, engine || '.assignmentId') = ?5
+           AND json_extract(explanation_json, engine || '.rulebookVersionId') = ?6
+         ORDER BY trading_day DESC, calculated_at DESC, id"
+    );
+    let mut stmt = conn.prepare_cached(&sql)?;
+    let (at, row_id) = before.unzip();
+    let mut rows = stmt.query(params![
+        account_id,
+        at,
+        row_id,
+        observed_at,
+        assignment,
+        version
+    ])?;
+    while let Some(row) = rows.next()? {
+        let (id, text): (String, String) = (row.get(0)?, row.get(1)?);
+        #[cfg(test)]
+        BREACH_CANDIDATES.with(|c| c.set(c.get() + 1));
         let Ok(raw) = serde_json::from_str::<Value>(&text) else {
             continue;
         };
-        let engine = if is_compact(&raw) {
-            &raw["explanation"]["engine"]
-        } else {
-            &raw["engine"]
+        let engine = match (is_compact(&raw), raw.get("inline")) {
+            (true, Some(inline)) => &inline["engine"],
+            (true, None) => &raw["explanation"]["engine"],
+            (false, _) => &raw["engine"],
         };
         if engine["assignmentId"] != breach["assignmentId"]
             || engine["asOf"] != breach["observedAt"]
@@ -544,6 +649,7 @@ pub(crate) fn encode(
     account_id: &str,
     engine_version: &str,
     explanation: &Value,
+    before: Before,
 ) -> AppResult<Encoded> {
     if is_compact(explanation) || !is_engine(engine_version, explanation) {
         return inline(explanation, 0);
@@ -558,7 +664,7 @@ pub(crate) fn encode(
         return report(inline(explanation, 1)?);
     }
     conn.execute_batch("SAVEPOINT frozen_v1")?;
-    let attempt = encode_in(conn, account_id, explanation).map(|(compact, fallbacks)| {
+    let attempt = encode_in(conn, account_id, explanation, before).map(|(compact, fallbacks)| {
         let decoded = Decoder::new(conn).decode(account_id, compact.clone());
         let exact = decoded.ok().as_ref() == Some(explanation);
         (compact, fallbacks, exact)
@@ -595,7 +701,12 @@ fn report(encoded: Encoded) -> AppResult<Encoded> {
     Ok(encoded)
 }
 
-fn encode_in(conn: &Connection, account_id: &str, explanation: &Value) -> AppResult<(Value, u64)> {
+fn encode_in(
+    conn: &Connection,
+    account_id: &str,
+    explanation: &Value,
+    before: Before,
+) -> AppResult<(Value, u64)> {
     let mut fallbacks = 0;
     let mut ex = explanation.clone();
     let mut meta = Map::new();
@@ -673,7 +784,7 @@ fn encode_in(conn: &Connection, account_id: &str, explanation: &Value) -> AppRes
         if breach.get("sourceReferences").is_none() {
             continue;
         }
-        match breach_source(conn, &mut decoder, account_id, breach)? {
+        match breach_source(conn, &mut decoder, account_id, breach, before)? {
             Some((snapshot, rule)) => {
                 if let Some(o) = ex["policy"]["priorBreaches"][i].as_object_mut() {
                     o.remove("sourceReferences");
@@ -693,34 +804,36 @@ fn encode_in(conn: &Connection, account_id: &str, explanation: &Value) -> AppRes
 /// Migration 23 data step: rewrites every eligible stored engine calculation into this format, one row at a
 /// time. Eligible: an engine version `fundedflow-risk/...`, an explanation that parses as an engine
 /// calculation, `validate_engine_payload` passing on the row rebuilt as a `SnapshotInput`, and an encoding that
-/// decodes to the same value (checked inside `encode`). Any other row is left byte-identical. Rows already in
-/// this format are skipped, so the step is idempotent.
+/// decodes to the same value (checked inside `encode`). Any other row is left byte-identical, except that on the
+/// migration's own run (`first_run`) every explanation with a top-level `"$ff"` key is wrapped: no row can be in
+/// this format before migration 23, so such a key is always caller content. Rows already in this format are
+/// skipped, so the compaction is idempotent. A carried breach's source is looked up only among earlier rows
+/// (already compacted, so small) of the same cutoff, assignment and rulebook version, newest first, so each
+/// lookup parses a few rows rather than every calculation of the account.
 ///
 /// This is the owner-approved exception OD-7(2) to the data-step rule (`db/mod.rs`, "change only derived
 /// columns"): `explanation_json` is not derived. The `account_snapshot_no_update` trigger is dropped for the
 /// rewrite and recreated from its own stored SQL, so the schema is byte-identical afterwards.
-pub(crate) fn backfill(tx: &Connection) -> rusqlite::Result<()> {
+pub(crate) fn backfill(tx: &Connection, first_run: bool) -> rusqlite::Result<()> {
     let trigger: String = tx.query_row(
         "SELECT sql FROM sqlite_schema WHERE type = 'trigger' AND name = 'account_snapshot_no_update'",
         [],
         |r| r.get(0),
     )?;
     tx.execute_batch("DROP TRIGGER account_snapshot_no_update")?;
-    // A caller-supplied explanation that already has a top-level "$ff" key (and is not this format) is wrapped,
-    // as new writes are, so it can never be read as the compact form.
-    let marked: Vec<(String, String)> = tx
-        .prepare(
-            "SELECT id, explanation_json FROM account_snapshots
-             WHERE json_extract(explanation_json, '$.\"$ff\"') IS NOT NULL ORDER BY id",
-        )?
-        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
-        .collect::<rusqlite::Result<_>>()?;
-    for (id, text) in marked {
-        let raw: Value = serde_json::from_str(&text)
-            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
-        let ours = raw[MARKER_KEY] == MARKER
-            && (raw["explanation"].is_object() || raw.get("inline").is_some());
-        if !ours {
+    // Before migration 23 nothing is encoded, so a top-level "$ff" key is caller content: wrap it, as new writes
+    // are, so it can never be read as the compact form.
+    if first_run {
+        let marked: Vec<(String, String)> = tx
+            .prepare(
+                "SELECT id, explanation_json FROM account_snapshots
+                 WHERE json_extract(explanation_json, '$.\"$ff\"') IS NOT NULL ORDER BY id",
+            )?
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+            .collect::<rusqlite::Result<_>>()?;
+        for (id, text) in marked {
+            let raw: Value = serde_json::from_str(&text)
+                .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
             tx.execute(
                 "UPDATE account_snapshots SET explanation_json = ?2 WHERE id = ?1",
                 params![id, json!({ MARKER_KEY: MARKER, "inline": raw }).to_string()],
@@ -752,6 +865,7 @@ pub(crate) fn backfill(tx: &Connection) -> rusqlite::Result<()> {
             &snapshot.account_id,
             &snapshot.engine_version,
             &snapshot.explanation,
+            Some((&snapshot.calculated_at, &snapshot.id)),
         )
         .map_err(failed)?;
         let compact: Value = serde_json::from_str(&encoded.text)
@@ -784,10 +898,16 @@ pub(crate) fn verify(conn: &Connection) -> AppResult<bool> {
          WHERE json_extract(explanation_json, '$.\"$ff\"') IS NOT NULL ORDER BY account_id, calculated_at, id",
     )?;
     let mut rows = stmt.query([])?;
+    // One decoder per account, so its caches never hold more than one account's records.
     let mut decoder = Decoder::new(conn);
+    let mut current = String::new();
     while let Some(row) = rows.next()? {
         let (account, engine_version, inputs_hash, text): (String, String, String, String) =
             (row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?);
+        if account != current {
+            decoder = Decoder::new(conn);
+            current = account.clone();
+        }
         let Ok(raw) = serde_json::from_str::<Value>(&text) else {
             return Ok(false);
         };

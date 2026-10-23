@@ -354,6 +354,7 @@ pub(super) fn insert_prepared(
         &input.account_id,
         &input.engine_version,
         &input.explanation,
+        None,
     )?
     .text;
     tx.execute(

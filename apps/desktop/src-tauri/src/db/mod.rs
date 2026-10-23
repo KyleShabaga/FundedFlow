@@ -179,7 +179,7 @@ fn frozen_risk_sources(tx: &Transaction) -> rusqlite::Result<()> {
     tx.execute_batch(include_str!(
         "../../migrations/0023_frozen_risk_sources.sql"
     ))?;
-    crate::store::frozen_v1::backfill(tx)
+    crate::store::frozen_v1::backfill(tx, true)
 }
 
 /// Latest schema version this build understands.

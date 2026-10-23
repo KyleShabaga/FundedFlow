@@ -2485,7 +2485,9 @@ fn restore_fee_flags(archive: &Path) -> Vec<(String, i64, i64)> {
 fn a_schema_22_archive_carries_fees_recorded_and_restores_it() {
     use crate::store::trades;
     let source = tempfile::tempdir().unwrap();
-    let mut c = journal(&source.path().join("source.db"));
+    // A journal at exactly schema 22 (TASK-045 added 23).
+    let mut c = Connection::open(source.path().join("source.db")).unwrap();
+    db::migrate_with(&mut c, &db::MIGRATIONS[..22]).unwrap();
     let a = account(&mut c, "fees");
     for (symbol, fees) in [
         ("ESZ6", None),
@@ -2513,8 +2515,7 @@ fn a_schema_22_archive_carries_fees_recorded_and_restores_it() {
     let out = source.path().join("v22.zip");
     archive::export(&c, &source.path().join("attachments"), &out, true).unwrap();
     let inspected = archive::inspect_to(&out, source.path()).unwrap();
-    // Schema 22 or later (TASK-045's migration 23 keeps the column).
-    assert_eq!(inspected.manifest.schema_version, db::latest_version());
+    assert_eq!(inspected.manifest.schema_version, 22);
     let data = archive::dump(
         &archive::readonly(&inspected.directory.path().join("journal.sqlite")).unwrap(),
     )
