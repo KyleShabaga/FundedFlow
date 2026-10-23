@@ -2046,8 +2046,7 @@ fn a_missing_attachment_does_not_block_restore_or_erase_and_is_named_in_both_pre
         .unwrap();
         assert!(
             erase.warnings.contains(&format!("{PREFIX}chart.png")),
-            "{:?}",
-            erase.warnings
+            "erase preview warnings should name chart.png"
         );
         assert_eq!(
             erase.attachments.len(),
@@ -2064,8 +2063,7 @@ fn a_missing_attachment_does_not_block_restore_or_erase_and_is_named_in_both_pre
         .unwrap();
         assert!(
             p.warnings.contains(&format!("{PREFIX}chart.png")),
-            "{:?}",
-            p.warnings
+            "inspect warnings should name chart.png"
         );
         let result = restore::prepare(&c, &root, confirm(&incoming, p.preview_token)).unwrap();
         drop(c);
@@ -2202,8 +2200,7 @@ fn a_changed_file_with_a_managed_name_is_never_an_extra_and_the_erase_lists_ever
     for id in ["gone", "managed", "opaque"] {
         assert!(
             p.warnings.contains(&format!("{PREFIX}{id}")),
-            "{id}: {:?}",
-            p.warnings
+            "preview warnings should name {id}"
         );
     }
     assert_eq!(

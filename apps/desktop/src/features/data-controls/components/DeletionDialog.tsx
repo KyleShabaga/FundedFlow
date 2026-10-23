@@ -192,7 +192,7 @@ export function MissingAttachmentsNotice({ warnings, children }: { warnings: rea
   return (
     <InlineNotice tone="warning" title="Some screenshots are already missing or changed">
       {children}
-      <ul className="dc-list">{names.map(name => <li key={name}><code className="dc-id">{name}</code></li>)}</ul>
+      <ul className="dc-list">{names.map((name, i) => <li key={i}><code className="dc-id">{name}</code></li>)}</ul>
     </InlineNotice>
   );
 }
