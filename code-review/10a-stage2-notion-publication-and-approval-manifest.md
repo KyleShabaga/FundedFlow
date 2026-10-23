@@ -286,3 +286,29 @@ Kyle answered each question in Claude Code, one at a time. His choice is recorde
 **Open follow-ups:**
 - Approved TASK-032 (line 62) still says the candidate shows the "first-run agreement" again and to "accept it", and approved TASK-033 (line 49) still says "first-run agreement". Both cite `apps/desktop/src/legal/index.ts:40-43` at 92e7980, which is `#107 apps/desktop/src/legal/index.ts:44-47` at `c0a076e`. These cards stay frozen; the wording is handled at execution.
 - Triage cards are proposed for the PR #107 packaged checks that no card covers, or covers only in part (TASK-035 r5 mapping): cleanup interruption, "Close writes no acknowledgment", account deletion keeping recovery copies, the old-acceptance-record prompt (conditional only) and whole-journal erasure retention (partial).
+
+## 14. Approval of the legal-track revisions (2026-10-22, same session)
+
+Kyle answered in Claude Code:
+- **TASK-025 r6:** "A: ship 0.2.1-draft (Rec.)". Approved with draft-status option (A). V1 ships PR #107's approved `0.2.1-draft` documents unchanged, accepting the "content approval pending" sentence at `#107 user-agreement.ts:14`.
+- **The other seven:** "Approve all seven (Rec.)". Approved at TASK-026 r5, TASK-028 r7, TASK-030 r5, TASK-031 r7, TASK-035 r5, TASK-036 r5 and TASK-044 r3.
+
+**On the board**, each of these eight cards has:
+- Approval set to Approved;
+- Approved Specification Revision set to the full SHA-256 of the committed spec;
+- Approved By and Approved At (2026-10-22) filled in;
+- an Approval Scope;
+- a comment recording Kyle's answer.
+
+**These eight card files must not be edited.**
+
+**Board totals:**
+- Approved: 43.
+- Deferred: 023 r3, pending the TASK-011(a) result.
+- Pending Review: none.
+
+**Still open (not cards):**
+- PR #107 must be merged before TASK-025, 026, 028, 030, 044 and TASK-040 can run.
+- The 0.1.0 artifact must be downloaded by 2026-11-20 (TASK-031 step 0).
+- Triage cards are proposed for the #107 packaged checks no gate covers (TASK-035 r5).
+- TASK-032 and 033 still say "first-run agreement"; this is fixed at execution.
