@@ -65,6 +65,12 @@ export class DataControlProblem extends Error {
   }
 }
 
+/** Prefix of a native preview warning naming one missing or changed attachment (`archive::MISSING_ATTACHMENT`). */
+export const MISSING_ATTACHMENT = "Missing or changed attachment: ";
+/** The attachment names in prefixed preview warnings. The dialogs show only these: the fixed native warnings repeat their own copy. */
+export const missingAttachments = (warnings: readonly string[]): string[] =>
+  warnings.filter(w => w.startsWith(MISSING_ATTACHMENT)).map(w => w.slice(MISSING_ATTACHMENT.length));
+
 export function describeProblem(error: unknown): string {
   return error instanceof DataControlProblem ? error.message : new DataControlProblem("unexpected").message;
 }

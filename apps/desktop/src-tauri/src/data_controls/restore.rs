@@ -1,5 +1,5 @@
 //! Replace-only restart installation. Durable intent precedes mutation; incomplete installs roll back.
-use super::{Code, Result, archive, fail, filesystem::*};
+use super::{Code, Result, archive, fail, filesystem::*, over_limit};
 use crate::db;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
@@ -123,12 +123,26 @@ pub(super) fn inspect_with(
     db::migrate(&mut candidate).map_err(|_| fail(Code::Integrity))?;
     let archive_sha256 = stage.source_hash.clone();
     let preview_token = token(&archive_sha256, &content_hash(c)?);
-    Ok(RestorePreview { state: "validated".into(), manifest: stage.manifest,
-        archive_sha256, preview_token, replaced_entities: counts(c)?, required_confirmation: "REPLACE ENTIRE JOURNAL".into(),
+    let mut warnings: Vec<String> = vec![
+        "Plaintext archive; hashes are integrity checks, not authentication.".into(),
+        "Replaces the entire journal and app-managed attachments after exclusive restart; never merges.".into(),
+        "External backups remain untouched. A local pre-restore safety copy remains until explicitly removed.".into(),
+    ];
+    // Missing or changed screenshots never block a restore; the preview names them.
+    warnings.extend(archive::attachment_warnings(
+        c,
+        &archive::survey(c, &root.join("attachments"))?,
+    )?);
+    Ok(RestorePreview {
+        state: "validated".into(),
+        manifest: stage.manifest,
+        archive_sha256,
+        preview_token,
+        replaced_entities: counts(c)?,
+        required_confirmation: "REPLACE ENTIRE JOURNAL".into(),
         required_free_bytes: required.advertised,
-        warnings: vec!["Plaintext archive; hashes are integrity checks, not authentication.".into(),
-            "Replaces the entire journal and app-managed attachments after exclusive restart; never merges.".into(),
-            "External backups remain untouched. A local pre-restore safety copy remains until explicitly removed.".into()] })
+        warnings,
+    })
 }
 /// Must be called with the runtime lock, followed by closing the connection before any further writes.
 pub fn prepare(c: &Connection, root: &Path, request: RestoreRequest) -> Result<RestoreResult> {
@@ -183,18 +197,34 @@ pub(super) fn prepare_with(
     // The safety copy is local only: uncapped, but it must fit before any persistent intent is written.
     ensure(available, &op, live_required(c)?.prepare_check)?;
     archive::local_snapshot(c, &op.join("safety.db"))?;
-    let original_attachments = archive::inventory(c, &root.join("attachments"))?;
-    // Copy the whole managed root, rejecting stray/unsafe files: no unbacked-up bytes can disappear.
+    let survey = archive::survey(c, &root.join("attachments"))?;
+    // The safety inventory lists verified files only; rollback reinstates exactly these.
+    let original_attachments = survey.present.clone();
+    // Copy the verified files and any unowned managed extras, refusing unsafe or unrecognised files: no
+    // unbacked-up bytes can disappear. Changed files are recorded, so they are never taken for extras.
     copy_managed(
         &root.join("attachments"),
         &op.join("safety-attachments"),
         &original_attachments,
-        // Keys recorded as changed attachments: none until TASK-017 detects them.
-        &BTreeSet::new(),
+        &survey.changed_keys(),
+    )?;
+    // Changed bytes are kept apart before anything is replaced; if they cannot be, nothing is.
+    let unverified = preserve_unverified(
+        &root.join("attachments"),
+        &op.join("safety-changed-attachments"),
+        &survey,
+        available,
+        &op,
     )?;
     write_new(
         &op.join("safety-inventory.json"),
         &serde_json::to_vec(&original_attachments)?,
+    )?;
+    // Always written, empty when nothing is missing or changed. Nothing reads it back: rollback uses only the
+    // safety inventory, so a folder from the previous version (which has no such file) rolls back the same way.
+    write_new(
+        &op.join("safety-missing.json"),
+        &serde_json::to_vec(&unverified)?,
     )?;
     write_new(
         &op.join("candidate-inventory.json"),
@@ -299,6 +329,73 @@ pub(crate) fn managed_files(root: &Path, prefix: &str, names: &mut Vec<String>) 
         }
     }
     Ok(())
+}
+/// One `safety-missing.json` entry: an attachments row whose file was missing or changed when the restore was
+/// prepared, with the recorded size and hash, and for a changed file those of the copy kept in
+/// `safety-changed-attachments/`.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Unverified {
+    id: String,
+    storage_key: String,
+    byte_size: u64,
+    sha256: String,
+    state: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    actual_byte_size: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    actual_sha256: Option<String>,
+}
+/// Copy each changed file, hash-verified, into `target` (after a free-space check at `op`); record missing ones.
+/// Any changed file that is not safely readable fails the restore before its intent is written.
+fn preserve_unverified(
+    source: &Path,
+    target: &Path,
+    survey: &archive::Survey,
+    available: Available,
+    op: &Path,
+) -> Result<Vec<Unverified>> {
+    let record = |a: &super::Attachment, state, actual: Option<(u64, String)>| Unverified {
+        id: a.id.clone(),
+        storage_key: a.storage_key.clone(),
+        byte_size: a.byte_size,
+        sha256: a.sha256.clone(),
+        state,
+        actual_byte_size: actual.as_ref().map(|(len, _)| *len),
+        actual_sha256: actual.map(|(_, hash)| hash),
+    };
+    let mut entries: Vec<Unverified> = survey
+        .missing
+        .iter()
+        .map(|a| record(a, "missing", None))
+        .collect();
+    if !survey.changed.is_empty() {
+        let mut needed = 0u64;
+        for a in &survey.changed {
+            needed = needed.saturating_add(fs::metadata(source.join(&a.storage_key))?.len());
+        }
+        ensure(available, op, needed)?;
+        for a in &survey.changed {
+            relative(&a.storage_key)?;
+            let path = source.join(&a.storage_key);
+            no_symlink_components(&path)?;
+            regular(&path)?;
+            let len = fs::metadata(&path)?.len();
+            if len > MAX_ENTRY {
+                return Err(over_limit("changed attachment", len, MAX_ENTRY, "bytes"));
+            }
+            let hash = hash_file(&path)?;
+            let dest = target.join(&a.storage_key);
+            write_new(&dest, &fs::read(&path)?)?;
+            if hash_file(&dest)? != hash {
+                return Err(fail(Code::Integrity));
+            }
+            entries.push(record(a, "changed", Some((len, hash))));
+        }
+        sync_tree(target)?;
+    }
+    entries.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(entries)
 }
 /// Whether `key` is a name FundedFlow itself writes under `attachments/` (`store/attachments.rs`): a finished
 /// screenshot `screenshots/<uuid>.<png|jpg|webp>` or an interrupted write `screenshots/.<uuid>.part`, with `<uuid>`

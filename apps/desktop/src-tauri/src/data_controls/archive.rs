@@ -1,4 +1,4 @@
-use super::{Attachment, Code, Counts, Result, fail, filesystem::*, over_limit};
+use super::{Attachment, Code, ControlError, Counts, Result, fail, filesystem::*, over_limit};
 use crate::db;
 use rusqlite::{Connection, OpenFlags, types::ValueRef};
 use serde::{Deserialize, Serialize};
@@ -251,25 +251,87 @@ pub fn attachments(conn: &Connection) -> Result<Vec<Attachment>> {
     })?
     .collect::<rusqlite::Result<_>>()?)
 }
-pub fn inventory(conn: &Connection, root: &Path) -> Result<Vec<Attachment>> {
-    let list = attachments(conn)?;
+/// The attachments rows, by what their files look like on disk.
+#[derive(Debug, Default)]
+pub struct Survey {
+    /// The file is there with its recorded size and hash.
+    pub present: Vec<Attachment>,
+    /// No file at the recorded key.
+    pub missing: Vec<Attachment>,
+    /// A regular file is there, but its size or hash differs from the record.
+    pub changed: Vec<Attachment>,
+}
+impl Survey {
+    pub fn changed_keys(&self) -> BTreeSet<String> {
+        self.changed.iter().map(|a| a.storage_key.clone()).collect()
+    }
+}
+/// Like `inventory`, but reports missing and changed files instead of failing on them. Unsafe or duplicate keys,
+/// links, reparse points and non-regular entries still fail exactly as `inventory` does.
+pub fn survey(conn: &Connection, root: &Path) -> Result<Survey> {
+    let mut survey = Survey::default();
     let mut keys = BTreeSet::new();
-    for a in &list {
+    for a in attachments(conn)? {
         relative(&a.storage_key)?;
         if !keys.insert(a.storage_key.to_lowercase()) {
             return Err(fail(Code::UnsafePath));
         }
         let path = root.join(&a.storage_key);
         no_symlink_components(&path)?;
+        if matches!(fs::symlink_metadata(&path), Err(e) if e.kind() == std::io::ErrorKind::NotFound)
+        {
+            survey.missing.push(a);
+            continue;
+        }
         regular(&path)?;
         if a.byte_size > MAX_ENTRY
             || fs::metadata(&path)?.len() != a.byte_size
             || hash_file(&path)? != a.sha256
         {
-            return Err(fail(Code::MissingAttachment));
+            survey.changed.push(a);
+        } else {
+            survey.present.push(a);
         }
     }
-    Ok(list)
+    Ok(survey)
+}
+/// Every attachment, verified. Export and archive import stay strict; `detail` names what is missing or changed.
+pub fn inventory(conn: &Connection, root: &Path) -> Result<Vec<Attachment>> {
+    let survey = survey(conn, root)?;
+    let mut ids: Vec<&str> = survey
+        .missing
+        .iter()
+        .chain(&survey.changed)
+        .map(|a| a.id.as_str())
+        .collect();
+    if !ids.is_empty() {
+        ids.sort();
+        return Err(ControlError {
+            detail: Some(format!(
+                "missing or changed attachments: {}",
+                ids.join(", ")
+            )),
+            ..fail(Code::MissingAttachment)
+        });
+    }
+    Ok(survey.present)
+}
+/// Prefix of the preview `warnings` entry naming one missing or changed attachment; the dialogs show only these.
+pub const MISSING_ATTACHMENT: &str = "Missing or changed attachment: ";
+/// One prefixed warning per missing or changed attachment (by id), naming its original file name, else its id.
+pub fn attachment_warnings(conn: &Connection, survey: &Survey) -> Result<Vec<String>> {
+    let mut rows: Vec<&Attachment> = survey.missing.iter().chain(&survey.changed).collect();
+    rows.sort_by(|a, b| a.id.cmp(&b.id));
+    let mut name = conn.prepare("SELECT original_name FROM attachments WHERE id=?1")?;
+    rows.into_iter()
+        .map(|a| {
+            let original: Option<String> = name.query_row([&a.id], |r| r.get(0))?;
+            let label = original
+                .filter(|n| !n.trim().is_empty())
+                .unwrap_or_else(|| a.id.clone());
+            Ok(format!("{MISSING_ATTACHMENT}{label}"))
+        })
+        .collect()
 }
 /// A compacted copy of the journal for an archive, refused over the archive entry cap.
 pub fn snapshot(conn: &Connection, destination: &Path) -> Result<()> {

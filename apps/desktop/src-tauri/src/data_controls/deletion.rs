@@ -231,6 +231,7 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
     let mut linked = Vec::new();
     let mut attachments;
     let mut extra_files = Vec::new();
+    let mut unverified = Vec::new();
     let mut name = None;
     let mut affected = Counts::new();
     let copies = recovery_copies(root)?;
@@ -313,14 +314,17 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
             }
         }
         Scope::Journal => {
-            attachments = archive::inventory(c, &root.join("attachments"))?;
-            // Reject stray bytes before promising a complete whole-journal erase.
-            // Keys recorded as changed attachments: none until TASK-017 detects them.
+            let survey = archive::survey(c, &root.join("attachments"))?;
+            // Every row is listed, so the cleanup marker removes missing and changed ones too, whatever their key.
+            attachments = archive::attachments(c)?;
+            // Reject unsafe or unrecognised bytes before promising a complete whole-journal erase. Only present
+            // and changed files are on disk; changed ones are recorded, so they are never taken for extras.
             extra_files = super::restore::validate_managed(
                 &root.join("attachments"),
-                &attachments,
-                &BTreeSet::new(),
+                &survey.present,
+                &survey.changed_keys(),
             )?;
+            unverified = archive::attachment_warnings(c, &survey)?;
             affected = before.clone();
         }
     }
@@ -340,9 +344,10 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
     ))?;
     Ok(DeletionPreview { scope:request.scope, account_name:name, affected_entities:affected, attachments, extra_files, linked_account_ids:linked, blockers,
         preview_token:digest(&payload),required_confirmation:confirmation,local_recovery_copies:copies.len() as u64,
-        warnings:vec!["Permanent application-data deletion, separate from reversible account archiving.".into(),
+        warnings:["Permanent application-data deletion, separate from reversible account archiving.".into(),
             "External/user-exported backups remain untouched; this is not a forensic secure-erase guarantee.".into(),
-            "Whole-journal erasure also removes app-managed recovery copies; account deletion leaves them intact.".into()] })
+            "Whole-journal erasure also removes app-managed recovery copies; account deletion leaves them intact.".into()]
+            .into_iter().chain(unverified).collect() })
 }
 pub fn execute(c: &mut Connection, root: &Path, request: DeleteRequest) -> Result<DeleteResult> {
     // Files may be removed only after the SQLite commit is durable, even when the app normally uses NORMAL.
