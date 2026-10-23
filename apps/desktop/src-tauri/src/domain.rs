@@ -407,7 +407,7 @@ pub fn realized_pnl(t: &TradeFields, instrument: Option<&Instrument>, account_cu
     let too_large = || "P&L is too large to store".to_string();
     let (gross, status) = match instrument {
         Some(i) if i.currency == account_currency => {
-            let per_unit = (exit - t.entry_price).checked_mul(t.quantity).ok_or_else(too_large)?;
+            let per_unit = exit.checked_sub(t.entry_price).and_then(|m| m.checked_mul(t.quantity)).ok_or_else(too_large)?;
             let mut gross = per_unit.checked_mul(i.point_value).ok_or_else(too_large)?;
             if t.side == Side::Short {
                 gross = -gross;
@@ -719,5 +719,14 @@ mod tests {
         assert_eq!(pnl(&closed(Side::Short, "3", "100", "100.000001", 1), Some(&half)), (Some(-2), Some(-3), "calculated"));
         // Point value 12.5, move 0.01, qty 1: 0.125 exactly = 125 000 micros, no rounding needed.
         assert_eq!(pnl(&closed(Side::Short, "1", "1.10", "1.09", 0), Some(&unit("12.5"))).0, Some(125_000));
+    }
+
+    #[test]
+    fn b01_a_price_move_beyond_decimal_range_is_an_error_not_a_panic() {
+        // −1 − 79228162514264337593543950335 (Decimal::MAX) does not fit a Decimal.
+        for side in [Side::Long, Side::Short] {
+            let t = closed(side, "1", "79228162514264337593543950335", "-1", 0);
+            assert_eq!(realized_pnl(&t, Some(&unit("1")), "USD").unwrap_err(), "P&L is too large to store", "{side:?}");
+        }
     }
 }

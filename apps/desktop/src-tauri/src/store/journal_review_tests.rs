@@ -410,6 +410,29 @@ fn historical_reviews_keep_labels_after_templates_are_renamed_or_archived() {
 }
 
 #[test]
+fn prices_beyond_decimal_range_give_unknown_risk_or_a_validation_error_never_a_panic() {
+    let mut conn = db();
+    let a = account(&mut conn, "A");
+    let t = trades::create(&mut conn, trade_input(&a)).unwrap();
+    // |79228162514264337593543950335 − (−1)| does not fit a Decimal: 1R is unknown, and later reads still work.
+    let mut r = review(&a, &t.id);
+    r.planned_entry_price = Some("79228162514264337593543950335".into());
+    r.planned_stop_price = Some("-1".into());
+    let saved = reviews::save(&mut conn, None, r).unwrap();
+    assert_eq!((saved.planned_risk.as_deref(), saved.r_multiple.as_deref()), (None, None));
+    let read = reviews::get(&conn, None, &a, &t.id).unwrap().unwrap();
+    assert_eq!((read.planned_risk.as_deref(), read.r_multiple.as_deref()), (None, None));
+
+    // A trade whose price move does not fit is rejected, and nothing is written.
+    let before = count(&conn, "SELECT COUNT(*) FROM trades");
+    let mut input = trade_input(&a);
+    input.entry_price = "79228162514264337593543950335".into();
+    input.exit_price = Some("-1".into());
+    assert_eq!(kind(trades::create(&mut conn, input).unwrap_err()), "validation");
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM trades"), before);
+}
+
+#[test]
 fn library_validation_and_uniqueness() {
     let mut conn = db();
     library::save_tag(&mut conn, None, TagInput { name: "Calm".into(), kind: "emotion".into() }).unwrap();
