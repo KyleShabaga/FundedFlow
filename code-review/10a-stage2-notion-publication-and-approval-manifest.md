@@ -235,3 +235,29 @@ On the board, each of these 23 cards has:
 - 042 r2 (TASK-009 r4 plus four rules)
 
 **Deferred:** 023 r3. TASK-011(a) must also record Alt+F4; this is an execution note, and 011 is unchanged.
+
+## 12. Owner questions answered (2026-10-22, same session)
+
+Kyle answered each question in Claude Code, one at a time. His choice is recorded on each card.
+
+**Approvals:**
+
+| Card | Revision | Kyle's choice |
+|---|---|---|
+| TASK-009 | r4 | Decision 1 confirmed: V1 "fees recorded" flag via TASK-042, which supersedes the r2 amendment. |
+| TASK-042 | r2 | The four rules as recommended: legacy >0 recorded and 0 not; CSV per the card; R-NET totals; coverage allowed with a count. The `trades.csv` export keeps 0 (Triage card). |
+| TASK-007 | r4 | D5 (a) closed for V1. The real-export import condition (TASK-030 R1, counts only) is accepted. |
+| TASK-021 | r5 | Q1 = yes: "Decide later" stays submittable while the day is unresolved. |
+| TASK-029 | r7 | The TASK-023 route is accepted; the gap is decided at TASK-036. |
+| TASK-040 | r3 | Merge or close PR #107 first, then run TASK-040. |
+| TASK-039 | r2 | Disposition (A): accept exposure; no rewrite or visibility change. |
+| TASK-041 | r2 | Partial B: text copies are replaced; the binary v3/v4 `.db` fixtures are accepted residuals. |
+
+**Legal track.** Kyle chose **PR #107's documents** for V1: the MIT licence, privacy notice 0.2.1-draft, "License and product information" and the acknowledgment wording. This replaces the owner-only v1.1 package.
+- TASK-025 r5, TASK-026 r4 and TASK-044 r2 are set to **Changes Requested**. Their earlier approvals remain in the Approved fields as history, and each card has a comment.
+- They need revising around #107 (or closing where #107 already covers them), then re-approval.
+
+**Board state:**
+- Approved: 40 cards.
+- Changes Requested: 025, 026, 044.
+- Deferred: 023.
