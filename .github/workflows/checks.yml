@@ -1,0 +1,176 @@
+name: Checks
+
+# TASK-027: every check, in one reusable workflow, so ordinary CI and the installer gate cannot drift apart.
+# - ci.yml calls it with the default checkout (GitHub's merge commit on pull_request), as before.
+# - release-installer.yml calls it with `ref` and `expected-sha` set to the exact commit it packages, and packages
+#   only when every job here succeeds.
+# No `concurrency` here: the callers' groups apply, and a group inside a called workflow is evaluated with the
+# caller's context, so it could collide. Inside a called workflow `github.event_name` is the caller's event, which
+# is why the audit outage rule is an input rather than an event check.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit, branch or tag to check out. Empty means the default checkout for the caller's event.
+        type: string
+        default: ''
+      expected-sha:
+        description: When set, each job fails unless the checked-out commit is exactly this SHA.
+        type: string
+        default: ''
+      run-build-and-test:
+        description: Run the build-and-test job (false for the daily audit-only schedule).
+        type: boolean
+        default: true
+      fail-on-outage:
+        description: An audit with no result after its retries fails instead of warning.
+        type: boolean
+        default: false
+
+# Read-only token: the jobs only check out, build and test.
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    if: inputs.run-build-and-test
+    runs-on: windows-latest
+    # A hung check fails instead of holding the run (a caller job with `uses:` cannot set this itself).
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Checked-out commit
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected-sha }}
+        run: |
+          head="$(git rev-parse HEAD)"
+          echo "Checked-out commit: \`$head\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Checked-out commit: $head"
+          if [ -n "$EXPECTED_SHA" ] && [ "$head" != "$EXPECTED_SHA" ]; then
+            echo "::error::Checked out $head, expected $EXPECTED_SHA"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: npm
+
+      # Clean install from the single root lockfile (no node_modules or dist cached).
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Domain boundaries (no React, Tauri, Node I/O or apps/desktop in packages/domain)
+        run: npm run check:boundaries -w @fundedflow/domain
+
+      # Builds packages/domain first, then type-checks domain sources/tests and the desktop app.
+      - name: Typecheck (domain + desktop)
+        run: npm run typecheck
+
+      # Domain unit tests (incl. Rust golden fixtures), then desktop component, cross-feature journey and axe
+      # accessibility suites (apps/desktop/src/journeys). All jsdom/Vitest: frontend evidence, not packaged-app runs.
+      - name: Tests (domain + desktop components, journeys and axe accessibility)
+        run: npm test
+
+      # Must run before cargo: the tauri build script expects apps/desktop/dist to exist.
+      - name: Build (domain, then desktop tsc + vite)
+        run: npm run build
+
+      - name: Domain dist loads by package name in plain Node
+        run: npm run check:dist -w @fundedflow/domain
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      # TASK-040: formatting is checked before the slower Rust steps so drift fails fast. Default rustfmt style for
+      # the crate's edition (no rustfmt.toml); fix locally with `cargo fmt` in apps/desktop/src-tauri.
+      - name: cargo fmt --check
+        working-directory: apps/desktop/src-tauri
+        run: cargo fmt --check
+
+      # Includes src/parity.rs, which checks packages/domain/test/fixtures against the Rust code.
+      - name: cargo test
+        working-directory: apps/desktop/src-tauri
+        run: cargo test
+
+      - name: cargo clippy
+        working-directory: apps/desktop/src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
+      # Build 26.78: THIRD_PARTY_NOTICES.txt must match the locked dependencies. Regenerates it in a temp folder
+      # (cargo-about for the Windows crates, package-lock.json for the npm packages and fonts) and fails on any
+      # difference, telling the contributor to run `npm run notices`. Also fails on a licence outside the allow-list.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about@0.9.2
+
+      - name: Third-party notices are up to date
+        run: npm run check:notices
+
+  # Dependency audits live in their own job so a registry outage (npm audit 503, RustSec fetch failure) cannot
+  # skip typecheck, tests, build or the Rust checks. A real high+ advisory still fails this job; an audit that
+  # cannot get an advisory result after retries is reported as "not run" (warning annotation + job summary).
+  # scripts/audit-guard.mjs does the retry and the result-versus-outage distinction.
+  # Outage rule: an audit with no result after 3 attempts is "NOT RUN" with a warning. It passes unless the caller
+  # sets `fail-on-outage` (--fail-on-outage), so an audit that never ran is red there.
+  dependency-audit:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Checked-out commit
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected-sha }}
+        run: |
+          head="$(git rev-parse HEAD)"
+          echo "Checked-out commit: \`$head\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Checked-out commit: $head"
+          if [ -n "$EXPECTED_SHA" ] && [ "$head" != "$EXPECTED_SHA" ]; then
+            echo "::error::Checked out $head, expected $EXPECTED_SHA"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Audit guard tests
+        run: node --test scripts/audit-guard.test.mjs
+
+      # Production dependencies only (what ships in the app); fails on high or critical advisories.
+      # `npm audit` reads package-lock.json, so no install is needed. Each attempt is killed after 120 s, and npm's
+      # own fetch is capped at 60 s with no internal retries (its defaults, 5 min and 2 retries, hung CI for minutes).
+      - name: npm audit (production dependencies)
+        run: >
+          node scripts/audit-guard.mjs --label "npm audit" --expect metadata --attempts 3 --backoff 15 --timeout 120
+          ${{ inputs.fail-on-outage && '--fail-on-outage' || '' }}
+          -- npm audit --omit=dev --audit-level=high --json --fetch-timeout=60000 --fetch-retries=0
+
+      # RustSec advisories for Cargo.lock. Vulnerabilities and unsound advisories fail; the one ignored advisory
+      # (Linux-only glib) is documented in apps/desktop/src-tauri/.cargo/audit.toml.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      # cargo-audit is called directly, not through `cargo`, so a timed-out attempt is killed with nothing left
+      # running (on Windows, killing cargo would leave its cargo-audit child behind).
+      - name: cargo audit
+        working-directory: apps/desktop/src-tauri
+        run: >
+          node ../../../scripts/audit-guard.mjs --label "cargo audit" --expect vulnerabilities --attempts 3 --backoff 15
+          --timeout 120 ${{ inputs.fail-on-outage && '--fail-on-outage' || '' }}
+          -- cargo-audit audit --deny unsound --json

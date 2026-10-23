@@ -63,7 +63,7 @@ describe("startup failures", () => {
     expect(text).toMatch(/^FundedFlow diagnostic summary/);
     expect(text).toContain(`Code: ${category}`);
     expect(text).toMatch(/Incident: FF-[0-9A-F]{12}/);
-    expect(text).toContain("FundedFlow version: 0.1.0");
+    expect(text).toContain("FundedFlow version: 0.1.1");
     expect(text).toContain("Supported journal version: 20");
     expect(text).toContain("Screen: accounts");
     if (category === "migration_failed") expect(text).toContain("Failed upgrade step: step 20 (from 18, reached 19)");

@@ -1,6 +1,6 @@
 [package]
 name = "fundedflow"
-version = "0.1.0"
+version = "0.1.1"
 description = "FundedFlow: a local-first trading journal for funded-account traders"
 authors = ["Kyle Shabaga"]
 # MIT: see LICENSE in the repository root. Not published to crates.io.

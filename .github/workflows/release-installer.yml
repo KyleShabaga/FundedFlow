@@ -3,6 +3,8 @@ name: Release installer
 # Build 26.75 / NA-2: builds the unsigned NSIS installer and uploads it with its SHA-256 as a workflow artifact.
 # Nothing is published: no GitHub release, no secrets, no signing, no updater (owner decision 2026-10-21).
 # Pull requests that touch bundler inputs get a test build; their artifact is kept for 3 days, tag and manual runs 30.
+# TASK-027: every check in checks.yml runs first in this same run, on the exact commit that is packaged; the installer
+# is built only when all of them pass.
 on:
   workflow_dispatch:
   push:
@@ -11,6 +13,11 @@ on:
     paths:
       # Bundler inputs: the Tauri crate (Cargo.toml/lock, icons, capabilities, migrations, Rust sources), the
       # frontend build that beforeBuildCommand runs, the dependency manifests and the dev-tools check.
+      # TASK-027 widened this (additively): all of apps/desktop (frontend sources and notices included), the domain
+      # package the frontend bundles, and the shared checks workflow.
+      - 'apps/desktop/**'
+      - 'packages/**'
+      - '.github/workflows/checks.yml'
       - 'apps/desktop/src-tauri/**'
       - 'apps/desktop/package.json'
       - 'apps/desktop/vite.config.ts'
@@ -31,8 +38,23 @@ permissions:
   contents: read
 
 jobs:
+  # The same checks as CI (checks.yml), on the commit this run packages: a pull request's head commit, not GitHub's
+  # merge commit. `with:` can't read `env`, so the SHA expression is repeated here and in SOURCE_SHA below.
+  # Candidates (workflow_dispatch, v* tags) fail on an audit that did not run; pull-request test builds only warn.
+  checks:
+    uses: ./.github/workflows/checks.yml
+    with:
+      ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      expected-sha: ${{ github.event.pull_request.head.sha || github.sha }}
+      # Always true here: a job skipped by its own `if` would count as a success to `needs`.
+      run-build-and-test: true
+      fail-on-outage: ${{ github.event_name != 'pull_request' }}
+
   nsis-installer:
+    # Default `if: success()`: failed, cancelled or timed-out checks skip packaging, so no artifact is uploaded.
+    needs: [checks]
     runs-on: windows-latest
+    timeout-minutes: 90
     defaults:
       run:
         shell: pwsh
@@ -43,6 +65,13 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ env.SOURCE_SHA }}
+
+      - name: Checked-out commit is SOURCE_SHA
+        run: |
+          $head = git rev-parse HEAD
+          "Checked-out commit: ``$head``" >> $env:GITHUB_STEP_SUMMARY
+          "Checked-out commit: $head"
+          if ($head -ne $env:SOURCE_SHA) { throw "Checked out $head, expected $env:SOURCE_SHA" }
 
       - uses: actions/setup-node@v7
         with:
@@ -60,6 +89,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: apps/desktop/src-tauri
+
+      - name: Toolchain versions
+        run: |
+          $rustc = rustc --version
+          $cargo = cargo --version
+          $node = node --version
+          $npm = npm --version
+          $cli = (npm run --silent tauri -- --version | Select-Object -Last 1)
+          "rustc: $rustc", "cargo: $cargo", "node: $node", "npm: $npm", "@tauri-apps/cli: $cli"
+          "## Toolchain`n`n| | |`n|---|---|`n| rustc | ``$rustc`` |`n| cargo | ``$cargo`` |`n| node | ``$node`` |`n| npm | ``$npm`` |`n| @tauri-apps/cli | ``$cli`` |" >> $env:GITHUB_STEP_SUMMARY
 
       - name: Read app version
         id: meta
