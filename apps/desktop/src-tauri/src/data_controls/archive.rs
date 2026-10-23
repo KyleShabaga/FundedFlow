@@ -65,7 +65,7 @@ pub struct Table {
     pub rowids: Vec<Option<String>>,
 }
 pub type Data = BTreeMap<String, Table>;
-fn quote(name: &str) -> String {
+pub(super) fn quote(name: &str) -> String {
     format!("\"{}\"", name.replace('"', "\"\""))
 }
 /// Whether a schema object is one of SQLite's own, which archive checks skip. Any other object whose name
@@ -81,6 +81,81 @@ fn internal(kind: &str, name: &str, sql_is_null: bool) -> Result<bool> {
     };
     if allowed { Ok(true) } else { Err(fail(Code::Integrity)) }
 }
+/// The journal's own tables in `dump` order, each with whether it is `WITHOUT ROWID`. `dump`, `counts` and
+/// `content_hash` all enumerate through this, so the internal-object allow-list applies to each of them.
+fn tables(conn: &Connection) -> Result<Vec<(String, bool)>> {
+    let mut stmt = conn.prepare(
+        "SELECT name,sql IS NULL,instr(upper(coalesce(sql,'')),'WITHOUT ROWID')>0 FROM sqlite_schema WHERE type='table' ORDER BY name",
+    )?;
+    let mut tables = Vec::new();
+    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?, r.get::<_, bool>(2)?)))? {
+        let (name, sql_is_null, without) = row?;
+        if !internal("table", &name, sql_is_null)? {
+            tables.push((name, without));
+        }
+    }
+    Ok(tables)
+}
+/// Rows per table, as `dump` reports them, counted without reading the rows or applying archive caps.
+pub fn counts(conn: &Connection) -> Result<Counts> {
+    tables(conn)?
+        .into_iter()
+        .map(|(name, _)| {
+            let count: i64 =
+                conn.query_row(&format!("SELECT count(*) FROM {}", quote(&name)), [], |r| r.get(0))?;
+            Ok((name, count as u64))
+        })
+        .collect()
+}
+/// SHA-256 of everything `dump` covers (same tables, rows, rowids and order), streamed and uncapped. The
+/// input is framed so no two contents share it: a domain tag; per table its name and column names; per row
+/// a rowid-or-none marker; per cell a type tag and a length-prefixed value.
+pub fn content_hash(conn: &Connection) -> Result<String> {
+    use sha2::{Digest, Sha256};
+    fn put(hash: &mut Sha256, tag: u8, bytes: &[u8]) {
+        hash.update([tag]);
+        hash.update((bytes.len() as u64).to_le_bytes());
+        hash.update(bytes);
+    }
+    let mut hash = Sha256::new();
+    hash.update(b"live-content-v1\0");
+    for (name, without) in tables(conn)? {
+        let (sql, skip) = if without {
+            (format!("SELECT * FROM {} ORDER BY 1,2", quote(&name)), 0)
+        } else {
+            (format!("SELECT rowid,* FROM {} ORDER BY rowid", quote(&name)), 1)
+        };
+        let mut stmt = conn.prepare(&sql)?;
+        let width = stmt.column_count() - skip;
+        put(&mut hash, b'T', name.as_bytes());
+        hash.update((width as u64).to_le_bytes());
+        for column in &stmt.column_names()[skip..] {
+            put(&mut hash, b'C', column.as_bytes());
+        }
+        let mut rows = stmt.query([])?;
+        while let Some(row) = rows.next()? {
+            if without {
+                hash.update([b'R', 0]);
+            } else {
+                hash.update([b'R', 1]);
+                hash.update(row.get::<_, i64>(0)?.to_le_bytes());
+            }
+            for i in skip..skip + width {
+                match row.get_ref(i)? {
+                    ValueRef::Null => put(&mut hash, b'N', &[]),
+                    ValueRef::Integer(v) => put(&mut hash, b'I', &v.to_le_bytes()),
+                    ValueRef::Real(v) => put(&mut hash, b'F', &v.to_bits().to_le_bytes()),
+                    ValueRef::Text(v) => {
+                        std::str::from_utf8(v).map_err(|_| fail(Code::Integrity))?;
+                        put(&mut hash, b'S', v)
+                    }
+                    ValueRef::Blob(v) => put(&mut hash, b'B', v),
+                }
+            }
+        }
+    }
+    Ok(format!("{:x}", hash.finalize()))
+}
 pub fn dump(conn: &Connection) -> Result<Data> {
     let pages: i64 = conn.pragma_query_value(None, "page_count", |r| r.get(0))?;
     let free: i64 = conn.pragma_query_value(None, "freelist_count", |r| r.get(0))?;
@@ -90,17 +165,9 @@ pub fn dump(conn: &Connection) -> Result<Data> {
     if used > MAX_ENTRY {
         return Err(over_limit("database pages", used, MAX_ENTRY, "bytes"));
     }
-    let mut stmt = conn.prepare("SELECT name,sql IS NULL FROM sqlite_schema WHERE type='table' ORDER BY name")?;
-    let mut tables = Vec::new();
-    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?)))? {
-        let (name, sql_is_null) = row?;
-        if !internal("table", &name, sql_is_null)? {
-            tables.push(name);
-        }
-    }
     let mut data = BTreeMap::new();
     let mut total = 0u64;
-    for name in tables {
+    for (name, without) in tables(conn)? {
         let count: i64 =
             conn.query_row(&format!("SELECT count(*) FROM {}", quote(&name)), [], |r| {
                 r.get(0)
@@ -109,11 +176,6 @@ pub fn dump(conn: &Connection) -> Result<Data> {
         if total > 500_000 {
             return Err(over_limit("rows", total, 500_000, ""));
         }
-        let without: bool = conn.query_row(
-            "SELECT instr(upper(sql),'WITHOUT ROWID')>0 FROM sqlite_schema WHERE name=?1",
-            [&name],
-            |r| r.get(0),
-        )?;
         let order = if without { "1,2" } else { "rowid" };
         let mut stmt = conn.prepare(&format!("SELECT * FROM {} ORDER BY {order}", quote(&name)))?;
         let rowids: Vec<Option<String>> = if without {
@@ -191,7 +253,15 @@ pub fn inventory(conn: &Connection, root: &Path) -> Result<Vec<Attachment>> {
     }
     Ok(list)
 }
+/// A compacted copy of the journal for an archive, refused over the archive entry cap.
 pub fn snapshot(conn: &Connection, destination: &Path) -> Result<()> {
+    snapshot_capped(conn, destination, Some(MAX_ENTRY))
+}
+/// The local pre-restore safety copy. It never enters an archive, so the entry cap does not apply.
+pub fn local_snapshot(conn: &Connection, destination: &Path) -> Result<()> {
+    snapshot_capped(conn, destination, None)
+}
+fn snapshot_capped(conn: &Connection, destination: &Path, cap: Option<u64>) -> Result<()> {
     if destination.exists() {
         return Err(fail(Code::UnsafePath));
     }
@@ -216,8 +286,8 @@ pub fn snapshot(conn: &Connection, destination: &Path) -> Result<()> {
         .open(destination)?
         .sync_all()?;
     let bytes = fs::metadata(destination)?.len();
-    if bytes > MAX_ENTRY {
-        return Err(over_limit("database pages", bytes, MAX_ENTRY, "bytes"));
+    if let Some(cap) = cap.filter(|cap| bytes > *cap) {
+        return Err(over_limit("database pages", bytes, cap, "bytes"));
     }
     Ok(())
 }

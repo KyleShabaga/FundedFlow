@@ -54,20 +54,64 @@ fn operation(root: &Path, id: &str) -> Result<PathBuf> {
     Ok(path)
 }
 fn content_hash(c: &Connection) -> Result<String> {
-    Ok(digest(&serde_json::to_vec(&archive::dump(c)?)?))
+    archive::content_hash(c)
 }
 fn token(archive_hash: &str, current_hash: &str) -> String {
     digest(format!("restore-v1\0replace\0{archive_hash}\0{current_hash}").as_bytes())
 }
 fn counts(c: &Connection) -> Result<super::Counts> {
-    Ok(archive::dump(c)?
-        .iter()
-        .map(|(k, v)| (k.clone(), v.rows.len() as u64))
-        .collect())
+    archive::counts(c)
+}
+/// The margin `space()` adds to every free-space check.
+const MARGIN: u64 = 16 * 1024 * 1024;
+/// Free bytes a restore over a live journal of `page_count × page_size` needs.
+#[derive(Debug, PartialEq)]
+pub(super) struct Required {
+    /// What `inspect` checks at the data folder (before the margin).
+    pub inspect_check: u64,
+    /// What `inspect` reports as `required_free_bytes` (the check plus the margin).
+    pub advertised: u64,
+    /// What `prepare` checks at the operation folder before taking the safety copy (before the margin).
+    pub prepare_check: u64,
+}
+pub(super) fn required(page_count: u64, page_size: u64) -> Required {
+    // The safety copy is a backup of every page, committed WAL pages included, and VACUUM then needs room
+    // for a second copy.
+    let safety = page_count.saturating_mul(page_size).saturating_mul(2);
+    Required {
+        inspect_check: (MAX_TOTAL * 4).saturating_add(safety),
+        advertised: (MAX_TOTAL * 4 + MARGIN).saturating_add(safety),
+        prepare_check: safety,
+    }
+}
+fn live_required(c: &Connection) -> Result<Required> {
+    let get = |name| c.pragma_query_value(None, name, |r| r.get::<_, i64>(0));
+    Ok(required(get("page_count")?.max(0) as u64, get("page_size")?.max(0) as u64))
+}
+/// Free bytes at a folder. Tests substitute a fixed figure.
+pub(super) type Available<'a> = &'a dyn Fn(&Path) -> Result<u64>;
+fn disk(dir: &Path) -> Result<u64> {
+    Ok(fs2::available_space(dir)?)
+}
+/// `space()`, with the available figure supplied.
+fn ensure(available: Available, dir: &Path, needed: u64) -> Result<()> {
+    if available(dir)? < needed.saturating_add(MARGIN) {
+        return Err(fail(Code::InsufficientSpace));
+    }
+    Ok(())
 }
 pub fn inspect(c: &Connection, root: &Path, request: InspectRequest) -> Result<RestorePreview> {
+    inspect_with(c, root, request, &disk)
+}
+pub(super) fn inspect_with(
+    c: &Connection,
+    root: &Path,
+    request: InspectRequest,
+    available: Available,
+) -> Result<RestorePreview> {
     no_symlink_components(root)?;
-    space(root, MAX_TOTAL * 4)?;
+    let required = live_required(c)?;
+    ensure(available, root, required.inspect_check)?;
     let stage = archive::inspect_to(Path::new(&request.source), &workspace(root)?)?;
     // Also prove that all required upgrades can run without touching active data.
     let mut candidate = db::open_restore_candidate(&stage.directory.path().join("journal.sqlite"))
@@ -77,25 +121,34 @@ pub fn inspect(c: &Connection, root: &Path, request: InspectRequest) -> Result<R
     let preview_token = token(&archive_sha256, &content_hash(c)?);
     Ok(RestorePreview { state: "validated".into(), manifest: stage.manifest,
         archive_sha256, preview_token, replaced_entities: counts(c)?, required_confirmation: "REPLACE ENTIRE JOURNAL".into(),
-        required_free_bytes: MAX_TOTAL * 4 + 16 * 1024 * 1024,
+        required_free_bytes: required.advertised,
         warnings: vec!["Plaintext archive; hashes are integrity checks, not authentication.".into(),
             "Replaces the entire journal and app-managed attachments after exclusive restart; never merges.".into(),
             "External backups remain untouched. A local pre-restore safety copy remains until explicitly removed.".into()] })
 }
 /// Must be called with the runtime lock, followed by closing the connection before any further writes.
 pub fn prepare(c: &Connection, root: &Path, request: RestoreRequest) -> Result<RestoreResult> {
+    prepare_with(c, root, request, &disk)
+}
+pub(super) fn prepare_with(
+    c: &Connection,
+    root: &Path,
+    request: RestoreRequest,
+    available: Available,
+) -> Result<RestoreResult> {
     if request.confirmation != "REPLACE ENTIRE JOURNAL" {
         return Err(fail(Code::ConfirmationRequired));
     }
     if root.join(PENDING).exists() {
         return Err(fail(Code::RecoveryRequired));
     }
-    let preview = inspect(
+    let preview = inspect_with(
         c,
         root,
         InspectRequest {
             source: request.source.clone(),
         },
+        available,
     )?;
     if preview.preview_token != request.preview_token {
         return Err(fail(Code::StalePreview));
@@ -123,7 +176,9 @@ pub fn prepare(c: &Connection, root: &Path, request: RestoreRequest) -> Result<R
         &op.join("candidate-attachments"),
         &staged.manifest.attachments,
     )?;
-    archive::snapshot(c, &op.join("safety.db"))?;
+    // The safety copy is local only: uncapped, but it must fit before any persistent intent is written.
+    ensure(available, &op, live_required(c)?.prepare_check)?;
+    archive::local_snapshot(c, &op.join("safety.db"))?;
     let original_attachments = archive::inventory(c, &root.join("attachments"))?;
     // Copy the whole managed root, rejecting stray/unsafe files: no unbacked-up bytes can disappear.
     copy_managed(

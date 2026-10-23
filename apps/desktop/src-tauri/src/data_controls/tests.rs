@@ -995,3 +995,176 @@ fn a_journal_over_a_real_cap_names_the_component_and_measured_value() {
         serde_json::json!({"code": "busy", "message": "Another FundedFlow process owns this journal."})
     );
 }
+/// A journal whose data in use exceeds the 64 MiB archive entry cap.
+fn heavy(path: &Path) -> Connection {
+    let mut c = journal(path);
+    account(&mut c, "heavy");
+    let filler = format!("\"{}\"", "x".repeat(1024 * 1024));
+    for i in 0..66 {
+        c.execute(
+            "INSERT INTO settings(key,value_json,updated_at) VALUES(?1,?2,'t')",
+            rusqlite::params![format!("filler-{i}"), filler],
+        )
+        .unwrap();
+    }
+    c.execute_batch("PRAGMA wal_checkpoint(TRUNCATE)").unwrap();
+    c
+}
+fn live_bytes(c: &Connection) -> u64 {
+    let get = |name| c.pragma_query_value(None, name, |r| r.get::<_, i64>(0)).unwrap() as u64;
+    get("page_count") * get("page_size")
+}
+#[test]
+fn over_cap_journals_can_be_previewed_for_erase_and_restore() {
+    let source = tempfile::tempdir().unwrap();
+    let incoming = backup_with_account(source.path(), "incoming");
+    let target = tempfile::tempdir().unwrap();
+    let c = heavy(&target.path().join(db::DB_FILE_NAME));
+    assert_eq!(archive::dump(&c).unwrap_err().code, Code::LimitExceeded);
+    let erase = deletion::preview(&c, target.path(), deletion::PreviewRequest { scope: deletion::Scope::Journal }).unwrap();
+    let settings: i64 = c.query_row("SELECT count(*) FROM settings", [], |r| r.get(0)).unwrap();
+    assert_eq!(erase.affected_entities["settings"], settings as u64);
+    assert_eq!(erase.affected_entities["accounts"], 1);
+    let p = restore::inspect(&c, target.path(), restore::InspectRequest { source: incoming.to_string_lossy().into() }).unwrap();
+    assert_eq!(p.replaced_entities, erase.affected_entities);
+    assert_eq!(
+        p.required_free_bytes,
+        filesystem::MAX_TOTAL * 4 + 16 * 1024 * 1024 + 2 * live_bytes(&c)
+    );
+}
+#[test]
+fn restore_over_an_over_cap_journal_keeps_an_uncapped_safety_copy_and_rolls_back() {
+    let source = tempfile::tempdir().unwrap();
+    let incoming = backup_with_account(source.path(), "incoming");
+    let incoming_data = {
+        let inspected = archive::inspect_to(&incoming, source.path()).unwrap();
+        archive::dump(&archive::readonly(&inspected.directory.path().join("journal.sqlite")).unwrap()).unwrap()
+    };
+    for fail_install in [false, true] {
+        let target = tempfile::tempdir().unwrap();
+        let live = target.path().join(db::DB_FILE_NAME);
+        let c = heavy(&live);
+        // Guard: the archive cap still applies to export.
+        let out = target.path().join("heavy.zip");
+        assert_eq!(
+            archive::export(&c, &target.path().join("attachments"), &out, true).unwrap_err().code,
+            Code::LimitExceeded
+        );
+        let request = || restore::InspectRequest { source: incoming.to_string_lossy().into() };
+        let p = restore::inspect(&c, target.path(), request()).unwrap();
+        let token = p.preview_token.clone();
+        let result = restore::prepare(
+            &c,
+            target.path(),
+            restore::RestoreRequest {
+                source: incoming.to_string_lossy().into(),
+                preview_token: p.preview_token,
+                confirmation: "REPLACE ENTIRE JOURNAL".into(),
+            },
+        )
+        .unwrap();
+        let safety = target.path().join("data-controls").join(&result.operation_id).join("safety.db");
+        assert!(fs::metadata(&safety).unwrap().len() > filesystem::MAX_ENTRY);
+        drop(c);
+        if fail_install {
+            assert!(restore::recover_failing(target.path(), &live).is_err());
+            let restored = journal(&live);
+            // Same content hash as before the restore: the same archive gives the same preview token.
+            assert_eq!(restore::inspect(&restored, target.path(), request()).unwrap().preview_token, token);
+        } else {
+            restore::recover(target.path(), &live).unwrap();
+            assert_eq!(archive::dump(&journal(&live)).unwrap(), incoming_data);
+        }
+        assert!(!target.path().join("data-controls-pending.json").exists());
+    }
+}
+#[test]
+fn restore_space_figures_come_from_one_pure_calculation() {
+    // 10 pages of 4096 bytes: twice the live journal is 81920 bytes.
+    assert_eq!(
+        restore::required(10, 4096),
+        restore::Required {
+            inspect_check: 4 * filesystem::MAX_TOTAL + 81_920,
+            advertised: 4 * filesystem::MAX_TOTAL + 16 * 1024 * 1024 + 81_920,
+            prepare_check: 81_920,
+        }
+    );
+    assert_eq!(restore::required(10, 4096).advertised, 1_090_519_040 + 81_920);
+}
+#[test]
+fn inspect_and_prepare_refuse_too_little_space_before_any_restore_intent() {
+    let source = tempfile::tempdir().unwrap();
+    let incoming = backup_with_account(source.path(), "incoming");
+    let target = tempfile::tempdir().unwrap();
+    let c = heavy(&target.path().join(db::DB_FILE_NAME));
+    let request = || restore::InspectRequest { source: incoming.to_string_lossy().into() };
+    let get = |name| c.pragma_query_value(None, name, |r| r.get::<_, i64>(0)).unwrap() as u64;
+    let required = restore::required(get("page_count"), get("page_size"));
+    assert!(required.prepare_check > 2 * filesystem::MAX_ENTRY);
+    // Inspect reports, and itself enforces, the figure that includes twice the live journal.
+    let short = |_: &Path| Ok(required.advertised - 1);
+    assert_eq!(
+        restore::inspect_with(&c, target.path(), request(), &short).unwrap_err().code,
+        Code::InsufficientSpace
+    );
+    let exact = |_: &Path| Ok(required.advertised);
+    let p = restore::inspect_with(&c, target.path(), request(), &exact).unwrap();
+    assert_eq!(p.required_free_bytes, required.advertised);
+    // Space runs out at the operation folder between preview and the safety copy.
+    let operations = target.path().join("data-controls");
+    let shrinking = |dir: &Path| Ok(if dir.starts_with(&operations) { required.prepare_check } else { u64::MAX });
+    let before = archive::content_hash(&c).unwrap();
+    let refused = restore::prepare_with(
+        &c,
+        target.path(),
+        restore::RestoreRequest {
+            source: incoming.to_string_lossy().into(),
+            preview_token: p.preview_token,
+            confirmation: "REPLACE ENTIRE JOURNAL".into(),
+        },
+        &shrinking,
+    )
+    .unwrap_err();
+    assert_eq!(refused.code, Code::InsufficientSpace);
+    assert!(!target.path().join("data-controls-pending.json").exists());
+    for op in fs::read_dir(&operations).unwrap() {
+        assert!(!op.unwrap().path().join("safety.db").exists());
+    }
+    assert_eq!(archive::content_hash(&c).unwrap(), before);
+}
+#[test]
+fn content_hash_framing_separates_types_cells_and_rowids() {
+    let hash = |sql: &str| {
+        let c = Connection::open_in_memory().unwrap();
+        c.execute_batch(&format!("CREATE TABLE t(a,b); {sql}")).unwrap();
+        archive::content_hash(&c).unwrap()
+    };
+    let base = hash("INSERT INTO t VALUES(1,NULL);");
+    assert_ne!(base, hash("INSERT INTO t VALUES('1',NULL);"), "Integer 1 vs Text '1'");
+    assert_ne!(base, hash("INSERT INTO t VALUES(NULL,1);"), "value moved to the next cell");
+    assert_ne!(hash("INSERT INTO t VALUES('ab','c');"), hash("INSERT INTO t VALUES('a','bc');"));
+    assert_ne!(base, hash("INSERT INTO t(rowid,a,b) VALUES(7,1,NULL);"), "rowid only");
+    assert_eq!(base, hash("INSERT INTO t VALUES(1,NULL);"));
+    let c = Connection::open_in_memory().unwrap();
+    c.execute_batch("CREATE TABLE t(a); INSERT INTO t VALUES(CAST(x'ff' AS TEXT));").unwrap();
+    assert_eq!(archive::content_hash(&c).unwrap_err().code, Code::Integrity);
+    assert_eq!(archive::dump(&c).unwrap_err().code, Code::Integrity);
+}
+#[test]
+fn preview_tokens_change_when_any_row_or_rowid_changes() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut c = journal(&dir.path().join(db::DB_FILE_NAME));
+    account(&mut c, "a");
+    let token = |c: &Connection| {
+        deletion::preview(c, dir.path(), deletion::PreviewRequest { scope: deletion::Scope::Journal })
+            .unwrap()
+            .preview_token
+    };
+    let first = token(&c);
+    assert_eq!(token(&c), first);
+    c.execute("INSERT INTO settings(key,value_json,updated_at) VALUES('k','1','t')", []).unwrap();
+    let second = token(&c);
+    assert_ne!(second, first);
+    c.execute("UPDATE settings SET rowid=rowid+100 WHERE key='k'", []).unwrap();
+    assert_ne!(token(&c), second, "rowid only");
+}
