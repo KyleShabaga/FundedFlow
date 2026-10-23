@@ -144,9 +144,10 @@ fixtures that both implementations run.
   - `catalogue.json` and `rulebook.json` are human-written contract fixtures with no generated outputs.
   - `cargo test` fails if a stored output no longer matches Rust.
   - To accept an intentional Rust change, run `FUNDEDFLOW_UPDATE_FIXTURES=1 cargo test --lib parity` under
-    `apps/desktop/src-tauri` and review the diff. That refreshes only the `parity.rs` files; the other Rust
-    generators rewrite their file when their own test runs with the variable set (to any value), so keep it unset
-    otherwise.
+    `apps/desktop/src-tauri` and review the diff. That refreshes the `parity.rs` files and also `reconciliation.json`,
+    because its test (`store/evidence_tests.rs`, `reconciliation_parity_fixture`) matches the `parity` filter. The
+    other Rust generators rewrite their file when their own test runs with the variable set (to any value), so
+    keep it unset otherwise.
 - Vitest (`packages/domain/test`) runs the same files against the TypeScript code.
 - Kinds of equivalence:
   - **Byte-for-byte wire equality** for DTOs: `trade-contract.json` holds the exact serde JSON. The Zod schemas
