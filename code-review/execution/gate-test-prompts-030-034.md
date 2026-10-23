@@ -67,7 +67,8 @@ These notes are repeated in short form in every prompt. They are here so Kyle kn
 That covers the hash, a per-user install with no UAC, first launch offline, the `0.2.1-draft` legal documents,
 data surviving reopen, unticked uninstall, reinstall and over-install, and B1–B8. It also includes Kyle's
 real-export import check (R1, counts only). It is **Passed** only if every mandatory step matches on both a clean
-Windows 11 and a clean Windows 10 22H2 machine, with B7 on one image without WebView2 and R1 on one VM. Any failure
+Windows 11 machine (Windows Sandbox counts, per Kyle), with B7 on one image without WebView2 and R1 on one VM. The
+Windows 10 22H2 leg is skipped (Kyle, 2026-10-23) and is a TASK-036 known gap. Any failure
 makes it Failed; any mandatory step not run makes it Blocked or Not Run. It also carries the packaged checks for
 TASK-025 (legal documents and banners), TASK-044 (deletion wording about recovery copies) and TASK-018 (B1 recheck).
 
@@ -79,10 +80,8 @@ TASK-025 (legal documents and banners), TASK-044 (deletion wording about recover
 | B7 (a) online, without WebView2 | Yes. A fresh sandbox has no WebView2, so run S1's install counts as B7(a) if "absent before" is recorded. |
 | B7 (b) offline, without WebView2 | Yes. Use a separate sandbox with `<Networking>Disable</Networking>` from the start. |
 | B2, junctioned-folder part | Yes. |
-| B2, OneDrive part | **No.** Sandbox has no OneDrive, and the rules forbid sign-ins. It needs a real PC or VM with a throwaway Microsoft account, signed in by Kyle; otherwise record **Not Run**. |
 | B3 and B8 (close and back guards, TASK-023/022) | Run by the separate **"Final manual tests §1"** prompt; copy its results in. |
 | B6 (scaling 125/150/200%) | Sandbox does not reliably allow changing scaling. Kyle runs it on a Hyper-V VM or a real PC under a throwaway local user (steps in the prompt). |
-| Windows 10 22H2 leg | **No.** It needs a Hyper-V VM with build 19045. Run the same table there (Claude inside the VM, or Kyle by hand). |
 | 11 network observation (optional) | Partly. Resource Monitor works in Sandbox; Wireshark would need installing. Optional. |
 
 **Expected results (from the spec and the checklist, PR #139 revision)**
@@ -121,7 +120,7 @@ TASK-025 (legal documents and banners), TASK-044 (deletion wording about recover
   and no db or lock file exists in the junction or its target.
 - B2: the known limitation (V1.1). Export to a junctioned folder is refused with "Nothing was exported. The archive
   contains an unsafe file path, so it was rejected."; nothing is written (no partial or temp file); the journal is
-  unchanged. Export to a normal folder succeeds. The OneDrive part is checked for the first time here.
+  unchanged. Export to a normal folder succeeds. (The OneDrive case is out of scope for V1 and listed as an untested known gap.)
 - B3: X and Alt+F4 on a dirty rulebook draft, trade review and daily review show the app's leave dialog. Cancel/Stay
   keeps the text and Leave closes. A clean window closes immediately, and first-run **Close** closes.
 - B4: a ticked uninstall removes exactly `%APPDATA%\com.fundedflow.desktop` and `%LOCALAPPDATA%\com.fundedflow.desktop`,
@@ -234,9 +233,7 @@ Run S4 (B7(b), <Networking>Disable</Networking> from the start)
 
 Not in this prompt (record their source in the report):
 - B3 and B8 come from the "Final manual tests §1" run. Copy its PASS/FAIL, evidence paths, tester and date.
-- B2 OneDrive is Kyle's, per the manual steps. If he did not do it, record Not Run: "needs throwaway Microsoft account".
 - B6 is Kyle's, per the manual steps.
-- The Windows 10 22H2 leg: repeat S1 to S4 on a Hyper-V VM (build 19045). Sandbox can't provide it.
 
 R1 for Kyle (by hand, in S1 after step 10; nothing is recorded but counts)
 1. Copy one current real broker export into the sandbox by clipboard (copy on the host, paste on the sandbox
@@ -251,10 +248,6 @@ B6 for Kyle (a Hyper-V VM with a clean Windows, or a real PC under a new local W
   Today and Settings. Record the physical resolution and the scaling, and whether any primary action is unreachable or
   clipped.
 
-B2 OneDrive for Kyle (optional; a VM or a spare local user signed into a throwaway Microsoft account, never his own)
-- Turn Files On-Demand on and export a full backup to OneDrive\Documents. Record the target path, the Files On-Demand
-  state, a screenshot of the result, the archive SHA-256 if one was saved, and any leftover at the target.
-
 REPORT (write C:\FFGate\030\report.md, then summarize in chat)
 - Header: tester; date; machine (Sandbox on <host model>); Windows ProductName, EditionID, DisplayVersion and build
   for each run; WebView2 before and after; source SHA 1d13c438c2cfa4752fb57fba8cef693ad3398d8f; version 0.1.1; EXE
@@ -266,8 +259,8 @@ REPORT (write C:\FFGate\030\report.md, then summarize in chat)
   L2 is recorded against TASK-044.
 - R1: counts by kind and pass/fail only.
 - Gate state for this machine (Passed / Failed / Blocked / Not Run) under the pass rule: every mandatory step 1–10,
-  4a, B1–B8 and R1 must pass. State that the gate needs the Windows 10 22H2 leg too, so this run alone can't make
-  it Passed.
+  4a, B1–B8 and R1 must pass. The Windows 10 22H2 leg is skipped by owner decision (record it as Not Run, known gap);
+  it doesn't block Passed.
 - Surprises, and a proposed Triage card title for each failure. Do not create cards.
 ```
 
@@ -280,12 +273,11 @@ reinstall, and whether the uninstaller's "Delete the application data" checkbox 
 documents and nothing else. It also records what a downgrade does, and NSIS's own prompts. It is **Passed** iff
 (a) the synthetic data is intact after the upgrade and after the reinstall, (b) an unticked uninstall keeps
 `%APPDATA%\com.fundedflow.desktop`, and (c) a ticked uninstall removes exactly the TASK-026 list. Steps 4 and 4a are
-recorded, but a run 4a with (i)–(iii) false gives Failed (see finding 1).
+recorded. Step 4a is **Not Run** by owner decision (2026-10-23): the premise changed (schema 23), so it is skipped.
 
 **Sandbox: can and can't.** Everything runs in Sandbox: installs, NSIS pages, HKCU uninstall entries, folder listings
 and file locks. Networking must be on for the first install (WebView2). Getting the 0.1.0 baseline: GitHub until
-2026-11-20 (see BUILD), after that a copy from the coordinator PC. 4a's file lock works in Sandbox. Nothing here needs
-a person, except that Kyle rules on 4a.
+2026-11-20 (see BUILD), after that a copy from the coordinator PC. Nothing here needs a person. Step 4a is skipped (owner decision).
 
 **Expected results (spec r7)**
 
@@ -377,14 +369,14 @@ Run T1 (main path: steps 1, 2, 3, 5)
 | 5r | Reinstall 0.1.1 /S; launch; verify the data (no prompt expected); snapshot | Data intact (supports (b)) |
 | 5t | Uninstall with "Delete the application data" TICKED; snapshot | %APPDATA%\com.fundedflow.desktop and %LOCALAPPDATA%\com.fundedflow.desktop absent; program folder, shortcuts and uninstall entry gone; C:\FFExports archive still present with the same SHA-256; list anything else that remains or vanished |
 
-Run T2 (downgrade: steps 4 and 4a)
+Run T2 (downgrade: step 4; step 4a is skipped)
 | ID | Do | Expected |
 |---|---|---|
 | T2-setup | Install 0.1.0, add account and data as in step 1, upgrade to 0.1.1 as in step 2 (acknowledge); snapshot | As step 2 |
 | 4 | Run the 0.1.0 installer interactively over 0.1.1. Record every NSIS page and prompt (downgrade warning, uninstall-first option, checkbox defaults); keep "Delete the application data" unticked. Launch 0.1.0. Screenshot. SHA-256 of fundedflow.db before and after the launch (app closed). | Record-only. Predicted: NewerSchema screen "Your journal was created by a newer version of FundedFlow. Install the latest version to open it. Your data has not been changed." with no Retry, db hash unchanged. The spec text says "opens normally"; record what actually happens. |
 | 4-back | Reinstall 0.1.1 over 0.1.0 (unticked); launch; verify data | Data intact |
-| 4a | In 0.1.1: restore the C:\FFExports backup so that data-controls\<uuid>\ exists. In a separate PowerShell that stays open, $h=[IO.File]::Open('<a file in data-controls\<uuid>\>','Open','Read','None'). Run Settings → Delete data permanently → Erase the entire local journal (type its phrase). Confirm that a marker *.json exists in data-controls-cleanup\ and save its name and contents to C:\out\4a-marker.json. Close FundedFlow; $h.Dispose(). Install 0.1.0 over it (unticked); launch; wait 60 s; screenshot; list data-controls-cleanup\, data-controls\ and data-controls-quarantine\ | Spec: (i) Ready; (ii) marker completed (listed copies removed, then the marker); (iii) journal and remaining data intact; (iv) quarantine may remain. Predicted: NewerSchema refusal, marker untouched. Record observed (i)–(iv) and mark DECISION NEEDED (see the report) |
-| 4a-opt | Optional: repeat with the lock still held when 0.1.0 starts | OpenFailed "Pending deletion cleanup could not finish" is expected, not a failure (if the schema check doesn't stop it first; record which message) |
+| 4a (SKIP, Not Run by owner decision) | In 0.1.1: restore the C:\FFExports backup so that data-controls\<uuid>\ exists. In a separate PowerShell that stays open, $h=[IO.File]::Open('<a file in data-controls\<uuid>\>','Open','Read','None'). Run Settings → Delete data permanently → Erase the entire local journal (type its phrase). Confirm that a marker *.json exists in data-controls-cleanup\ and save its name and contents to C:\out\4a-marker.json. Close FundedFlow; $h.Dispose(). Install 0.1.0 over it (unticked); launch; wait 60 s; screenshot; list data-controls-cleanup\, data-controls\ and data-controls-quarantine\ | Spec: (i) Ready; (ii) marker completed (listed copies removed, then the marker); (iii) journal and remaining data intact; (iv) quarantine may remain. Predicted: NewerSchema refusal, marker untouched. Record observed (i)–(iv) and mark DECISION NEEDED (see the report) |
+| 4a-opt (SKIP) | Optional: repeat with the lock still held when 0.1.0 starts | OpenFailed "Pending deletion cleanup could not finish" is expected, not a failure (if the schema check doesn't stop it first; record which message) |
 
 REPORT (C:\FFGate\031\report.md, then summarize in chat)
 - Header: tester; date; Windows edition, DisplayVersion and build for each run; WebView2 version; source SHA
@@ -398,10 +390,8 @@ REPORT (C:\FFGate\031\report.md, then summarize in chat)
   recovery copies and exports that remain (privacy-notice check).
 - Pass rule: (a) data intact after 2 and 3; (b) 5u keeps %APPDATA%\com.fundedflow.desktop; (c) 5t removes exactly the
   list. State Passed, Failed, Not Run or Blocked.
-- DECISION NEEDED for Kyle: the candidate's journal is schema 23 (migrations 0022 and 0023 added after 0.1.0, which
-  stops at 21), so 0.1.0 can't open it. Quote the observed 4 and 4a results. Under the literal pass rule a run 4a
-  with (i) false is Failed. Kyle chooses: accept and amend the TASK-015/016 declaration, or record 4a as Not Run
-  ("premise changed: schema 23"). Do not decide this yourself.
+- Step 4a: record **Not Run** with the reason "owner decision 2026-10-23: premise changed, the candidate's journal is
+  schema 23 (migrations 0022 and 0023 added after 0.1.0, which stops at 21), so 0.1.0 can't open it". Don't run 4a or 4a-opt.
 ```
 
 ---
@@ -780,10 +770,8 @@ REPORT (write C:\FFGate\034\report.md after Kyle replies)
 
 ## What can't be done from the Sandbox PC (summary)
 
-- **TASK-030, Windows 10 22H2 leg:** needs a Hyper-V VM (build 19045). Whether Sandbox counts as the "clean Windows 11
-  VM" is Kyle's call; the spec prefers a full VM.
-- **TASK-030 B2, OneDrive part:** no OneDrive in Sandbox, and no sign-ins allowed. It needs a throwaway Microsoft
-  account on a VM or a spare user, otherwise Not Run.
+- **TASK-030, Windows 10 22H2 leg:** skipped by owner decision (2026-10-23); Sandbox counts as the Windows 11 leg.
+- **OneDrive export:** removed from V1 scope by owner decision (2026-10-23); listed as an untested known gap.
 - **TASK-030 B6 and TASK-033 W3, W4, W5, W9 and §9 scaling and zoom:** OS scaling can't reliably be changed in
   Sandbox. They need a Hyper-V VM or a real PC under a throwaway local user.
 - **TASK-030 R1:** Kyle imports his real broker export by hand. It can be done inside the sandbox by clipboard, with
@@ -795,8 +783,7 @@ REPORT (write C:\FFGate\034\report.md after Kyle replies)
 - **TASK-033 W11:** needs a debug build's DevTools (record-only).
 - **TASK-034:** an owner run with `cargo test` on the PC that holds the real journal. It is not a Sandbox task and not
   for the other PC.
-- **TASK-031 step 4a:** runs in Sandbox, but the spec's expected result can't be met as written (0.1.0 can't open a
-  schema-23 journal). Kyle must rule on it.
+- **TASK-031 step 4a:** Not Run by owner decision (2026-10-23): 0.1.0 can't open a schema-23 journal.
 - **TASK-032 R9 and R10:** optional. R10 has no known reliable method, so it is expected to be Not Run plus a Triage
   card.
 - **The 0.1.0 baseline after 2026-11-20:** must be copied from the coordinator PC.
