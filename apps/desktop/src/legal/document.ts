@@ -15,7 +15,7 @@ export interface LegalDocument {
   version: string;
   /** ISO date (YYYY-MM-DD). */
   effectiveDate: string;
-  /** Draft documents are placeholders pending counsel review and say so wherever they are shown. */
+  /** Draft documents remain unapproved for release and visibly identify that status. */
   draft: boolean;
   /** One plain-language sentence for the first-run screen and Settings. */
   summary: string;

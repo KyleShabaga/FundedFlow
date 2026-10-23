@@ -386,7 +386,7 @@ export function renderNotices(components, { appVersion }) {
   out.push(heading("About this file", "-"), "");
   out.push(`FundedFlow ${appVersion} for Windows x64 (x86_64-pc-windows-msvc) includes the third-party components listed below. Each is licensed by its own authors under the licence named in its entry; the full licence texts follow at the end, each printed once and referenced by its [T] number.`, "");
   out.push(`This build includes ${counts.rust} Rust crates, ${counts.npm} npm packages and ${counts.font} fonts: ${total} components, with ${uniqueTexts.length} distinct licence texts.`, "");
-  out.push("FundedFlow itself is not open source. Its own terms are in the LICENSE file installed next to this one.", "");
+  out.push("FundedFlow itself is open source under the MIT License. Its full license is in the LICENSE file installed next to this one. Third-party components retain their own licenses and notices.", "");
   out.push(heading("What is included", "-"), "");
   out.push("Rust crates: the normal (non-dev, non-build) dependencies of the FundedFlow app for the x86_64-pc-windows-msvc target, as resolved by Cargo.lock and reported by cargo-about. Crates used only on other platforms are not included.", "");
   out.push("npm packages: the production dependency tree of apps/desktop and packages/domain in package-lock.json, whose code Vite bundles into the app. Development tools and type packages are not included.", "");

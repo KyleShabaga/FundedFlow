@@ -8,7 +8,7 @@ describe("bundled legal documents", () => {
     expect(doc.digest, `${doc.id}: set digest to ${await sha256Hex(documentText(doc))}`).toBe(await sha256Hex(documentText(doc)));
   });
 
-  it("are versioned, dated and, until counsel signs off, marked as drafts everywhere they appear", () => {
+  it("are versioned, dated and, until owner content and release approval, marked as drafts everywhere they appear", () => {
     const ids = CURRENT_LEGAL_DOCUMENTS.map(d => d.id);
     expect(ids).toEqual(["privacy-notice", "user-agreement"]);
     for (const doc of CURRENT_LEGAL_DOCUMENTS) {

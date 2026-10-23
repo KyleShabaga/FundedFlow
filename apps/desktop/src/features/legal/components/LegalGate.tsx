@@ -52,17 +52,17 @@ function FirstRunAgreement({ previous }: { previous: KnownAcceptance | null }) {
 
   return (
     <GatePage eyebrow={<BrandLogo />}
-      title={previous === null ? "Before you start" : "The privacy notice or agreement has changed"}
+      title={previous === null ? "Before you start" : "The privacy or product notice has changed"}
       actions={<>
-        <Button variant="secondary" onClick={() => void onDecline()} loading={declining} disabled={accept.isPending}>Decline and close</Button>
-        <Button variant="primary" onClick={() => void onAccept()} loading={accept.isPending} disabled={declining}>Accept and continue</Button>
+        <Button variant="secondary" onClick={() => void onDecline()} loading={declining} disabled={accept.isPending}>Close</Button>
+        <Button variant="primary" onClick={() => void onAccept()} loading={accept.isPending} disabled={declining}>Acknowledge and continue</Button>
       </>}>
       {previous !== null && changed.length > 0 && (
-        <p>Updated since you last accepted: {changed.map(doc => `${doc.title} (version ${doc.version})`).join(", ")}.</p>
+        <p>Updated since your last acknowledgment: {changed.map(doc => `${doc.title} (version ${doc.version})`).join(", ")}.</p>
       )}
       {drafts && (
         <InlineNotice tone="warning" live="off" title="Draft documents">
-          These documents are drafts and haven't been reviewed by a lawyer. Final versions will replace them, and FundedFlow will ask you to accept them then.
+          These documents are drafts and haven't been reviewed by a lawyer. Final versions will replace them, and FundedFlow will ask you to acknowledge them then.
         </InlineNotice>
       )}
       <section aria-labelledby={privacyId} className="ds-stack">
@@ -73,10 +73,10 @@ function FirstRunAgreement({ previous }: { previous: KnownAcceptance | null }) {
         <h2 id={documentsId} className="ds-title">Documents</h2>
         {CURRENT_LEGAL_DOCUMENTS.map(doc => <LegalDocumentDisclosure key={doc.id} doc={doc} headingLevel={3} />)}
       </section>
-      <p>Accept to continue. Decline closes FundedFlow; no trading data is created.</p>
+      <p>Acknowledge these notices to continue, or close FundedFlow. This records that the notices were displayed; your software permissions come from the MIT License.</p>
       {declineFailed && (
         <InlineNotice tone="error" title="FundedFlow couldn't close itself">
-          Close the window to exit. No trading data has been created.
+          Close the window to exit. No acknowledgment has been recorded.
         </InlineNotice>
       )}
       {busy && <p role="status" className="ds-sr-only">{declining ? "Closing FundedFlow…" : "Saving your answer…"}</p>}

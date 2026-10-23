@@ -3,8 +3,8 @@ name = "fundedflow"
 version = "0.1.0"
 description = "FundedFlow: a local-first trading journal for funded-account traders"
 authors = ["Kyle Shabaga"]
-# Proprietary: see LICENSE in the repository root. Not published to crates.io.
-license-file = "../../../LICENSE"
+# MIT: see LICENSE in the repository root. Not published to crates.io.
+license = "MIT"
 publish = false
 edition = "2024"
 
