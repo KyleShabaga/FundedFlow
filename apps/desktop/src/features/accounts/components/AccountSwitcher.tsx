@@ -6,10 +6,11 @@
 // carries a freshness dot with its reason written under the name, so nothing relies on colour.
 import { statusLabels } from "@fundedflow/domain";
 import { ChevronDown, CircleAlert } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import { DropdownMenu, formatInstant, type MenuEntry, StatusDot, useToast } from "../../../design-system";
 import { useDisplayTimeZone } from "../../settings/display-time-zone";
+import { useGuardedNavigate } from "../../shared/hooks/use-leave-guard";
 import { canBeActive, useActiveAccount } from "../active-account";
 import { freshnessLine, policyText, type FreshnessStatus } from "../freshness";
 import { useAccountFreshness } from "../hooks/freshness";
@@ -21,7 +22,8 @@ const DOT: Record<FreshnessStatus, "success" | "caution" | "unknown"> = { fresh:
 export function AccountSwitcher() {
   const { state, accounts, select, isSaving } = useActiveAccount();
   const toast = useToast();
-  const navigate = useNavigate();
+  // Manage accounts asks first when an editor has unsaved edits (TASK-022).
+  const navigate = useGuardedNavigate();
   const freshness = useAccountFreshness(accounts?.filter(canBeActive));
   const display = useDisplayTimeZone();
 

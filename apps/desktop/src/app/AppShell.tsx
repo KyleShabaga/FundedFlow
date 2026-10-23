@@ -1,10 +1,11 @@
 import { BookOpen, ChartNoAxesCombined, ChevronDown, House, PanelLeftClose, PanelLeftOpen, Settings, Wallet, Workflow, Zap } from "lucide-react";
 import { lazy, type RefObject, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 
 import { RuntimeRecoveryNotice } from "../components/RuntimeGate";
 import { AppFrame, BrandLogo, Button, ContentFrame, Tooltip, useWindowFileDropGuard } from "../design-system";
 import { AccountSwitcher } from "../features/accounts/components/AccountSwitcher";
+import { useGuardedNavigate } from "../features/shared/hooks/use-leave-guard";
 import "./shell.css";
 
 const routes = [
@@ -209,7 +210,8 @@ export function SidebarNav({ collapsed }: { collapsed: boolean }) {
 export function PageHeader({ title }: { title: string }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const { pathname } = useLocation();
-  const navigate = useNavigate();
+  // Quick Import asks first when an editor has unsaved edits (TASK-022).
+  const guardedNavigate = useGuardedNavigate();
   const previousPath = useRef(pathname);
   useEffect(() => {
     if (previousPath.current !== pathname) heading.current?.focus();
@@ -228,7 +230,7 @@ export function PageHeader({ title }: { title: string }) {
           {/* Quick import (Build 18.5; button since P0-D07). The page shows its own runtime and account states and
               keeps the account confirmation and check before anything is saved. The full wizard is in the sidebar. */}
           <Button icon={<Zap size={16} aria-hidden="true" />} title="Check and import a CSV in one step"
-            aria-current={normalizePath(pathname) === "/import/quick" ? "page" : undefined} onClick={() => navigate("/import/quick")}>Quick Import</Button>
+            aria-current={normalizePath(pathname) === "/import/quick" ? "page" : undefined} onClick={() => guardedNavigate("/import/quick")}>Quick Import</Button>
         </div>
       </ContentFrame>
     </header>
