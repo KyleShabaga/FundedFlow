@@ -15,13 +15,15 @@ use crate::store::{accounts, journal, trades};
 const V3: &[u8] = include_bytes!("fixtures/fundedflow-v3.db");
 const V4: &[u8] = include_bytes!("fixtures/fundedflow-v4.db");
 
-/// The Performance CSV both fixtures imported into "NY 17:00 eval".
+/// The Performance CSV both fixtures imported into "NY 17:00 eval", with the same fill IDs and row
+/// order. Prices, times, P&L text and durations are invented (TASK-041); a re-import matches saved
+/// trades by fill-pair key alone (`csv_import/dedup.rs`), so the duplicate counts are unchanged.
 const FIXTURE_CSV: &str = "symbol,_priceFormat,_priceFormatType,_tickSize,buyFillId,sellFillId,qty,buyPrice,sellPrice,pnl,boughtTimestamp,soldTimestamp,duration
-MNQZ6,-2,0,0.25,900000000001,900000000002,1,29774.25,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,33sec
+MNQZ6,-2,0,0.25,900000000001,900000000002,1,24387.25,24396.00,$17.50,10/19/2026 07:12:15,10/19/2026 07:13:00,45sec
 MNQZ6,-2,0,0.25,900000000003,900000000004,2,29800.00,29790.50,$(38.00),10/16/2026 17:10:00,10/16/2026 17:20:00,10min
 MESZ6,-2,0,0.25,900000000005,900000000006,1,6010.25,6000.00,$(51.25),10/18/2026 18:05:00,10/18/2026 18:01:00,4min
-MNQZ6,-2,0,0.25,900000000001,900000000002,1,29774.25,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,33sec
-MNQZ6,-2,0,0.25,900000000007,900000000008,1,abc,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,33sec
+MNQZ6,-2,0,0.25,900000000001,900000000002,1,24387.25,24396.00,$17.50,10/19/2026 07:12:15,10/19/2026 07:13:00,45sec
+MNQZ6,-2,0,0.25,900000000007,900000000008,1,abc,24396.00,$17.50,10/19/2026 07:12:15,10/19/2026 07:13:00,45sec
 ";
 
 pub(super) struct Journal(pub(super) PathBuf);

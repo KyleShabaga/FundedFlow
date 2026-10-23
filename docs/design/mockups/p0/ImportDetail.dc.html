@@ -91,9 +91,9 @@ class Component extends DCLogic {
   renderVals() {
     var self = this, v = this.state.view, f = this.state.f, failed = v === 'failed';
     var all = failed ? [] : [
-      { line: 3, kind: 'dup', st: 'Duplicate', cls: 'badge b-neutral', reason: 'Same as a saved trade', help: 'Fill pair …450007 / …450038, saved Oct 19 at 4:12 PM', raw: 'MNQZ6 | 1 | 7454500007 | 7454500038 | 29774.25 | 29774.25 | 0.00 | 10/21/2026 07:47:48 | 10/21/2026 07:48:10' },
-      { line: 41, kind: 'err', st: 'Error', cls: 'badge b-loss', reason: 'qty: must be greater than 0', help: 'Fix the quantity in the file and import it again; the other rows are already saved.', raw: 'MNQZ6 | 0 | 7454500811 | 7454500830 | 29840.50 | 29841.00 | 0.00 | 10/21/2026 08:21:14 | 10/21/2026 08:21:40' },
-      { line: 66, kind: 'dup', st: 'Duplicate', cls: 'badge b-neutral', reason: 'Same as a saved trade', help: 'Fill pair …451285 / …451304', raw: 'MNQZ6 | 3 | 7454501285 | 7454501304 | 29799.00 | 29805.00 | 36.00 | 10/21/2026 08:40:18 | 10/21/2026 08:41:02' },
+      { line: 3, kind: 'dup', st: 'Duplicate', cls: 'badge b-neutral', reason: 'Same as a saved trade', help: 'Fill pair …450007 / …450038, saved Oct 19 at 4:12 PM', raw: 'MNQZ6 | 1 | 7454500007 | 7454500038 | 24402.50 | 24404.25 | 3.50 | 10/21/2026 07:46:31 | 10/21/2026 07:48:10' },
+      { line: 41, kind: 'err', st: 'Error', cls: 'badge b-loss', reason: 'qty: must be greater than 0', help: 'Fix the quantity in the file and import it again; the other rows are already saved.', raw: 'MNQZ6 | 0 | 7454500811 | 7454500830 | 24418.50 | 24421.25 | 5.50 | 10/21/2026 08:21:14 | 10/21/2026 08:22:37' },
+      { line: 66, kind: 'dup', st: 'Duplicate', cls: 'badge b-neutral', reason: 'Same as a saved trade', help: 'Fill pair …451285 / …451304', raw: 'MNQZ6 | 3 | 7454501285 | 7454501304 | 24410.75 | 24413.75 | 18.00 | 10/21/2026 08:40:19 | 10/21/2026 08:41:02' },
       { line: 68, kind: 'skip', st: 'Skipped', cls: 'badge b-neutral', reason: 'Blank row', help: '', raw: '| | | | | | | |' }
     ];
     var keep = function (r) { return f === 'all' || r.kind === f; };

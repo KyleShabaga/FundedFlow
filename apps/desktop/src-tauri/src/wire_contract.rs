@@ -36,12 +36,13 @@ use crate::store::{
 const V3: &[u8] = include_bytes!("db/fixtures/fundedflow-v3.db");
 const V4: &[u8] = include_bytes!("db/fixtures/fundedflow-v4.db");
 
-/// Imports with duplicates and one unparseable price, so problem rows exist.
+/// Imports with duplicates and one unparseable price, so problem rows exist. Values are invented
+/// (TASK-041): row 1 is (24396.00 - 24387.25) = 8.75 points x $2 = $17.50 over 45 s.
 const CSV: &str = "symbol,_priceFormat,_priceFormatType,_tickSize,buyFillId,sellFillId,qty,buyPrice,sellPrice,pnl,boughtTimestamp,soldTimestamp,duration
-MNQZ6,-2,0,0.25,900000000001,900000000002,1,29774.25,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,33sec
+MNQZ6,-2,0,0.25,900000000001,900000000002,1,24387.25,24396.00,$17.50,10/19/2026 07:12:15,10/19/2026 07:13:00,45sec
 MNQZ6,-2,0,0.25,900000000003,900000000004,2,29800.00,29790.50,$(38.00),10/16/2026 17:10:00,10/16/2026 17:20:00,10min
-MNQZ6,-2,0,0.25,900000000001,900000000002,1,29774.25,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,33sec
-MNQZ6,-2,0,0.25,900000000007,900000000008,1,abc,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,33sec
+MNQZ6,-2,0,0.25,900000000001,900000000002,1,24387.25,24396.00,$17.50,10/19/2026 07:12:15,10/19/2026 07:13:00,45sec
+MNQZ6,-2,0,0.25,900000000007,900000000008,1,abc,24396.00,$17.50,10/19/2026 07:12:15,10/19/2026 07:13:00,45sec
 ";
 
 const PLACEHOLDER_INSTANT: &str = "2026-01-01T00:00:00.000Z";

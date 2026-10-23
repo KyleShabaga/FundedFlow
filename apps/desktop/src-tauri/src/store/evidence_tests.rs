@@ -680,10 +680,11 @@ fn csv_provenance_remains_in_frozen_reconciliation_and_fee_corrections_create_ne
     .unwrap();
     let o = evidence::create(
         &mut c,
-        input(&a.id, "balance", Some("50026"), "2026-10-20T20:00:00Z"),
+        input(&a.id, "balance", Some("50017.5"), "2026-10-20T20:00:00Z"),
     )
     .unwrap();
-    let import=CsvImportRequest { account_id:a.id.clone(),file_name:"performance.csv".into(),content:"symbol,qty,buyPrice,sellPrice,boughtTimestamp,soldTimestamp,pnl,buyFillId,sellFillId\nMNQZ6,1,29774.25,29787.25,2026-10-19T11:47:48Z,2026-10-19T11:48:21Z,26,buy-1,sell-1\n".into(),format:FormatChoice::Auto,columns:None,target_acknowledgement:None,date_format:DateFormatChoice::Auto,timezone:"America/New_York".into() };
+    // Invented row (TASK-041): (24396.00 - 24387.25) = 8.75 points x $2 x 1 = 17.50, so 50000 + 17.50 = 50017.50, difference 0.
+    let import=CsvImportRequest { account_id:a.id.clone(),file_name:"performance.csv".into(),content:"symbol,qty,buyPrice,sellPrice,boughtTimestamp,soldTimestamp,pnl,buyFillId,sellFillId\nMNQZ6,1,24387.25,24396.00,2026-10-19T11:12:15Z,2026-10-19T11:13:00Z,17.50,buy-1,sell-1\n".into(),format:FormatChoice::Auto,columns:None,target_acknowledgement:None,date_format:DateFormatChoice::Auto,timezone:"America/New_York".into() };
     let batch = csv_import::commit_reviewed(&mut c, &import).unwrap();
     let mut req = request(&a.id, &baseline.id, &o.id);
     req.coverage.fees = "missing".into();
