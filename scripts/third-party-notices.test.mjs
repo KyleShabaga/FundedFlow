@@ -116,6 +116,8 @@ test("output is sorted and deterministic whatever order components arrive in", t
   // alpha and gamma share one MIT body; ISC is separate.
   assert.equal(JSON.parse(first.summary).licenseTexts, 2);
   assert.match(first.notices, /FundedFlow 1\.2\.3 for Windows x64/);
+  assert.match(first.notices, /FundedFlow itself is open source under the MIT License/);
+  assert.match(first.notices, /Third-party components retain their own licenses and notices/);
   assert.match(first.notices, /Licence: MIT \(chosen from "\(MIT OR Apache-2\.0\)"\)/);
   assert.doesNotMatch(first.notices, /\r|\d{4}-\d{2}-\d{2}T/);
 });

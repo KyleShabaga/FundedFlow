@@ -15,6 +15,13 @@ It does **not** interpret rules, log in, approve anything, use AI, or touch the 
   [`../../docs/contracts/collector-directory-observations-v1.schema.json`](../../docs/contracts/collector-directory-observations-v1.schema.json)
 - Asking a firm for permission: [`docs/permission-request.md`](docs/permission-request.md)
 
+## License
+
+The collector is MIT-licensed; see [LICENSE](LICENSE) (the same text as the repository root license).
+Dependencies retain their own licenses. Collected pages, PDFs and other third-party content are not
+relicensed under MIT by being fetched, stored or exported by the collector. Existing source-permission,
+robots.txt and dependency checks still apply.
+
 ## Being a good citizen
 
 The collector avoids being blocked by being a low-volume, honest, well-behaved visitor, **never by disguising

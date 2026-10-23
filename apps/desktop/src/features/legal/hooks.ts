@@ -1,3 +1,4 @@
+// Compatibility: acceptance names and acceptedAt persist on disk; the UI records notice acknowledgment.
 // First-run acceptance state (NA-3). The record lives in a per-install file (src-tauri/src/legal.rs), not in
 // the journal, so these queries never wait for the journal runtime, and the data-control reset (restore,
 // erase) doesn't touch them: its keys are under featureKeys.root, this one isn't.

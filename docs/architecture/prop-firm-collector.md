@@ -20,6 +20,9 @@ content-addressed snapshots in its **own** SQLite file. Pages can also be import
 in a browser, with no network access. A versioned JSON envelope exports the snapshots as **unverified evidence**
 for Build 31. Build 29 does not interpret rules, approve anything, write to the FundedFlow app database, or use AI.
 
+> Current license: FundedFlow and the collector are MIT-licensed; see [the transition note](../licensing-transition.md).
+> The baseline below records the earlier proprietary state. The dependency allow-list and AGPL exclusions remain unchanged.
+
 ## 2. Baseline and independence check (checked 2026-10-20)
 
 The desktop consumer (import → review/edit → account prefill) is deferred to V1.5
@@ -132,7 +135,7 @@ The root `README.md` gets one row in its layout table pointing at `tools/prop-fi
 ## 4. Dependencies
 
 Exact versions are locked (with hashes) in `uv.lock` at implementation time, using the newest patched releases.
-Licences were checked against the proprietary repo.
+Licences were originally checked against the then-proprietary repo. The MIT transition does not change the dependency policy.
 
 | Purpose | Package | Licence | Notes |
 |---|---|---|---|

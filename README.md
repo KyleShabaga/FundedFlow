@@ -82,7 +82,7 @@ Full wording, uninstall behaviour and the clean-machine smoke checklist: [Instal
 
 ## Local data
 
-FundedFlow stores accounts, trades, journal entries and CSV import history in a single SQLite file in the per-user app data directory: `%APPDATA%\com.fundedflow.desktop\fundedflow.db` on Windows. Nothing is stored in the install directory or the repository, and nothing leaves the machine. The first-run privacy notice and agreement (NA-3) records this install's acceptance in `legal-acceptance.json` in the same folder; it is not journal data ([spec](docs/design/screens/16-first-run.md)).
+FundedFlow stores accounts, trades, journal entries and CSV import history in a single SQLite file in the per-user app data directory: `%APPDATA%\com.fundedflow.desktop\fundedflow.db` on Windows. Nothing is stored in the install directory or the repository, and the packaged desktop app does not upload journal data. Installer downloads, external services, user sharing and cloud-synced folders have separate privacy implications; see the bundled privacy notice. The first-run privacy and product notices (NA-3) record this install's acknowledgment in `legal-acceptance.json` in the same folder; it is not journal data ([spec](docs/design/screens/16-first-run.md)).
 
 - Schema, relationships, delete rules, migrations, CSV column mapping, duplicate detection and P&L assumptions: [`docs/data-model.md`](docs/data-model.md)
 - Migrations: `apps/desktop/src-tauri/migrations/*.sql`, embedded and applied at startup by `apps/desktop/src-tauri/src/db` (a backup copy is written before an upgrade)
@@ -150,10 +150,23 @@ the job still passes, so an outage can't block code checks or merges; on the sch
 
 ## License and ownership
 
-Copyright (c) 2026 Kyle Shabaga. All rights reserved.
+Copyright (c) 2026 Kyle Shabaga.
 
-FundedFlow is proprietary software. Its source code is publicly viewable, but it is **not open source**: being able to read it on GitHub does not give you a license to copy, modify, redistribute, sublicense or commercially use it, or to make derivative works. See [LICENSE](LICENSE) for the full terms.
+FundedFlow's original software and associated documentation are open source under the [MIT License](LICENSE).
+You may use, copy, modify, distribute, sublicense and sell copies, including in commercial products, provided
+you include the copyright and permission notice in all copies or substantial portions of the software.
+The software is provided as is, without warranty; see the full license for its terms.
 
-- Viewing the code, and the forking that GitHub's Terms of Service allow for public repositories, are fine.
-- Anything beyond that, including reuse in another project or commercial licensing, needs written permission from the copyright holder. To ask, open an issue in this repository or contact [@KyleShabaga](https://github.com/KyleShabaga) through GitHub.
-- Third-party libraries, crates and fonts used by FundedFlow keep their own licenses and notices; the FundedFlow license does not apply to them.
+- Third-party libraries, crates, fonts and other third-party materials keep their own licenses and notices.
+  The MIT license for FundedFlow does not relicense them. The installed app includes LICENSE and
+  THIRD_PARTY_NOTICES.txt, also available in Settings → Privacy & legal.
+- Imported journals and CSVs, screenshots, and third-party pages or documents used by the standalone collector
+  are not granted an MIT license merely because FundedFlow processes or stores them.
+- FundedFlow is a record-keeping tool. It does not provide financial, trading or investment advice or guarantee
+  broker or prop-firm compliance. Verify calculations against the original records and keep your own backups.
+- Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+The privacy notice and license/product information remain drafts. The MIT transition does not constitute counsel review or
+complete the existing release gate; see [transition scope and remaining work](docs/licensing-transition.md).
+
+The owner adopted revised P0-13 criteria and authorized notice acknowledgment on 2026-10-22; document content is now owner-approved, while release approval remains pending. See [verification and owner decisions](docs/privacy-product-verification.md).

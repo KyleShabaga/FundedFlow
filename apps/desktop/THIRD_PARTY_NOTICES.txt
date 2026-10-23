@@ -8,7 +8,7 @@ FundedFlow 0.1.0 for Windows x64 (x86_64-pc-windows-msvc) includes the third-par
 
 This build includes 232 Rust crates, 58 npm packages and 3 fonts: 293 components, with 38 distinct licence texts.
 
-FundedFlow itself is not open source. Its own terms are in the LICENSE file installed next to this one.
+FundedFlow itself is open source under the MIT License. Its full license is in the LICENSE file installed next to this one. Third-party components retain their own licenses and notices.
 
 What is included
 ----------------

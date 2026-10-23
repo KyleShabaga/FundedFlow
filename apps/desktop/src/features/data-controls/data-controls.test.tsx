@@ -127,10 +127,10 @@ async function typePhrase(user: ReturnType<typeof userEvent.setup>, dialog: HTML
 }
 
 describe("data information and export", () => {
-  it("says the journal is local, is copied only before an upgrade and that exports are not encrypted", async () => {
+  it("describes local storage, recovery copies and unencrypted exports", async () => {
     renderPage();
-    expect(screen.getByText(/only on this computer/)).toBeTruthy();
-    expect(screen.getByText("Only before an upgrade. FundedFlow saves a copy of your journal in the same folder before upgrading its format. That copy isn't a substitute for exporting a full backup.")).toBeTruthy();
+    expect(screen.getByText(/storage, sharing and deletion limits/)).toBeTruthy();
+    expect(screen.getByText("FundedFlow keeps pre-upgrade database copies and pre-restore safety copies. These are not a substitute for independent full backups.")).toBeTruthy();
     expect(screen.getByText(/Not encrypted\. Anyone who can open the file/)).toBeTruthy();
     expect(await screen.findByText("No export yet")).toBeTruthy();
     expect(screen.getByText("18 (backup format 1)")).toBeTruthy();
