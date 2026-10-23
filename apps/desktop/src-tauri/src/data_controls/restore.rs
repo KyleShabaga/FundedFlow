@@ -4,6 +4,7 @@ use crate::db;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::BTreeSet,
     fs,
     path::{Path, PathBuf},
 };
@@ -188,6 +189,8 @@ pub(super) fn prepare_with(
         &root.join("attachments"),
         &op.join("safety-attachments"),
         &original_attachments,
+        // Keys recorded as changed attachments: none until TASK-017 detects them.
+        &BTreeSet::new(),
     )?;
     write_new(
         &op.join("safety-inventory.json"),
@@ -267,7 +270,7 @@ fn sync_tree(root: &Path) -> Result<()> {
     }
     sync_dir(root)
 }
-fn managed_files(root: &Path, prefix: &str, names: &mut Vec<String>) -> Result<()> {
+pub(crate) fn managed_files(root: &Path, prefix: &str, names: &mut Vec<String>) -> Result<()> {
     if !root.exists() {
         return Ok(());
     }
@@ -297,19 +300,74 @@ fn managed_files(root: &Path, prefix: &str, names: &mut Vec<String>) -> Result<(
     }
     Ok(())
 }
-pub(crate) fn copy_managed(source: &Path, target: &Path, list: &[super::Attachment]) -> Result<()> {
-    validate_managed(source, list)?;
-    copy_inventory(source, target, list)
+/// Whether `key` is a name FundedFlow itself writes under `attachments/` (`store/attachments.rs`): a finished
+/// screenshot `screenshots/<uuid>.<png|jpg|webp>` or an interrupted write `screenshots/.<uuid>.part`, with `<uuid>`
+/// in the lowercase hyphenated form `domain::new_id` produces. Unreferenced files like these are leftovers of a
+/// crash or a failed removal, not someone else's data.
+pub(crate) fn is_managed_extra(key: &str) -> bool {
+    let Some(name) = key.strip_prefix("screenshots/") else {
+        return false;
+    };
+    let id = match name.strip_prefix('.').and_then(|n| n.strip_suffix(".part")) {
+        Some(id) => id,
+        None => match name.rsplit_once('.') {
+            Some((id, "png" | "jpg" | "webp")) => id,
+            _ => return false,
+        },
+    };
+    uuid::Uuid::parse_str(id).is_ok_and(|u| u.hyphenated().to_string() == id)
 }
-pub(crate) fn validate_managed(source: &Path, list: &[super::Attachment]) -> Result<()> {
+/// Copies the listed attachments and, hash-verified, the unowned managed extras: no bytes are lost.
+pub(crate) fn copy_managed(
+    source: &Path,
+    target: &Path,
+    list: &[super::Attachment],
+    changed: &BTreeSet<String>,
+) -> Result<()> {
+    let extras = validate_managed(source, list, changed)?;
+    copy_inventory(source, target, list)?;
+    for key in &extras {
+        let path = source.join(key);
+        no_symlink_components(&path)?;
+        regular(&path)?;
+        // Extras have no recorded hash: the copy must match the source as it was read.
+        let hash = hash_file(&path)?;
+        let dest = target.join(key);
+        write_new(&dest, &fs::read(&path)?)?;
+        if hash_file(&dest)? != hash {
+            return Err(fail(Code::Integrity));
+        }
+    }
+    sync_tree(target)
+}
+/// The unowned managed extras under `source` (sorted), next to the listed attachments. Unsafe entries (links,
+/// reparse points, hard links, non-regular entries, invalid names) fail with `UnsafePath`; any other regular file
+/// no row lists fails with `UnrecognizedFile`. `changed` holds keys recorded as changed attachments (TASK-017):
+/// never extras. Empty until TASK-017 fills it.
+pub(crate) fn validate_managed(
+    source: &Path,
+    list: &[super::Attachment],
+    changed: &BTreeSet<String>,
+) -> Result<Vec<String>> {
     let mut files = Vec::new();
     managed_files(source, "", &mut files)?;
-    let expected: std::collections::BTreeSet<_> =
-        list.iter().map(|a| a.storage_key.clone()).collect();
-    if files.into_iter().collect::<std::collections::BTreeSet<_>>() != expected {
-        return Err(fail(Code::UnsupportedOwnership));
+    let listed: BTreeSet<&str> = list.iter().map(|a| a.storage_key.as_str()).collect();
+    let present: BTreeSet<&str> = files.iter().map(String::as_str).collect();
+    if !listed.is_subset(&present) {
+        return Err(fail(Code::MissingAttachment));
     }
-    Ok(())
+    let mut extras = Vec::new();
+    for key in &files {
+        if listed.contains(key.as_str()) || changed.contains(key) {
+            continue;
+        }
+        if !is_managed_extra(key) {
+            return Err(fail(Code::UnrecognizedFile));
+        }
+        extras.push(key.clone());
+    }
+    extras.sort();
+    Ok(extras)
 }
 fn replace_database(source: &Path, live: &Path) -> Result<()> {
     // No SQLite connection may exist here. Pending intent makes interrupted multi-file swaps recoverable.

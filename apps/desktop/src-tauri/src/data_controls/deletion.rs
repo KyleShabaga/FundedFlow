@@ -30,6 +30,9 @@ pub struct DeletionPreview {
     pub account_name: Option<String>,
     pub affected_entities: Counts,
     pub attachments: Vec<super::Attachment>,
+    /// Whole-journal erase only: storage keys of unowned managed extras under `attachments/` (leftover screenshots
+    /// or interrupted writes no row lists), removed with the journal. Empty for account deletion.
+    pub extra_files: Vec<String>,
     pub linked_account_ids: Vec<String>,
     pub blockers: Vec<String>,
     pub preview_token: String,
@@ -227,6 +230,7 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
     let mut blockers = Vec::new();
     let mut linked = Vec::new();
     let mut attachments;
+    let mut extra_files = Vec::new();
     let mut name = None;
     let mut affected = Counts::new();
     let copies = recovery_copies(root)?;
@@ -311,7 +315,12 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
         Scope::Journal => {
             attachments = archive::inventory(c, &root.join("attachments"))?;
             // Reject stray bytes before promising a complete whole-journal erase.
-            super::restore::validate_managed(&root.join("attachments"), &attachments)?;
+            // Keys recorded as changed attachments: none until TASK-017 detects them.
+            extra_files = super::restore::validate_managed(
+                &root.join("attachments"),
+                &attachments,
+                &BTreeSet::new(),
+            )?;
             affected = before.clone();
         }
     }
@@ -324,10 +333,12 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
         &request.scope,
         &content,
         &attachments,
+        // Part of what the user confirms: an extra appearing or disappearing makes the confirm stale.
+        &extra_files,
         &copies,
         &blockers,
     ))?;
-    Ok(DeletionPreview { scope:request.scope, account_name:name, affected_entities:affected, attachments, linked_account_ids:linked, blockers,
+    Ok(DeletionPreview { scope:request.scope, account_name:name, affected_entities:affected, attachments, extra_files, linked_account_ids:linked, blockers,
         preview_token:digest(&payload),required_confirmation:confirmation,local_recovery_copies:copies.len() as u64,
         warnings:vec!["Permanent application-data deletion, separate from reversible account archiving.".into(),
             "External/user-exported backups remain untouched; this is not a forensic secure-erase guarantee.".into(),
@@ -562,6 +573,19 @@ fn finish(c: &Connection, root: &Path, cleanup: &Cleanup) -> Result<()> {
                 return Err(fail(Code::UnsafePath));
             }
             remove_path(&root.join(key))?;
+        }
+        // Unowned managed extras are never listed in a marker either (an older build would refuse or keep
+        // them): re-derive them now. A row that still lists a file keeps it.
+        let managed = root.join("attachments");
+        let mut files = Vec::new();
+        super::restore::managed_files(&managed, "", &mut files)?;
+        for key in files.iter().filter(|k| super::restore::is_managed_extra(k)) {
+            let owned = c
+                .prepare("SELECT 1 FROM attachments WHERE storage_key=?1 LIMIT 1")?
+                .exists([key])?;
+            if !owned {
+                remove_path(&managed.join(key))?;
+            }
         }
         // Never listed in a marker (see QUARANTINE); a whole-journal erase by this build removes it.
         remove_path(&root.join(QUARANTINE))?;

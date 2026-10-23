@@ -37,6 +37,8 @@ pub enum Code {
     UnsupportedOwnership,
     Busy,
     RecoveryRequired,
+    /// A regular file under `attachments/` that no row lists and FundedFlow never writes.
+    UnrecognizedFile,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -76,6 +78,9 @@ pub(crate) fn fail(code: Code) -> ControlError {
         Code::Busy => "Another FundedFlow process owns this journal.",
         Code::RecoveryRequired => {
             "A recovery operation must finish before journal access can resume."
+        }
+        Code::UnrecognizedFile => {
+            "A file in the attachments folder belongs to no record and was not written by FundedFlow. Nothing was changed."
         }
     };
     ControlError {
