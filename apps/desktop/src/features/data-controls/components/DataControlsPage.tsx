@@ -198,7 +198,7 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
         </div>
       </FormSection>
 
-      <FormSection headingLevel={2} title="Delete data permanently" description="Failing or archiving an account keeps its history. Deleting removes it for good.">
+      <FormSection headingLevel={2} title="Delete data permanently" description="Failing or archiving an account keeps its history. Deleting removes it from the journal. Recovery copies FundedFlow keeps on this computer may still hold it until you erase the entire journal.">
         <div className="dc-danger">
           <div className="dc-danger-row">
             <div>

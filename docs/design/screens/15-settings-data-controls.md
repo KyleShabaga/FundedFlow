@@ -70,8 +70,13 @@ Separate titles, descriptions, buttons and phrases for one account (`DELETE ACCO
 whole journal (`ERASE ENTIRE JOURNAL`). Account deletion names the account, its ID and current status/archived
 state, then shows the native preview: blockers (each explained; no phrase field or delete button while blocked,
 "Archive instead" from Accounts), linked attempts by ID and that they are kept, counts of what will be deleted,
-attachment count and size, what stays (other attempts, shared data, user-exported files). Whole-journal erasure
-adds FundedFlow's recovery copies. `cleanup_pending` shows a warning and "Retry file cleanup".
+attachment count and size, what stays (other attempts, shared data, user-exported files). When FundedFlow keeps
+recovery copies on this computer (`localRecoveryCopies` > 0), account deletion says how many may still contain the
+account's data (pre-upgrade database copies, pre-restore safety copies or leftover restore working files), that
+deleting the account doesn't change them and that erasing the entire journal removes them; "What stays" names them.
+Whole-journal erasure says those copies will also be removed. The section description says deleting removes an
+account from the journal and that recovery copies may still hold it until the entire journal is erased (privacy
+notice 0.2.1-draft, "Retention, backups and temporary copies" and "Deletion and uninstall"). `cleanup_pending` shows a warning and "Retry file cleanup".
 
 ## Behaviour
 

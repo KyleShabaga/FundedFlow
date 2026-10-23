@@ -358,6 +358,49 @@ describe("permanent deletion", () => {
     expect(within(empty).queryByText(/leftover file/)).toBeNull();
   });
 
+  it("says recovery copies may keep a deleted account's data until the whole journal is erased", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const section = screen.getByRole("heading", { name: "Delete data permanently" }).closest("section") as HTMLElement;
+    expect(within(section).queryByText(/for good/)).toBeNull();
+    expect(within(section).getByText(
+      "Failing or archiving an account keeps its history. Deleting removes it from the journal. Recovery copies FundedFlow keeps on this computer may still hold it until you erase the entire journal.",
+    )).toBeTruthy();
+    cleanup();
+
+    controls.previewDeletion.mockResolvedValue(accountPreview({ localRecoveryCopies: 2 }));
+    let dialog = await openAccountDeletion(user);
+    await within(dialog).findByText("What will be deleted");
+    expect(within(dialog).getByText(
+      "2 recovery copies kept by FundedFlow on this computer (pre-upgrade database copies, pre-restore safety copies or leftover restore working files) may still contain this account's data. Deleting the account doesn't change them; erasing the entire journal removes them.",
+    )).toBeTruthy();
+    expect(within(dialog).getByText(/FundedFlow's recovery copies on this computer stay\./)).toBeTruthy();
+    expect(within(dialog).queryByText(/will also be removed/)).toBeNull();
+    cleanup();
+
+    controls.previewDeletion.mockResolvedValue(accountPreview({ localRecoveryCopies: 1 }));
+    dialog = await openAccountDeletion(user);
+    expect(await within(dialog).findByText(/^1 recovery copy kept by FundedFlow on this computer/)).toBeTruthy();
+    cleanup();
+
+    controls.previewDeletion.mockResolvedValue(accountPreview({ localRecoveryCopies: 0 }));
+    dialog = await openAccountDeletion(user);
+    await within(dialog).findByText("What will be deleted");
+    expect(within(dialog).queryByText(/may still contain this account's data/)).toBeNull();
+    expect(within(dialog).queryByText(/recovery copies on this computer stay/)).toBeNull();
+  });
+
+  it("tells journal erasure that FundedFlow's recovery copies are removed too", async () => {
+    const user = userEvent.setup();
+    controls.previewDeletion.mockResolvedValue({ ...journalPreview, localRecoveryCopies: 3 });
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Erase entire journal…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Erase the entire local journal?" });
+    expect(await within(dialog).findByText("3 local recovery copies kept by FundedFlow will also be removed.")).toBeTruthy();
+    expect(within(dialog).queryByText(/may still contain this account's data/)).toBeNull();
+    expect(within(dialog).queryByText(/recovery copies on this computer stay/)).toBeNull();
+  });
+
   it("erases the whole journal through a separate flow and phrase, and offers file-cleanup retry", async () => {
     const user = userEvent.setup();
     controls.deletePermanently.mockResolvedValue({ operationId: "op", state: "cleanup_pending", affectedEntities: {} });
