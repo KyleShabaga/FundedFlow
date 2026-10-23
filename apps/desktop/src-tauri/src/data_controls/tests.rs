@@ -293,6 +293,110 @@ fn failed_swap_and_interrupted_install_restore_the_original_journal() {
         assert!(!target.path().join("data-controls-pending.json").exists());
     }
 }
+/// Prepares a restore, swaps the operation's `safety.db` for one built at `version` by `build`, and leaves the
+/// restore interrupted in the "installing" phase with an overwritten live file, as an update would find it.
+fn installing_restore_with_safety(
+    target: &Path,
+    version: usize,
+    build: impl FnOnce(&mut Connection),
+) -> std::path::PathBuf {
+    let source = tempfile::tempdir().unwrap();
+    let archive = backup_with_account(source.path(), "incoming");
+    let live = target.join(db::DB_FILE_NAME);
+    let mut c = journal(&live);
+    account(&mut c, "original");
+    let p = restore::inspect(
+        &c,
+        target,
+        restore::InspectRequest {
+            source: archive.to_string_lossy().into(),
+        },
+    )
+    .unwrap();
+    let result = restore::prepare(&c, target, confirm(&archive, p.preview_token)).unwrap();
+    drop(c);
+    let op = op_dir(target, &result);
+    for name in ["safety.db", "safety.db-wal", "safety.db-shm"] {
+        let _ = fs::remove_file(op.join(name));
+    }
+    let mut safety = Connection::open(op.join("safety.db")).unwrap();
+    db::migrate_with(&mut safety, &db::MIGRATIONS[..version]).unwrap();
+    db::configure(&safety).unwrap();
+    build(&mut safety);
+    drop(safety);
+    let marker = target.join("data-controls-pending.json");
+    let text = fs::read_to_string(&marker)
+        .unwrap()
+        .replace("prepared", "installing");
+    fs::write(&marker, text).unwrap();
+    fs::write(&live, b"interrupted overwrite").unwrap();
+    op
+}
+#[test]
+fn interrupted_install_rolls_back_to_an_older_safety_copy_and_upgrades_it_on_open() {
+    let target = tempfile::tempdir().unwrap();
+    let latest = db::latest_version();
+    let older = latest as usize - 1;
+    installing_restore_with_safety(target.path(), older, |c| {
+        account(c, "older");
+    });
+    let live = target.path().join(db::DB_FILE_NAME);
+    restore::recover(target.path(), &live).unwrap();
+    assert!(!target.path().join("data-controls-pending.json").exists());
+    let installed: u32 = archive::readonly(&live)
+        .unwrap()
+        .pragma_query_value(None, "user_version", |r| r.get(0))
+        .unwrap();
+    assert_eq!(installed, latest - 1);
+    let upgraded = journal(&live);
+    let version: u32 = upgraded
+        .pragma_query_value(None, "user_version", |r| r.get(0))
+        .unwrap();
+    assert_eq!(version, latest);
+    assert!(
+        live.with_extension(format!("db.before-v{latest}.bak"))
+            .exists()
+    );
+    let names: Vec<String> = upgraded
+        .prepare("SELECT name FROM accounts ORDER BY name")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert_eq!(names, ["older"]);
+}
+#[test]
+fn rollback_refuses_safety_copies_outside_the_supported_range_or_with_a_changed_schema() {
+    let latest = db::latest_version() as usize;
+    type Build = Box<dyn FnOnce(&mut Connection)>;
+    let cases: [(usize, Build); 3] = [
+        (
+            latest,
+            Box::new(move |c: &mut Connection| {
+                c.pragma_update(None, "user_version", latest as u32 + 1)
+                    .unwrap();
+            }),
+        ),
+        (2, Box::new(|_: &mut Connection| {})),
+        (
+            latest - 1,
+            Box::new(|c: &mut Connection| {
+                c.execute_batch("CREATE TABLE tampered (x TEXT)").unwrap();
+            }),
+        ),
+    ];
+    for (version, build) in cases {
+        let target = tempfile::tempdir().unwrap();
+        let op = installing_restore_with_safety(target.path(), version, build);
+        let live = target.path().join(db::DB_FILE_NAME);
+        assert!(restore::recover(target.path(), &live).is_err());
+        assert!(target.path().join("data-controls-pending.json").exists());
+        assert!(op.join("safety.db").exists());
+        assert!(op.join("safety-inventory.json").exists());
+        assert_eq!(fs::read(&live).unwrap(), b"interrupted overwrite");
+    }
+}
 #[test]
 fn second_runtime_cannot_access_a_journal_owned_by_another_process_handle() {
     let dir = tempfile::tempdir().unwrap();
