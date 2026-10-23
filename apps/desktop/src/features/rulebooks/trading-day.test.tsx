@@ -10,7 +10,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { RuntimeState } from "../../app/RuntimeProvider";
 import { ToastProvider } from "../../design-system";
-import { boundary, freshnessRow, resetBoundaries, type FreshnessEntry } from "../../test/boundaries";
+import type { AccountFreshnessInputs } from "../../lib/data/freshness";
+import { boundary, deferredFor, freshnessRow, resetBoundaries, type FreshnessEntry } from "../../test/boundaries";
 import { makeAccount } from "../accounts/test-store";
 import { RulebookPage } from "./components/RulebookPage";
 import { createRulebookStore } from "./test-store";
@@ -130,6 +131,25 @@ describe("the version in force today is the one for Rust's trading day", () => {
     expect(Date.parse(boundary.freshness.calls[boundary.freshness.calls.length - 1])).toBeGreaterThanOrEqual(Date.parse("2026-10-23T21:00:00.000Z"));
     expect(await inForce()).toBeTruthy();
     await waitFor(() => expect(screen.queryByText(/not today/)).toBeNull());
+  });
+
+  it("re-reads when an answer sent before the boundary arrives after it, still holding the old day", async () => {
+    fresh("2026-10-23T20:59:59.000Z", "all");
+    const late = deferredFor<AccountFreshnessInputs[]>();
+    boundary.freshness.table = [
+      { from: "2000-01-01T00:00:00.000Z", answer: late.promise },
+      { from: "2026-10-23T21:00:00.000Z", answer: [freshnessRow(A, "2026-10-26", "2026-10-26T21:00:00.000Z")] },
+    ];
+    await assignFrom("2026-10-26");
+    renderRulebook();
+    await waitFor(() => expect(boundary.freshness.calls).toHaveLength(1)); // asked at 20:59:59, before Friday's reset
+    await act(() => vi.advanceTimersByTimeAsync(5_000)); // the answer is still on its way at 21:00:04
+    await act(async () => { late.resolve([freshnessRow(A, "2026-10-23", "2026-10-23T21:00:00.000Z")]); });
+    expect(await screen.findByText("No rulebook in force today")).toBeTruthy();
+    // No focus or visibility event: the hook sees the row's boundary has passed and reads again.
+    await act(() => vi.advanceTimersByTimeAsync(2_000));
+    await waitFor(() => expect(boundary.freshness.calls.length).toBeGreaterThan(1));
+    expect(await inForce()).toBeTruthy();
   });
 
   it("when the trading day can't be read, in force and the badge are Unknown, with no calendar-day fallback", async () => {

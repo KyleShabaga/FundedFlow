@@ -24,14 +24,14 @@ export function useTradingDay(accountId: string | null): TradingDay {
   const query = useFeatureQuery({ key: accountFreshnessKey, enabled: accountId !== null, read: signal => readOperation(() => freshnessGateway.list(new Date().toISOString()), rows => rows, signal) });
   const row = query.data?.find(r => r.accountId === accountId);
   const next = row ? Date.parse(row.nextTradingDayStart) : NaN;
-  const readAt = query.observedAt ? Date.parse(query.observedAt) : NaN;
   useEffect(() => {
-    // A read made at or after the boundary already has the new day.
-    if (!Number.isFinite(next) || !(readAt < next)) return;
+    // Armed for every boundary, including one already past: an answer sent before the reset can arrive after it
+    // with the old day, and is read again at once. Rust's next answer has a later boundary, so this re-arms once.
+    if (!Number.isFinite(next)) return;
     const wait = Math.max(0, Math.min(next - Date.now(), MAX_WAIT_MS));
     const timer = setTimeout(() => { void client.invalidateQueries({ queryKey: accountFreshnessKey }); }, wait);
     return () => clearTimeout(timer);
-  }, [next, readAt, client]);
+  }, [next, client]);
   if (row) return { kind: "known", day: row.currentTradingDay };
   return query.isInitialLoading ? { kind: "loading" } : { kind: "unknown" };
 }
