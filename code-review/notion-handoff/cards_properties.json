@@ -1844,7 +1844,7 @@
  {
   "id": "043",
   "slug": "TASK-043-rollback-accepts-older-safety-copy.md",
-  "sha256": "950963c3faea805e68bf68e65f7e2cfcd96ae5fb1845fb96de8e8660376fbf01",
+  "sha256": "0fa4b920b28c4addb8547446925369012bb2606a6fe61a2511e4e0eb0d58d0e0",
   "props": {
    "Name": "TASK-043 \u2014 Fix: restore rollback accepts a safety copy at an older schema version (B2-1)",
    "Task ID": "TASK-043",
@@ -1858,15 +1858,15 @@
    "Roadmap Lane": "Unassigned (owner)",
    "Wave": "W1d",
    "Approval": "Pending Review",
-   "Spec Readiness": "Ready for Approval (r1)",
+   "Spec Readiness": "Ready for Approval (r2)",
    "Execution Status": "Not Started",
    "Finding Verification": "N/A (gate/decision)",
    "Release Blocking": "Yes",
    "Gate State": "N/A",
    "Source Card": "Approved-task audit 2026-10-22 (TASK-009 fee decision needs a V1 migration; 08:93 \"Any future migration task must list B2-1 as its prerequisite\")",
-   "Specification Revision": "r1 \u00b7 sha256 950963c3faea805e",
-   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD 1fb1230); cards 1fb1230",
-   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-043 at spec r1 (sha256 950963c3faea), scope exactly as the card; prerequisites must be complete.",
+   "Specification Revision": "r2 \u00b7 sha256 0fa4b920b28c4add",
+   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD 962a984); cards 962a984",
+   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-043 at spec r2 (sha256 0fa4b920b28c), scope exactly as the card; prerequisites must be complete.",
    "Effort": "S",
    "Risk": "Low",
    "Verification Platform": "Any OS",
@@ -1878,7 +1878,7 @@
   "nits": [],
   "ready": true,
   "r3": true,
-  "rev": "r1",
+  "rev": "r2",
   "deps": [
    "017"
   ]
