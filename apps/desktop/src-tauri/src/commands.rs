@@ -637,11 +637,11 @@ pub async fn preview_permanent_deletion(db: State<'_, Runtime>, request: crate::
 }
 #[tauri::command]
 pub async fn permanently_delete_data(db: State<'_, Runtime>, request: crate::data_controls::DeleteRequest) -> crate::data_controls::Result<crate::data_controls::DeleteResult> {
-    db.with_controls(|c, root| crate::data_controls::delete_data(c, root, request))
+    db.delete_data(request)
 }
 #[tauri::command]
 pub async fn retry_data_cleanup(db: State<'_, Runtime>) -> crate::data_controls::Result<()> {
-    db.with_controls(|c, root| crate::data_controls::recover_cleanup(c, root))
+    db.retry_cleanup()
 }
 
 use crate::store::daily_reviews::{self, DailyReviewDay, DailyReviewIndex, DailyReviewInput, DailyReviewRef};

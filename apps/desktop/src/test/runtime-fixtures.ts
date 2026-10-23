@@ -3,7 +3,7 @@ import type { RuntimeFailure, RuntimeStatus } from "../lib/data/runtime";
 
 export const initializing: RuntimeStatus = {
   state: "initializing", stage: "migrate", schemaVersion: 4,
-  supportedSchemaVersion: 13, created: false, failure: null,
+  supportedSchemaVersion: 13, created: false, failure: null, cleanup: "clear",
 };
 export const ready: RuntimeStatus = {
   ...initializing, state: "ready", stage: "ready", schemaVersion: 13,

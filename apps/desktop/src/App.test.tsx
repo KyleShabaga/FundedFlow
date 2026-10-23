@@ -21,7 +21,7 @@ import { primeAccepted } from "./test/legal";
 
 const ready = {
   state: "ready", stage: "ready", schemaVersion: 13,
-  supportedSchemaVersion: 13, created: true, failure: null,
+  supportedSchemaVersion: 13, created: true, failure: null, cleanup: "clear",
 };
 
 beforeEach(() => {

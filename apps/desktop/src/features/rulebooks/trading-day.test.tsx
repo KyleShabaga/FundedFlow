@@ -56,7 +56,7 @@ function renderRulebook() {
 
 function fresh(now: string, timers: "date" | "all" = "date") {
   vi.useFakeTimers({ now: new Date(now), shouldAdvanceTime: true, toFake: timers === "all" ? ["setTimeout", "clearTimeout", "Date"] : ["Date"] });
-  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 15, supportedSchemaVersion: 15, created: false, failure: null } } as unknown as RuntimeState;
+  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 15, supportedSchemaVersion: 15, created: false, failure: null, cleanup: "clear" } } as unknown as RuntimeState;
   runtime.check.mockReset().mockResolvedValue(undefined);
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false } } });
   resetBoundaries();

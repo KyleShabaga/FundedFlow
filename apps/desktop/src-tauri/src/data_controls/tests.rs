@@ -1168,3 +1168,243 @@ fn preview_tokens_change_when_any_row_or_rowid_changes() {
     c.execute("UPDATE settings SET rowid=rowid+100 WHERE key='k'", []).unwrap();
     assert_ne!(token(&c), second, "rowid only");
 }
+fn queue(root: &Path) -> std::path::PathBuf {
+    root.join("data-controls-cleanup")
+}
+fn quarantine(root: &Path) -> std::path::PathBuf {
+    root.join("data-controls-quarantine")
+}
+fn entries(dir: &Path) -> Vec<String> {
+    let mut names: Vec<String> = fs::read_dir(dir)
+        .map(|d| d.map(|e| e.unwrap().file_name().into_string().unwrap()).collect())
+        .unwrap_or_default();
+    names.sort();
+    names
+}
+/// A cleanup marker as any build writes it (camelCase `Cleanup`).
+fn marker_json(op: &str, whole: bool, attachments: &[(String, String)], copies: &[&str]) -> Vec<u8> {
+    let attachments: Vec<_> = attachments
+        .iter()
+        .map(|(id, key)| serde_json::json!({"id": id, "storageKey": key, "byteSize": 1, "sha256": "0".repeat(64)}))
+        .collect();
+    serde_json::to_vec(&serde_json::json!({
+        "operationId": op, "wholeJournal": whole, "attachments": attachments, "recoveryCopies": copies,
+    }))
+    .unwrap()
+}
+fn put_marker(root: &Path, name: &str, bytes: &[u8]) {
+    fs::create_dir_all(queue(root)).unwrap();
+    fs::write(queue(root).join(name), bytes).unwrap();
+}
+#[test]
+fn a_valid_marker_over_one_mib_from_an_older_build_is_processed_not_rejected() {
+    let dir = tempfile::tempdir().unwrap();
+    let c = journal(&dir.path().join("live.db"));
+    fs::create_dir_all(dir.path().join("attachments")).unwrap();
+    fs::write(dir.path().join("attachments/unowned.png"), b"left over").unwrap();
+    let mut listed = vec![("unowned".to_string(), "unowned.png".to_string())];
+    listed.extend((0..6000).map(|i| (format!("gone-{i}"), format!("{}-{i}.png", "k".repeat(120)))));
+    let bytes = marker_json(&crate::domain::new_id(), false, &listed, &[]);
+    assert!(bytes.len() > 1024 * 1024);
+    put_marker(dir.path(), "big.json", &bytes);
+    deletion::recover_cleanup(&c, dir.path()).unwrap();
+    assert!(!dir.path().join("attachments/unowned.png").exists());
+    assert!(entries(&queue(dir.path())).is_empty());
+    assert!(!quarantine(dir.path()).exists());
+}
+#[test]
+fn an_erase_listing_thousands_of_attachments_completes_its_cleanup() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut c = journal(&dir.path().join("live.db"));
+    account(&mut c, "A");
+    let bytes = b"x";
+    let hash = filesystem::digest(bytes);
+    fs::create_dir_all(dir.path().join("attachments")).unwrap();
+    let tx = c.transaction().unwrap();
+    for i in 0..4500 {
+        let key = format!("{}-{i}.png", "k".repeat(120));
+        tx.execute(
+            "INSERT INTO attachments(id,kind,storage_key,mime_type,byte_size,sha256,created_at,updated_at) VALUES(?1,'screenshot',?2,'image/png',1,?3,'t','t')",
+            rusqlite::params![format!("att-{i}"), key, hash],
+        )
+        .unwrap();
+        fs::write(dir.path().join("attachments").join(&key), bytes).unwrap();
+    }
+    tx.commit().unwrap();
+    let p = deletion::preview(&c, dir.path(), deletion::PreviewRequest { scope: deletion::Scope::Journal }).unwrap();
+    assert_eq!(p.attachments.len(), 4500);
+    assert_eq!(deletion::execute(&mut c, dir.path(), approved(&p)).unwrap().state, "completed");
+    assert!(entries(&dir.path().join("attachments")).is_empty());
+    assert!(entries(&queue(dir.path())).is_empty());
+}
+#[test]
+fn an_unparseable_marker_is_quarantined_never_deleted_and_never_blocks() {
+    let dir = tempfile::tempdir().unwrap();
+    let c = journal(&dir.path().join("live.db"));
+    let op = crate::domain::new_id();
+    put_marker(dir.path(), &format!("{op}.json"), b"");
+    deletion::recover_cleanup(&c, dir.path()).unwrap();
+    assert!(entries(&queue(dir.path())).is_empty());
+    let held = entries(&quarantine(dir.path()));
+    assert_eq!(held.len(), 1);
+    assert_eq!(fs::read(quarantine(dir.path()).join(&held[0])).unwrap(), b"");
+    // The same file name again keeps both quarantined copies.
+    put_marker(dir.path(), &format!("{op}.json"), b"{\"truncated");
+    deletion::recover_cleanup(&c, dir.path()).unwrap();
+    let held = entries(&quarantine(dir.path()));
+    assert_eq!(held.len(), 2);
+    let contents: std::collections::BTreeSet<Vec<u8>> = held.iter().map(|n| fs::read(quarantine(dir.path()).join(n)).unwrap()).collect();
+    assert_eq!(contents, std::collections::BTreeSet::from([b"".to_vec(), b"{\"truncated".to_vec()]));
+}
+#[test]
+fn one_marker_that_cannot_finish_does_not_stop_the_next() {
+    let dir = tempfile::tempdir().unwrap();
+    let c = journal(&dir.path().join("live.db"));
+    let attachments = dir.path().join("attachments");
+    fs::create_dir_all(attachments.join("stuck.png")).unwrap();
+    fs::write(attachments.join("free.png"), b"unowned").unwrap();
+    let stuck = format!("{}.json", "00000000-0000-4000-8000-000000000001");
+    let free = format!("{}.json", "ffffffff-ffff-4fff-bfff-ffffffffffff");
+    put_marker(dir.path(), &stuck, &marker_json("00000000-0000-4000-8000-000000000001", false, &[("s".into(), "stuck.png".into())], &[]));
+    put_marker(dir.path(), &free, &marker_json("ffffffff-ffff-4fff-bfff-ffffffffffff", false, &[("f".into(), "free.png".into())], &[]));
+    let _ = deletion::recover_cleanup(&c, dir.path());
+    assert!(!attachments.join("free.png").exists(), "the second marker was processed");
+    assert_eq!(entries(&queue(dir.path())), vec![stuck]);
+    assert!(attachments.join("stuck.png").is_dir(), "nothing deleted for the pending marker");
+}
+#[test]
+fn whole_journal_erase_removes_the_quarantine_and_account_deletion_keeps_it() {
+    for whole in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let mut c = journal(&dir.path().join("live.db"));
+        let a = account(&mut c, "A");
+        account(&mut c, "B");
+        put_marker(dir.path(), &format!("{}.json", crate::domain::new_id()), b"not json");
+        deletion::recover_cleanup(&c, dir.path()).unwrap();
+        assert_eq!(entries(&quarantine(dir.path())).len(), 1);
+        let scope = if whole { deletion::Scope::Journal } else { deletion::Scope::Account { account_id: a } };
+        let p = deletion::preview(&c, dir.path(), deletion::PreviewRequest { scope }).unwrap();
+        assert_eq!(deletion::execute(&mut c, dir.path(), approved(&p)).unwrap().state, "completed");
+        assert_eq!(quarantine(dir.path()).exists(), !whole, "whole journal: {whole}");
+    }
+}
+/// The cleanup marker exactly as the 92e7980 build reads it (`deletion.rs:49-56`).
+#[derive(serde::Deserialize, Debug)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[allow(dead_code)]
+struct OldCleanup {
+    operation_id: String,
+    whole_journal: bool,
+    attachments: Vec<super::Attachment>,
+    recovery_copies: Vec<String>,
+}
+/// The 92e7980 recovery-copy allow-list (`deletion.rs:361-363`).
+fn old_build_accepts(key: &str) -> bool {
+    key == "data-controls-work"
+        || key.starts_with("data-controls/")
+        || (key.starts_with("fundedflow.db.before-v") && key.ends_with(".bak"))
+}
+#[test]
+fn a_large_cleanup_is_split_into_markers_an_older_build_can_read() {
+    let attachments: Vec<super::Attachment> = (0..6000)
+        .map(|i| super::Attachment {
+            id: format!("att-{i}"),
+            storage_key: format!("{}-{i}.png", "k".repeat(120)),
+            byte_size: 1,
+            sha256: "0".repeat(64),
+        })
+        .collect();
+    let cleanup = deletion::Cleanup {
+        operation_id: crate::domain::new_id(),
+        whole_journal: true,
+        attachments: attachments.clone(),
+        recovery_copies: vec!["data-controls-work".into(), "fundedflow.db.before-v14.bak".into()],
+    };
+    assert!(serde_json::to_vec(&cleanup).unwrap().len() > deletion::MARKER_LIMIT);
+    let files = deletion::marker_files(&cleanup).unwrap();
+    assert!(files.len() > 1);
+    let parsed: Vec<OldCleanup> = files
+        .iter()
+        .map(|f| {
+            assert!(f.len() <= deletion::MARKER_LIMIT, "{} bytes", f.len());
+            serde_json::from_slice(f).unwrap()
+        })
+        .collect();
+    assert!(parsed.iter().all(|m| m.operation_id == cleanup.operation_id && m.whole_journal));
+    assert_eq!(parsed[0].recovery_copies, cleanup.recovery_copies);
+    assert!(parsed[1..].iter().all(|m| m.recovery_copies.is_empty()));
+    let rejoined: Vec<super::Attachment> = parsed.into_iter().flat_map(|m| m.attachments).collect();
+    assert_eq!(rejoined, attachments);
+    // A small cleanup stays one marker, byte-identical to the unsplit serialization.
+    let small = deletion::Cleanup { attachments: attachments[..3].to_vec(), ..cleanup };
+    assert_eq!(deletion::marker_files(&small).unwrap(), vec![serde_json::to_vec(&small).unwrap()]);
+}
+#[test]
+fn marker_temp_files_are_created_in_the_data_root_never_in_the_queue() {
+    let dir = tempfile::tempdir().unwrap();
+    let op = crate::domain::new_id();
+    let files = vec![b"{}".to_vec(), b"{}".to_vec()];
+    let mut seen = Vec::new();
+    deletion::write_markers(dir.path(), &op, &files, &mut |temp| {
+        assert_eq!(temp.parent(), Some(dir.path()));
+        assert!(!temp.starts_with(queue(dir.path())));
+        seen.push(entries(&queue(dir.path())).len());
+    })
+    .unwrap();
+    // Each temp file was observed before its marker appeared; only finished markers ever sit in the queue.
+    assert_eq!(seen, vec![0, 1]);
+    assert_eq!(entries(&queue(dir.path())), vec![format!("{op}-1.json"), format!("{op}-2.json")]);
+    assert!(entries(dir.path()).iter().all(|n| n == "data-controls-cleanup"));
+    // A name that already exists is never replaced.
+    assert!(deletion::write_markers(dir.path(), &op, &files[..1], &mut |_| {}).is_ok());
+    assert!(deletion::write_markers(dir.path(), &op, &files[..1], &mut |_| {}).is_err());
+}
+#[test]
+fn markers_this_build_leaves_pending_are_readable_by_the_previous_build() {
+    for whole in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let mut c = journal(&dir.path().join("live.db"));
+        let a = account(&mut c, "A");
+        let j = journal_note(&mut c, &a);
+        image(&c, dir.path(), &j, "image", "image.png");
+        fs::write(dir.path().join("fundedflow.db.before-v14.bak"), b"old backup").unwrap();
+        let scope = if whole { deletion::Scope::Journal } else { deletion::Scope::Account { account_id: a } };
+        let held = dir.path().join("data-controls").join(crate::domain::new_id());
+        fs::create_dir_all(&held).unwrap();
+        fs::write(held.join("held.bin"), b"x").unwrap();
+        let p = deletion::preview(&c, dir.path(), deletion::PreviewRequest { scope }).unwrap();
+        // Keep the marker queued. Account scope: its listed file is now a directory. Whole journal (whose
+        // execute re-checks the attachment files): a listed recovery copy cannot be removed.
+        #[cfg(windows)]
+        let _lock = {
+            use std::os::windows::fs::OpenOptionsExt;
+            fs::OpenOptions::new().read(true).share_mode(0).open(held.join("held.bin")).unwrap()
+        };
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&held, fs::Permissions::from_mode(0o500)).unwrap();
+        }
+        if !whole {
+            let file = dir.path().join("attachments/image.png");
+            fs::remove_file(&file).unwrap();
+            fs::create_dir(&file).unwrap();
+        }
+        assert_eq!(deletion::execute(&mut c, dir.path(), approved(&p)).unwrap().state, "cleanup_pending");
+        let names = entries(&queue(dir.path()));
+        assert_eq!(names.len(), 1);
+        let old: OldCleanup = serde_json::from_slice(&fs::read(queue(dir.path()).join(&names[0])).unwrap()).unwrap();
+        assert_eq!(old.whole_journal, whole);
+        assert_eq!(old.attachments.len(), 1);
+        assert!(old.recovery_copies.iter().all(|k| old_build_accepts(k)), "{:?}", old.recovery_copies);
+        assert_eq!(old.recovery_copies.is_empty(), !whole);
+        // A new erase or restore is refused while it is pending.
+        assert_eq!(deletion::recover_cleanup(&c, dir.path()).unwrap(), deletion::CleanupOutcome::Pending);
+        assert_eq!(deletion::cleanup_state(dir.path()), deletion::CleanupOutcome::Pending);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&held, fs::Permissions::from_mode(0o700)).unwrap();
+        }
+    }
+}

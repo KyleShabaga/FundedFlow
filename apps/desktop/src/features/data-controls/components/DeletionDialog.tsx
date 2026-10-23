@@ -7,6 +7,7 @@ import type { PermanentDeletionPreview, PermanentDeletionResult } from "@fundedf
 import { type ReactNode, useEffect, useState } from "react";
 
 import { Button, Dialog, formatBytes, InlineNotice, LoadingState, StatList, useToast } from "../../../design-system";
+import { useRuntime } from "../../../app/RuntimeProvider";
 import * as api from "../api/data-controls";
 import { useDataControlOperation } from "../hooks/data-controls";
 import { DestructiveActionDialog } from "./DestructiveActionDialog";
@@ -37,6 +38,8 @@ export function DeletionDialog(props: DeletionDialogProps) {
 
 function DeletionDialogBody({ target, open, onOpenChange, onDeleted, onArchiveInstead }: DeletionDialogProps) {
   const op = useDataControlOperation();
+  // The runtime status carries the cleanup state; it stops polling once ready, so re-read it after each step.
+  const runtime = useRuntime();
   const toast = useToast();
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -57,6 +60,7 @@ function DeletionDialogBody({ target, open, onOpenChange, onDeleted, onArchiveIn
   const confirm = async (typed: string) => {
     if (phase.kind !== "ready") return;
     const result = await op.run("delete", () => api.deletePermanently(phase.preview, typed));
+    void runtime.check();
     await op.forgetJournal();
     onDeleted?.(result);
     if (result.state === "cleanup_pending") {
@@ -70,6 +74,7 @@ function DeletionDialogBody({ target, open, onOpenChange, onDeleted, onArchiveIn
   const retryCleanup = () => {
     if (phase.kind !== "cleanup-pending") return;
     op.run("cleanup", api.retryCleanup)
+      .finally(() => void runtime.check())
       .then(() => {
         toast.show({ tone: "success", title: "File cleanup finished" });
         onOpenChange(false);

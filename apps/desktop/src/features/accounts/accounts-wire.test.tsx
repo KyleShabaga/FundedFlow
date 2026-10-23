@@ -61,7 +61,7 @@ beforeAll(() => {
 
 let client: QueryClient;
 beforeEach(() => {
-  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 14, supportedSchemaVersion: 14, created: false, failure: null } } as unknown as RuntimeState;
+  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 14, supportedSchemaVersion: 14, created: false, failure: null, cleanup: "clear" } } as unknown as RuntimeState;
   settings = {};
   bridge.invoke.mockReset().mockImplementation(answer);
   bridge.repository = createTauriRepository(bridge.invoke as never);

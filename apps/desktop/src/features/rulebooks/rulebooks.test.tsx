@@ -59,7 +59,7 @@ const B = "acct-b";
 /** Fresh runtime, query cache and store for each test. */
 function fresh() {
   vi.useFakeTimers({ now: new Date("2026-10-21T15:00:00Z"), shouldAdvanceTime: true, toFake: ["Date"] });
-  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 15, supportedSchemaVersion: 15, created: false, failure: null } } as unknown as RuntimeState;
+  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 15, supportedSchemaVersion: 15, created: false, failure: null, cleanup: "clear" } } as unknown as RuntimeState;
   runtime.check.mockReset().mockResolvedValue(undefined);
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
   holder.store = createRulebookStore([makeAccount({ id: A, name: "Eval A", propFirm: "Example" }), makeAccount({ id: B, name: "Eval B" })]);

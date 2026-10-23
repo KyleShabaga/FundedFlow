@@ -56,7 +56,7 @@ const bodyOf = (fresh: HTMLElement) => document.getElementById(toggleOf(fresh).g
 beforeEach(() => {
   resetFreshnessDetails();
   vi.useFakeTimers({ now: new Date(NOW), shouldAdvanceTime: true, toFake: ["Date"] });
-  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 17, supportedSchemaVersion: 17, created: false, failure: null } } as unknown as RuntimeState;
+  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 17, supportedSchemaVersion: 17, created: false, failure: null, cleanup: "clear" } } as unknown as RuntimeState;
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
   holder.store = createTodayStore([makeAccount({ id: A, name: "Eval A" }), makeAccount({ id: B, name: "Eval B" })]);
   holder.store.settings.set(ACTIVE_ACCOUNT_SETTING, A);

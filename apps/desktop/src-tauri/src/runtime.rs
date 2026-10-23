@@ -20,6 +20,7 @@ use std::sync::{Mutex, MutexGuard};
 use rusqlite::Connection;
 use serde::Serialize;
 
+use crate::data_controls::CleanupOutcome;
 use crate::db::{self, MigrateError};
 use crate::error::{AppError, AppResult};
 
@@ -41,6 +42,9 @@ pub struct RuntimeStatus {
     /// The database file did not exist and was created by this start.
     pub created: bool,
     pub failure: Option<RuntimeFailure>,
+    /// Deletion cleanup left on disk. Never a failure: the journal stays usable while files wait to be removed.
+    /// Set at startup and after `retry_data_cleanup`, `permanently_delete_data` and restore prepare.
+    pub cleanup: CleanupOutcome,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -207,6 +211,7 @@ impl Runtime {
                 supported_schema_version: db::latest_version(),
                 created: false,
                 failure: None,
+                cleanup: CleanupOutcome::Clear,
             }),
             running: AtomicBool::new(true),
             ownership: Mutex::new(None),
@@ -227,7 +232,13 @@ impl Runtime {
         let root=path.parent().ok_or_else(|| crate::data_controls::fail(crate::data_controls::Code::UnsafePath))?;
         let mut conn=lock(&self.conn);
         let c=conn.as_mut().ok_or_else(|| crate::data_controls::fail(crate::data_controls::Code::Busy))?;
-        crate::data_controls::recover_cleanup(c,root)?;
+        // Quarantined records no longer block a restore; a pending cleanup does, because an installed restore
+        // changes the erase operation that cleanup needs to remove the pre-erase recovery copies.
+        let outcome=crate::data_controls::recover_cleanup(c,root);
+        self.set_cleanup(crate::data_controls::cleanup_state(root));
+        if !matches!(outcome, Ok(CleanupOutcome::Clear | CleanupOutcome::Quarantined)) {
+            return Err(crate::data_controls::fail(crate::data_controls::Code::RecoveryRequired));
+        }
         let result=crate::data_controls::prepare_restore(c,root,request)?;
         // The safety image already contains the committed WAL. Closing prevents stale writes after confirmation.
         *conn=None;
@@ -251,6 +262,31 @@ impl Runtime {
 
     pub fn status(&self) -> RuntimeStatus {
         lock(&self.status).clone()
+    }
+
+    fn set_cleanup(&self, cleanup: CleanupOutcome) {
+        lock(&self.status).cleanup = cleanup;
+    }
+
+    /// `permanently_delete_data`, then the cleanup it left in the status.
+    pub fn delete_data(&self, request: crate::data_controls::DeleteRequest) -> crate::data_controls::Result<crate::data_controls::DeleteResult> {
+        self.with_controls(|c, root| {
+            let result = crate::data_controls::delete_data(c, root, request);
+            self.set_cleanup(crate::data_controls::cleanup_state(root));
+            result
+        })
+    }
+
+    /// `retry_data_cleanup`: fails while a marker is still pending, so "finished" is only reported when it is.
+    pub fn retry_cleanup(&self) -> crate::data_controls::Result<()> {
+        self.with_controls(|c, root| {
+            let outcome = crate::data_controls::recover_cleanup(c, root);
+            self.set_cleanup(crate::data_controls::cleanup_state(root));
+            match outcome? {
+                CleanupOutcome::Pending => Err(crate::data_controls::fail(crate::data_controls::Code::RecoveryRequired)),
+                CleanupOutcome::Clear | CleanupOutcome::Quarantined => Ok(()),
+            }
+        })
     }
 
     /// Claim the next initialization for the caller to run (on its own
@@ -349,11 +385,9 @@ impl Runtime {
             }
         }
         let conn = db::open_file(path).map_err(|e| classify(&e, path))?;
-        crate::data_controls::recover_cleanup(&conn, root).map_err(|e| {
-            let mut f=failure(FailureCategory::OpenFailed,e.message);
-            f.message="Pending deletion cleanup could not finish. Logical deletion may already be committed. Resolve filesystem or disk-space problems, then retry.".into();
-            (f,None)
-        })?;
+        // Never fatal: files a cleanup could not remove stay pending and are shown in the status.
+        let _ = crate::data_controls::recover_cleanup(&conn, root);
+        self.set_cleanup(crate::data_controls::cleanup_state(root));
         let version = conn
             .pragma_query_value(None, "user_version", |r| r.get(0))
             .map_err(|e| (failure(FailureCategory::OpenFailed, e.to_string()), None))?;

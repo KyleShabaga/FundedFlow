@@ -4,7 +4,7 @@
 // Unknown values stay "unknown". Nothing is sent anywhere: the trader copies it themselves.
 import { version as appVersion } from "../../package.json";
 import type { RuntimeState } from "../app/RuntimeProvider";
-import { failureCategories, runtimeStages, type RuntimeGatewayErrorKind } from "./data/runtime";
+import { cleanupStates, failureCategories, runtimeStages, type RuntimeGatewayErrorKind } from "./data/runtime";
 
 export const APP_VERSION: string = appVersion;
 
@@ -32,6 +32,8 @@ export interface DiagnosticSummary {
   supportedSchemaVersion: string;
   failedMigration: string;
   retryable: string;
+  /** Deletion cleanup state: clear, quarantined or pending. */
+  cleanup: string;
   section: Section;
 }
 
@@ -69,6 +71,7 @@ export function runtimeDiagnostics(state: RuntimeState, incidentId: string, occu
     supportedSchemaVersion: count(status?.supportedSchemaVersion),
     failedMigration: migration ? `step ${count(migration.version)} (from ${count(migration.fromVersion)}, reached ${count(migration.reachedVersion)})` : UNKNOWN,
     retryable: failure ? String(failure.retryable === true) : UNKNOWN,
+    cleanup: pick(status?.cleanup, cleanupStates),
     section: sectionOf(path),
   };
 }
@@ -88,6 +91,7 @@ export function renderDiagnostics(error: unknown, incidentId: string, occurredAt
     supportedSchemaVersion: UNKNOWN,
     failedMigration: UNKNOWN,
     retryable: UNKNOWN,
+    cleanup: UNKNOWN,
     section: sectionOf(path),
   };
 }
@@ -104,6 +108,7 @@ const LABELS: [keyof DiagnosticSummary, string][] = [
   ["supportedSchemaVersion", "Supported journal version"],
   ["failedMigration", "Failed upgrade step"],
   ["retryable", "Retry allowed"],
+  ["cleanup", "Deletion cleanup"],
   ["section", "Screen"],
 ];
 

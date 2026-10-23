@@ -20,7 +20,7 @@ import { featureKeys } from "../../features/shared/query-keys";
 import DevSidebarTools from "./DevSidebarTools";
 import { primeAccepted } from "../../test/legal";
 
-const ready = { state: "ready", stage: "ready", schemaVersion: 20, supportedSchemaVersion: 20, created: false, failure: null };
+const ready = { state: "ready", stage: "ready", schemaVersion: 20, supportedSchemaVersion: 20, created: false, failure: null, cleanup: "clear" };
 const TEST_DIR = "/work/.dev-journal/com.fundedflow.desktop";
 const status = (over: Record<string, unknown> = {}) => ({
   isolated: true, dataDir: TEST_DIR, defaultDataDir: "/home/dev/.local/share/com.fundedflow.desktop", problem: null,

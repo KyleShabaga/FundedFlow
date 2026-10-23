@@ -68,7 +68,7 @@ const accountPreview = (over: Partial<PermanentDeletionPreview> = {}): Permanent
 });
 
 const ready = () => {
-  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 18, supportedSchemaVersion: 18, created: false, failure: null } } as unknown as RuntimeState;
+  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 18, supportedSchemaVersion: 18, created: false, failure: null, cleanup: "clear" } } as unknown as RuntimeState;
 };
 let client: QueryClient;
 let controls: Record<string, ReturnType<typeof vi.fn>>;
@@ -346,9 +346,12 @@ describe("permanent deletion", () => {
     await user.click(within(dialog).getByRole("button", { name: "Erase entire journal" }));
     const pending = await screen.findByRole("dialog", { name: "Deleted, but some files are still on disk" });
     expect(controls.previewDeletion).toHaveBeenCalledWith({ scope: { kind: "journal" } });
+    // The runtime status carries the cleanup state; it is re-read after the erase and after the retry.
+    expect(runtime.check).toHaveBeenCalledTimes(1);
     await user.click(within(pending).getByRole("button", { name: "Retry file cleanup" }));
     await waitFor(() => expect(controls.retryCleanup).toHaveBeenCalledTimes(1));
     expect(await screen.findByText("File cleanup finished")).toBeTruthy();
+    expect(runtime.check).toHaveBeenCalledTimes(2);
   });
 });
 

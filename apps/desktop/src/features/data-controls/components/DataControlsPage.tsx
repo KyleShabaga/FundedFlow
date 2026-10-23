@@ -222,7 +222,7 @@ export function DataControlsPage({ picker = api.tauriFilePicker }: DataControlsP
           <div className="dc-danger-row">
             <div>
               <h3 className="dc-subhead">Erase the entire local journal</h3>
-              <p className="dc-note">Removes every account and all data in this journal, and FundedFlow's own recovery copies. Backups you exported yourself are not touched.</p>
+              <p className="dc-note">Removes every account and all data in this journal, FundedFlow's own recovery copies, and any damaged cleanup records it set aside. Backups you exported yourself are not touched.</p>
             </div>
             <Button variant="danger" icon={<Eraser size={16} aria-hidden="true" />} disabled={disabled} onClick={() => setDeletion({ kind: "journal" })}>
               Erase entire journal…

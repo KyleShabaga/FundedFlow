@@ -93,7 +93,7 @@ const NEVER_SAFE = "Without a current calculation this account is never shown as
 
 beforeEach(() => {
   vi.useFakeTimers({ now: new Date(NOW), shouldAdvanceTime: true, toFake: ["Date"] });
-  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 17, supportedSchemaVersion: 17, created: false, failure: null } } as unknown as RuntimeState;
+  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 17, supportedSchemaVersion: 17, created: false, failure: null, cleanup: "clear" } } as unknown as RuntimeState;
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false } } });
   // Wednesday 2026-10-21 is each account's trading day until the 17:00 New York reset (fixed rows; Rust computes them).
   resetBoundaries();

@@ -304,3 +304,182 @@ fn a_failed_backup_keeps_the_known_version() {
     assert_eq!((s.stage, s.schema_version), (RuntimeStage::Backup, Some(1)));
     assert_eq!(user_version(&dir.db()), 1, "no upgrade without a backup");
 }
+
+fn cleanup_queue(dir: &TempDir) -> PathBuf {
+    dir.0.join("data-controls-cleanup")
+}
+fn quarantined(dir: &TempDir) -> usize {
+    std::fs::read_dir(dir.0.join("data-controls-quarantine")).map(|d| d.count()).unwrap_or(0)
+}
+/// A well-formed cleanup marker listing unowned `attachments/<key>` files.
+fn cleanup_marker(dir: &TempDir, op: &str, whole: bool, keys: &[&str], copies: &[&str]) -> PathBuf {
+    let attachments: Vec<_> = keys
+        .iter()
+        .map(|k| serde_json::json!({"id": k, "storageKey": k, "byteSize": 1, "sha256": "0".repeat(64)}))
+        .collect();
+    std::fs::create_dir_all(cleanup_queue(dir)).unwrap();
+    let path = cleanup_queue(dir).join(format!("{op}.json"));
+    std::fs::write(
+        &path,
+        serde_json::to_vec(&serde_json::json!({"operationId": op, "wholeJournal": whole, "attachments": attachments, "recoveryCopies": copies})).unwrap(),
+    )
+    .unwrap();
+    path
+}
+/// A one-account archive and the restore request for it, taken against `rt`'s live journal.
+fn staged_restore(rt: &Runtime, source: &TempDir) -> crate::data_controls::RestoreRequest {
+    std::fs::create_dir_all(&source.0).unwrap();
+    let c = db::open_file(&source.db()).unwrap();
+    let out = source.0.join("backup.zip");
+    crate::data_controls::export_journal(
+        &c,
+        &source.0,
+        crate::data_controls::ExportRequest { destination: out.to_string_lossy().into(), acknowledge_plaintext: true },
+    )
+    .unwrap();
+    let preview = rt
+        .with_controls(|c, root| {
+            crate::data_controls::inspect_restore(c, root, crate::data_controls::InspectRequest { source: out.to_string_lossy().into() })
+        })
+        .unwrap();
+    crate::data_controls::RestoreRequest {
+        source: out.to_string_lossy().into(),
+        preview_token: preview.preview_token,
+        confirmation: "REPLACE ENTIRE JOURNAL".into(),
+    }
+}
+
+#[test]
+fn a_zero_byte_cleanup_marker_is_quarantined_and_startup_reaches_ready() {
+    let dir = TempDir::new();
+    drop(Runtime::start(Ok(dir.db())));
+    std::fs::create_dir_all(cleanup_queue(&dir)).unwrap();
+    std::fs::write(cleanup_queue(&dir).join(format!("{}.json", uuid::Uuid::now_v7())), b"").unwrap();
+    let rt = Runtime::start(Ok(dir.db()));
+    assert_eq!(rt.status().state, RuntimeState::Ready, "{:?}", rt.status().failure);
+    assert_eq!(std::fs::read_dir(cleanup_queue(&dir)).unwrap().count(), 0);
+    assert_eq!(quarantined(&dir), 1);
+    assert_eq!(rt.status().cleanup, CleanupOutcome::Quarantined);
+}
+
+#[test]
+fn a_cleanup_that_cannot_finish_leaves_startup_ready_and_deletes_nothing() {
+    let dir = TempDir::new();
+    drop(Runtime::start(Ok(dir.db())));
+    let attachments = dir.0.join("attachments");
+    std::fs::create_dir_all(attachments.join("stuck.png")).unwrap();
+    std::fs::write(attachments.join("stuck.png").join("inside"), b"kept").unwrap();
+    let marker = cleanup_marker(&dir, &uuid::Uuid::now_v7().to_string(), false, &["stuck.png"], &[]);
+    let rt = Runtime::start(Ok(dir.db()));
+    assert_eq!(rt.status().state, RuntimeState::Ready, "{:?}", rt.status().failure);
+    assert!(marker.exists());
+    assert_eq!(std::fs::read(attachments.join("stuck.png").join("inside")).unwrap(), b"kept");
+    assert_eq!(quarantined(&dir), 0);
+    assert_eq!(rt.status().cleanup, CleanupOutcome::Pending);
+}
+
+#[cfg(windows)]
+#[test]
+fn a_locked_listed_file_leaves_startup_ready_with_cleanup_pending() {
+    use std::os::windows::fs::OpenOptionsExt;
+    let dir = TempDir::new();
+    drop(Runtime::start(Ok(dir.db())));
+    let attachments = dir.0.join("attachments");
+    std::fs::create_dir_all(&attachments).unwrap();
+    std::fs::write(attachments.join("locked.png"), b"held open").unwrap();
+    let marker = cleanup_marker(&dir, &uuid::Uuid::now_v7().to_string(), false, &["locked.png"], &[]);
+    let held = std::fs::OpenOptions::new().read(true).share_mode(0).open(attachments.join("locked.png")).unwrap();
+    let rt = Runtime::start(Ok(dir.db()));
+    assert_eq!(rt.status().state, RuntimeState::Ready, "{:?}", rt.status().failure);
+    assert!(marker.exists());
+    assert_eq!(rt.status().cleanup, CleanupOutcome::Pending);
+    drop(held);
+    assert_eq!(std::fs::read(attachments.join("locked.png")).unwrap(), b"held open");
+}
+
+#[test]
+fn a_malformed_marker_does_not_block_restore_prepare_and_is_quarantined() {
+    let dir = TempDir::new();
+    let source = TempDir::new();
+    let rt = Runtime::start(Ok(dir.db()));
+    let request = staged_restore(&rt, &source);
+    std::fs::create_dir_all(cleanup_queue(&dir)).unwrap();
+    std::fs::write(cleanup_queue(&dir).join(format!("{}.json", uuid::Uuid::now_v7())), b"{\"operationId\":").unwrap();
+    let result = rt.prepare_restore(request);
+    assert!(result.is_ok(), "{:?}", result.err());
+    assert!(dir.0.join("data-controls-pending.json").exists());
+    assert_eq!(quarantined(&dir), 1);
+}
+
+#[test]
+fn a_pending_well_formed_cleanup_refuses_restore_prepare_and_keeps_everything() {
+    let dir = TempDir::new();
+    let source = TempDir::new();
+    let rt = Runtime::start(Ok(dir.db()));
+    let request = staged_restore(&rt, &source);
+    let op = uuid::Uuid::now_v7().to_string();
+    rt.with(|c| {
+        c.execute("INSERT INTO app_meta(key,value) VALUES('data_controls.erase_operation',?1)", [&op])?;
+        Ok(())
+    })
+    .unwrap();
+    std::fs::create_dir_all(dir.0.join("attachments/stuck.png")).unwrap();
+    let copy = "fundedflow.db.before-v3.bak";
+    std::fs::write(dir.0.join(copy), b"pre-erase recovery copy").unwrap();
+    let marker = cleanup_marker(&dir, &op, true, &["stuck.png"], &[copy]);
+    let refused = rt.prepare_restore(request).unwrap_err();
+    assert_eq!(refused.code, crate::data_controls::Code::RecoveryRequired);
+    assert!(!dir.0.join("data-controls-pending.json").exists());
+    assert!(marker.exists());
+    assert_eq!(std::fs::read(dir.0.join(copy)).unwrap(), b"pre-erase recovery copy");
+    assert_eq!(rt.status().state, RuntimeState::Ready);
+    assert_eq!(rt.status().cleanup, CleanupOutcome::Pending);
+}
+
+#[test]
+fn the_cleanup_status_follows_deletion_and_retry_without_a_restart() {
+    let dir = TempDir::new();
+    let rt = Runtime::start(Ok(dir.db()));
+    assert_eq!(rt.status().cleanup, CleanupOutcome::Clear);
+    let bytes = b"owned screenshot";
+    let hash = { use sha2::Digest; format!("{:x}", sha2::Sha256::digest(bytes)) };
+    rt.with(|c| {
+        c.execute(
+            "INSERT INTO accounts (id, name, starting_balance_micros, timezone, created_at, updated_at)
+             VALUES ('a1', 'Eval', 0, 'America/New_York', 'x', 'x')",
+            [],
+        )?;
+        c.execute(
+            "INSERT INTO attachments(id,account_id,kind,storage_key,mime_type,byte_size,sha256,created_at,updated_at) VALUES('img','a1','screenshot','img.png','image/png',?1,?2,'t','t')",
+            rusqlite::params![bytes.len() as i64, hash],
+        )?;
+        Ok(())
+    })
+    .unwrap();
+    let file = dir.0.join("attachments/img.png");
+    std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+    std::fs::write(&file, bytes).unwrap();
+    let request: crate::data_controls::PreviewRequest =
+        serde_json::from_value(serde_json::json!({"scope": {"kind": "account", "accountId": "a1"}})).unwrap();
+    let preview = rt.with_controls(|c, root| crate::data_controls::preview_deletion(c, root, request)).unwrap();
+    // The listed file cannot be removed yet.
+    std::fs::remove_file(&file).unwrap();
+    std::fs::create_dir(&file).unwrap();
+    let deleted = rt
+        .delete_data(crate::data_controls::DeleteRequest {
+            scope: preview.scope.clone(),
+            preview_token: preview.preview_token.clone(),
+            confirmation: preview.required_confirmation.clone(),
+        })
+        .unwrap();
+    assert_eq!(deleted.state, "cleanup_pending");
+    assert_eq!(rt.status().state, RuntimeState::Ready);
+    assert_eq!(rt.status().cleanup, CleanupOutcome::Pending);
+    assert_eq!(rt.retry_cleanup().unwrap_err().code, crate::data_controls::Code::RecoveryRequired);
+    assert_eq!(rt.status().cleanup, CleanupOutcome::Pending);
+    std::fs::remove_dir(&file).unwrap();
+    std::fs::write(&file, bytes).unwrap();
+    rt.retry_cleanup().unwrap();
+    assert_eq!(rt.status().cleanup, CleanupOutcome::Clear);
+    assert!(!file.exists());
+}
