@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r4) |
+| Status | Ready for Approval (r5) |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -17,7 +17,7 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | 9430f2a (application source identical to 92e7980) |
-| Specification revision | r4 (2026-10-22; r3 + approved-task audit fixes) |
+| Specification revision | r5 (2026-10-22; r4 + board review fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 4d4e66d (HEAD at r3; application source unchanged). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -45,7 +45,7 @@ Native window close (TASK-023, Deferred but Release Blocking = Yes, so the gap s
 ## Implementation approach
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 2. Route programmatic navigations through the existing `useGuardedNavigate`.
-3. The app uses a declarative `HashRouter` and `popstate` cannot be cancelled. While dirty, add a `window` `popstate` listener with `{ capture: true }`. It runs before the router's earlier bubble-phase listener. In it: compute `delta` from the new `history.state.idx` and the index of the entry the editor is on; call `event.stopImmediatePropagation()` so the router never sees the navigation; call `history.go(-delta)` to return to the editor's entry (the restoring `popstate` that reaches the router is harmless, since the location is unchanged; ignore it in the guard); then invoke the leave request. If `history.state?.idx` is missing (no delta can be computed), do not cancel the event: let it through and fall back to the leave request. Use one module-level capture listener that asks the most recently registered guard (`[...active].pop()`, as `useGuardedNavigate` does, `use-leave-guard.ts:14`), not one listener per guard, so links and history navigation are handled by the same guard. Do not use `hashchange`, and do not `pushState`/`replaceState` a replacement entry. The named fallback, migrating to `unstable_HistoryRouter` with a blocking history, is **not authorized by approving this card**: it needs its own separate approval, and if the capture-phase approach fails the implementer stops and reports.
+3. The app uses a declarative `HashRouter` and `popstate` cannot be cancelled. While dirty, add a `window` `popstate` listener with `{ capture: true }`. It runs before the router's earlier bubble-phase listener. In it: compute `delta` from the new `history.state.idx` and the index of the entry the editor is on; call `event.stopImmediatePropagation()` so the router never sees the navigation; call `history.go(-delta)` to return to the editor's entry (the restoring `popstate` that reaches the router is harmless, since the location is unchanged; ignore it in the guard); then invoke the leave request. If `history.state?.idx` is missing (no delta can be computed), do not cancel the event: let it through without a prompt (known gap: the router has already moved and the editor unmounts, so a later leave prompt would be meaningless; log the gap in the execution log and add the criterion/test below that documents it). Use one module-level capture listener that asks the most recently registered guard (`[...active].pop()`, as `useGuardedNavigate` does, `use-leave-guard.ts:14`), not one listener per guard, so links and history navigation are handled by the same guard. Do not use `hashchange`, and do not `pushState`/`replaceState` a replacement entry. The named fallback, migrating to `unstable_HistoryRouter` with a blocking history, is **not authorized by approving this card**: it needs its own separate approval, and if the capture-phase approach fails the implementer stops and reports.
 3a. Leave after a history navigation completes it: the confirm handler calls `history.go(delta)` once, with a one-shot bypass so the guard does not ask again for that traversal, instead of `navigate(href)` (which would push a new entry). Leave after a link or `useGuardedNavigate` keeps calling `navigate(href)`.
 4. Tests using the real `HashRouter`: dirty DailyReviewPage → `history.back()`, `history.forward()` (after a Back from a later entry), 'Manage accounts', Quick Import and a trades-table row click each show the confirm dialog; the editor never unmounts (assert the same element instance and text) while the dialog is open; choosing to stay keeps text and history intact; choosing Leave after Back completes the Back.
 
@@ -58,6 +58,7 @@ Native window close (TASK-023, Deferred but Release Blocking = Yes, so the gap s
 - [ ] Back then Stay: `history.state.idx` and `history.length` are the same as before the Back, the editor is the same element with its text, and a second `history.back()` shows the dialog again.
 - [ ] Forward is guarded too: from a dirty editor that has a forward entry, `history.forward()` shows the dialog, and Stay leaves `history.state.idx` and `history.length` unchanged.
 - [ ] Back then Leave: the app ends on the previous entry (`history.state.idx` one lower than before, `history.length` unchanged, no new entry pushed) and does not ask twice.
+- [ ] Known gap documented: a test pops an entry whose `history.state` has no `idx`; the guard does not cancel it and shows no dialog (the navigation goes through), and the test name or comment says this is the known gap from step 3; the gap is recorded in the execution log.
 - [ ] A dirty daily review's trades-table row click (`DailyReviewPage.tsx:513`) shows the dialog.
 - [ ] Manual Windows check (owner/VM, recorded with tester, date, Windows build, tested source SHA): on a dirty daily review, mouse back (X1) and Alt+← each show the dialog, and Stay keeps the text. The automated tests cover the History API path only.
 - [ ] `npm run test -w @fundedflow/desktop -- src/features/journal src/features/daily-reviews src/features/rulebooks src/features/shared src/features/accounts src/app` → exit 0.
@@ -99,8 +100,12 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Root cause wording: the router reads the location from the URL and computes the delta from `history.state.idx` (independent review (review4), reviewer B nit).
 - Scope: the row click uses the page's existing guarded `go` (`DailyReviewPage.tsx:123`); conflicts add `DailyReviewPage.tsx` with TASK-024 and `AppShell.tsx` with TASK-015 (independent review (review4), reviewer B nits).
 
+## Changes in r5
+- Step 3: when `history.state.idx` is missing the event is let through without a prompt (a later leave prompt would come after the editor unmounted); recorded as a known gap in the execution log, with a new criterion and test that document it (board review 2026-10-22).
+
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.
 Block 4 review (10 §8.3): nits only — applied in r3.
 Independent review r3 (2026-10-22): CHANGES on 012, 024, 026 (citations, test construction, scope lines); applied. READY.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.
+Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; fixes folded in at r5. Independent re-check of r5: pending.

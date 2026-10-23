@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r4) |
+| Status | Ready for Approval (r5) |
 | Type | Test |
 | Audit priority | Gate (kept, TASK-008 = A) / P2 test safety |
 | Roadmap lane | Build 10.5 gate |
@@ -17,7 +17,7 @@
 | Verification platform | Any OS (test) + Windows (owner run) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | b01e2b9 (application source identical to 92e7980) |
-| Specification revision | r4 (2026-10-22; r3 + currency update for approved decisions) |
+| Specification revision | r5 (2026-10-22; r4 + board review fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -33,7 +33,7 @@ Running the gate.
 Test design.
 
 ## Expected change scope
-`apps/desktop/src-tauri/src/db/upgrade_tests.rs` (`upgrade_copy_of_a_real_journal`): copy the source file (and -wal/-shm if present) into a temp dir first; refuse if `fundedflow.lock` is held; redact output to counts only; fix the doc comment at `upgrade_tests.rs:428`, which tells the runner to set `FUNDEDFLOW_UPGRADE_DB=%APPDATA%\com.fundedflow.desktop\fundedflow.db` (the live path) and to add `--nocapture` — it must instead point at the offline copy and suggest `--nocapture` only once output is redacted; doc update in `docs/data-model.md` (upgrade test instructions). The code change lands in W3c, before TASK-029 freezes the candidate SHA; only the owner run is W5.
+`apps/desktop/src-tauri/src/db/upgrade_tests.rs` (`upgrade_copy_of_a_real_journal`): copy the source file (and -wal/-shm if present) into a temp dir first; refuse if `fundedflow.lock` is held; redact output to counts only, including assertion and panic messages (today `assert_eq!(dump_like(&conn, &before), before)` at `upgrade_tests.rs:451` Debug-prints both full table dumps of the real journal on failure, and panic output is shown even without `--nocapture`; on success the `println!` at `upgrade_tests.rs:457` prints the id of every trade whose trading day changed, so it is redacted to a count too); fix the doc comment at `upgrade_tests.rs:426-428`, which tells the runner to set `FUNDEDFLOW_UPGRADE_DB=%APPDATA%\com.fundedflow.desktop\fundedflow.db` (the live path) and to add `--nocapture` — it must instead point at the offline copy and suggest `--nocapture` only once output is redacted; doc update in `docs/data-model.md` (upgrade test instructions). The code change lands in W3c, before TASK-029 freezes the candidate SHA; only the owner run is W5.
 
 ## Out of scope
 Running against the live `%APPDATA%` path while the app is open.
@@ -42,7 +42,7 @@ Running against the live `%APPDATA%` path while the app is open.
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 
 Code change (W3c, merged before TASK-029):
-2. Implement the safety changes: redact output to counts only; refuse a held lock; rewrite the `upgrade_tests.rs:428` doc comment to point `FUNDEDFLOW_UPGRADE_DB` at the copied `fundedflow.db`, never the live `%APPDATA%` path.
+2. Implement the safety changes: redact output to counts only; refuse a held lock; replace the whole-dump `assert_eq!` at `upgrade_tests.rs:451` (and any other comparison in this test) with a comparison that never Debug-prints rows: on mismatch it fails with a message giving only per-table row counts before/after and the number of mismatched rows per table (no ids, no column values); rewrite the `upgrade_tests.rs:426-428` doc comment to point `FUNDEDFLOW_UPGRADE_DB` at the copied `fundedflow.db`, never the live `%APPDATA%` path.
 
 Owner run (W5, after TASK-029 is recorded):
 3. Kyle makes a folder copy of the journal (with -wal/-shm) with the app closed — the test never touches the live path or takes its lock.
@@ -55,10 +55,12 @@ Owner run (W5, after TASK-029 is recorded):
 
 ## Acceptance criteria (pass/fail)
 - [ ] Code change merged before TASK-029's candidate SHA (the candidate SHA contains it).
-- [ ] The `upgrade_tests.rs:428` doc comment names an offline copy for `FUNDEDFLOW_UPGRADE_DB`, not the live `%APPDATA%` path, and no longer suggests `--nocapture` before redaction.
+- [ ] The `upgrade_tests.rs:426-428` doc comment names an offline copy for `FUNDEDFLOW_UPGRADE_DB`, not the live `%APPDATA%` path, and no longer suggests `--nocapture` before redaction.
 - [ ] The same command in `docs/data-model.md:572` is corrected the same way (it gives the live `%APPDATA%` path and `--nocapture` today).
 - [ ] Test refuses when the lock is held (unit-tested with a temp lock).
-- [ ] Output contains no trade ids.
+- [ ] Output contains no trade ids, on success and on failure: assertion and panic messages included.
+- [ ] Output redacted to counts only, including assertion and panic messages: no comparison in `upgrade_copy_of_a_real_journal` Debug-prints rows (`upgrade_tests.rs:451` replaced); a mismatch reports only per-table row counts and mismatch counts; the success output prints no trade ids (the per-trade `println!` at `upgrade_tests.rs:457` replaced by a count).
+- [ ] Deliberate-failure check on a synthetic DB: a test (or a recorded one-off run) points the comparison at a synthetic journal with a known marker value and a forced mismatch; the captured failure output shows per-table counts only and contains neither the marker nor any trade id or row content (record command and the redacted output).
 - [ ] Owner-recorded run result (counts, PASS/FAIL).
 - [ ] Run record includes the source SHA and the copy's SHA-256, and shows `FUNDEDFLOW_UPGRADE_DB` set to the copy.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
@@ -95,9 +97,15 @@ Tests merged after review; they fail against a deliberately broken variant or th
 - Independent review (review3_B), nit: added `cargo fmt --check` (after TASK-040 merges) to the standard checks.
 - Independent review (review3_B), nit: listed the `db/upgrade_tests.rs` conflict with TASK-041 (new card for value-level copies) and TASK-040 under conflicts.
 
+## Changes in r5
+- Scope, step 2 and criteria: the whole-dump `assert_eq!` at `upgrade_tests.rs:451` Debug-prints both table dumps of the real journal on failure (shown even without `--nocapture`); comparisons must not Debug-print rows and report only per-table row counts and mismatch counts (board review 2026-10-22).
+- Criteria: "output redacted to counts only" and "no trade ids" now cover assertion and panic messages, with a deliberate-failure check on a synthetic DB proving no row content is printed (board review 2026-10-22).
+- Scope, step 2 and criteria: the doc comment is cited as `upgrade_tests.rs:426-428` (the three `///` lines at 92e7980; the old `:428` was only its last line); the per-trade `println!` at `upgrade_tests.rs:457`, which prints trade ids on success, is named under redact-to-counts (board review re-check 2026-10-22).
+
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: W3c code / W5 owner-run split with code before TASK-029 (G7); `FUNDEDFLOW_UPGRADE_DB` set to the copy; `upgrade_tests.rs:428` doc-comment fix; fixture rule unset (not 0).
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
 Independent review r4 (review3_B, 2026-10-22): READY; nits applied (see "Changes in r4"). Status stays Proposed until approval.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r4.
+Board review (2026-10-22, against main 92e7980): CHANGES REQUESTED; fixes folded in at r5. Independent re-check of r5: pending.

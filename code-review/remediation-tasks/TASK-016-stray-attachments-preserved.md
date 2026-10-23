@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r4) |
+| Status | Ready for Approval (r5) |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -17,7 +17,7 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | 9430f2a (application source identical to 92e7980) |
-| Specification revision | r4 (2026-10-22; r3 + approved-task audit fixes + owner amendment folded in) |
+| Specification revision | r5 (2026-10-22; r4 + board review fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -43,6 +43,7 @@ Startup sweep of orphans (optional later); attachment write ordering change.
 2. Classify unreferenced files under `attachments/`: names matching `screenshots/<uuid>.<ext>` or the temp name `screenshots/.<uuid>.part` (`store/attachments.rs:207`) are 'unowned managed extras', where `<uuid>` is the lowercase hyphenated form `crate::domain::new_id()` produces (`Uuid::now_v7().to_string()`, `domain.rs:74-76`) and `<ext>` is `png`, `jpg` or `webp` (`store/attachments.rs:108, 134, 161`). Error codes per case (audit SHOULD 016-S1; today `validate_managed` returns `UnsupportedOwnership` for any mismatch, `restore.rs:252`):
    - non-regular entries, symlinks/reparse points, hard links and invalid names → `UnsafePath` (unchanged);
    - an unrecognised **regular** file (not a managed extra) → the new distinct code from step 5, with its copy in `CODE_COPY`.
+   Keys recorded as **changed** attachments (TASK-017, which builds on this card: an attachments row whose file is on disk but fails its recorded checksum) are not extras: the classification takes the recorded keys as a separate input and excludes them. This card adds that input and always passes it empty (no changed-key detection exists before TASK-017); TASK-017 fills it from its checksum check. So a changed `screenshots/<uuid>.png` is never copied into `safety-attachments/` or listed in `extraFiles` (TASK-017 preserves it in `safety-changed-attachments/` and lists its row in the erase marker).
    Known limit (audit SHOULD 016-S3, owner-level, not decided here): unrecognised safe regular files such as Windows Explorer `Thumbs.db`/`desktop.ini` still block restore and whole-journal erase with the new code.
    Known limit (re-derivation): the preview token binds only the preview-to-confirm window. The step 4a re-derivation in `recover_cleanup` can also remove a managed-name stray created after the confirmation (for example while a cleanup stays pending and is retried later); the confirmation copy ("leftover files like these") covers it.
 3. Restore prepare: copy extras into the safety copy (`safety-attachments/`) so no bytes are lost; extras have no inventory hash, so copy them hash-verified (hash the source with `hash_file`, copy, re-hash the destination; `hash_file`'s size limit applies); do not install them into the restored journal. Rollback restores only the files listed in `safety-inventory.json`: `rollback` (`restore.rs:345-349`) → `replace_attachments` (`restore.rs:273-281`, which removes `attachments/` at `:276-278`) → `copy_inventory` (`restore.rs:178-202`, listed files only). So after rollback the extras are **not** reinstated into `attachments/`; they survive in the operation folder `data-controls/<op>/safety-attachments/`.
@@ -65,7 +66,8 @@ Startup sweep of orphans (optional later); attachment write ordering change.
 - [ ] After restore commit and after rollback, the extra exists in `data-controls/<op>/safety-attachments/` and is not reinstated into `attachments/` (rollback test required).
 - [ ] Downgrade compatibility test: a whole-journal marker written when extras exist deserializes with a test-only copy of the 92e7980 `Cleanup` struct (`deny_unknown_fields`, `deletion.rs:50`) and contains no extras.
 - [ ] `packages/domain/test/fixtures/data-controls-wire.json` diff limited to the new preview field/code (`warnings` entries unchanged).
-- [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
+- [ ] Fixture regeneration (this card names `data-controls-wire.json`): regenerate it with the single wire test only, never the whole suite, because `wire_tests.rs:90` rewrites the fixture whenever `FUNDEDFLOW_UPDATE_FIXTURES` is set (`is_some`, any value) and other tests rewrite other fixtures under the same variable (for example `src-tauri/src/wire_contract.rs`, `src-tauri/src/parity.rs`). In `apps/desktop/src-tauri` (bash): `FUNDEDFLOW_UPDATE_FIXTURES=1 cargo test --offline --locked --lib data_controls::wire_tests::native_data_control_outputs_match_portable_wire_fixture -- --exact` → exit 0 (PowerShell: set `$env:FUNDEDFLOW_UPDATE_FIXTURES='1'`, run the same command, then `Remove-Item Env:FUNDEDFLOW_UPDATE_FIXTURES`). Then, with the variable unset, `cargo test --offline --locked` → exit 0. `git status --short` / `git diff --name-only` show `packages/domain/test/fixtures/data-controls-wire.json` as the only changed fixture file. TASK-014 also regenerates this file (one `requiredFreeBytes` value): whichever of the two merges second rebases onto the other and regenerates with this command, and its diff is limited to its own change.
+- [ ] Apart from that single-test regeneration, keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate any other fixture.
 
 ## Verification plan
 Contract change: if the TS error-code union changes, run `npm run typecheck` and the data-controls wire tests.
@@ -104,8 +106,14 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Step 2: recorded the residual that the re-derivation can remove a managed-name stray created after the confirmation (independent review (review4), reviewer A N1).
 - Fixture rule unchanged: `FUNDEDFLOW_UPDATE_FIXTURES` unset (not `0`).
 
+## Changes in r5
+- Criteria: the mandatory `data-controls-wire.json` regeneration has a targeted single-test command (`data_controls::wire_tests::native_data_control_outputs_match_portable_wire_fixture` with `--exact`), because `wire_tests.rs:90` rewrites on any set value and other tests rewrite other fixtures; followed by a full run with the variable unset and a check that it is the only changed fixture (board review 2026-10-22).
+- Step 2: keys recorded as changed attachments (TASK-017) are passed separately and excluded from the extras classification, consistent with TASK-017 step 3 (board review 2026-10-22).
+- Step 2 and fixture criterion: this card adds the recorded-changed-keys input and passes it empty; TASK-017 fills it. Merge order with TASK-014, which now also regenerates `data-controls-wire.json`: the second to merge rebases and regenerates (board review re-check 2026-10-22).
+
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: extras kept out of the `Cleanup` marker and 015/016 downgrade declaration (G8); rollback semantics of extras stated and tested, citation corrected to `restore.rs:345-349`/`273-281` (G12); `warnings` left to TASK-017; fixture rule "unset (not `0`)".
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.
+Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; notes folded in at r5. Independent re-check of r5: pending.

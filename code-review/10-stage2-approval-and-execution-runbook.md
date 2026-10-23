@@ -83,15 +83,16 @@ This document plans future, separately approved sessions. It authorizes none of 
    - Each acceptance criterion has evidence in `code-review/11-remediation-execution-log.md`, which the first executed task creates.
    - Kyle reviewed and merged the PR.
 2. **Before W1b (013):** 012 is merged, and the existing-archive round trip passes.
-3. **Before W1c (015):** 013 and 014 are merged; `replacedEntities` and the wire fixture are byte-identical except for 013's `detail` field.
+3. **Before W1c (015):** 013 and 014 are merged; `replacedEntities` and the wire fixture are byte-identical except for 013's `detail` field and 014's one `requiredFreeBytes` value in the `inspect_journal_archive` entry (TASK-014 r5; board review re-check 2026-10-22).
 4. **Before W1d (018):** 015–017 are merged, and persistence compatibility is shown:
    - markers from the previous version are recovered;
    - a restore that was in flight under the previous version recovers;
    - downgrade with a pending marker is either tested or declared unsupported in the docs (G8).
-5. **Before W2c (024):** 021 and 022 are merged.
+5. **W2c (024):** no functional prerequisite; merge order only — rebase onto whichever of 021/022 has merged (different regions of LifecycleDialogs.tsx / AccountSwitcher.tsx); no wait-for-both gate (board review re-check 2026-10-22).
 6. **Windows-only criteria (018, 023, 011):** each needs a record of the SHA, the build EXE SHA-256 (if packaged), the Windows build, the WebView2 version, the tester and the date. jsdom or mocked Tauri results never count.
+6a. **Before W3d (042):** 043 Verified, TASK-009 r4 decision 1 confirmed (board review re-check 2026-10-22).
 7. **Before W4 (029):**
-   - every W1–W3 task is Verified;
+   - every W1–W3 task is Verified, including 044, and 042 and 043 when TASK-009 r4 decision 1 is confirmed (without that confirmation they are not started) (board review re-check 2026-10-22);
    - decisions 001, 002, 005 and 006 are recorded;
    - TASK-008 is decided (fmt task Verified if the gate is kept);
    - 027 and the 034 code change are merged;
@@ -111,7 +112,7 @@ Stop the affected task, record the condition in the log, and ask Kyle when any o
 - **Data-loss risk:** any path that could delete, overwrite or fail to preserve user bytes beyond what the card specifies, or any test touching non-temporary paths.
 - **Unapproved dependency, schema or format change:**
   - a new crate or npm dependency (including declaring `windows-sys` in TASK-018 without approval);
-  - any migration;
+  - any migration, except migration `0022` (`src-tauri/migrations/0022_trade_fees_recorded.sql`) named by TASK-042, once TASK-042 is approved and only within that task (Board review sync 2026-10-22);
   - an archive v1, `data.json`, marker or `legal-acceptance.json` format change the card does not name;
   - a shipped migration edit.
 - **Scope growth:** more than the card's file list, or a contract or fixture change the card doesn't name, for example a router migration in TASK-022.
@@ -144,7 +145,7 @@ Not in batch 1, for the reason given:
 | Task | Why not |
 |---|---|
 | 014 | Blocked by 013, which needs correction |
-| 024 | Needs 021 and 022 merged |
+| 024 | No functional prerequisite; merge order only — rebase onto whichever of 021/022 has merged (different regions of LifecycleDialogs.tsx / AccountSwitcher.tsx) (board review re-check 2026-10-22) |
 | 025 | Needs the 001 and 006 decisions and Kyle's v1.1 texts |
 | 026 | Needs the 006 decision |
 | 004 | Needs the 003 decision |
@@ -247,7 +248,7 @@ the card "Approval evidence" rows; git status.
 ## 11. Deferred work and why
 
 - **V1.1:**
-  - ISSUE-008 (if TASK-019 is not pulled in), 010, 011 (rest), 013, 014, 015, 016, 017, 018, 019, 020, 021, 024, 025, 026–032, the 034 migration, the 037 implementation, and 038 if gate 052 is waived.
+  - ISSUE-008 (if TASK-019 is not pulled in), 010, 011 (rest), 013, 014, 015, 016, 017, 018, 019, 020, 021, 024, 025, 026–032, the 037 implementation, and 038 if gate 052 is waived. ISSUE-018 is V1.1 except B2-1, handled by TASK-043, and the retention disclosure, handled by TASK-044, both in V1; for ISSUE-034 only nullable fee amounts are V1.1, and the fees-recorded migration is V1 via TASK-042 (as 08 §D; board review re-check 2026-10-22).
   - Partial items: 002c redesign; 004 export side; the 006 user-path part; 012 Rust verdict fixtures; TEST-010; and the live `trusted_schema` change (pending the §8.1 decision).
   - Reasons are given per item in 08 §C.1: P2 or P3, no current trigger, an unmeasured frequency, or a migration that needs B2-1 first.
 - **V1.5:** ISSUE-033 (collector), which is a separate tool.

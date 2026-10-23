@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r4) |
+| Status | Ready for Approval (r5) |
 | Type | Fix |
 | Audit priority | Gate work (mandatory) |
 | Roadmap lane | P0-13 / NA-3 (V1, open) |
@@ -17,7 +17,7 @@
 | Verification platform | Any OS (+ packaged check in TASK-030) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | 9430f2a (application source identical to 92e7980) |
-| Specification revision | r4 (2026-10-22; r3 + approved-task audit fixes) |
+| Specification revision | r5 (2026-10-22; r4 + board review fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -33,7 +33,7 @@ N/A (mandatory gate).
 Not yet integrated.
 
 ## Expected change scope
-`apps/desktop/src/legal/user-agreement.ts` (becomes the owner-use statement 1.0.1-owner-only; id `user-agreement` kept, decided on the Notion approval card; the pinned digests depend on it), `privacy-notice.ts` (1.0.0-owner-only), `legal/index.ts` (`PRIVACY_SUMMARY` and `LICENSE_SUMMARY`, `:12-25`, set verbatim from the package; today `:13` says "no internet connection", which the integrated notice contradicts), `legal/legal.test.ts` (draft assertions → final-state assertions; new digests), `journeys/first-run.journey.test.tsx:45, 57, 61-62, 66, 148, 227`, draft-banner components `features/legal/components/LegalGate.tsx:33,63-65`, `PrivacyLegalSection.tsx:23-25`, `LegalDocuments.tsx:8-16` (dormant when draft=false), `docs/design/screens/16-first-run.md:7-8, 22, 25`, `docs/design/README.md:40` (row 16 "Draft documents until counsel signs off"). Rust `legal.rs` needs no change.
+`apps/desktop/src/legal/user-agreement.ts` (becomes the owner-use statement 1.0.1-owner-only; id `user-agreement` kept, decided on the Notion approval card; the pinned digests depend on it), `privacy-notice.ts` (1.0.0-owner-only), `legal/index.ts` (`PRIVACY_SUMMARY` and `LICENSE_SUMMARY`, `:12-25`, set verbatim from the package; today `:13` says "no internet connection", which the integrated notice contradicts), `legal/legal.test.ts` (draft assertions → final-state assertions; new digests), `journeys/first-run.journey.test.tsx:45, 57, 61-62, 65, 66, 148, 227` (`:65` is `getByText("Draft")` inside the opened document article), draft-banner components `features/legal/components/LegalGate.tsx:33,63-65`, `PrivacyLegalSection.tsx:23-25`, `LegalDocuments.tsx:8-16` (dormant when draft=false), `docs/design/screens/16-first-run.md:7-8, 22, 25`, `docs/design/README.md:40` (row 16 "Draft documents until counsel signs off"). Rust `legal.rs` needs no change.
 
 ## Out of scope
 Counsel review/external-user agreements (V2); third-party notices regeneration.
@@ -48,7 +48,11 @@ Counsel review/external-user agreements (V2); third-party notices regeneration.
 
    Field mapping that reproduces these digests through `documentText` (`legal/document.ts:28-40`), verified by the approved-task audit: `id` `user-agreement` / `privacy-notice` (hashed as `id: …`, `legal/document.ts:31`); `title` "Owner-use statement" / "Privacy notice — owner-only V1"; `summary` = the intro paragraph under the version line; `sections` = the `###` headings with their paragraphs; `effectiveDate` `2026-10-22`; `draft: false`. The `%APPDATA%\com.fundedflow.desktop\…` path is hashed with single backslashes, so it is written `\\` in a TS string literal. Run `npm run test -w @fundedflow/desktop -- src/legal`: if the computed digest of the integrated text differs from the pinned value, the PR is blocked until the text is made faithful to the package; never accept the printed digest. Reword the "copy the digest from this failure" guidance in `legal.test.ts:7` and the header comments of `user-agreement.ts:4` and `privacy-notice.ts:4-5` accordingly.
 5. Rewrite `legal.test.ts` draft assertions to final-state assertions (version pattern, no '(draft)', ids).
-6. Update first-run journey expectations and the spec; set `PRIVACY_SUMMARY` and `LICENSE_SUMMARY` (`legal/index.ts:12-25`) to the package's "Short notices for the app → First-run copy" text verbatim (owner-only package page 4001bd4b6bde81e28d74f5e17bb56a16).
+6. Update first-run journey expectations (including the `getByText("Draft")` assertion at `first-run.journey.test.tsx:65`) and the spec; set `PRIVACY_SUMMARY` and `LICENSE_SUMMARY` (`legal/index.ts:12-25`) from the owner-only package page 4001bd4b6bde81e28d74f5e17bb56a16, section "Short notices for the app". Sources and mapping (text verbatim except for the splits defined here; no words added, dropped or reordered):
+   - `PRIVACY_SUMMARY` (two-item `readonly string[]`, rendered one `<p>` per item by `LegalGate.tsx:70` and `PrivacyLegalSection.tsx:21`) comes from the "First-run copy" subsection, a single paragraph. Item 0 = that paragraph from its start ("For Kyle Shabaga's own use.") up to and including the sentence ending "…WebView2 runtime if needed."; item 1 = the remaining final sentence ("Review the owner-use statement and privacy notice before continuing."). The split is at that sentence boundary; the single space between the sentences is dropped.
+   - `LICENSE_SUMMARY` (`{ notice: string; terms: readonly string[] }`, rendered by `PrivacyLegalSection.tsx:36-37`) comes from the "About / licence summary" subsection, **not** from "First-run copy" (which contains no licence text). `notice` = its first two sentences ("Copyright (c) 2026 Kyle Shabaga." through "…to the extent owned by Kyle Shabaga."); `terms` = each remaining sentence as one item, in order ("Owner-only use.", the "Source available…" sentence, the "Third-party components…" sentence, the "No additional rights…" sentence). Update the doc comment above `LICENSE_SUMMARY` (`legal/index.ts:16`) to name the package subsection as its source alongside the root LICENSE.
+   - Do **not** use the archived "Archive — v0.2 external-user review draft" toggle on the same page, in particular its "Draft C — Short notices → Source/About" block, which refers to an EULA/authorized-release grant that the owner-only package rejects; nor its "First-run privacy summary" block.
+   - The summaries are not part of any digest: the pinned digests in step 4 cover only the two documents, computed over `documentText` (`legal/document.ts:28-40`) of the code objects. A test in `legal.test.ts` asserts the literal summary strings.
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-001 decided — Option A, approved 2026-10-22 on the Notion approval board (keep 0BSD; no dependency change or notice regeneration, so nothing here is blocked by it); TASK-006 decided — Option A, approved 2026-10-22 on the Notion approval board (wording basis: the installer needs internet only when WebView2 is missing, the installed app works offline); v1.1 text: owner-only package page 4001bd4b6bde81e28d74f5e17bb56a16, effective 2026-10-22 (supplied by Kyle; step 4 pins its digests); id `user-agreement` kept (decided on the Notion approval card; the pinned digests depend on it). TASK-026 is not a prerequisite: the summaries come from the package (step 6).
@@ -59,6 +63,7 @@ Counsel review/external-user agreements (V2); third-party notices regeneration.
 - [ ] `npm run test -w @fundedflow/desktop -- src/legal src/journeys/first-run.journey.test.tsx` → exit 0.
 - [ ] Document versions equal `1.0.1-owner-only` and `1.0.0-owner-only`; digests match the texts (test).
 - [ ] Digests are pinned to the package manifest: a test in `legal.test.ts` asserts the literal values `userAgreement.digest === "ab5e539be811bef70e96115cb5fad9a5c6592c6d0079e1774738b019e3e08ead"` and `privacyNotice.digest === "042bf1b9e34c986f6c240f92ca20fcd4d2591a5144ec34202c01fc959a535a9a"`, independent of the self-consistency test at `legal.test.ts:6-9`, and both pass. A mismatch is investigated and fixed in the text, never resolved by changing the pinned value.
+- [ ] `legal.test.ts` asserts `PRIVACY_SUMMARY` has exactly the two items and `LICENSE_SUMMARY` the `notice`/`terms` values defined in step 6, taken from the package's "First-run copy" and "About / licence summary" subsections; no text from the archived v0.2 draft appears in `legal/index.ts`.
 - [ ] Full root checks → exit 0.
 - [ ] Packaged first-run shows the v1.1 texts (verified in TASK-030).
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
@@ -96,7 +101,14 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Step 4 mapping now includes `id` (`legal/document.ts:31` hashes it); scope, step 2 and prerequisites record the `user-agreement` id as kept and the v1.1 text as supplied in the package page, as this section already noted, instead of "open" (independent review (review4), reviewer C blocking 1).
 - Scope: added the stale draft lines `first-run.journey.test.tsx:57, 66, 227`, `16-first-run.md:22, 25` and `docs/design/README.md:40`; prerequisites note TASK-044's possible re-pin (independent review (review4), reviewer C nits).
 
+## Changes in r5
+- Step 6: `LICENSE_SUMMARY` is sourced from the package's "About / licence summary" subsection, not "First-run copy" (which has no licence text); the archived v0.2 "Source/About" block (which mentions an EULA) is explicitly excluded (board review 2026-10-22).
+- Step 6 and a new acceptance criterion: defined the mapping from package text to code shapes (`PRIVACY_SUMMARY` two items split at the final-sentence boundary; `LICENSE_SUMMARY` `{notice, terms[]}` split at sentence boundaries; text otherwise verbatim; summaries are not hashed, document digests stay over `documentText`) (board review 2026-10-22).
+- Scope and step 6: added `journeys/first-run.journey.test.tsx:65` (`getByText("Draft")`) (board review 2026-10-22).
+- Step 6: the doc comment above `LICENSE_SUMMARY` is cited as `legal/index.ts:16`, not `:17` (`:17` is the declaration at 92e7980) (board review re-check 2026-10-22).
+
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r3.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.
+Board review (2026-10-22, against main 92e7980): CHANGES REQUESTED (wrong source subsection for `LICENSE_SUMMARY`, undefined text-to-shape mapping, missing journey line); fixes folded in at r5. Independent re-check of r5: pending.

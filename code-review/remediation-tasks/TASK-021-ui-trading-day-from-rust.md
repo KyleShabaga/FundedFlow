@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r4) |
+| Status | Ready for Approval (r5) |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | Unassigned (owner) |
@@ -17,7 +17,7 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | 9430f2a (application source identical to 92e7980) |
-| Specification revision | r4 (2026-10-22; r3 + approved-task audit fixes + owner amendment folded in) |
+| Specification revision | r5 (2026-10-22; r4 + board review fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 9430f2a (HEAD at r4; application source unchanged). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -45,7 +45,7 @@ New Rust command/DTO; batched overview (ISSUE-014, V1.1); freshness adapter rout
 1. Before branching: create or link the Notion roadmap Triage card for this task (CLAUDE.md plan of record); branch `feat/build-<n>-<slug>` and link the card in the PR. (Notion writes need their own approval; Block 4A.)
 2. Change `currentAssignment(assignments, tradingDay)` to take a trading day; update callers to pass the Rust trading day.
 3. Badge: compare `snapshot.tradingDay` with the Rust trading day.
-4. Reset dialog (owner amendment, 2026-10-22): the `effectiveFrom` sent with an Assign decision is the Rust trading day for the **selected** `effectiveAt`, read through the existing freshness `asOf` support (`list_account_freshness(asOf = effectiveAt)`, `currentTradingDay` of this account's row); no TypeScript calendar maths. It is recomputed whenever `effectiveAt` (or the account) changes; a response for an earlier `effectiveAt` is ignored (key the read by `[accountId, asOf]`, separate from `accountFreshnessKey`). While the value is unresolved (loading, error, no row) or outdated (not for the current `effectiveAt`), submitting the Assign decision is blocked with the existing `Button disabledReason`; the unresolved state shows the existing `StatusIndicator status="unknown"`. Under TASK-020's strict equality, today's trading day is wrong for a backdated reset, so this is the only accepted source. The block applies only to the Assign decision: "Decide later" (`LifecycleDialogs.tsx:442`) sends no `effectiveFrom` and stays submittable while the day is unresolved (recommended, because it sends no date; Kyle confirms it when re-approving this revision).
+4. Reset dialog (owner amendment, 2026-10-22): the `effectiveFrom` sent with an Assign decision is the Rust trading day for the **selected** `effectiveAt`, read through the existing freshness `asOf` support (`list_account_freshness(asOf = effectiveAt)`, `currentTradingDay` of this account's row); no TypeScript calendar maths. It is recomputed whenever `effectiveAt` (or the account) changes; a response for an earlier `effectiveAt` is ignored (key the read by `[accountId, asOf]`, separate from `accountFreshnessKey`). While the value is unresolved (loading, error, no row) or outdated (not for the current `effectiveAt`), submitting the Assign decision is blocked with the existing `Button disabledReason`; the unresolved state shows the existing `StatusIndicator status="unknown"`. Under TASK-020's strict equality, today's trading day is wrong for a backdated reset, so this is the only accepted source. The block applies only to the Assign decision: "Decide later" (`LifecycleDialogs.tsx:442`) sends no `effectiveFrom` and stays submittable while the day is unresolved (recommended, because it sends no date; this is owner question Q1 under Prerequisites, answered at approval).
 5. Fake-clock tests at 2026-10-23T22:30Z (America/New_York, reset 17:00) and Saturday noon → assignment effective 2026-10-26 is 'in use'; no false badge.
 6. Fail closed: if the Rust trading day (freshness) is unavailable, show 'unknown' rather than falling back to `zonedDay`.
 6a. Boundary re-read: wherever the Rust trading day is used for 'in use', the badge or a default, re-read freshness at the row's `nextTradingDayStart` (a timer that does not depend on `nextChangeAt` or on `AccountSwitcher` being mounted), so an open window crosses the reset without a focus event.
@@ -54,6 +54,8 @@ New Rust command/DTO; batched overview (ISSUE-014, V1.1); freshness adapter rout
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-020.
+- Owner question Q1 (Kyle answers yes/no at approval of this revision): may "Decide later" (`LifecycleDialogs.tsx:442`) stay submittable while the Rust trading day for the selected `effectiveAt` is unresolved? Recommended: yes, because it sends no `effectiveFrom` (step 4). If no, the step 4 block also applies to "Decide later" and the blocked-submit criterion covers it. The answer is recorded in the approval evidence.
+- Follow-up (Triage card proposal, out of scope for this card): `apps/desktop/src/features/insights/components/CalendarSection.tsx:52` also derives "today" with `zonedDay` (calendar navigation only); propose a Triage card to decide whether it should use the Rust trading day. Not changed here.
 - Likely shared-file conflicts: `LifecycleDialogs.tsx` with TASK-024; `test/boundaries.ts` with TASK-015 (option A); a new hook next to `features/accounts/hooks/freshness.ts`, which `AccountSwitcher.tsx` (TASK-022, TASK-024) imports.
 
 ## Acceptance criteria (pass/fail)
@@ -69,6 +71,7 @@ New Rust command/DTO; batched overview (ISSUE-014, V1.1); freshness adapter rout
 - [ ] Repository root: `npm run test -w @fundedflow/desktop -- src/features/rulebooks src/features/accounts src/features/today` → exit 0.
 - [ ] Full root checks → exit 0.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed.
+- [ ] Owner question Q1: if Q1 = yes, a test shows "Decide later" submits while the Rust trading day for the selected `effectiveAt` is unresolved; if Q1 = no, a test shows it is blocked like Assign (same `disabledReason`).
 
 ## Verification plan
 Existing `rulebooks.test.tsx:443`.
@@ -104,8 +107,14 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Baseline row: stale `a7310fd (HEAD)` replaced with `9430f2a (HEAD at r4; application source unchanged)` (independent review (review4), reviewer B nit).
 - Step 4: stated that "Decide later" stays submittable while the trading day is unresolved (independent review (review4), reviewer B nit; audit NIT).
 
+## Changes in r5
+- Prerequisites: the "Decide later" behaviour while the trading day is unresolved is now named owner question Q1, which Kyle answers yes/no at approval; step 4 points to it (board review 2026-10-22).
+- Prerequisites: follow-up recorded as a Triage card proposal (out of scope): `features/insights/components/CalendarSection.tsx:52` also derives "today" with `zonedDay` (board review 2026-10-22).
+- Acceptance criteria: added a criterion for each answer to owner question Q1 (yes: "Decide later" submits while the day is unresolved; no: it is blocked like Assign) (board review re-check 2026-10-22).
+
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: tests for reset-dialog boundary default, unknown state without freshness, no weekend dates in AssignDialog (G10); fixture rule unset (not 0).
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.
+Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; fixes folded in at r5. Independent re-check of r5: pending.

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r6) |
+| Status | Ready for Approval (r7) |
 | Type | Verification |
 | Audit priority | Gate |
 | Roadmap lane | NA-2 / P0-06 |
@@ -17,11 +17,11 @@
 | Verification platform | GitHub Actions + Windows (hash check) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | 9430f2a (application source identical to 92e7980) |
-| Specification revision | r6 (2026-10-22; r5 + approved-task audit fixes) |
+| Specification revision | r7 (2026-10-22; r6 + board review fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
-| Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision) |
+| Approval evidence | — (none; requires Kyle's explicit approval of this task ID and specification revision, including the TASK-023 acknowledgement under "Prerequisites") |
 
 ## Purpose / risk
 No valid candidate exists: `7679edc` lacks LegalGate/notices; `b94fb1b` is 14 commits behind `92e7980`.
@@ -42,12 +42,13 @@ Installing (TASK-030).
 1. Record final SHA; dispatch the release workflow on it (or push the `v<version>` tag).
 2. Record the release run URL, its event (`workflow_dispatch` or tag `push`), `SOURCE_SHA`, each check job's result and reported checked-out commit, and both audit results.
 3. Record advisory result text.
-4. From that run, download the artifact; `Get-FileHash` the EXE; compare with SHA256SUMS.txt.
+4. From that run, download the artifact (the hashed `FundedFlow_<version>_x64-setup.exe` and `SHA256SUMS.txt`) promptly; `Get-FileHash` the EXE; compare with SHA256SUMS.txt. Keep both files outside GitHub Actions (owner-controlled storage, path recorded in the evidence register), because dispatch and tag artifacts expire 30 days after the run (`.github/workflows/release-installer.yml:116`) and TASK-030/W5 may run later; W5 installs this kept copy after re-checking its SHA-256 against the recorded value.
 5. Record all fields in the evidence register.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: All W1–W3 tasks Verified (incl. TASK-025, TASK-026, TASK-027, and TASK-042, TASK-043, TASK-044 from the TASK-009 r3 decisions), except TASK-023 (below). W1–W3 here means the code and documentation tasks.
+- Prerequisites: All W1–W3 tasks Verified (incl. TASK-025, TASK-026, TASK-027 and TASK-044 (TASK-009 decision 4), and TASK-042 and TASK-043 when Kyle confirms TASK-009 r4 decision 1; without that confirmation they are not started and are not prerequisites), except TASK-023 (below). W1–W3 here means the code and documentation tasks.
 - TASK-023 (native window-close veto, W2; Deferred by Kyle pending TASK-011(a)): TASK-023 Verified, closed Not Needed with evidence, or still Deferred with the window-close gap explicitly accepted by Kyle in TASK-036. In the last case this card may proceed, the gap (ISSUE-009 window close) is recorded in the evidence register for TASK-036, and the candidate cannot be Go unless Kyle accepts it there.
+- **Owner acknowledgement required at approval:** the "still Deferred" route above (`:50`, first added in r6, see Changes in r6) lets TASK-023, a release-blocking task, stay Deferred or Not Needed and unfixed when this card runs, instead of Verified. Kyle's approval of this revision must state explicitly that he accepts this route; without that statement, TASK-023 Verified or closed Not Needed with TASK-011(a) evidence remains a prerequisite.
 - Decisions (approved 2026-10-22): TASK-001 (A), TASK-002 (B + cleanup), TASK-005 (A), TASK-006 (A), TASK-008 (A for both gates).
 - TASK-002 follow-ups resolved (this card stays **Blocked** until then, per the TASK-002 decision): TASK-037 (synthetic replacement for `test_csvimport/Performance.csv` and its Rust tests) Verified and merged into the candidate SHA; TASK-038 (removal of the two unreferenced exports) Verified and merged; TASK-039 (Git-history exposure) assessed, Kyle's separate owner disposition recorded and, if he chose option B (make the repository private) or option C (rewrite history), its separate execution task **Verified** (for C, the candidate SHA is taken from the rewritten history). If Kyle rules (TASK-041) that the value-level copies of real rows must be removed, TASK-041 Verified and merged into the candidate SHA is a prerequisite too; if he accepts them as low-risk, it is not.
 - TASK-040 (`cargo fmt` formatting and CI check, the TASK-008 cargo-fmt follow-up) **Verified** and contained in the candidate SHA (TASK-008 = A: adopt; G5).
@@ -55,7 +56,7 @@ Installing (TASK-030).
 - Likely shared-file conflicts: None.
 
 ## Acceptance criteria (pass/fail)
-- [ ] Evidence register row complete: SHA, release run (with its check jobs), advisory result (not 'NOT RUN'), version (`0.1.1` or later and higher than every earlier candidate, TASK-005 = A; equal to the `FundedFlow_<version>_x64-setup.exe` file name and, for a tag run, to the tag `v<version>`), EXE SHA-256 (matches SHA256SUMS.txt), artifact expiry ≥ 30 days.
+- [ ] Evidence register row complete: SHA, release run (with its check jobs), advisory result (not 'NOT RUN'), version (`0.1.1` or later and higher than every earlier candidate, TASK-005 = A; equal to the `FundedFlow_<version>_x64-setup.exe` file name and, for a tag run, to the tag `v<version>`), EXE SHA-256 (matches SHA256SUMS.txt), artifact expiry ≥ 30 days, and the storage location of the kept EXE and `SHA256SUMS.txt` copies (step 4).
 - [ ] The candidate SHA contains the merged TASK-037, TASK-038, TASK-040 and TASK-034 (code) changes, and TASK-039's owner disposition is recorded and, if option B or C was chosen, its execution task is Verified (for C, the SHA is from the rewritten history); TASK-041 is merged if Kyle chose removal; the release run's check jobs on that SHA include the TASK-040 `cargo fmt` check, green.
 - [ ] The release run (event `workflow_dispatch` or a `v<version>` tag push, not `pull_request`) has every check job green on `SOURCE_SHA` = the recorded SHA, every job's reported checked-out commit equals it, both audits produced a result (not 'NOT RUN'; `fail-on-outage` true on these events per TASK-027 r5), and the packaging job ran after them.
 - [ ] TASK-023's state is recorded with the candidate: Verified (contained in the candidate SHA), closed Not Needed (with the TASK-011(a) evidence), or Deferred (with the window-close gap listed for Kyle's explicit acceptance in TASK-036).
@@ -99,6 +100,11 @@ Gate state recorded Passed/Failed/Not Run/Blocked with source SHA, installer EXE
 - Prerequisites name TASK-042, TASK-043 and TASK-044 (V1 work created by TASK-009 r3).
 - Re-approval note: the "still Deferred, with the gap accepted by Kyle in TASK-036" route goes beyond the audit's "Verified or Not Needed with evidence" and lets a Release-Blocking: Yes task (TASK-023) stay unfixed for this build; Kyle should see this explicitly when he re-approves r6. Still open outside this card: the Notion 029→023 relation, 08 §A/§C.1 and 10a still say TASK-023 is expected (audit M3) (independent review (review4), reviewer C nits).
 
+## Changes in r7
+- Step 4 and acceptance: download the hashed EXE and `SHA256SUMS.txt` from the release run and keep them outside Actions, since dispatch/tag artifacts expire 30 days after the run (`release-installer.yml:116`) and W5 may run later (board review 2026-10-22).
+- Prerequisites and approval evidence: added an explicit owner acknowledgement that the r6 route (`:50`) lets release-blocking TASK-023 stay Deferred/Not Needed at TASK-029 time (board review 2026-10-22).
+- Prerequisites: TASK-042 and TASK-043 are prerequisites only when Kyle confirms TASK-009 r4 decision 1 (TASK-009 r4: without it they are not started); TASK-044 stays unconditional (decision 4) (board review re-check 2026-10-22).
+
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: TASK-008/fmt prerequisite; CI evidence on exact SHA via push or workflow_dispatch with automatic `--fail-on-outage`; WebView2 field dropped from DoD; fixture rule unset (not 0).
@@ -106,3 +112,4 @@ Independent review r3 (two reviewers, then a re-check of the blocking fixes, 202
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r4.
 Independent review r5 (2026-10-22, owner-directed CI gate): CHANGES applied, re-check READY.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r6.
+Board review (2026-10-22, against main 92e7980): CHANGES (artifact expiry before W5; implicit TASK-023 route); fixes folded in at r7. Independent re-check of r7: pending.

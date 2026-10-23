@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r5) |
+| Status | Ready for Approval (r6) |
 | Type | Fix |
 | Audit priority | P1 |
 | Roadmap lane | NA-2 / P0-06 (release) |
@@ -17,7 +17,7 @@
 | Verification platform | Any OS (CI) |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | a9be03f (application source identical to 92e7980) |
-| Specification revision | r5 (2026-10-22; r4 + owner-directed CI gate: reusable check workflow run in the installer workflow on the exact `SOURCE_SHA`) |
+| Specification revision | r6 (2026-10-22; r5 + board review fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / a7310fd (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -48,7 +48,8 @@ Signing; updater; pinning actions by SHA (optional, V1.1).
    e. `permissions: contents: read` stays in both callers; no GitHub API call or `actions: read` is needed.
    f. Owner action at merge time: check names change to the `<caller job> / <called job>` form. If branch protection requires the old names, the TASK-027 PR itself would wait forever on them, so update the required-check names in the repository settings while merging this PR (record in the execution log).
    g. TASK-040 order: if TASK-040 has merged, move its `rustfmt` component and `cargo fmt --check` step into `checks.yml`; if TASK-040 merges after this card (its fallback order), TASK-040 adds them to `checks.yml` instead of `ci.yml`.
-3. Widen PR paths to `apps/desktop/**`, `packages/**` and `.github/workflows/checks.yml`.
+3. Widen PR paths additively (`release-installer.yml:11-21`): add `apps/desktop/**` (it subsumes the existing `apps/desktop/...` entries), `packages/**` and `.github/workflows/checks.yml`; keep the existing root `package.json`, `package-lock.json` and `.github/workflows/release-installer.yml` entries, and keep `LICENSE` and `apps/desktop/THIRD_PARTY_NOTICES.txt` if PR #107 has landed (its `THIRD_PARTY_NOTICES.txt` entry is then covered by `apps/desktop/**` but may stay). No existing trigger path is removed.
+   Cost note: with these paths every PR that touches `apps/desktop/**` or `packages/**` runs the full checks twice, once in `ci.yml` and once in `release-installer.yml` (through `checks.yml`), plus the Windows packaging job. This is accepted for the gate; record the observed extra run time in the execution log.
 4. Add a summary step printing toolchain versions.
 5. Apply TASK-005 Option A: set every version field above to `0.1.1` for the first candidate (a later candidate gets the next increasing version); keep the tag-equals-version check (`release-installer.yml:65-69`, so the tag is `v0.1.1`) and the `source_sha`/`version` lines in `SHA256SUMS.txt` (`release-installer.yml:96-100`); update `recovery.journey.test.tsx:66` and the wire fixture `producerVersion` (or take the `normalize()` option above).
 6. Not applicable (TASK-006 = Option A): leave `webviewInstallMode` unchanged.
@@ -57,8 +58,9 @@ Signing; updater; pinning actions by SHA (optional, V1.1).
 
 ## Prerequisites, dependencies and conflicts
 - Prerequisites: TASK-005 decided — Option A, approved 2026-10-22 on the Notion approval board; TASK-006 decided — Option A, approved 2026-10-22 on the Notion approval board (no config change follows from it).
+- Blocks: TASK-026 (documents post-027 workflow facts).
 - Merge order: after TASK-017 (the last W1 wire-fixture edit; 013 → 015 (option B only) → 016 → 017 → 027 on `data-controls-wire.json`) and before TASK-029 (candidate).
-- Likely shared-file conflicts: `.github/workflows/ci.yml` with TASK-040 (its `cargo fmt --check` step and `rustfmt` component; if TASK-040 merges first (recommended), this card moves its step into `checks.yml`; otherwise TASK-040 adds it to `checks.yml`, step 2g); version files with TASK-029 (candidate); `packages/domain/test/fixtures/data-controls-wire.json` with TASK-013, 015 (option B), 016, 017.
+- Likely shared-file conflicts: `.github/workflows/ci.yml` with TASK-040 (its `cargo fmt --check` step and `rustfmt` component; if TASK-040 merges first (recommended), this card moves its step into `checks.yml`; otherwise TASK-040 adds it to `checks.yml`, step 2g); version files with TASK-029 (candidate); open draft PR #107 (branch `feat/mit-license-transition`, verified with `git diff origin/main...origin/feat/mit-license-transition --stat`) edits the same `release-installer.yml` PR path list (adds `LICENSE` and `apps/desktop/THIRD_PARTY_NOTICES.txt`) and the version/manifest files `apps/desktop/src-tauri/tauri.conf.json`, `apps/desktop/src-tauri/Cargo.toml`, root `package.json`, `apps/desktop/package.json` and `packages/domain/package.json` (and `package-lock.json`): whichever of #107 and this card merges second rebases onto the other; `packages/domain/test/fixtures/data-controls-wire.json` with TASK-013, 015 (option B), 016, 017.
 
 ## Acceptance criteria (pass/fail)
 - [ ] Domain package version rule: `packages/domain/package.json:3` and the pin `apps/desktop/package.json:22` either both stay `0.1.0` or both become `0.1.1`; the PR records which.
@@ -119,9 +121,16 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Conflict with TASK-040 on `ci.yml` named; owner note on branch-protection required-check names; effort/risk raised to M / Low–Medium.
 - Independent review fixes: SHA passed to the called workflow by expression (no `env` in `with:`); `needs: [checks]` on the caller job and `run-build-and-test: true` for releases; `timeout-minutes` on the packaging job; no `concurrency` in `checks.yml`; `checks.yml` added to the PR path filter; required-check names updated at merge time; TASK-040 order handled both ways; all steps moved (incl. installs and audit-guard tests); acceptance wording for unchanged CI and the dev-tools-check exemption.
 
+## Changes in r6
+- Conflicts: open draft PR #107 (`feat/mit-license-transition`) edits the same `release-installer.yml` PR path list (adds `LICENSE`, `apps/desktop/THIRD_PARTY_NOTICES.txt`) and `tauri.conf.json`, `Cargo.toml`, root `package.json`, `apps/desktop/package.json`, `packages/domain/package.json`; whichever merges second rebases (board review 2026-10-22).
+- Step 3: widening the PR paths is additive; existing root `package.json`, `package-lock.json` and `release-installer.yml` entries (and #107's entries if it lands) stay (board review 2026-10-22).
+- Step 3: cost note added: PRs touching `apps/desktop/**` or `packages/**` run the full checks in both the CI and installer workflows. Owner action at merge (rename required checks) unchanged (board review 2026-10-22).
+- Prerequisites: added "Blocks: TASK-026 (documents post-027 workflow facts)", matching TASK-026's dependency on this card (board review re-check 2026-10-22).
+
 ## Independent review notes
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANGES (applied — see 08 §H, reviewer 2). Remaining re-check items were wording/line-level; no open blocker.
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: `recovery.journey.test.tsx:66` knock-on (G13); TASK-006 `webviewInstallMode` scope and prerequisite (G4); `producerVersion` normalize option (G13); merge after 017 and before 029; fixture rule unset (not 0).
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r4.
 Independent review r5 (2026-10-22, owner-directed CI gate): CHANGES applied, re-check READY.
+Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; fixes folded in at r6. Independent re-check of r6: pending.

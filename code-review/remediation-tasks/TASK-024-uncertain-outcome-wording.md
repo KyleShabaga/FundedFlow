@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r4) |
+| Status | Ready for Approval (r5) |
 | Type | Fix |
 | Audit priority | P1 (wording only) |
 | Roadmap lane | Unassigned (owner); P0-03 rule (merged) |
@@ -17,7 +17,7 @@
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | 9430f2a (application source identical to 92e7980) |
-| Specification revision | r4 (2026-10-22; r3 + approved-task audit fixes) |
+| Specification revision | r5 (2026-10-22; r4 + board review fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 4d4e66d (HEAD at r3; application source unchanged). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -53,7 +53,7 @@ Settings auto-acknowledge and daily-review acknowledge flow (ISSUE-011 rest, V1.
 4. Tests: reject each with `FeatureDataError('uncertain-outcome')` → uncertain wording; with a definite failure → existing wording. For one active-account site and one account or trade site, also test the locked retry: after an uncertain result, a second attempt sends nothing (spy on the repository) and still shows the uncertain wording, never the definite one.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-021, TASK-022 (shared files merge order).
+- Prerequisites: none functional. TASK-021 and TASK-022 are merge order only: rebase onto whichever of TASK-021/TASK-022 has merged; no functional dependency, so this card does not wait behind TASK-020 → TASK-021. The overlapping edits are in different regions (`LifecycleDialogs.tsx:166,191` here vs `:282` in TASK-021; `AccountSwitcher.tsx:45` here vs `:68` in TASK-022).
 - Likely shared-file conflicts: `LifecycleDialogs.tsx`, `AccountSwitcher.tsx`; `DailyReviewPage.tsx` with TASK-022.
 
 ## Acceptance criteria (pass/fail)
@@ -98,8 +98,12 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Step 2: trade guidance says "adding or editing" (`trades/hooks/trades.ts:10`); uncertain toasts use the `warning` tone, with a criterion (independent review (review4), reviewer B nits; audit NIT 5).
 - Conflicts: `DailyReviewPage.tsx` with TASK-022; out-of-scope wording simplified (independent review (review4), reviewer B nits).
 
+## Changes in r5
+- Prerequisites: TASK-021/TASK-022 are merge order only; rebase onto whichever has merged, no functional dependency, so this card does not wait behind 020 → 021 (overlaps are in different regions: `LifecycleDialogs.tsx:166,191` vs `:282`, `AccountSwitcher.tsx:45` vs `:68`) (board review 2026-10-22).
+
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).
 Block 4 review (10 §8.3): nits only — applied in r3.
 Independent review r3 (2026-10-22): CHANGES on 012, 024, 026 (citations, test construction, scope lines); applied. READY.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.
+Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; fixes folded in at r5. Independent re-check of r5: pending.

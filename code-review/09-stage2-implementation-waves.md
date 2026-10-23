@@ -132,10 +132,10 @@ Source: the dependency reviewer, re-checked by the lead.
 **Shared files that force serial merges:**
 - `data_controls/mod.rs`: 013, 016, 017, 018
 - `deletion.rs`: 014, 015, 016, 017
-- `restore.rs`: 012, 014, 016, 017
+- `restore.rs`: 012, 014, 016, 017, 018, 043 (043 last; Board review sync 2026-10-22)
 - `archive.rs`: 012, 013, 014, 017
 - `runtime.rs`: 015, 018
-- `packages/domain/src/contracts/data-controls.ts` and `packages/domain/test/fixtures/data-controls-wire.json`: 013, 016, 017 (optional), 027 (`producerVersion`, line 89)
+- `packages/domain/src/contracts/data-controls.ts` and `packages/domain/test/fixtures/data-controls-wire.json`: 013, 014 (one `requiredFreeBytes` value; board review re-check 2026-10-22), 016, 017 (optional), 027 (`producerVersion`, line 89)
 - `apps/desktop/src/lib/data/runtime.ts`: 015, 018
 - `LifecycleDialogs.tsx`: 021, 024
 - `AccountSwitcher.tsx`: 022, 024
@@ -153,14 +153,14 @@ Source: the dependency reviewer, re-checked by the lead.
 This corrects 07 §E: W2 does not need W1 merged first.
 
 **Persistence:**
-- No V1 task needs a migration, so B2-1 (the rollback validating at `latest_version`) does not block V1.
+- **Board review sync 2026-10-22:** TASK-042 adds a V1 migration (`0022_trade_fees_recorded.sql`, TASK-009 decision 1), so B2-1 (the rollback validating at `latest_version`) does block V1. TASK-043 fixes B2-1 and must be Verified before TASK-042 opens. (Superseded: "No V1 task needs a migration, so B2-1 does not block V1.")
 - Archive v1, the `data.json` format and the `legal-acceptance.json` format are unchanged.
 - `legal.rs:54-57` accepts `1.0.1-owner-only`, and acceptance re-prompts by design.
 - Downgrade compatibility of cleanup markers is the one open persistence issue (G8).
 
 **Wire contract:**
 - Each contract change lands once per task, in serial order: 013 (`detail`) → 016 (`Code` and the preview field) → 017 (reuses both) → 027 (`producerVersion`).
-- B2-2 (risk fingerprint) is not affected: no task changes the `trades::list` or `ledger::list` shapes.
+- **Board review sync 2026-10-22:** B2-2 (risk fingerprint) is affected by TASK-042, which adds `feesRecorded` to the Trade DTO returned by `trades::list`. TASK-042 strips the key from `risk_inputs_in` and tests that a calculation promoted before the migration still reads sources unchanged. No other task changes the `trades::list` or `ledger::list` shapes. (Superseded: "B2-2 is not affected".)
 - No Rust command request signature changes.
 - 021 reuses `accountFreshnessKey`, which is already invalidated after mutations (`features/accounts/hooks/freshness.ts:43-46`).
 - 024's `uncertain-outcome` category is separate from the runtime-status categories in 015 and 018.
@@ -182,14 +182,16 @@ Each line is one PR-sized change and one approval unit.
 | **W1b** size caps | 013 → 014 | 013 needs G3/G10; 014 Ready but blocked by 013 | 012 merged; 010 result informs priority | W2 |
 | **W1c** cleanup and attachments | 015 → 016 → 017 | All need correction (G8, G11, G12) | 014 merged | W2 |
 | **W1d** startup reparse | 018 | Needs correction (G11, G14) | 017 merged; 011(b) result | W2 |
+| **W1e** rollback at an older schema (B2-1) | 043 (Board review sync 2026-10-22) | Ready for Approval (r1) | 017 and 018 merged (serial on `restore.rs`, per its card); must be **Verified** before 042 opens | W2 |
 | **W1-opt** | 019 | **Ready** | None | All |
 | **W2a** trading day | 020 → 021 | 020 **Ready**; 021 needs G10 | 021 needs 020 merged | W1 |
 | **W2b** navigation | 022 → 023 | 022 **Ready**; 023 needs G10/G14 | 023 needs 022 merged and 011(a) | W1 |
-| **W2c** wording | 024 | Ready | 021 and 022 merged (merge hygiene in `LifecycleDialogs.tsx` and `AccountSwitcher.tsx`) | W1 |
-| **W3a** docs | 026 → 025 → 028 | 026 and 025 Ready; 028 needs G2/G10 | 025: TASK-001 and 006 decided, plus Kyle's v1.1 texts and the id decision. 026: TASK-006 decided. | W1, W2 |
+| **W2c** wording | 024 | Ready | No functional prerequisite; merge order only — rebase onto whichever of 021/022 has merged (different regions of LifecycleDialogs.tsx / AccountSwitcher.tsx) (board review re-check 2026-10-22) | W1 |
+| **W3a** docs and notices | 025 → 044; 026 → 028 (Board review sync 2026-10-22: 025 no longer depends on 026; 026 now needs 027 merged) | See 08 §A | 025: TASK-001 and 006 decided (v1.1 text and `user-agreement` id already decided). 044: 025 merged and 015–017 merged (same dialogs), TASK-009 decision 4. 026: TASK-006 decided and TASK-027 (W3b) merged. 028: 025, 026 and 011. | W1, W2 |
 | **W3b** release process | 027 | Needs correction (G4, G13) | 005 and 006 decided; merge after W1's fixture edits (017) | — |
 | **W3c** test safety | 034 code part (moved before the candidate, per G7) | Needs correction | 008 keeps the gate | Any |
-| **W4** candidate | 029 | Needs correction (G5, G14) | All of W1 to W3 Verified; 001, 002, 005, 006 decided | — |
+| **W3d** fees-recorded migration | 042 (Board review sync 2026-10-22) | Ready for Approval (r2) | 043 **Verified**; 019, 034 code part, 041 (if removal ruled), 022 and 024 merged; TASK-009 r4 approved with Kyle's explicit confirmation of decision 1; merge before 029 freezes the SHA so the 034 owner run exercises migration 0022 | — |
+| **W4** candidate | 029 | Needs correction (G5, G14) | All of W1 to W3 Verified, including 044, and 042 and 043 when TASK-009 r4 decision 1 is confirmed (Board review sync 2026-10-22; board review re-check 2026-10-22); 023 Verified, Not Needed or Deferred with Kyle's acknowledgement (TASK-029 r7); 001, 002, 005, 006 decided | — |
 | **W5** Windows gates | 030, 031, 032, 033; owner run of 034 | All need correction (G6, G8, G9) | 029 recorded | Each other (separate VMs) |
 | **W6** | 035 → 036 | Ready | W5 complete or each gate state recorded | — |
 
@@ -201,7 +203,7 @@ Each line is one PR-sized change and one approval unit.
 |---|---|
 | 012 | Four crafted archives are rejected, including a planted `writable_schema` object. Archives with `sqlite_sequence` or `sqlite_stat1` still round-trip. A previous-version safety copy still rolls back (Nit). |
 | 013 | A journal with more than 64 MiB of free pages exports and previews (after G3). The over-cap detail names the component. |
-| 014 | Over-cap previews work. Changing only a rowid changes the token. The wire fixture stays byte-identical. |
+| 014 | Over-cap previews work. Changing only a rowid changes the token. The wire fixture diff is limited to the `inspect_journal_archive` `requiredFreeBytes` value (TASK-014 r5; board review re-check 2026-10-22). |
 | 015 | A zero-byte marker or a non-regular entry still reaches Ready, at both startup and `prepare_restore`. An older build ignores the quarantine folder, or downgrade is declared unsupported (G8). |
 | 016 | A stray file and a `.part` file are preserved in the safety folder. Rollback semantics are stated (G12). |
 | 017 | A missing screenshot does not block restore or erase. Rollback works with a missing list from the old format (G12). |
@@ -221,9 +223,11 @@ The full detail is in runbook §5.
 |---|---|
 | Every Fix/Test PR | Every standard check is green and run serially (runbook §3); new tests fail before the fix and pass after; any fixture diff is limited to the fields the card names and was reviewed; every acceptance criterion has evidence in `11-remediation-execution-log.md`; the PR was reviewed and merged by Kyle |
 | W1b, W1c | Persistence compatibility: old-version markers, archives and in-flight restore recover. Downgrade behaviour is either tested or declared unsupported. |
+| W1e (043) | **Board review sync 2026-10-22:** TASK-043 Verified (an older-version safety copy rolls back) before TASK-042 opens. |
 | W1d, W2b (023) | Windows evidence recorded: SHA, EXE SHA-256 when packaged, Windows build, WebView2 version, tester, date. jsdom or mock results do not count. |
+| W3d (042) | **Board review sync 2026-10-22:** migration 0022 applies to a version-21 journal; existing risk fingerprints unchanged (B2-2); rollback with a pre-0022 safety copy works (B2-1, via TASK-043); merged before TASK-029 freezes the SHA. |
 | W3 | Notices check (`check:notices`) and `Cargo.lock` diff check if versions or dependencies changed; TASK-027 observed in Actions |
-| W4 | Candidate recorded: a `ci.yml` push or dispatch run on the exact SHA (not a PR merge commit) whose advisory log says "no blocking advisories." with no "NOT RUN"; EXE SHA-256 from `SHA256SUMS.txt` (not the ZIP digest) |
+| W4 | **Board review sync 2026-10-22:** TASK-042, TASK-043 and TASK-044 Verified and in the candidate SHA. Candidate recorded: a `ci.yml` push or dispatch run on the exact SHA (not a PR merge commit) whose advisory log says "no blocking advisories." with no "NOT RUN"; EXE SHA-256 from `SHA256SUMS.txt` (not the ZIP digest) |
 | W5 | Each gate state is Passed, Failed, Not Run or Blocked, decided by its card's pass rule (after G9) |
 | W6 | Evidence register complete. Then Kyle's P0-18 decision. |
 

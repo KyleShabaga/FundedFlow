@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r1) |
+| Status | Ready for Approval (r2) |
 | Type | Fix |
 | Audit priority | P1 (V1, by Kyle's TASK-009 decision of 2026-10-22) |
 | Roadmap lane | Unassigned (owner). Absorbs the trade-level part of roadmap card "Triage: Performance-import fees show $0.00 instead of unknown" (lane P1 - V1.1); the board needs updating (not done here) |
@@ -11,13 +11,13 @@
 | Confidence | High (code facts); the classification rules in step 3 are recommendations Kyle confirms |
 | Canonical issue | ISSUE-034 (see `code-review/remediation-findings-ledger.md`); B2-1, B2-2, B2-3 planning constraints (`code-review/07-stage2-priorities-and-dependencies.md` §F) |
 | Original Stage 1 finding IDs | TSD-008 |
-| Source card / date | TASK-009 r3 decision (1), Kyle 2026-10-22: "a V1 migration plus a new task. Add a persisted 'fees recorded' flag so that missing fees are distinguishable from an explicitly entered zero." Approved-task audit 2026-10-22 (TASK-009 MUST) |
+| Source card / date | TASK-009 decision (1) (r3; holds only on TASK-009 r4 approved, including Kyle's explicit confirmation of decision 1), Kyle 2026-10-22: "a V1 migration plus a new task. Add a persisted 'fees recorded' flag so that missing fees are distinguishable from an explicitly entered zero." Approved-task audit 2026-10-22 (TASK-009 MUST) |
 | Wave | W3 (after TASK-043 is Verified; merge before TASK-029 freezes the candidate SHA, so TASK-034's owner run exercises migration 0022) |
 | Effort / risk | M / Medium (schema migration, wire DTO and fixture changes) |
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | 9430f2a (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22; created from the approved-task audit) |
+| Specification revision | r2 (2026-10-22; r1 + board review fixes) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 9430f2a (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -86,17 +86,17 @@ UPDATE trades SET fees_recorded = 0 WHERE fees_micros = 0;
    - B2-2: a calculation promoted before the migration (test journal at version 21 → promote → migrate) still reads `sources_unchanged == Some(true)`; `risk_inputs_in` output has no `feesRecorded` key.
    - Archive: export at version 22 and restore pass; an archive made at version 21 still inspects and restores (CSV comparison unchanged).
    - UI: the trade form keeps an explicit `0` on edit; trade detail shows "Not recorded" and Net `—`; journal totals show the marker; CalculationSettings shows the note.
-7. Regenerate only the two named fixtures, one targeted command each, then `git diff --stat` must list only them:
+7. Regenerate only the two named fixtures (plus, only in the TASK-014 page-count case under "Archive, wire and fixture knock-on", `data-controls-wire.json` by its own targeted command), one targeted command each, then `git diff --stat` must list only them:
    `FUNDEDFLOW_UPDATE_FIXTURES=1 cargo test --offline --locked --lib wire_contract` (this test requires the value `1`, `wire_contract.rs:278`) and `FUNDEDFLOW_UPDATE_FIXTURES=1 cargo test --offline --locked --lib parity::trade_contract_fixture_matches_rust`. Other fixture tests rewrite their files when the variable has any value (`data_controls/wire_tests.rs:90`), so never run the full suite with it set. Then unset it and run everything.
 
 ## Archive, wire and fixture knock-on (state at 9430f2a)
 - Archive format v1 is unchanged (`FORMAT`, `VERSION`, `ArchiveManifest`, `archive.rs:13, 26-27`). New archives carry `schemaVersion` 22. `data.json` is a generic `SELECT *` dump (`archive.rs:71-128`), so the `trades` table gains a `fees_recorded` entry in `columns` and one cell per row; the manifest `entities` keys are unchanged (a column, not a table). Builds at version 21 refuse schema-22 archives (`archive.rs:390-397`), which is the strict-v1 policy (TASK-009 decision 5). This build accepts archives 3..=22 and validates each at its own version (`archive.rs:419, 476-487`); restore then upgrades the candidate.
 - Expected to change (named above): `command-wire.json` (Trade DTOs in the fresh, `v3Upgraded` and `v4Upgraded` journals, `wire_contract.rs:273`; the upgraded journals show the legacy rule) and `trade-contract.json` (`tradeWire` strings, `parity.rs:96-120`).
-- Expected unchanged (any diff stops the PR): `packages/domain/test/fixtures/data-controls-wire.json` (the export runs on the unmigrated v3 fixture, `data_controls/wire_tests.rs:31-40`; the other outputs count rows per table), `apps/desktop/src/test/fixtures/risk-promotion-wire.json` and `evidence-wire.json` (key stripped from risk inputs), `packages/domain/test/fixtures/engine-contract.json`, `engine-math.json`, `reconciliation.json`, `insights-metrics.json`, `test_csvimport/build17/normalization-v1.json` (also keep `FUNDEDFLOW_UPDATE_CSV_FIXTURES` unset, `csv_import/golden_tests.rs:12`). The fixture databases are not edited.
+- Expected unchanged (any diff stops the PR): `packages/domain/test/fixtures/data-controls-wire.json` (the export runs on the unmigrated v3 fixture, `data_controls/wire_tests.rs:31-40`; the other outputs count rows per table), with one exception if TASK-014 r5 has merged: its `inspect_journal_archive` `requiredFreeBytes` is `1090519040 + 2 × page_count × page_size` of the wire test's fresh migrated journal (`wire_tests.rs:43-70`), so if migration 0022 changes that journal's page count, that one value moves. In that case this card names `data-controls-wire.json` too, regenerates it with TASK-014's targeted command (`FUNDEDFLOW_UPDATE_FIXTURES=1 cargo test --offline --locked --lib data_controls::wire_tests::native_data_control_outputs_match_portable_wire_fixture -- --exact`), and its diff must be limited to that one value (reviewed); any other diff in it stops the PR. `apps/desktop/src/test/fixtures/risk-promotion-wire.json` and `evidence-wire.json` (key stripped from risk inputs), `packages/domain/test/fixtures/engine-contract.json`, `engine-math.json`, `reconciliation.json`, `insights-metrics.json`, `test_csvimport/build17/normalization-v1.json` (also keep `FUNDEDFLOW_UPDATE_CSV_FIXTURES` unset, `csv_import/golden_tests.rs:12`). The fixture databases are not edited.
 - Upgrade gate: the first start of a build with this migration writes `fundedflow.db.before-v22.bak` (`db/mod.rs:244-247, 266-284`), a full copy covered by TASK-044's disclosure. TASK-034's owner run on the candidate exercises migration 0022 on a copy of the real journal; this card does not edit TASK-034's region (`db/upgrade_tests.rs:426-459`).
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: **TASK-043 Verified** (B2-1: "Must precede any new migration", 07 §A, §F.1; 08:93). TASK-009 r3 approved. Kyle's answers to the four rules (step 3). TASK-040 merged if approved.
+- Prerequisites: **TASK-043 Verified** (B2-1: "Must precede any new migration", 07 §A, §F.1; 08:93). TASK-009 r4 approved, including Kyle's explicit confirmation of decision 1 (without it, this card is not started). Kyle's answers to the four rules (step 3). TASK-040 merged if approved.
 - Blocks: TASK-029 (the candidate must contain the migration); TASK-034 owner run (exercises it).
 - Likely shared-file conflicts: `domain.rs` with TASK-019 (`realized_pnl`, `:410`); `store/trades.rs` with TASK-019; `docs/data-model.md` with TASK-004, TASK-015 and TASK-034; `command-wire.json` and `db/upgrade_tests.rs` with TASK-041 and TASK-034 (merge those first, then regenerate); `TradeDetailPage.tsx`, `TradeFormDialog.tsx`, `TradeLogView.tsx`, `LibraryView.tsx` with TASK-022 and TASK-024 (merge them first). Any other migration must be serialized after this one (0022, then 0023; 07 §D).
 
@@ -106,7 +106,7 @@ UPDATE trades SET fees_recorded = 0 WHERE fees_micros = 0;
 - [ ] After migrating the v3/v4/v8 fixtures, zero-fee trades are not recorded, positive-fee trades are recorded, and `updated_at`, `fees_micros` and `net_pnl_micros` are unchanged.
 - [ ] A calculation promoted before the migration reads `sources_unchanged == Some(true)` after it.
 - [ ] A version-21 archive still inspects and restores.
-- [ ] Only `command-wire.json` and `trade-contract.json` change among fixtures, each by the targeted command, and each diff is limited to `feesRecorded` (reviewed).
+- [ ] Only `command-wire.json` and `trade-contract.json` change among fixtures, each by the targeted command, and each diff is limited to `feesRecorded` (reviewed). Sole exception: if TASK-014 r5 has merged and migration 0022 changes the wire test journal's page count, `data-controls-wire.json` changes only in the `inspect_journal_archive` `requiredFreeBytes` value, regenerated by TASK-014's targeted command (see "Archive, wire and fixture knock-on").
 - [ ] Full root and Rust checks → exit 0.
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` **unset (not `0`)** for every check except the two targeted regeneration commands in step 7; never regenerate any other fixture.
 
@@ -133,6 +133,11 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Conflicts: dropped TASK-016 from the `domain.rs` conflict; it only cites `domain.rs:74-76` (independent review (review4), reviewer B nit).
 - Follow-ups: removed the TASK-029 dependency item, already done in TASK-029 r6 (independent review (review4), reviewer B nit).
 
+## Changes in r2
+- Prerequisites and source line: "TASK-009 r3 approved" → "TASK-009 r4 approved, including Kyle's explicit confirmation of decision 1"; TASK-009 r4 states that without that confirmation the r2 amendment stands and TASK-042/043 are not started (board review re-check 2026-10-22).
+- Archive, wire and fixture knock-on, step 7 and the fixture criterion: TASK-014 r5 makes `data-controls-wire.json`'s `inspect_journal_archive` `requiredFreeBytes` depend on the wire test journal's page count (`1090519040 + 2 × page_count × page_size`); if migration 0022 changes that page count, this card regenerates that one value with TASK-014's targeted command, and any other diff in that file still stops the PR (board review re-check 2026-10-22).
+
 ## Independent review notes
 Not yet reviewed. Created from the approved-task audit (TASK-009 MUST: the fee amendment needs storage and an owning task) and Kyle's 2026-10-22 decision. Open owner points: the legacy rule, the CSV rule, R-NET versus strict `—` totals, and the coverage-statement behaviour. Board and index follow-ups (not done here): add TASK-042 to 08 §A and the 09 waves (TASK-029 r6 already names it); update the "Performance-import fees show $0.00" roadmap card.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r1.
+Board review (2026-10-22, against main 92e7980): fixes folded in at r2. Independent re-check of r2: pending.
