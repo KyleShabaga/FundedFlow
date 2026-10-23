@@ -1,8 +1,8 @@
 //! B01: long/short classification and realized P&L through the CSV import
-//! pipeline, with hand-calculated expected values. All CSV values are synthetic
-//! except the MNQZ6 fill pair 707776451322 / 707776451331, copied from a real
-//! Performance export. Every expected value is a literal worked out by hand in
-//! the comment beside it; none is derived by calling the code under test.
+//! pipeline, with hand-calculated expected values. All CSV values are synthetic;
+//! the MNQZ6 fill pair 900000000021 / 900000000022 mirrors the Performance export's
+//! format (12-digit fill IDs, whole-number prices). Every expected value is a literal
+//! worked out by hand in the comment beside it; none is derived by calling the code under test.
 //!
 //! FundedFlow has no partial-close, scale-in, scale-out or reversal
 //! aggregation: each CSV row is one independent trade. A Performance row is one
@@ -21,9 +21,9 @@ const PERF_ROWS: [&str; 7] = [
     "MNQZ6,1001,1002,1,21000.00,21010.25,$20.50,10/20/2026 09:30:00,10/20/2026 09:31:00",
     // Line 3, long loss: buy first. (21015 − 21020.50) × 2 × 2 = −22.
     "MNQZ6,1011,1012,2,21020.50,21015.00,$(22.00),10/20/2026 09:40:00,10/20/2026 09:42:00",
-    // Line 4, short win (real export row): sold 07:31:23 before bought 07:31:26.
-    // (29555 − 29562) × 1 × 2 = −14, negated for short = +14.
-    "MNQZ6,707776451322,707776451331,1,29555,29562,$14.00,10/20/2026 07:31:26,10/20/2026 07:31:23",
+    // Line 4, short win (Performance-format row): sold 08:15:41 before bought 08:15:44.
+    // (21080 − 21089) × 1 × 2 = −18, negated for short = +18.
+    "MNQZ6,900000000021,900000000022,1,21080,21089,$18.00,10/20/2026 08:15:44,10/20/2026 08:15:41",
     // Line 5, short loss: sold 10:00 before bought 10:05. (21050.75 − 21045.25) × 1 × 2 = +11, negated = −11.
     "MNQZ6,1031,1032,1,21050.75,21045.25,$(11.00),10/20/2026 10:05:00,10/20/2026 10:00:00",
     // Line 6, short qty 3 win: sold first. (21000 − 21012.50) × 3 × 2 = −75, negated = +75.
@@ -84,7 +84,7 @@ fn b01_performance_rows_classify_direction_and_calculate_pnl() {
     // Performance exports have no fee column: fees "0", so net = gross.
     assert_eq!(seen(&p, 2), ("long", Some("buy_first"), "21000", Some("21010.25"), "0", Some("20.5"), "calculated"));
     assert_eq!(seen(&p, 3), ("long", Some("buy_first"), "21020.5", Some("21015"), "0", Some("-22"), "calculated"));
-    assert_eq!(seen(&p, 4), ("short", Some("sell_first"), "29562", Some("29555"), "0", Some("14"), "calculated"));
+    assert_eq!(seen(&p, 4), ("short", Some("sell_first"), "21089", Some("21080"), "0", Some("18"), "calculated"));
     assert_eq!(seen(&p, 5), ("short", Some("sell_first"), "21045.25", Some("21050.75"), "0", Some("-11"), "calculated"));
     assert_eq!(seen(&p, 6), ("short", Some("sell_first"), "21012.5", Some("21000"), "0", Some("75"), "calculated"));
     assert_eq!(seen(&p, 7), ("long", Some("same_time"), "21100", Some("21096.5"), "0", Some("-7"), "calculated"));
@@ -94,11 +94,11 @@ fn b01_performance_rows_classify_direction_and_calculate_pnl() {
     assert_eq!(row(&p, 6).trade.as_ref().unwrap().quantity, "3");
     assert_eq!(row(&p, 3).trade.as_ref().unwrap().quantity, "2");
 
-    // The real export row: entry = sell fill time, exit = buy fill time (07:31:23 / 07:31:26 EDT).
-    let real = row(&p, 4).trade.as_ref().unwrap();
-    assert_eq!((real.entry_at.as_str(), real.exit_at.as_deref()), ("2026-10-20T11:31:23.000Z", Some("2026-10-20T11:31:26.000Z")));
-    assert_eq!((real.buy_fill_id.as_deref(), real.sell_fill_id.as_deref()), (Some("707776451322"), Some("707776451331")));
-    assert_eq!(real.reported_pnl.as_deref(), Some("14"));
+    // The Performance-format row: entry = sell fill time, exit = buy fill time (08:15:41 / 08:15:44 EDT).
+    let short_row = row(&p, 4).trade.as_ref().unwrap();
+    assert_eq!((short_row.entry_at.as_str(), short_row.exit_at.as_deref()), ("2026-10-20T12:15:41.000Z", Some("2026-10-20T12:15:44.000Z")));
+    assert_eq!((short_row.buy_fill_id.as_deref(), short_row.sell_fill_id.as_deref()), (Some("900000000021"), Some("900000000022")));
+    assert_eq!(short_row.reported_pnl.as_deref(), Some("18"));
 
     // Buy-first and same-time rows carry no warnings; sell-first rows warn on soldTimestamp only, and
     // a matching exported pnl adds no realizedPnl warning.
@@ -185,14 +185,14 @@ fn b01_committed_trades_store_the_previewed_pnl_and_totals_exclude_unknowns() {
     // Performance: gross = net (fees 0). Same hand values as the preview test.
     assert_eq!(stored(by_sell_fill("1002")), ("long", Some("20.5"), "0", Some("20.5"), "calculated"));
     assert_eq!(stored(by_sell_fill("1012")), ("long", Some("-22"), "0", Some("-22"), "calculated"));
-    assert_eq!(stored(by_sell_fill("707776451331")), ("short", Some("14"), "0", Some("14"), "calculated"));
+    assert_eq!(stored(by_sell_fill("900000000022")), ("short", Some("18"), "0", Some("18"), "calculated"));
     assert_eq!(stored(by_sell_fill("1032")), ("short", Some("-11"), "0", Some("-11"), "calculated"));
     assert_eq!(stored(by_sell_fill("1042")), ("short", Some("75"), "0", Some("75"), "calculated"));
     assert_eq!(stored(by_sell_fill("1052")), ("long", Some("-7"), "0", Some("-7"), "calculated"));
     assert_eq!(stored(by_sell_fill("1062")), ("short", Some("20"), "0", Some("20"), "calculated"));
-    let real = by_sell_fill("707776451331");
-    assert_eq!((real.entry_price.as_str(), real.exit_price.as_deref()), ("29562", Some("29555")));
-    assert_eq!(real.round_trip.as_ref().unwrap().entry_basis, "sell_first");
+    let short_row = by_sell_fill("900000000022");
+    assert_eq!((short_row.entry_price.as_str(), short_row.exit_price.as_deref()), ("21089", Some("21080")));
+    assert_eq!(short_row.round_trip.as_ref().unwrap().entry_basis, "sell_first");
     assert_eq!(by_sell_fill("1062").reported_pnl.as_deref(), Some("25"), "the wrong export value is kept as source data");
 
     // Generic.
@@ -213,19 +213,19 @@ fn b01_committed_trades_store_the_previewed_pnl_and_totals_exclude_unknowns() {
     );
 
     // Hand totals over the 15 trades with a known result (T8 is excluded, not counted as 0):
-    //   Performance net = gross: 20.50 − 22 + 14 − 11 + 75 − 7 + 20 = 89.50; fees 0.
+    //   Performance net = gross: 20.50 − 22 + 18 − 11 + 75 − 7 + 20 = 93.50; fees 0.
     //   Generic gross: 350 − 275 + 550 − 175 + 19 + 0 + 10 + 10 = 489.
     //   Generic fees: 5 + 5 + 5 + 5 + 0.74 + 2.50 + 1 + 0 = 24.24 (T8's 0.50 excluded with its trade).
     //   Generic net: 345 − 280 + 545 − 180 + 18.26 − 2.50 + 9 + 10 = 464.76 (= 489 − 24.24).
-    //   All: gross 89.50 + 489 = 578.50; fees 24.24; net 89.50 + 464.76 = 554.26.
-    //   Wins (net > 0): 1002, 707776451331, 1042, 1062, T1, T3, T5, T7, T11 = 9.
+    //   All: gross 93.50 + 489 = 582.50; fees 24.24; net 93.50 + 464.76 = 558.26.
+    //   Wins (net > 0): 1002, 900000000022, 1042, 1062, T1, T3, T5, T7, T11 = 9.
     //   Losses (net < 0): 1012, 1032, 1052, T2, T4, T6 = 6. Breakevens 0. Win rate 9 / 15 = 60%.
 
     // Account totals used by the attempts view (`attempts::lineage`): SUM of stored net, unknowns counted apart.
     let lineage = attempts::lineage(&conn, &account).unwrap();
     assert_eq!(lineage.len(), 1);
     assert_eq!(lineage[0].trade_count, 16);
-    assert_eq!(lineage[0].net_pnl.as_deref(), Some("554.26"));
+    assert_eq!(lineage[0].net_pnl.as_deref(), Some("558.26"));
     assert_eq!(lineage[0].trades_with_unknown_pnl, 1);
 
     // Insights totals: the Rust mirror of the TypeScript summary, over the stored Insights dataset.
@@ -240,8 +240,8 @@ fn b01_committed_trades_store_the_previewed_pnl_and_totals_exclude_unknowns() {
     assert_eq!(s["unknownPnl"], 1);
     assert_eq!(s["unknownIds"], serde_json::json!([xyz.id]));
     assert_eq!(s["complete"], false);
-    assert_eq!(s["net"], serde_json::json!({ "state": "value", "value": "554.26" }));
-    assert_eq!(s["gross"], serde_json::json!({ "state": "value", "value": "578.5" }));
+    assert_eq!(s["net"], serde_json::json!({ "state": "value", "value": "558.26" }));
+    assert_eq!(s["gross"], serde_json::json!({ "state": "value", "value": "582.5" }));
     assert_eq!(s["fees"], serde_json::json!({ "state": "value", "value": "24.24" }));
     assert_eq!((s["wins"].clone(), s["losses"].clone(), s["breakevens"].clone()), (9.into(), 6.into(), 0.into()));
     assert_eq!(s["winRate"]["value"]["percent"], "60");
