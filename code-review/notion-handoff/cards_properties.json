@@ -1587,7 +1587,7 @@
  {
   "id": "037",
   "slug": "TASK-037-synthetic-performance-csv-fixture.md",
-  "sha256": "1ac1803895d336f20a815d69e41f48ec5441689a7d84ab967e79a75f4a185f30",
+  "sha256": "fb961a44e3802f1dbb3254e46973a4a2035f3739e5a6393761a03e2a3a62905e",
   "props": {
    "Name": "TASK-037 \u2014 Fix: replace the real `Performance.csv` export with a synthetic fixture and re-derive its tests",
    "Task ID": "TASK-037",
@@ -1601,15 +1601,15 @@
    "Roadmap Lane": "Unassigned (owner)",
    "Wave": "W0-Privacy",
    "Approval": "Pending Review",
-   "Spec Readiness": "Ready for Approval (r2)",
+   "Spec Readiness": "Ready for Approval (r3)",
    "Execution Status": "Not Started",
    "Finding Verification": "N/A (gate/decision)",
    "Release Blocking": "Yes",
    "Gate State": "N/A",
    "Source Card": "Notion draft TASK-037 r1 (https://app.notion.com/p/4011bd4b6bde815d8816fd1f5eb50263), created 2026-10-22 under TASK-002 r2 Option B (\"Yes APprove\"; Kyle: \"They are all real exports that I was using for testing\")",
-   "Specification Revision": "r2 \u00b7 sha256 1ac1803895d336f2",
-   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD a210808); cards a210808",
-   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-037 at spec r2 (sha256 1ac1803895d3), scope exactly as the card; prerequisites must be complete.",
+   "Specification Revision": "r3 \u00b7 sha256 fb961a44e3802f1d",
+   "Evidence Revision": "source 92e7980 (app source unchanged at HEAD a8615bb); cards a8615bb",
+   "Approval Scope": "PROPOSAL \u2014 NOT YET APPROVED: TASK-037 at spec r3 (sha256 fb961a44e380), scope exactly as the card; prerequisites must be complete.",
    "Effort": "M",
    "Risk": "Medium (fixture change can silently weaken coverage)",
    "Verification Platform": "Any OS (Rust CSV-import and store tests); Windows CI on the PR",
@@ -1621,7 +1621,7 @@
   "nits": [],
   "ready": true,
   "r3": true,
-  "rev": "r2",
+  "rev": "r3",
   "deps": [
    "002",
    "040"
