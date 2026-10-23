@@ -174,11 +174,19 @@ function PreviewDetails({ preview, isAccount }: { preview: PermanentDeletionPrev
         {!isAccount && preview.localRecoveryCopies > 0 && (
           <p className="dc-note">{preview.localRecoveryCopies} local recovery cop{preview.localRecoveryCopies === 1 ? "y" : "ies"} kept by FundedFlow will also be removed.</p>
         )}
+        {isAccount && preview.localRecoveryCopies > 0 && (
+          <p className="dc-note">
+            {preview.localRecoveryCopies} recovery cop{preview.localRecoveryCopies === 1 ? "y" : "ies"} kept by FundedFlow on this computer
+            (pre-upgrade database copies, pre-restore safety copies or leftover restore working files) may still contain this account's data.
+            Deleting the account doesn't change them; erasing the entire journal removes them.
+          </p>
+        )}
       </section>
       <InlineNotice tone="info" title="What stays">
         {isAccount
           ? "Other accounts and attempts, shared tags, strategies, firms and rulebooks shared with other accounts stay. "
           : ""}
+        {isAccount && preview.localRecoveryCopies > 0 ? "FundedFlow's recovery copies on this computer stay. " : ""}
         Archives or CSV files you exported yourself are not touched, wherever you saved them. This is not a forensic secure erase.
       </InlineNotice>
     </>
