@@ -8,15 +8,26 @@
 - **Proposed approval scope:** PROPOSAL — NOT YET APPROVED: TASK-044 at spec r3 (sha256 c0cd3bfe0e77), scope exactly as the card; prerequisites must be complete.
 
 ## Objective, trigger and why it matters
-**Objective / risk:** Kyle accepted V1 retention of recovery copies, including deleted-account data, on condition that it is disclosed (TASK-009 decision 4). Today the app says the opposite and the privacy notice is incomplete, so V1 would ship a misleading privacy statement.
+**Objective / risk:** Kyle accepted V1 retention of recovery copies, including deleted-account data, on condition that it is disclosed (TASK-009 decision 4). PR #107's privacy notice, which Kyle chose as the V1 legal text (2026-10-22), now discloses it. The deletion UI still says the opposite ("Deleting removes it for good"), so V1 would ship a screen that contradicts its own privacy notice.
 
-**Trigger / current behaviour:** Restore a full backup (this leaves a safety copy), or upgrade the app (this leaves a pre-upgrade copy); then delete one trading account. The account's trades, notes and screenshots remain in those copies, while the page said "Deleting removes it for good."
+**Trigger / current behaviour:** Restore a full backup (this leaves a safety copy), or upgrade the app (this leaves a pre-upgrade copy); then delete one trading account. The account's trades, notes and screenshots remain in those copies, while the page says "Deleting removes it for good."
 
-**Root cause / evidence (at source 92e7980):** - Account-deletion section: "Failing or archiving an account keeps its history. Deleting removes it for good." (`features/data-controls/components/DataControlsPage.tsx:201`).
-- The deletion dialog mentions recovery copies only for whole-journal erasure: `!isAccount && preview.localRecoveryCopies > 0` (`features/data-controls/components/DeletionDialog.tsx:165-167`). The account preview already carries the count, because `preview` enumerates the copies for both scopes (`src-tauri/src/data_controls/deletion.rs:139`). The "What stays" notice (`DeletionDialog.tsx:169-174`) does not mention them.
+**Root cause / evidence (at source 92e7980; PR #107 at c0a076e):** Checked against main 92e7980 and PR #107 head `c0a076e` (citations written `#107 <path>:<line>`).
+
+What #107 already delivers (the r2 privacy-notice objective and criteria):
+- Pre-upgrade copies: "Migration creates pre-upgrade database copies, retaining earlier copies when needed…" (`#107 apps/desktop/src/legal/privacy-notice.ts:36`).
+- Restore safety copies: "It keeps a pre-restore safety database and attachment copies under data-controls… There is no timed automatic expiry promised for recovery copies." (`#107 privacy-notice.ts:37`).
+- Deleted-account data stays, and how to remove the copies: "[Account deletion] leaves app-managed recovery copies intact. Whole-journal erasure … targets managed attachments, migration backups and data-controls recovery and working copies." (`#107 privacy-notice.ts:45`).
+- Not-encrypted statement covers recovery copies (`#107 privacy-notice.ts:22`).
+- Kyle approved this exact text at digest `8b83157f…1c392`, version `0.2.1-draft` (`#107 docs/privacy-product-verification.md:41`). So r2's conditional privacy-notice change, the (A)/(B) order, the version bump, the digest re-pin and the `coversCurrent` re-prompt criterion no longer apply: the notice must not be changed by this card.
+- The data page's "Automatic backups" row already names both kinds of copy (`#107 features/data-controls/components/DataControlsPage.tsx:138`), and the privacy summary says recovery copies have different deletion limits (`#107 apps/desktop/src/legal/index.ts:15`), which resolves r2's out-of-scope flag about "permanently delete your data".
+
+What remains (unchanged by #107):
+- Account-deletion section: "Failing or archiving an account keeps its history. Deleting removes it for good." (`features/data-controls/components/DataControlsPage.tsx:201`, the same line at #107).
+- The deletion dialog mentions recovery copies only for whole-journal erasure: `!isAccount && preview.localRecoveryCopies > 0` (`features/data-controls/components/DeletionDialog.tsx:165-167`, unchanged by #107). The account preview already carries the count, because `preview` enumerates the copies for both scopes (`src-tauri/src/data_controls/deletion.rs:139`). The "What stays" notice (`DeletionDialog.tsx:169-174`) does not mention them.
 - Rust already says it in the preview `warnings` ("Whole-journal erasure also removes app-managed recovery copies; account deletion leaves them intact.", `deletion.rs:234-236`), but the dialog does not render `warnings`, and those strings are pinned in `packages/domain/test/fixtures/data-controls-wire.json`.
-- Privacy notice "Backups" (`apps/desktop/src/legal/privacy-notice.ts:36-42`) mentions only the pre-upgrade copy; "Exporting, restoring and deleting" (`:43-48`) does not say that deletion leaves copies.
-- The copies, as enumerated by `recovery_copies` (`deletion.rs:93-131`): restore operation folders `data-controls/<uuid>/` (each holds `safety.db` and `safety-attachments/`, the journal and screenshots as they were before the restore; `src-tauri/src/data_controls/restore.rs:126`); pre-upgrade copies `fundedflow.db.before-v<N>.bak` and retained `….previous-<uuid>.bak` (`src-tauri/src/db/mod.rs:244-247, 266-284`); the work folder `data-controls-work/`. Whole-journal erasure removes them; account deletion does not.
+- Screen spec: `docs/design/screens/15-settings-data-controls.md:66-74` says only that whole-journal erasure "adds FundedFlow's recovery copies" (`:73-74`); unchanged by #107.
+- The copies, as enumerated by `recovery_copies` (`deletion.rs:93-131`): restore operation folders `data-controls/<uuid>/` (each holds `safety.db` and `safety-attachments/`; `src-tauri/src/data_controls/restore.rs:126`); pre-upgrade copies `fundedflow.db.before-v<N>.bak` and retained `….previous-<uuid>.bak` (`src-tauri/src/db/mod.rs:244-247, 266-284`); the work folder `data-controls-work/`. Whole-journal erasure removes them; account deletion does not.
 
 **Proposed result:** see Acceptance criteria in the full specification below.
 

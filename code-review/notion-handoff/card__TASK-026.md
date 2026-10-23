@@ -8,11 +8,22 @@
 - **Proposed approval scope:** PROPOSAL — NOT YET APPROVED: TASK-026 at spec r5 (sha256 2dcea616e11a), scope exactly as the card; prerequisites must be complete.
 
 ## Objective, trigger and why it matters
-**Objective / risk:** Uninstall text omits screenshots, restore safety copies, the legal record and the cleanup queue; docs do not say the installer needs internet when WebView2 is missing; workflow trigger/retention text is stale (`docs/build-26.75-evidence.md:63,70`; `README.md:72`).
+**Objective / risk:** Uninstall text omits screenshots, restore safety copies, the legal record and the cleanup queue, and does not say that uninstall is not the erasure control; docs do not say the installer needs internet when WebView2 is missing; workflow trigger/retention text is stale (`docs/build-26.75-evidence.md:63,70-71`; `README.md:72`). PR #107 (Kyle's V1 legal track, 2026-10-22) fixes the "nothing leaves the machine" claims but none of these.
 
 **Trigger / current behaviour:** Owner relies on docs during install/uninstall.
 
-**Root cause / evidence (at source 92e7980):** Docs drift.
+**Root cause / evidence (at source 92e7980; PR #107 at c0a076e):** Docs drift. Checked against PR #107 head `c0a076e` (citations written `#107 <path>:<line>`); #107 does not touch `docs/build-26.75-evidence.md`.
+
+What #107 already delivers (r4 objectives and criteria):
+- `README.md:85` "…and nothing leaves the machine" is replaced by "the packaged desktop app does not upload journal data. Installer downloads, external services, user sharing and cloud-synced folders have separate privacy implications; see the bundled privacy notice." (`#107 README.md:85`). This matches the approved privacy notice (`#107 apps/desktop/src/legal/privacy-notice.ts:28-30`), which deliberately does not promise that Windows or WebView2 make no requests (`:29`). r4 criterion 2 is met by #107; this card only checks it.
+- `src-tauri/tauri.conf.json:35` (`longDescription`, "nothing leaves the machine"), which r4 left to TASK-027 or a Triage card, now reads "the desktop app does not upload journal data" (`#107 src-tauri/tauri.conf.json:35`). No follow-up is needed.
+
+What remains (unchanged by #107):
+- `README.md:78`: "If WebView2 is missing, the installer downloads it from Microsoft once." (same line at #107). It does not say internet is needed or that the installed app then works offline.
+- `README.md:72`: triggers "pull requests that change `tauri.conf.json` or the workflow" and "kept for 30 days" (same line at #107). The workflow's PR paths are `release-installer.yml:11-21` at 92e7980 and `#107 .github/workflows/release-installer.yml:11-23` (#107 adds `LICENSE` and `apps/desktop/THIRD_PARTY_NOTICES.txt`, `:19-20`); retention is 3 days for pull requests and 30 otherwise (`release-installer.yml:116` at 92e7980; `#107 release-installer.yml:118`). TASK-027 rewrites the workflow again.
+- `docs/build-26.75-evidence.md:51-54` ("Uninstall and data"): names only the journal, its backups and the WebView2 profile, and says "Checked, both folders are removed." The approved privacy notice says "Uninstall is not the journal-erasure control: do not rely on it to remove per-user data, recovery files or exports." (`#107 privacy-notice.ts:46`), and the screen spec says packaged uninstall behaviour requires verification (`#107 docs/design/screens/16-first-run.md:42`).
+- `docs/build-26.75-evidence.md:63, 70-71`: the same stale trigger and retention facts.
+- Terminology outside 51-71: `docs/build-26.75-evidence.md:32` says "The user agreement is shown in the app (NA-3)"; #107 renames that document "License and product information" (`#107 apps/desktop/src/legal/user-agreement.ts:5`).
 
 **Proposed result:** see Acceptance criteria in the full specification below.
 

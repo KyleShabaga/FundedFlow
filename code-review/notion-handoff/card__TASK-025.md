@@ -8,11 +8,28 @@
 - **Proposed approval scope:** PROPOSAL — NOT YET APPROVED: TASK-025 at spec r6 (sha256 3c4a9c6650a7), scope exactly as the card; prerequisites must be complete.
 
 ## Objective, trigger and why it matters
-**Objective / risk:** Source ships `0.1.0-draft` documents and tests assert draft state; the first-run gate must present the owner-only v1.1 package.
+**Objective / risk:** Kyle chose PR #107's documents as the V1 legal text (2026-10-22). #107 replaces the `0.1.0-draft` placeholders with owner-approved content at `0.2.1-draft` and records the approved digests in a document (`#107 docs/privacy-product-verification.md:39-42`), but no test pins those digests: `#107 legal.test.ts:6-9` only checks that each digest matches its own text, and `:7` still tells the implementer to copy the printed digest. A later edit can change the approved text, re-hash it and pass every check. This card closes that gap after #107 merges and records, criterion by criterion, which #107 lines deliver the rest of ISSUE-039.
 
-**Trigger / current behaviour:** N/A (mandatory gate).
+**Trigger / current behaviour:** N/A (mandatory gate). With #107 merged: change one word in `privacy-notice.ts`, set its `digest` to the value the failing test prints, and `npm run test -w @fundedflow/desktop -- src/legal` passes.
 
-**Root cause / evidence (at source 92e7980):** Not yet integrated.
+**Root cause / evidence (at source 92e7980; PR #107 at c0a076e):** What #107 already delivers (each r5 objective or criterion, with the #107 line that satisfies it):
+- Owner-approved texts replace the drafts: `#107 apps/desktop/src/legal/privacy-notice.ts:3-66` and `#107 apps/desktop/src/legal/user-agreement.ts:3-53`; content approval recorded at `#107 docs/privacy-product-verification.md:35-44`.
+- Versions and digests: both `0.2.1-draft`, effective `2026-10-22` (`#107 privacy-notice.ts:6-7`, `#107 user-agreement.ts:6-7`); digests `8b83157f…1c392` (`#107 privacy-notice.ts:65`) and `96894603…8911a` (`#107 user-agreement.ts:52`) equal the approved values (`#107 docs/privacy-product-verification.md:41-42`). Self-consistency is tested (`#107 legal.test.ts:6-9`).
+- The `user-agreement` id is kept (`#107 user-agreement.ts:4`; `#107 legal.test.ts:13`); its title is "License and product information (draft)" (`#107 user-agreement.ts:5`).
+- `PRIVACY_SUMMARY` and `LICENSE_SUMMARY` rewritten (`#107 legal/index.ts:13-16, 21-28`): the "no internet connection" sentence (`legal/index.ts:13` at 92e7980) is gone, and the summary says the installer may download WebView2 (`#107 legal/index.ts:14`). The full MIT text is available in Settings (`#107 legal/index.ts:2, 19`; "Read the MIT License", `#107 features/legal/components/PrivacyLegalSection.tsx:38-41`).
+- Acknowledgment wording: "Acknowledge and continue" / "Close" and the explanatory line (`#107 features/legal/components/LegalGate.tsx:55-58, 76`); journey expectations updated (`#107 journeys/first-run.journey.test.tsx:57, 62-67, 236-243`).
+- Screen spec and design index: `#107 docs/design/screens/16-first-run.md:1-7, 19-29, 42, 88-90`; `#107 docs/design/README.md:40`.
+- Re-prompt: versions and digests change, so earlier records do not cover the new documents (`coversCurrent`, `#107 legal/index.ts:44-47`; `#107 docs/design/screens/16-first-run.md:90`).
+
+What r5 required that no longer applies:
+- The owner-only package texts, versions `1.0.1-owner-only`/`1.0.0-owner-only`, digests `ab5e539b…08ead`/`042bf1b9…a535a9a`, the "Short notices for the app" mapping and the archived v0.2 exclusion: superseded by the legal-track decision. They must not be integrated.
+- The version-regex fix: `0.2.1-draft` already matches `^\d+\.\d+\.\d+(-[0-9a-z.]+)?$` (`#107 legal.test.ts:15`).
+- Final-state (non-draft) assertions and removal of the draft banners: #107 keeps `draft: true` until release approval (`#107 privacy-notice.ts:8`, `#107 user-agreement.ts:8`, `#107 legal.test.ts:17-20`; `#107 docs/privacy-product-verification.md:44, 58`). See "Draft status" below.
+
+What remains (this card):
+- No literal pin of the approved digests (`#107 legal.test.ts:6-9` is self-consistency only).
+- `#107 legal.test.ts:7` still says "copy the digest from this failure into the document".
+- No literal assertion of the merged `PRIVACY_SUMMARY`/`LICENSE_SUMMARY` strings (the journey asserts a prefix regex, `#107 first-run.journey.test.tsx:57`, and the copyright line, `:240`). The summaries are not in the approved-digest table (`#107 docs/privacy-product-verification.md:39-42`).
 
 **Proposed result:** see Acceptance criteria in the full specification below.
 
