@@ -9,8 +9,9 @@ import { type ReactNode, useState } from "react";
 
 import {
   Badge, Button, Drawer, formatInstant, InlineNotice, MutationFeedback, StateBoundary, StatList, StatusIndicator, type StatusKind,
-  UnavailableState, useToast, zonedDay,
+  UnavailableState, useToast,
 } from "../../../design-system";
+import { useTradingDay } from "../../accounts/hooks/trading-day";
 import { useCurrentRisk, useLatestSnapshot, useSnapshotHistory } from "../../insights/hooks/insights";
 import type { SnapshotViewModel as Snapshot } from "../../insights/view-models/snapshot";
 import { useRulebookVersion } from "../../references/hooks/references";
@@ -49,17 +50,19 @@ function Recorded({ value, depth = 0 }: { value: unknown; depth?: number }): Rea
   );
 }
 
-function Freshness({ accountId, snapshot, timeZone }: { accountId: string; snapshot: Snapshot; timeZone: string }) {
+function Freshness({ accountId, snapshot }: { accountId: string; snapshot: Snapshot }) {
   const fresh = useCalculationFreshness(accountId, snapshot);
-  const today = zonedDay(new Date().toISOString(), timeZone);
-  const notToday = snapshot.tradingDay !== today;
+  // Today is Rust's trading day (zone, reset time, weekends), never the calendar day.
+  const today = useTradingDay(accountId);
+  const notToday = today.kind === "known" && snapshot.tradingDay !== today.day;
   return (
     <div className="rb-freshness" role="status">
       {fresh.data?.kind === "current" && <Badge tone="profit">Sources unchanged for its cutoff</Badge>}
       {fresh.data?.kind === "changed" && <Badge tone="warn">Sources changed since it was calculated</Badge>}
       {fresh.data === undefined && !fresh.error && <span className="ds-faint">Checking its sources…</span>}
       {fresh.error && <span className="ds-faint">Couldn't check its sources</span>}
-      {notToday && <Badge>Calculated for {snapshot.tradingDay}, not today ({today})</Badge>}
+      {notToday && <Badge>Calculated for {snapshot.tradingDay}, not today ({today.day})</Badge>}
+      {today.kind === "unknown" && <StatusIndicator status="unknown" variant="inline" label="Today's trading day unknown" detail="Couldn't check whether this calculation is for today" />}
     </div>
   );
 }
@@ -77,7 +80,7 @@ export function SnapshotExplanation({ snapshot, current, timeZone, accountId }: 
   const versionLabel = used.data ? `${used.data.rulebook.displayName} v${used.data.version.versionNumber} (${versionState(used.data).label})` : snapshot.rulebookVersionId ?? "None";
   return (
     <div className="rb-explain">
-      <Freshness accountId={accountId} snapshot={snapshot} timeZone={timeZone} />
+      <Freshness accountId={accountId} snapshot={snapshot} />
       {otherVersion && (
         <InlineNotice tone="warning" live="off" title="Calculated with a different rulebook version">
           This was calculated {snapshot.rulebookVersionId ? `with ${versionLabel}` : "without a rulebook"}; the account now uses

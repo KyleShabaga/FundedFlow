@@ -3,11 +3,26 @@
 // no second copy in component state or browser storage. Selection is by stable
 // account id. An archived or missing account is never silently replaced: the
 // hook reports it so the UI can ask the trader to choose again.
+import type { ToastInput } from "../../design-system";
 import { useAccounts } from "./hooks/accounts";
 import type { AccountViewModel } from "./view-models/account";
 import { useSetSetting, useSetting } from "../settings/hooks/settings";
 
 export const ACTIVE_ACCOUNT_SETTING = "accounts.active_account_id";
+
+/**
+ * A switch with no answer may have been saved. Settings have no review that releases the lock, so it lasts until
+ * FundedFlow restarts, and the toast never invites trying again now (TASK-024).
+ */
+export const UNCERTAIN_SWITCH: ToastInput = {
+  tone: "warning",
+  title: "The active account may have changed",
+  description: "No answer came back, so the active account may have changed. Switching is locked until you restart FundedFlow; check the active account after reopening it.",
+};
+/** The toast for a switch that didn't succeed: the site's own definite failure, unless no answer came back. */
+export function switchFailure(error: unknown, definite: ToastInput): ToastInput {
+  return (error as { category?: string } | null)?.category === "uncertain-outcome" ? UNCERTAIN_SWITCH : definite;
+}
 
 export type ActiveAccountState =
   /** Settings or accounts are still loading (or the runtime is starting). */

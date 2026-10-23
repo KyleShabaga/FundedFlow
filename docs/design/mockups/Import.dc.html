@@ -109,16 +109,16 @@ class Component extends DCLogic {
   renderVals() {
     var self = this, f = this.state.f;
     var all = [
-      { line: 2, st: 'new', sym: 'MNQZ6', side: 'Long', qty: 1, time: '07:47:48', entry: '29,774.25', exit: '29,787.25', file: '$26.00', net: 24.10, fills: '…450007 / …450023', note: '' },
-      { line: 3, st: 'dup', sym: 'MNQZ6', side: 'Long', qty: 1, time: '07:47:48', entry: '29,774.25', exit: '29,774.25', file: '$0.00', net: -1.90, fills: '…450007 / …450038', note: 'Same fill pair as a trade saved on Oct 19, 4:12 PM' },
-      { line: 4, st: 'new', sym: 'MNQZ6', side: 'Long', qty: 1, time: '07:47:48', entry: '29,774.25', exit: '29,774.25', file: '$0.00', net: -1.90, fills: '…450007 / …450046', note: 'Shares a buy fill with line 3; a different sell fill, so not a duplicate' },
-      { line: 5, st: 'new', sym: 'MNQZ6', side: 'Long', qty: 1, time: '07:50:01', entry: '29,761.25', exit: '29,769.50', file: '$16.50', net: 14.60, fills: '…450060 / …450069', note: '' },
-      { line: 6, st: 'restore', sym: 'MNQZ6', side: 'Long', qty: 1, time: '07:50:01', entry: '29,761.25', exit: '29,779.00', file: '$35.50', net: 33.60, fills: '…450060 / …450086', note: 'Matches a trade you deleted on Oct 20. Importing restores that original trade instead of adding a copy.' },
-      { line: 8, st: 'warn', sym: 'MNQZ6', side: 'Short', qty: 3, time: '07:52:38', entry: '29,733.25', exit: '29,728.25', file: '$30.00', net: 24.30, fills: '…450139 / …450114', note: 'Sell filled before buy, so imported as a short' },
-      { line: 9, st: 'warn', sym: 'MNQZ6', side: 'Short', qty: 3, time: '07:53:05', entry: '29,739.75', exit: '29,738.00', file: '$10.00', net: 4.80, fills: '…450168 / …450123', note: 'File P&L $10.00 differs from calculated $10.50; calculated value used' },
-      { line: 41, st: 'err', sym: 'MNQZ6', side: '—', qty: 0, time: '08:21:14', entry: '29,840.50', exit: '29,841.00', file: '$0.00', net: null, fills: '…450811 / …450830', note: 'qty: must be greater than 0' },
-      { line: 66, st: 'dup', sym: 'MNQZ6', side: 'Long', qty: 3, time: '08:40:18', entry: '29,799.00', exit: '29,805.00', file: '$36.00', net: 30.30, fills: '…451285 / …451304', note: 'Same fill pair as a trade saved on Oct 19, 4:12 PM' },
-      { line: 67, st: 'new', sym: 'MNQZ6', side: 'Long', qty: 3, time: '08:40:18', entry: '29,799.00', exit: '29,805.00', file: '$36.00', net: 30.30, fills: '…451294 / …451304', note: 'Shares a sell fill with line 66 but has its own buy fill, so it is a separate trade' }
+      { line: 2, st: 'new', sym: 'MNQZ6', side: 'Long', qty: 1, time: '09:31:05', entry: '21,004.25', exit: '21,010.75', file: '$13.00', net: 11.10, fills: '…000201 / …000202', note: '' },
+      { line: 3, st: 'dup', sym: 'MNQZ6', side: 'Long', qty: 1, time: '09:31:05', entry: '21,004.25', exit: '21,005.00', file: '$1.50', net: -0.40, fills: '…000201 / …000204', note: 'Same fill pair as a trade saved on Oct 19, 4:12 PM' },
+      { line: 4, st: 'new', sym: 'MNQZ6', side: 'Long', qty: 1, time: '09:31:05', entry: '21,004.25', exit: '21,004.75', file: '$1.00', net: -0.90, fills: '…000201 / …000206', note: 'Shares a buy fill with line 3; a different sell fill, so not a duplicate' },
+      { line: 5, st: 'new', sym: 'MNQZ6', side: 'Long', qty: 1, time: '09:36:42', entry: '21,012.50', exit: '21,021.00', file: '$17.00', net: 15.10, fills: '…000207 / …000208', note: '' },
+      { line: 6, st: 'restore', sym: 'MNQZ6', side: 'Long', qty: 1, time: '09:41:18', entry: '21,019.75', exit: '21,027.25', file: '$15.00', net: 13.10, fills: '…000209 / …000210', note: 'Matches a trade you deleted on Oct 20. Importing restores that original trade instead of adding a copy.' },
+      { line: 8, st: 'warn', sym: 'MNQZ6', side: 'Short', qty: 3, time: '09:47:09', entry: '21,031.50', exit: '21,028.75', file: '$16.50', net: 10.80, fills: '…000212 / …000211', note: 'Sell filled before buy, so imported as a short' },
+      { line: 9, st: 'warn', sym: 'MNQZ6', side: 'Short', qty: 3, time: '09:52:51', entry: '21,026.00', exit: '21,024.25', file: '$12.50', net: 4.80, fills: '…000214 / …000213', note: 'File P&L $12.50 differs from calculated $10.50; calculated value used' },
+      { line: 41, st: 'err', sym: 'MNQZ6', side: '—', qty: 0, time: '09:58:20', entry: '21,020.00', exit: '21,022.50', file: '$5.00', net: null, fills: '…000215 / …000216', note: 'qty: must be greater than 0' },
+      { line: 66, st: 'dup', sym: 'MNQZ6', side: 'Long', qty: 3, time: '13:41:07', entry: '21,008.75', exit: '21,011.75', file: '$18.00', net: 12.30, fills: '…000217 / …000218', note: 'Same fill pair as a trade saved on Oct 19, 4:12 PM' },
+      { line: 67, st: 'new', sym: 'MNQZ6', side: 'Long', qty: 3, time: '13:41:52', entry: '21,008.00', exit: '21,011.75', file: '$22.50', net: 16.80, fills: '…000219 / …000218', note: 'Shares a sell fill with line 66 but has its own buy fill, so it is a separate trade' }
     ];
     var meta = {
       new: ['New', 'badge b-profit', ''], restore: ['Restore', 'badge b-flow', 'flowc'], dup: ['Duplicate', 'badge b-neutral', 'faint'],

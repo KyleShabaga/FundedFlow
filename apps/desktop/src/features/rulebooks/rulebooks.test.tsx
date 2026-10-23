@@ -10,6 +10,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import type { RuntimeState } from "../../app/RuntimeProvider";
 import { ToastProvider } from "../../design-system";
+import { boundary, freshnessRow, resetBoundaries } from "../../test/boundaries";
 import { warmUp } from "../../test/warm-up";
 import { makeAccount } from "../accounts/test-store";
 import { RulebookPage } from "./components/RulebookPage";
@@ -20,6 +21,8 @@ const runtime = vi.hoisted(() => ({ state: { kind: "ready" } as unknown as Runti
 const holder = vi.hoisted(() => ({ store: null as unknown as ReturnType<typeof createRulebookStore> }));
 vi.mock("../../app/RuntimeProvider", () => ({ useRuntime: () => runtime }));
 vi.mock("../../lib/data/api", () => ({ get repository() { return holder.store.repository; } }));
+// TASK-021: today's trading day comes from Rust (`list_account_freshness`), answered here from fixed rows.
+vi.mock("../../lib/data/freshness", async importOriginal => ({ ...(await importOriginal<object>()), freshnessGateway: (await import("../../test/boundaries")).freshnessGatewayMock }));
 
 beforeAll(() => {
   Element.prototype.scrollIntoView ??= () => {};
@@ -60,6 +63,9 @@ function fresh() {
   runtime.check.mockReset().mockResolvedValue(undefined);
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
   holder.store = createRulebookStore([makeAccount({ id: A, name: "Eval A", propFirm: "Example" }), makeAccount({ id: B, name: "Eval B" })]);
+  // Wednesday 2026-10-21 is each account's trading day until the 17:00 New York reset (fixed rows; Rust computes them).
+  resetBoundaries();
+  boundary.freshness.table = [{ from: "2000-01-01T00:00:00.000Z", answer: [A, B].map(id => freshnessRow(id, "2026-10-21", "2026-10-21T21:00:00.000Z")) }];
   try { sessionStorage.clear(); } catch { /* jsdom always has it */ }
 }
 beforeEach(fresh);

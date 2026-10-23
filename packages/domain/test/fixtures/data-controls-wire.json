@@ -159,7 +159,7 @@
         "trades": 0
       },
       "requiredConfirmation": "REPLACE ENTIRE JOURNAL",
-      "requiredFreeBytes": 1090519040,
+      "requiredFreeBytes": 1092730880,
       "state": "validated",
       "warnings": [
         "Plaintext archive; hashes are integrity checks, not authentication.",
@@ -344,6 +344,14 @@
     "output": {
       "code": "stale_preview",
       "message": "Data changed after the preview. Inspect again before confirming."
+    }
+  },
+  {
+    "command": "error",
+    "output": {
+      "code": "limit_exceeded",
+      "detail": "database pages: 70254592 bytes, limit 67108864 bytes",
+      "message": "The operation exceeds the supported data limits."
     }
   }
 ]

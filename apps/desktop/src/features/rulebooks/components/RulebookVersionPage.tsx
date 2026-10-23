@@ -11,6 +11,7 @@ import {
   StatList, TabPanel, Tabs, Textarea, TextField, UnavailableState, useToast, ValidationSummary,
 } from "../../../design-system";
 import { useRulebookVersion } from "../../references/hooks/references";
+import { useLeave } from "../../shared/hooks/use-leave-guard";
 import { retryRead, toAsyncState, toMutationState } from "../../shared/presentation";
 import { useDiscardRulebookDraft, usePublishIssues, usePublishRulebookVersion, useSaveRulebookDraft } from "../hooks/rulebooks";
 import { compareVersions, type ComparableVersion } from "../view-models/compare";
@@ -307,6 +308,7 @@ function VersionView({ d, ctx }: { d: RulebookVersionDetail; ctx: AccountRuleboo
   const [starting, setStarting] = useState(false);
   const [assigning, setAssigning] = useState<RulebookVersionDetail | null>(null);
   useLeaveGuard(dirty, setLeaveTo);
+  const leave = useLeave();
   const state = versionState(d);
   const candidates = useMemo(() => assignableVersions([d, ...(ctx.currentVersion.data ? [ctx.currentVersion.data] : [])], account.id), [d, ctx.currentVersion.data, account.id]);
   const back = `/accounts/${encodeURIComponent(account.id)}/rulebook`;
@@ -358,7 +360,7 @@ function VersionView({ d, ctx }: { d: RulebookVersionDetail; ctx: AccountRuleboo
         <TabPanel value="details"><VersionFacts d={d} ctx={ctx} /></TabPanel>
       </Tabs>
       <ConfirmDialog open={leaveTo !== null} onOpenChange={o => !o && setLeaveTo(null)} tone="neutral" title="Leave without saving?"
-        confirmLabel="Leave" onConfirm={async () => { const to = leaveTo!; setDirty(false); setLeaveTo(null); navigate(to); }}>
+        confirmLabel="Leave" onConfirm={async () => { const to = leaveTo!; setDirty(false); setLeaveTo(null); leave(to); }}>
         Your edits aren't saved. They are kept in this window and offered back when you reopen this draft.
       </ConfirmDialog>
       {starting && <StartDraftDialog open onOpenChange={setStarting} account={account} source={d} privateRulebook={ctx.privateRulebook}

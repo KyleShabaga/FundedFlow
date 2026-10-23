@@ -32,7 +32,7 @@ import {
 import { CalculateNow } from "../../rulebooks/components/CalculationExplanation";
 import { retryRead, toAsyncState } from "../../shared/presentation";
 import { useCheckTime } from "../../today/hooks/today";
-import { useActiveAccount } from "../active-account";
+import { switchFailure, useActiveAccount } from "../active-account";
 import { PROP_ACCOUNT_TYPES } from "../setup";
 import { useAccount, useAccountHistory, useAccountLineage } from "../hooks/accounts";
 import { useAccountOverview } from "../hooks/overview";
@@ -254,7 +254,7 @@ export function AccountDetailPage() {
   const showToday = (a: AccountViewModel) => {
     active.select(a.id)
       .then(() => navigate("/"))
-      .catch(() => toast.show({ tone: "error", title: "The account wasn't switched", description: "Try again when local data is available." }));
+      .catch(error => toast.show(switchFailure(error, { tone: "error", title: "The account wasn't switched", description: "Try again when local data is available." })));
   };
 
   return (

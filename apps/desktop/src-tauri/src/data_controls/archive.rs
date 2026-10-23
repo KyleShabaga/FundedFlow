@@ -1,4 +1,4 @@
-use super::{Attachment, Code, Counts, Result, fail, filesystem::*};
+use super::{Attachment, Code, Counts, Result, fail, filesystem::*, over_limit};
 use crate::db;
 use rusqlite::{Connection, OpenFlags, types::ValueRef};
 use serde::{Deserialize, Serialize};
@@ -65,35 +65,117 @@ pub struct Table {
     pub rowids: Vec<Option<String>>,
 }
 pub type Data = BTreeMap<String, Table>;
-fn quote(name: &str) -> String {
+pub(super) fn quote(name: &str) -> String {
     format!("\"{}\"", name.replace('"', "\"\""))
+}
+/// Whether a schema object is one of SQLite's own, which archive checks skip. Any other object whose name
+/// starts with `sqlite` (in any case) could hide from those checks, so it fails validation.
+fn internal(kind: &str, name: &str, sql_is_null: bool) -> Result<bool> {
+    if !name.get(..6).is_some_and(|p| p.eq_ignore_ascii_case("sqlite")) {
+        return Ok(false);
+    }
+    let allowed = match kind {
+        "table" => matches!(name, "sqlite_sequence" | "sqlite_stat1" | "sqlite_stat4"),
+        "index" => name.starts_with("sqlite_autoindex_") && sql_is_null,
+        _ => false,
+    };
+    if allowed { Ok(true) } else { Err(fail(Code::Integrity)) }
+}
+/// The journal's own tables in `dump` order, each with whether it is `WITHOUT ROWID`. `dump`, `counts` and
+/// `content_hash` all enumerate through this, so the internal-object allow-list applies to each of them.
+fn tables(conn: &Connection) -> Result<Vec<(String, bool)>> {
+    let mut stmt = conn.prepare(
+        "SELECT name,sql IS NULL,instr(upper(coalesce(sql,'')),'WITHOUT ROWID')>0 FROM sqlite_schema WHERE type='table' ORDER BY name",
+    )?;
+    let mut tables = Vec::new();
+    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?, r.get::<_, bool>(2)?)))? {
+        let (name, sql_is_null, without) = row?;
+        if !internal("table", &name, sql_is_null)? {
+            tables.push((name, without));
+        }
+    }
+    Ok(tables)
+}
+/// Rows per table, as `dump` reports them, counted without reading the rows or applying archive caps.
+pub fn counts(conn: &Connection) -> Result<Counts> {
+    tables(conn)?
+        .into_iter()
+        .map(|(name, _)| {
+            let count: i64 =
+                conn.query_row(&format!("SELECT count(*) FROM {}", quote(&name)), [], |r| r.get(0))?;
+            Ok((name, count as u64))
+        })
+        .collect()
+}
+/// SHA-256 of everything `dump` covers (same tables, rows, rowids and order), streamed and uncapped. The
+/// input is framed so no two contents share it: a domain tag; per table its name and column names; per row
+/// a rowid-or-none marker; per cell a type tag and a length-prefixed value.
+pub fn content_hash(conn: &Connection) -> Result<String> {
+    use sha2::{Digest, Sha256};
+    fn put(hash: &mut Sha256, tag: u8, bytes: &[u8]) {
+        hash.update([tag]);
+        hash.update((bytes.len() as u64).to_le_bytes());
+        hash.update(bytes);
+    }
+    let mut hash = Sha256::new();
+    hash.update(b"live-content-v1\0");
+    for (name, without) in tables(conn)? {
+        let (sql, skip) = if without {
+            (format!("SELECT * FROM {} ORDER BY 1,2", quote(&name)), 0)
+        } else {
+            (format!("SELECT rowid,* FROM {} ORDER BY rowid", quote(&name)), 1)
+        };
+        let mut stmt = conn.prepare(&sql)?;
+        let width = stmt.column_count() - skip;
+        put(&mut hash, b'T', name.as_bytes());
+        hash.update((width as u64).to_le_bytes());
+        for column in &stmt.column_names()[skip..] {
+            put(&mut hash, b'C', column.as_bytes());
+        }
+        let mut rows = stmt.query([])?;
+        while let Some(row) = rows.next()? {
+            if without {
+                hash.update([b'R', 0]);
+            } else {
+                hash.update([b'R', 1]);
+                hash.update(row.get::<_, i64>(0)?.to_le_bytes());
+            }
+            for i in skip..skip + width {
+                match row.get_ref(i)? {
+                    ValueRef::Null => put(&mut hash, b'N', &[]),
+                    ValueRef::Integer(v) => put(&mut hash, b'I', &v.to_le_bytes()),
+                    ValueRef::Real(v) => put(&mut hash, b'F', &v.to_bits().to_le_bytes()),
+                    ValueRef::Text(v) => {
+                        std::str::from_utf8(v).map_err(|_| fail(Code::Integrity))?;
+                        put(&mut hash, b'S', v)
+                    }
+                    ValueRef::Blob(v) => put(&mut hash, b'B', v),
+                }
+            }
+        }
+    }
+    Ok(format!("{:x}", hash.finalize()))
 }
 pub fn dump(conn: &Connection) -> Result<Data> {
     let pages: i64 = conn.pragma_query_value(None, "page_count", |r| r.get(0))?;
+    let free: i64 = conn.pragma_query_value(None, "freelist_count", |r| r.get(0))?;
     let page_size: i64 = conn.pragma_query_value(None, "page_size", |r| r.get(0))?;
-    if pages.saturating_mul(page_size) > MAX_ENTRY as i64 {
-        return Err(fail(Code::LimitExceeded));
+    // Free pages hold no data (archive snapshots are vacuumed), so only pages in use count.
+    let used = pages.saturating_sub(free).saturating_mul(page_size).max(0) as u64;
+    if used > MAX_ENTRY {
+        return Err(over_limit("database pages", used, MAX_ENTRY, "bytes"));
     }
-    let mut stmt = conn.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")?;
-    let tables = stmt
-        .query_map([], |r| r.get::<_, String>(0))?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
     let mut data = BTreeMap::new();
     let mut total = 0u64;
-    for name in tables {
+    for (name, without) in tables(conn)? {
         let count: i64 =
             conn.query_row(&format!("SELECT count(*) FROM {}", quote(&name)), [], |r| {
                 r.get(0)
             })?;
         total += count as u64;
         if total > 500_000 {
-            return Err(fail(Code::LimitExceeded));
+            return Err(over_limit("rows", total, 500_000, ""));
         }
-        let without: bool = conn.query_row(
-            "SELECT instr(upper(sql),'WITHOUT ROWID')>0 FROM sqlite_schema WHERE name=?1",
-            [&name],
-            |r| r.get(0),
-        )?;
         let order = if without { "1,2" } else { "rowid" };
         let mut stmt = conn.prepare(&format!("SELECT * FROM {} ORDER BY {order}", quote(&name)))?;
         let rowids: Vec<Option<String>> = if without {
@@ -171,7 +253,15 @@ pub fn inventory(conn: &Connection, root: &Path) -> Result<Vec<Attachment>> {
     }
     Ok(list)
 }
+/// A compacted copy of the journal for an archive, refused over the archive entry cap.
 pub fn snapshot(conn: &Connection, destination: &Path) -> Result<()> {
+    snapshot_capped(conn, destination, Some(MAX_ENTRY))
+}
+/// The local pre-restore safety copy. It never enters an archive, so the entry cap does not apply.
+pub fn local_snapshot(conn: &Connection, destination: &Path) -> Result<()> {
+    snapshot_capped(conn, destination, None)
+}
+fn snapshot_capped(conn: &Connection, destination: &Path, cap: Option<u64>) -> Result<()> {
     if destination.exists() {
         return Err(fail(Code::UnsafePath));
     }
@@ -182,6 +272,8 @@ pub fn snapshot(conn: &Connection, destination: &Path) -> Result<()> {
     }
     drop(backup);
     target.pragma_update(None, "journal_mode", "DELETE")?;
+    // The backup copies free pages too. Compact the copy, never the live journal.
+    target.execute_batch("VACUUM")?;
     drop(target);
     #[cfg(unix)]
     {
@@ -193,8 +285,9 @@ pub fn snapshot(conn: &Connection, destination: &Path) -> Result<()> {
         .write(true)
         .open(destination)?
         .sync_all()?;
-    if fs::metadata(destination)?.len() > MAX_ENTRY {
-        return Err(fail(Code::LimitExceeded));
+    let bytes = fs::metadata(destination)?.len();
+    if let Some(cap) = cap.filter(|cap| bytes > *cap) {
+        return Err(over_limit("database pages", bytes, cap, "bytes"));
     }
     Ok(())
 }
@@ -237,7 +330,7 @@ pub fn export(
     let data = dump(&c)?;
     let bytes = serde_json::to_vec(&data)?;
     if bytes.len() as u64 > MAX_ENTRY {
-        return Err(fail(Code::LimitExceeded));
+        return Err(over_limit("data.json", bytes.len() as u64, MAX_ENTRY, "bytes"));
     }
     let data_path = temp.path().join("data.json");
     write_new(&data_path, &bytes)?;
@@ -256,7 +349,7 @@ pub fn export(
         ));
     }
     if files.len() + 1 > MAX_ENTRIES {
-        return Err(fail(Code::LimitExceeded));
+        return Err(over_limit("archive entries", (files.len() + 1) as u64, MAX_ENTRIES as u64, ""));
     }
     let entries = files
         .iter()
@@ -268,8 +361,9 @@ pub fn export(
             })
         })
         .collect::<Result<Vec<_>>>()?;
-    if entries.iter().map(|e| e.bytes).sum::<u64>() > MAX_TOTAL {
-        return Err(fail(Code::LimitExceeded));
+    let total: u64 = entries.iter().map(|e| e.bytes).sum();
+    if total > MAX_TOTAL {
+        return Err(over_limit("total archive", total, MAX_TOTAL, "bytes"));
     }
     let manifest = ArchiveManifest {
         format: FORMAT.into(),
@@ -340,11 +434,15 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
     }
     use std::io::Seek;
     input.rewind()?;
-    if input.metadata()?.len() > MAX_TOTAL + 2 * 1024 * 1024 {
-        return Err(fail(Code::LimitExceeded));
+    let size = input.metadata()?.len();
+    if size > MAX_TOTAL + 2 * 1024 * 1024 {
+        return Err(over_limit("total archive", size, MAX_TOTAL + 2 * 1024 * 1024, "bytes"));
     }
     let mut zip = ZipArchive::new(input)?;
-    if zip.len() > MAX_ENTRIES || zip.len() < 4 {
+    if zip.len() > MAX_ENTRIES {
+        return Err(over_limit("archive entries", zip.len() as u64, MAX_ENTRIES as u64, ""));
+    }
+    if zip.len() < 4 {
         return Err(fail(Code::LimitExceeded));
     }
     let dir = tempfile::tempdir_in(workspace)?;
@@ -374,8 +472,13 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
         total = total
             .checked_add(entry.size())
             .ok_or_else(|| fail(Code::LimitExceeded))?;
-        if entry.size() > limit || total > MAX_TOTAL {
-            return Err(fail(Code::LimitExceeded));
+        if entry.size() > limit {
+            // Archive entry names are not echoed: only fixed component names reach the UI.
+            let component = if name == "manifest.json" { "manifest.json" } else { "archive entry" };
+            return Err(over_limit(component, entry.size(), limit, "bytes"));
+        }
+        if total > MAX_TOTAL {
+            return Err(over_limit("total archive", total, MAX_TOTAL, "bytes"));
         }
         // Never extract symlink/link metadata. Only explicit fresh regular files are written.
         let mut bytes = Vec::new();
@@ -463,15 +566,20 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
     })
 }
 fn schema(conn: &Connection) -> Result<Vec<(String, String, String)>> {
-    let mut s = conn.prepare("SELECT type,name,sql FROM sqlite_schema WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY type,name")?;
-    Ok(s.query_map([], |r| {
-        Ok((
-            r.get(0)?,
-            r.get(1)?,
-            r.get::<_, String>(2)?.replace("\r\n", "\n"),
-        ))
-    })?
-    .collect::<rusqlite::Result<_>>()?)
+    let mut s = conn.prepare("SELECT type,name,sql FROM sqlite_schema ORDER BY type,name")?;
+    let mut objects = Vec::new();
+    for row in s.query_map([], |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, Option<String>>(2)?))
+    })? {
+        let (kind, name, sql) = row?;
+        if internal(&kind, &name, sql.is_none())? {
+            continue;
+        }
+        if let Some(sql) = sql {
+            objects.push((kind, name, sql.replace("\r\n", "\n")));
+        }
+    }
+    Ok(objects)
 }
 pub fn validate_database(path: &Path, version: u32) -> Result<()> {
     let c = readonly(path)?;
@@ -607,8 +715,9 @@ pub fn export_csv(
             );
         }
         writer.write_record(cells).map_err(|_| fail(Code::Io))?;
-        if writer.get_ref().metadata()?.len() > MAX_ENTRY {
-            return Err(fail(Code::LimitExceeded));
+        let bytes = writer.get_ref().metadata()?.len();
+        if bytes > MAX_ENTRY {
+            return Err(over_limit("trades.csv", bytes, MAX_ENTRY, "bytes"));
         }
     }
     writer.flush()?;

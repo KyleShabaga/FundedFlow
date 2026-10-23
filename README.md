@@ -115,7 +115,7 @@ block import; historical imports within a non-active attempt require confirmatio
 preview digest and rejects changed inputs, account settings, lineage or dedup state. See the
 [exact-attempt handoff](docs/handoffs/build-18-exact-import-attempts.md) for policy and acceptance evidence.
 
-Full rules, field mappings and known limitations: [`docs/data-model.md#csv-import`](docs/data-model.md#csv-import). The test fixture `test_csvimport/Performance.csv` is read by the Rust tests and must stay unedited.
+Full rules, field mappings and known limitations: [`docs/data-model.md#csv-import`](docs/data-model.md#csv-import). The test fixture `test_csvimport/Performance.csv` is synthetic data in the broker Performance export format (generation rules in [`docs/architecture/build-17-csv-backend.md`](docs/architecture/build-17-csv-backend.md)). The Rust tests read it; it changes only through an approved roadmap card.
 
 ## Tests
 
@@ -146,7 +146,7 @@ audit is reported as **not run** (a warning annotation and a line in the job sum
 the job still passes, so an outage can't block code checks or merges; on the scheduled and manual
 (`workflow_dispatch`) runs it fails.
 
-`cargo test` covers schema, repositories, CSV import (including the `Performance.csv` fixture) and the golden parity fixtures in `packages/domain/test/fixtures`, which Vitest runs too. After an intentional Rust change, regenerate the expected outputs with `$env:FUNDEDFLOW_UPDATE_FIXTURES=1; cargo test --lib parity` and review the diff.
+`cargo test` covers schema, repositories, CSV import (including the synthetic `Performance.csv` fixture) and the golden parity fixtures in `packages/domain/test/fixtures`, which Vitest runs too. After an intentional Rust change, regenerate the expected outputs with `$env:FUNDEDFLOW_UPDATE_FIXTURES=1; cargo test --lib parity` and review the diff.
 
 ## License and ownership
 

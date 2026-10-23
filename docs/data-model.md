@@ -13,11 +13,15 @@ Everything is local. There is no network access, account system, sync or secret 
   Imported trades keep their immutable original CSV row (`import_rows`) and, for paired-fill exports, the
   immutable source fill pair (`trade_round_trips`). There is no executions ledger; trades cannot be recomputed
   from raw executions.
-- **Rust is authoritative for calculations.** Validation, trading day, instrument lookup and realized P&L are
+- **Authority for calculations is split (TASK-003, Option A).** Rust is authoritative for inputs, trade
+  economics, trading days and persistence: validation, trading day, instrument lookup and realized P&L are
   computed in `src-tauri/src/domain.rs` and stored. The Zod schemas in `packages/domain/src/contracts` mirror the
-  input rules for early feedback but never compute stored values. A calculation moves to TypeScript (e.g. a
-  shared `packages/domain`) only together with parity tests that run the same cases against both
-  implementations and prove identical results; see [`architecture/packages.md`](architecture/packages.md).
+  input rules for early feedback but never compute those values. The TypeScript risk engine
+  (`packages/domain/src/engine`, Build 16) is authoritative for risk verdicts: it computes the status and figures
+  stored in risk snapshots, and Rust checks that a stored result is consistent and that its sources are unchanged
+  before promoting it, without recomputing it (`src-tauri/src/store/risk_promotion.rs`). Any other calculation
+  moves to TypeScript only together with parity tests that run the same cases against both implementations and
+  prove identical results; see [`architecture/packages.md`](architecture/packages.md).
 - **SQLite is authoritative for persistence.** Every write goes through the [repository port](#repository-port),
   a Tauri command and one SQLite transaction.
 
@@ -566,10 +570,10 @@ The tests check:
 - reopening is a no-op;
 - a failure in step 5 leaves the journal at version 4.
 
-To try a copy of your own journal (read-only on the source), run this under `apps/desktop/src-tauri`:
+To try a copy of your own journal, close FundedFlow and copy its journal folder (`fundedflow.db` and any `-wal`/`-shm`) somewhere offline. Point `FUNDEDFLOW_UPGRADE_DB` at that copy, never at the live `%APPDATA%` journal, and run this under `apps/desktop/src-tauri`. The test copies the file again into a temp folder, refuses while its `fundedflow.lock` is held, and prints counts only (failures included), so `--nocapture` only adds the counts:
 
 ```
-FUNDEDFLOW_UPGRADE_DB=%APPDATA%\com.fundedflow.desktop\fundedflow.db cargo test --lib upgrade_copy -- --ignored --nocapture
+FUNDEDFLOW_UPGRADE_DB=<copy folder>\fundedflow.db cargo test --offline --locked --lib upgrade_copy -- --ignored
 ```
 
 ## Repository port

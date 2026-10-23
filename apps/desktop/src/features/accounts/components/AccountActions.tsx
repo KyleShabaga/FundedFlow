@@ -8,7 +8,7 @@ import { statusLabels } from "@fundedflow/domain";
 
 import { type MenuEntry, useToast } from "../../../design-system";
 import { DeletionDialog } from "../../data-controls/components/DeletionDialog";
-import { useActiveAccount } from "../active-account";
+import { switchFailure, useActiveAccount } from "../active-account";
 import type { AccountViewModel } from "../view-models/account";
 import { AccountFormDialog } from "./AccountFormDialog";
 import { ArchiveDialog, ResetDialog, RestoreDialog, StatusDialog } from "./LifecycleDialogs";
@@ -34,7 +34,7 @@ export function useAccountDialogs() {
     active
       .select(account.id)
       .then(() => toast.show({ tone: "success", title: `${account.name} is the active account` }))
-      .catch(() => toast.show({ tone: "error", title: "The active account wasn't changed", description: "Try again when local data is available." }));
+      .catch(error => toast.show(switchFailure(error, { tone: "error", title: "The active account wasn't changed", description: "Try again when local data is available." })));
 
   const element = dialog && (
     <>

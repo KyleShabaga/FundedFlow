@@ -18,13 +18,13 @@ import {
   RadioGroup,
   Select,
   StatList,
+  StatusIndicator,
   Stepper,
   Textarea,
   TextField,
   useToast,
   ValidationSummary,
   type ValidationIssue,
-  zonedDay,
   zonedWallTime,
   zonedWallTimeToInstant,
 } from "../../../design-system";
@@ -35,6 +35,7 @@ import { useFeatureQuery } from "../../shared/hooks/use-feature-query";
 import { fieldErrors, toMutationState } from "../../shared/presentation";
 import { featureKeys } from "../../shared/query-keys";
 import { useArchiveAccount, useChangeAccountStatus, useRestoreAccount, useResetAccountAttempt } from "../hooks/accounts";
+import { useTradingDayAt } from "../hooks/trading-day";
 import type { AccountViewModel } from "../view-models/account";
 import { AccountWriteReview } from "./AccountWriteReview";
 import { accountLabel } from "./presentation";
@@ -147,6 +148,11 @@ function StatusDialogBody({ account, initialStatus, open, onOpenChange }: Status
 
 /* ---------- Archive and restore ---------- */
 
+// TASK-024: an archive or restore with no answer may have been saved. An account that shows as archived offers no review
+// (its menu has no Edit, Change status or Start new attempt), so its lock lasts until FundedFlow restarts.
+const isUncertain = (error: unknown) => (error as { category?: string } | null)?.category === "uncertain-outcome";
+const LOCKED_UNTIL_RESTART = "Archiving and restoring this account are locked until you restart FundedFlow; check the account after reopening it.";
+
 export function ArchiveDialog({ account, open, onOpenChange, onArchived }: { account: AccountViewModel; open: boolean; onOpenChange: (open: boolean) => void; onArchived?: () => void }) {
   const archive = useArchiveAccount(account.id);
   const toast = useToast();
@@ -163,7 +169,13 @@ export function ArchiveDialog({ account, open, onOpenChange, onArchived }: { acc
         toast.show({ tone: "success", title: `${account.name} archived`, description: "Find it under the Archived filter." });
         onArchived?.();
       }}
-      describeError={() => "It wasn't archived. Check the account and try again."}
+      describeError={error => (!isUncertain(error)
+        ? "It wasn't archived. Check the account and try again."
+        : account.archivedAt !== null
+          ? `No answer came back, so it may have been archived. ${LOCKED_UNTIL_RESTART} Nothing is sent again.`
+          : "No answer came back, so it may have been archived. Close this and check the account; archived accounts are under the Archived filter. "
+            + "If it is archived, archiving and restoring it are locked until you restart FundedFlow; check it again after reopening. "
+            + "If it isn't, its Edit, Change status or Start new attempt dialog shows what was saved. Nothing is sent again.")}
     >
       <p>It leaves the account lists and becomes read-only. Its trades, imports, journal and history are kept, and you can restore it at any time.</p>
     </ConfirmDialog>
@@ -188,7 +200,9 @@ export function RestoreDialog({ account, open, onOpenChange }: { account: Accoun
       describeError={error =>
         (error as { category?: string })?.category === "conflict"
           ? "Another active or paused account already uses this broker account number. Close or archive that one first."
-          : "It wasn't restored. Check the account and try again."
+          : isUncertain(error)
+            ? `No answer came back for this account's last change, so it may already have been archived or restored. ${LOCKED_UNTIL_RESTART} Nothing is sent again.`
+            : "It wasn't restored. Check the account and try again."
       }
     >
       <p>It returns to the account lists with its status unchanged ({statusLabels[account.status].toLowerCase()}).</p>
@@ -280,7 +294,10 @@ function ResetDialogBody({ account, attemptNumber, open, onOpenChange, onCreated
   const catalogue = useCatalogue();
 
   const effectiveAt = zonedWallTimeToInstant(effective, account.timezone);
-  const effectiveDay = effectiveAt ? zonedDay(effectiveAt, account.timezone) : null;
+  // The rulebook's first day is Rust's trading day for the chosen instant (zone, reset time, weekends), read
+  // again whenever the instant changes. Until it is known for this instant, an assignment can't be submitted.
+  const tradingDay = useTradingDayAt(account.id, open ? effectiveAt : null);
+  const effectiveDay = tradingDay.kind === "known" ? tradingDay.day : null;
   const options = useMemo<RulebookOption[]>(() => {
     const phases = new Map((catalogue.data?.graph.programmePhases ?? []).map(p => [p.id, p.providerLabel]));
     const paths = new Map((catalogue.data?.graph.phasePaths ?? []).map(p => [p.id, p.providerLabel]));
@@ -297,6 +314,10 @@ function ResetDialogBody({ account, attemptNumber, open, onOpenChange, onCreated
   }, [rulebooks.data, catalogue.data, effectiveDay]);
 
   const decision: RulebookDecision | null = rulebookKey === "later" ? { kind: "decideLater" } : (options.find(o => o.key === rulebookKey)?.decision ?? null);
+  // "Decide later" sends no date, so it never waits for the trading day.
+  const dayBlocked = decision?.kind === "assign" && effectiveDay === null
+    ? tradingDay.kind === "loading" ? "Reading the first trading day for this reset time" : "The first trading day for this reset time couldn't be read"
+    : null;
 
   const checkStep = (s: number): Record<string, string> => {
     const e: Record<string, string> = {};
@@ -328,7 +349,7 @@ function ResetDialogBody({ account, attemptNumber, open, onOpenChange, onCreated
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (step < 3) return advance();
-    if (!prior || !effectiveAt || !decision) return;
+    if (!prior || !effectiveAt || !decision || dayBlocked) return;
     reset
       .submit({
         predecessorAccountId: account.id,
@@ -387,7 +408,8 @@ function ResetDialogBody({ account, attemptNumber, open, onOpenChange, onCreated
       footer={
         <>
           {step > 0 ? <Button onClick={() => setStep(s => s - 1)} disabled={reset.isPending}>Back</Button> : <Button onClick={close}>Cancel</Button>}
-          <Button type="submit" form={`${base}-form`} variant="primary" loading={reset.isPending} disabled={step === 3 && !reset.canSubmit && !reset.isPending}>
+          <Button type="submit" form={`${base}-form`} variant="primary" loading={reset.isPending}
+            disabled={step === 3 && ((!reset.canSubmit && !reset.isPending) || dayBlocked !== null)} disabledReason={step === 3 && !reset.isPending ? dayBlocked ?? undefined : undefined}>
             {step < 3 ? "Next" : reset.isPending ? "Starting…" : "Start new attempt"}
           </Button>
         </>
@@ -444,6 +466,10 @@ function ResetDialogBody({ account, attemptNumber, open, onOpenChange, onCreated
                 ]}
               />
             </div>
+            {options.length > 0 && effectiveDay === null && (
+              <StatusIndicator status="unknown" label="First trading day: Unknown"
+                detail={tradingDay.kind === "loading" ? "Reading it for this reset time" : "It couldn't be read for this reset time"} />
+            )}
           </FormSection>
         )}
 
@@ -459,8 +485,10 @@ function ResetDialogBody({ account, attemptNumber, open, onOpenChange, onCreated
                 { label: "Account number", value: externalRef.trim() || "Not set" },
                 { label: "Starting balance", value: { kind: "money", amount: balance.trim(), signed: false, currency: account.currency } },
                 { label: "Rulebook", value: rulebookKey === "later" ? "Decide later" : (options.find(o => o.key === rulebookKey)?.label ?? "—") },
+                ...(decision?.kind === "assign" ? [{ label: "Rulebook from", value: effectiveDay ? `${effectiveDay} (trading day)` : <StatusIndicator status="unknown" variant="inline" label="Unknown" /> }] : []),
               ]}
             />
+            {dayBlocked && <InlineNotice tone="warning" live="polite" title="First trading day not known yet">{dayBlocked}. Go back and check the reset time, or choose Decide later.</InlineNotice>}
             <InlineNotice tone="info" live="off" title="The old attempt stays as it is">
               Its trades, imports, journal, history and rulebook evidence are kept under {account.name}. This doesn't erase a breach or move past trades.
             </InlineNotice>

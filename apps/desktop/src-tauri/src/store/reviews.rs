@@ -527,7 +527,7 @@ fn derived_risk(conn: &Connection, trade_id: &str, entry: &Option<String>, stop:
 pub(crate) fn risk_from_plan(entry: Decimal, stop: Decimal, quantity: &str, instrument: Option<&Instrument>, currency: &str) -> Option<i64> {
     let instrument = instrument.filter(|i| i.currency == currency)?;
     let quantity = Decimal::from_str(quantity).ok()?;
-    let risk = (entry - stop).abs().checked_mul(quantity).and_then(|r| r.checked_mul(instrument.point_value));
+    let risk = entry.checked_sub(stop).and_then(|d| d.abs().checked_mul(quantity)).and_then(|r| r.checked_mul(instrument.point_value));
     risk.and_then(to_micros).filter(|m| *m > 0)
 }
 

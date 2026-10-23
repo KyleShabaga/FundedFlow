@@ -5,13 +5,14 @@
 //! A prop-firm evaluation reset is not `trading_day_reset_time`, which is only
 //! the account's session-day boundary.
 
+use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
 use super::accounts::{self, friendly, Account};
 use super::opt_text;
 use super::rulebooks;
-use crate::domain::{format_instant, micros_to_string, new_id, now, parse_decimal, parse_payload_time, to_micros};
+use crate::domain::{format_instant, micros_to_string, new_id, now, parse_decimal, parse_payload_time, to_micros, trading_day};
 use crate::error::{AppError, AppResult, Issues};
 use crate::rulebook::{AccountRulebookAssignment, AssignmentInput};
 
@@ -109,6 +110,7 @@ const LINK: &str = "SELECT predecessor_account_id, successor_account_id, prior_o
 struct Valid {
     prior_outcome: String,
     effective_at: String,
+    effective_instant: DateTime<Utc>,
     reason: Option<String>,
     source: String,
     name: String,
@@ -125,11 +127,11 @@ fn validate(input: &ResetInput) -> AppResult<Valid> {
     if !RESET_SOURCES.contains(&input.source.as_str()) {
         issues.add("source", format!("must be one of {}", RESET_SOURCES.join(", ")));
     }
-    let effective_at = match parse_payload_time(&input.effective_at) {
-        Ok(t) => format_instant(t),
+    let (effective_at, effective_instant) = match parse_payload_time(&input.effective_at) {
+        Ok(t) => (format_instant(t), t),
         Err(message) => {
             issues.add("effectiveAt", message);
-            String::new()
+            (String::new(), DateTime::<Utc>::MIN_UTC)
         }
     };
     let reason = opt_text(input.reason.clone());
@@ -166,6 +168,7 @@ fn validate(input: &ResetInput) -> AppResult<Valid> {
     Ok(Valid {
         prior_outcome: input.prior_outcome.clone(),
         effective_at,
+        effective_instant,
         reason,
         source: input.source.clone(),
         name,
@@ -260,6 +263,12 @@ pub fn reset(conn: &mut Connection, input: ResetInput) -> AppResult<ResetResult>
 
     let (assignment, decision) = match &input.rulebook {
         RulebookDecision::Assign { rulebook_version_id, effective_from, programme_phase_id, phase_path_id } => {
+            // The rulebook applies from the trading day the reset took effect, in the new attempt's session.
+            let ctx = super::account_ctx(&tx, &successor_id)?;
+            let day = trading_day(v.effective_instant, ctx.tz, ctx.reset).to_string();
+            if *effective_from != day {
+                return Err(AppError::invalid("effectiveFrom", format!("Use the trading day the reset took effect, {day}")));
+            }
             let assignment = rulebooks::assign_in(
                 &tx,
                 AssignmentInput {

@@ -20,6 +20,8 @@ export const dataControlCodeSchema = z.enum([
 export const dataControlErrorSchema = z.object({
   code: dataControlCodeSchema,
   message: z.string(),
+  /** Which limit was exceeded and the measured value; never a path or row content. */
+  detail: z.string().optional(),
 });
 export type DataControlError = z.infer<typeof dataControlErrorSchema>;
 export const dataControlCountsSchema = z.record(

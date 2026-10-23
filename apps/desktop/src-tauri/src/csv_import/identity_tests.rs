@@ -70,7 +70,7 @@ fn version_2_keys_are_distinct_for_every_split_of_supported_ids() {
     // Deterministic, and never in the unversioned key space or another strategy's prefix.
     assert_eq!(dedup::fill_pair_key("a:b", "c"), "fills2:3:a:b:c");
     assert_eq!(dedup::fill_pair_key("a", "b:c"), "fills2:1:a:b:c");
-    assert_eq!(dedup::fill_pair_key("707776450007", "707776450023"), "fills2:12:707776450007:707776450023");
+    assert_eq!(dedup::fill_pair_key("500000000001", "500000000002"), "fills2:12:500000000001:500000000002");
     for key in &keys {
         assert!(key.starts_with("fills2:") && !key.starts_with("fills:") && !key.starts_with("id:") && !key.starts_with("rt:"));
     }

@@ -242,7 +242,7 @@ fn rollback_reverts_restore_and_new_trade_and_reimport_after_restart_is_safe() {
         // Last write: after restoring the first trade and inserting the second trade/row.
         conn.execute_batch(
             "CREATE TRIGGER interrupt_import BEFORE INSERT ON trade_round_trips
-            WHEN NEW.sell_fill_id = '707776450038'
+            WHEN NEW.sell_fill_id = '500000000004'
             BEGIN SELECT RAISE(ROLLBACK, 'interrupted import (simulated)'); END;",
         )
         .unwrap();
@@ -298,7 +298,7 @@ fn source_provenance_survives_corrections_edits_restore_and_reopen() {
         };
         trade_store::update(&mut conn, &trade_id, edited).unwrap();
         trade_store::delete(&mut conn, &trade_id).unwrap();
-        let corrected = csv.replace("29787.25", "29788.25"); // Same fill IDs: restore original, never overwrite source.
+        let corrected = csv.replace("21010.50", "21011.50"); // Same fill IDs: restore original, never overwrite source.
         let restored = commit(&mut conn, &request(&account, &corrected)).unwrap();
         assert_eq!(restored.imported_count, 1);
         assert_ne!(restored.file_sha256, original_batch.file_sha256);
@@ -361,7 +361,7 @@ fn fees_notes_format_and_timestamp_precision_follow_existing_identity_rules() {
 #[test]
 fn minimum_signed_money_in_a_pnl_warning_does_not_panic() {
     let (mut conn, account) = setup();
-    let csv = single_performance().replace("$26.00", "-9223372036854.775808");
+    let csv = single_performance().replace("$2.50", "-9223372036854.775808");
     let p = preview(&conn, &request(&account, &csv)).unwrap();
     assert_eq!(p.new_count, 1);
     assert!(p.rows[0].warnings.iter().any(|w| w.message.contains("-$9223372036854.775808")));
@@ -372,7 +372,7 @@ fn minimum_signed_money_in_a_pnl_warning_does_not_panic() {
 fn duration_overflow_is_a_row_error_not_a_panic_or_failed_transaction() {
     let (mut conn, account) = setup();
     for duration in ["18446744073709551615:00:00", "9223372036854775808sec"] {
-        let csv = single_performance().replace("32sec", duration);
+        let csv = single_performance().replace("33sec", duration);
         let p = preview(&conn, &request(&account, &csv)).unwrap();
         assert_eq!((p.new_count, p.invalid_count), (0, 1));
         assert_eq!(fields(&p.rows[0].errors), ["duration"]);

@@ -11,6 +11,7 @@ use crate::rulebook::{
     ApplicabilityInput, ApplicableRulebookQuery, AssignmentInput, NewRulebook, RuleDefinitionInput, RulebookDraftInput,
     SourceConflictInput,
 };
+use crate::store::attempts::{self, ResetInput, RulebookDecision};
 use crate::store::rulebooks as store;
 use crate::store::{accounts, tests::account_input};
 
@@ -263,11 +264,11 @@ fn assignments_are_explicit_dated_history() {
     // A newer verified version is never switched in by itself.
     let v2 = verified_100k(&mut conn);
     assert_eq!(store::list_assignments(&conn, &acc).unwrap().len(), 1);
-    store::assign(&mut conn, assign(&acc, &v2, "2026-10-10")).unwrap();
+    store::assign(&mut conn, assign(&acc, &v2, "2026-10-12")).unwrap();
     let history = store::list_assignments(&conn, &acc).unwrap();
     let spans: Vec<(&str, Option<&str>)> = history.iter().map(|a| (a.effective_from.as_str(), a.effective_to.as_deref())).collect();
-    assert_eq!(spans, [("2026-10-01", Some("2026-10-10")), ("2026-10-10", None)]);
-    assert!(matches!(store::assign(&mut conn, assign(&acc, &v1, "2026-10-10")), Err(AppError::Conflict { .. })));
+    assert_eq!(spans, [("2026-10-01", Some("2026-10-12")), ("2026-10-12", None)]);
+    assert!(matches!(store::assign(&mut conn, assign(&acc, &v1, "2026-10-12")), Err(AppError::Conflict { .. })));
     assert!(matches!(store::assign(&mut conn, assign(&acc, &v1, "2026-09-01")), Err(AppError::Conflict { .. })));
     rejects(&conn, &format!("UPDATE account_rulebook_assignments SET effective_from = '2026-09-01' WHERE id = '{}'", a1.id), "history");
 
@@ -293,8 +294,68 @@ fn assignments_are_explicit_dated_history() {
     assert_eq!(fields(store::assign(&mut conn, assign(&other, &pv, "2026-10-01")).unwrap_err()), ["rulebookVersionId"]);
     store::publish(&mut conn, &pv, None).unwrap();
     assert_eq!(fields(store::publish(&mut conn, &pv, Some("kyle".into())).unwrap_err()), ["verificationStatus"]);
-    assert_eq!(fields(store::assign(&mut conn, assign(&acc, &pv, "2026-11-01")).unwrap_err()), ["rulebookVersionId"]);
+    assert_eq!(fields(store::assign(&mut conn, assign(&acc, &pv, "2026-11-02")).unwrap_err()), ["rulebookVersionId"]);
     store::assign(&mut conn, assign(&other, &pv, "2026-10-01")).unwrap();
+}
+
+#[test]
+fn assignments_start_on_a_monday_to_friday_trading_day() {
+    let mut conn = seeded();
+    let acc = account(&mut conn, "Eval");
+    let v1 = verified_100k(&mut conn);
+    // 2026-10-24 is a Saturday, 2026-10-25 a Sunday.
+    for weekend in ["2026-10-24", "2026-10-25"] {
+        assert_eq!(fields(store::assign(&mut conn, assign(&acc, &v1, weekend)).unwrap_err()), ["effectiveFrom"], "{weekend}");
+    }
+    assert!(store::list_assignments(&conn, &acc).unwrap().is_empty());
+    store::assign(&mut conn, assign(&acc, &v1, "2026-10-26")).unwrap();
+}
+
+#[test]
+fn a_reset_assigns_its_rulebook_from_the_trading_day_it_took_effect() {
+    let mut conn = seeded();
+    let v1 = verified_100k(&mut conn);
+    let reset = |predecessor: &str, effective_at: &str, effective_from: &str| ResetInput {
+        predecessor_account_id: predecessor.into(),
+        prior_outcome: "failed".into(),
+        effective_at: effective_at.into(),
+        reason: None,
+        source: "user_entered".into(),
+        name: "Next attempt".into(),
+        external_ref: None,
+        starting_balance: "50000".into(),
+        catalogue: None,
+        rulebook: RulebookDecision::Assign {
+            rulebook_version_id: v1.clone(),
+            effective_from: effective_from.into(),
+            programme_phase_id: None,
+            phase_path_id: None,
+        },
+        notes: None,
+    };
+    let rejected = |e: AppError| match e {
+        AppError::Validation { issues, .. } => issues.into_iter().map(|i| (i.field, i.message)).collect::<Vec<_>>(),
+        other => panic!("expected a validation error, got {other:?}"),
+    };
+    let count = |conn: &Connection| -> i64 { conn.query_row("SELECT COUNT(*) FROM accounts", [], |r| r.get(0)).unwrap() };
+
+    // Saturday 2026-10-24 15:00Z is 11:00 in New York: the account's trading day is Monday 2026-10-26.
+    let a = account(&mut conn, "Sat");
+    let before = count(&conn);
+    let issues = rejected(attempts::reset(&mut conn, reset(&a, "2026-10-24T15:00:00Z", "2026-10-24")).unwrap_err());
+    assert_eq!(issues.len(), 1);
+    assert_eq!(issues[0].0, "effectiveFrom");
+    assert!(issues[0].1.contains("2026-10-26"), "{:?}", issues[0].1);
+    assert_eq!(count(&conn), before, "a rejected reset writes nothing");
+    let r = attempts::reset(&mut conn, reset(&a, "2026-10-24T15:00:00Z", "2026-10-26")).unwrap();
+    assert_eq!(r.rulebook_assignment.unwrap().effective_from, "2026-10-26");
+
+    // Monday 17:30 in New York is after the 17:00 reset: the calendar day is a day early.
+    let b = account(&mut conn, "After reset");
+    let issues = rejected(attempts::reset(&mut conn, reset(&b, "2026-10-26T17:30:00-04:00", "2026-10-26")).unwrap_err());
+    assert_eq!(issues[0].0, "effectiveFrom");
+    assert!(issues[0].1.contains("2026-10-27"), "{:?}", issues[0].1);
+    attempts::reset(&mut conn, reset(&b, "2026-10-26T17:30:00-04:00", "2026-10-27")).unwrap();
 }
 
 #[test]

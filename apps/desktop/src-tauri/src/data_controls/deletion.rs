@@ -130,7 +130,8 @@ fn recovery_copies(root: &Path) -> Result<Vec<String>> {
     Ok(paths)
 }
 pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<DeletionPreview> {
-    let before = archive::dump(c)?;
+    let before = archive::counts(c)?;
+    let content = archive::content_hash(c)?;
     let mut blockers = Vec::new();
     let mut linked = Vec::new();
     let mut attachments;
@@ -172,11 +173,11 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
             let mut simulation = clone_db(c)?;
             match remove_account(&mut simulation, id, &attachments) {
                 Ok(()) => {
-                    let after = archive::dump(&simulation)?;
+                    let after = archive::counts(&simulation)?;
                     for (k, v) in &before {
-                        let remaining = after.get(k).map_or(0, |t| t.rows.len());
-                        if remaining < v.rows.len() {
-                            affected.insert(k.clone(), (v.rows.len() - remaining) as u64);
+                        let remaining = after.get(k).copied().unwrap_or(0);
+                        if remaining < *v {
+                            affected.insert(k.clone(), v - remaining);
                         }
                     }
                     let remaining = archive::attachments(&simulation)?;
@@ -187,17 +188,24 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
                         blockers.push("immutable_or_shared_provenance".into());
                     }
                     // A blocked preview still enumerates direct ownership; no neighbour is added to the deletion scope.
-                    for (k, t) in &before {
-                        if let Some(i) = t
-                            .columns
+                    for k in before.keys() {
+                        let table = archive::quote(k);
+                        let columns: Vec<String> = c
+                            .prepare(&format!("SELECT * FROM {table} LIMIT 0"))?
+                            .column_names()
                             .iter()
-                            .position(|v| v == "account_id" || v == "owner_account_id")
+                            .map(|v| v.to_string())
+                            .collect();
+                        if let Some(column) =
+                            columns.iter().find(|v| *v == "account_id" || *v == "owner_account_id")
                         {
-                            let count = t
-                                .rows
-                                .iter()
-                                .filter(|r| matches!(&r[i],archive::Cell::Text(v) if v==id))
-                                .count();
+                            // Text values equal to the id, byte for byte, as before.
+                            let column = archive::quote(column);
+                            let count: i64 = c.query_row(
+                                &format!("SELECT count(*) FROM {table} WHERE typeof({column})='text' AND {column}=?1 COLLATE BINARY"),
+                                [id],
+                                |r| r.get(0),
+                            )?;
                             if count > 0 {
                                 affected.insert(k.clone(), count as u64);
                             }
@@ -211,10 +219,7 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
             attachments = archive::inventory(c, &root.join("attachments"))?;
             // Reject stray bytes before promising a complete whole-journal erase.
             super::restore::validate_managed(&root.join("attachments"), &attachments)?;
-            affected = before
-                .iter()
-                .map(|(k, t)| (k.clone(), t.rows.len() as u64))
-                .collect();
+            affected = before.clone();
         }
     }
     let confirmation = match &request.scope {
@@ -224,7 +229,7 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
     let payload = serde_json::to_vec(&(
         "deletion-v1",
         &request.scope,
-        &before,
+        &content,
         &attachments,
         &copies,
         &blockers,

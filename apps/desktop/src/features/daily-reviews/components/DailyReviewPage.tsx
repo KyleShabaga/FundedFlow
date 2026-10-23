@@ -10,7 +10,7 @@
 import { toMicros, type DailyReview, type DailyReviewDay, type Library } from "@fundedflow/domain";
 import { ChevronLeft, ChevronRight, CircleCheck, RotateCcw, Save } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import {
   Badge,
@@ -39,11 +39,11 @@ import {
   ValidationSummary,
   type ValidationIssue,
 } from "../../../design-system";
-import { useActiveAccount } from "../../accounts/active-account";
+import { switchFailure, useActiveAccount } from "../../accounts/active-account";
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import { clock, longDay, STATUS_NOTE, tradePath, zoneLabel } from "../../journal/components/presentation";
 import { useLibrary } from "../../library/hooks/library";
-import { useLeaveGuard } from "../../shared/hooks/use-leave-guard";
+import { useGuardedNavigate, useLeave, useLeaveGuard } from "../../shared/hooks/use-leave-guard";
 import { fieldErrors, retryRead, toMutationState } from "../../shared/presentation";
 import { useDailyReviewDay, useRelinkDailyReviewTrades, useReopenDailyReview, useSaveDailyReview } from "../hooks/daily-reviews";
 import {
@@ -112,7 +112,6 @@ function keptEdits(accountId: string, day: string): Kept | null {
 function DayReview({ account, day, selectedId, onSelect }: {
   account: AccountViewModel; day: string; selectedId: string | null; onSelect: (id: string) => Promise<unknown>;
 }) {
-  const navigate = useNavigate();
   const toast = useToast();
   const query = useDailyReviewDay(account.id, day);
   const library = useLibrary();
@@ -120,7 +119,8 @@ function DayReview({ account, day, selectedId, onSelect }: {
   const [leaving, setLeaving] = useState<string | null>(null);
   const focusStatus = useRef(false);
   useLeaveGuard(dirty, href => setLeaving(href));
-  const go = (href: string) => (dirty ? setLeaving(href) : navigate(href));
+  const go = useGuardedNavigate();
+  const leave = useLeave();
   const data = query.data;
   const review = data?.review ?? null;
   const status = statusView(review);
@@ -152,7 +152,7 @@ function DayReview({ account, day, selectedId, onSelect }: {
 
       {selectedId !== null && selectedId !== account.id && (
         <InlineNotice tone="info" live="polite" title="This review isn't for the selected account"
-          actions={account.archivedAt === null ? <Button size="sm" onClick={() => { onSelect(account.id).catch(() => toast.show({ tone: "error", title: "The account wasn't switched" })); }}>Select {account.name}</Button> : undefined}>
+          actions={account.archivedAt === null ? <Button size="sm" onClick={() => { onSelect(account.id).catch(error => toast.show(switchFailure(error, { tone: "error", title: "The account wasn't switched" }))); }}>Select {account.name}</Button> : undefined}>
           You are viewing <strong>{account.name}</strong>'s review. The selection at the top of the window is a different account; nothing from it is shown here.
         </InlineNotice>
       )}
@@ -171,13 +171,13 @@ function DayReview({ account, day, selectedId, onSelect }: {
           <ReviewForm key={review?.revision ?? 0} account={account} data={data} library={library.data ?? null}
             libraryFailed={library.error !== null && library.data === undefined} onDirtyChange={setDirty}
             reload={retryRead(query.refresh)} focusStatus={focusStatus} />
-          <DayTrades account={account} data={data} dirty={dirty} />
+          <DayTrades account={account} data={data} dirty={dirty} go={go} />
           {review && <History account={account} review={review} />}
         </>
       )}
 
       <ConfirmDialog open={leaving !== null} onOpenChange={o => !o && setLeaving(null)} tone="neutral" title="Leave without saving the review?" confirmLabel="Leave"
-        onConfirm={async () => { const href = leaving; setLeaving(null); setDirty(false); if (href) navigate(href); }}>
+        onConfirm={async () => { const href = leaving; setLeaving(null); setDirty(false); if (href) leave(href); }}>
         <p>Your edits stay available to restore in this window when you come back to this day.</p>
       </ConfirmDialog>
     </div>
@@ -461,8 +461,7 @@ const LINK_TEXT: Record<"linked" | "added" | "changed", { label: string; tone: "
   linked: { label: "In review", tone: "neutral" }, added: { label: "Added since", tone: "flow" }, changed: { label: "Changed since", tone: "warn" },
 };
 
-function DayTrades({ account, data, dirty }: { account: AccountViewModel; data: DailyReviewDay; dirty: boolean }) {
-  const navigate = useNavigate();
+function DayTrades({ account, data, dirty, go }: { account: AccountViewModel; data: DailyReviewDay; dirty: boolean; go: (href: string) => void }) {
   const toast = useToast();
   const relink = useRelinkDailyReviewTrades(account.id, data.tradingDay);
   const review = data.review;
@@ -510,7 +509,7 @@ function DayTrades({ account, data, dirty }: { account: AccountViewModel; data: 
         <p className="ds-faint">{data.dayState === "no_trade_day" ? "No trades: you marked this a no-trade day." : "No trades are recorded for this trading day."}</p>
       ) : (
         <DataTable label={`Trades on ${longDay(data.tradingDay)}`} columns={columns} rows={data.trades} getRowId={t => t.tradeId}
-          onRowClick={t => navigate(tradePath(t.tradeId))} isRowMuted={t => t.pnlStatus === "open"} />
+          onRowClick={t => go(tradePath(t.tradeId))} isRowMuted={t => t.pnlStatus === "open"} />
       )}
       <p className="ds-faint jr-note">Open a trade to review or correct it; trades are edited in the Journal, not here.</p>
     </section>

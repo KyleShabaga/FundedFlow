@@ -8,7 +8,7 @@
 // review as stored now before saving is allowed again.
 import { toMicros, type Library, type ReviewInput, type TradeReview } from "@fundedflow/domain";
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import {
   Badge,
@@ -38,7 +38,7 @@ import {
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import { useLibrary } from "../../library/hooks/library";
 import { useSaveTradeReview, useTradeReview } from "../../reviews/hooks/reviews";
-import { useLeaveGuard } from "../../shared/hooks/use-leave-guard";
+import { useLeave, useLeaveGuard } from "../../shared/hooks/use-leave-guard";
 import { fieldErrors, retryRead, toMutationState } from "../../shared/presentation";
 import { UncertainOutcomeReview, type UncertainWrite } from "../../shared/UncertainOutcomeReview";
 import type { TradeViewModel } from "../../trades/view-models/trade";
@@ -183,7 +183,6 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
   account: AccountViewModel; trade: TradeViewModel; review: TradeReview | null; library: Library | null; libraryFailed: boolean; reload: () => void;
 }) {
   const base = useId().replace(/:/g, "");
-  const navigate = useNavigate();
   const toast = useToast();
   const persistedNow = useMemo<Baseline>(() => ({ revision: review?.revision ?? null, values: reviewValues(review) }), [review]);
   const restorableFor = (b: Baseline) => {
@@ -221,6 +220,7 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
   const dirty = !same(values, baseline.values);
 
   useLeaveGuard(dirty, href => setLeaving(href));
+  const leave = useLeave();
   useEffect(() => {
     if (dirty) keep(account.id, trade.id, { revision, values });
   }, [dirty, values, account.id, trade.id, revision]);
@@ -406,7 +406,7 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
         </div>
       </form>
       <ConfirmDialog open={leaving !== null} onOpenChange={o => !o && setLeaving(null)} tone="neutral" title="Leave without saving the review?" confirmLabel="Leave"
-        onConfirm={async () => { const href = leaving; setLeaving(null); if (href) navigate(href); }}>
+        onConfirm={async () => { const href = leaving; setLeaving(null); if (href) leave(href); }}>
         <p>Your edits stay available to restore in this window when you come back to this trade.</p>
       </ConfirmDialog>
     </>
