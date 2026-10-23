@@ -105,6 +105,22 @@ it("offers no retry for a newer journal", async () => {
   expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
 });
 
+it("offers no retry for a linked data folder (TASK-018)", async () => {
+  gateway.status.mockResolvedValue({
+    ...base,
+    state: "failed",
+    stage: "data_directory",
+    schemaVersion: null,
+    failure: { category: "data_folder_link", retryable: false, message: "The data folder is behind a link FundedFlow does not trust.", detail: "link", failedMigration: null },
+  });
+  render(<RuntimeProvider><RuntimeGate><p>journal</p></RuntimeGate></RuntimeProvider>);
+  await tick(0);
+  expect(screen.getByRole("heading").textContent).toBe("FundedFlow doesn't trust its data folder");
+  expect(screen.getByText("The data folder is behind a link FundedFlow does not trust.")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  expect(screen.queryByText("journal")).toBeNull();
+});
+
 it("never treats an unreachable runtime as an empty journal", async () => {
   gateway.status.mockRejectedValue(new Error("no response after 10s"));
   render(<RuntimeProvider><RuntimeGate><p>journal</p></RuntimeGate></RuntimeProvider>);

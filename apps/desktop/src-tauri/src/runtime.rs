@@ -114,12 +114,17 @@ pub enum FailureCategory {
     MigrationFailed,
     /// The database was written by a newer FundedFlow; it is left untouched.
     NewerSchema,
+    /// The data folder itself (or its lock file) is a symbolic link, junction or mount point. Folders above the
+    /// data folder are trusted as the OS resolved them; a link at or inside it is refused. Not retryable.
+    DataFolderLink,
 }
 
 impl FailureCategory {
     fn stage(self) -> RuntimeStage {
         match self {
-            FailureCategory::DataDirectory => RuntimeStage::DataDirectory,
+            FailureCategory::DataDirectory | FailureCategory::DataFolderLink => {
+                RuntimeStage::DataDirectory
+            }
             FailureCategory::OpenFailed | FailureCategory::NewerSchema => RuntimeStage::Open,
             FailureCategory::BackupFailed => RuntimeStage::Backup,
             FailureCategory::MigrationFailed => RuntimeStage::Migrate,
@@ -149,6 +154,10 @@ fn failure(category: FailureCategory, detail: String) -> RuntimeFailure {
         NewerSchema => (
             false,
             "Your journal was created by a newer version of FundedFlow. Install the latest version to open it. Your data has not been changed.",
+        ),
+        DataFolderLink => (
+            false,
+            "The data folder is behind a link FundedFlow does not trust, so your journal was not opened. Your data has not been changed. Replace the link with a real folder, then restart FundedFlow.",
         ),
     };
     RuntimeFailure {
@@ -454,14 +463,19 @@ impl Runtime {
         if ownership.is_none() {
             crate::data_controls::filesystem_ownership(root)
                 .map(|file| *ownership = Some(file))
-                .map_err(|_| {
-                    (
+                .map_err(|e| {
+                    let f = if e.code == crate::data_controls::Code::UnsafePath {
+                        failure(
+                            FailureCategory::DataFolderLink,
+                            "The data folder or its lock file is a link".into(),
+                        )
+                    } else {
                         failure(
                             FailureCategory::OpenFailed,
                             "Journal is already owned or its directory is unsafe".into(),
-                        ),
-                        None,
-                    )
+                        )
+                    };
+                    (f, None)
                 })?;
         }
         drop(ownership);

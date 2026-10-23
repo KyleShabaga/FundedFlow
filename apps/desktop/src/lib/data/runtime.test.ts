@@ -27,6 +27,9 @@ it.each([
   { ...failed("open_failed"), created: true },
   { ...failed("migration_failed"), failure: { ...failed("migration_failed").failure, failedMigration: null } },
   { ...failed("newer_schema"), failure: { ...failed("newer_schema").failure, retryable: true } },
+  // TASK-018: a linked data folder fails at the data-folder stage and is never retryable.
+  { ...failed("data_folder_link"), failure: { ...failed("data_folder_link").failure, retryable: true } },
+  { ...failed("data_folder_link"), stage: "open" },
   { ...ready, cleanup: undefined }, { ...ready, cleanup: "unknown" }, { ...ready, cleanup: null },
 ])("rejects malformed or contradictory status %j for both commands", async reply => {
   const gateway = createRuntimeGateway(vi.fn().mockResolvedValue(reply));

@@ -134,8 +134,8 @@ pub(super) fn write_markers(
     observe: &mut dyn FnMut(&Path),
 ) -> Result<()> {
     let queue = root.join(QUEUE);
-    no_symlink_components(&queue)?;
-    private_dir(&queue)?;
+    no_link_below(root, &queue)?;
+    private_dir(root, &queue)?;
     for (i, bytes) in files.iter().enumerate() {
         let name = if files.len() == 1 {
             format!("{operation_id}.json")
@@ -188,7 +188,7 @@ fn clone_db(c: &Connection) -> Result<Connection> {
 fn recovery_copies(root: &Path) -> Result<Vec<String>> {
     let mut paths = Vec::new();
     let controls = root.join("data-controls");
-    no_symlink_components(&controls)?;
+    no_link_below(root, &controls)?;
     if controls.exists() {
         for e in fs::read_dir(&controls)? {
             let e = e?;
@@ -214,7 +214,7 @@ fn recovery_copies(root: &Path) -> Result<Vec<String>> {
         }
     }
     let work = root.join("data-controls-work");
-    no_symlink_components(&work)?;
+    no_link_below(root, &work)?;
     if work.exists() {
         if !work.is_dir() {
             return Err(fail(Code::UnsupportedOwnership));
@@ -435,7 +435,7 @@ fn execute_durable(
 /// (`Quarantined`), or stay queued if that move fails. `Err` only when the queue itself cannot be read.
 pub fn recover_cleanup(c: &Connection, root: &Path) -> Result<CleanupOutcome> {
     let queue = root.join(QUEUE);
-    no_symlink_components(&queue)?;
+    no_link_below(root, &queue)?;
     if !queue.exists() {
         return Ok(CleanupOutcome::Clear);
     }
@@ -515,7 +515,7 @@ pub(super) fn read_marker(file: &Path) -> Marker {
 /// Move a queue entry into the quarantine under a new unique name, never replacing anything there.
 fn quarantine_entry(root: &Path, entry: &Path) -> Result<()> {
     let held = root.join(QUARANTINE);
-    private_dir(&held)?;
+    private_dir(root, &held)?;
     let name = entry
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
@@ -528,8 +528,8 @@ fn quarantine_entry(root: &Path, entry: &Path) -> Result<()> {
     sync_dir(&held)?;
     sync_dir(entry.parent().ok_or_else(|| fail(Code::UnsafePath))?)
 }
-fn remove_path(path: &Path) -> Result<()> {
-    no_symlink_components(path)?;
+fn remove_path(root: &Path, path: &Path) -> Result<()> {
+    no_link_below(root, path)?;
     if path.is_dir() {
         fs::remove_dir_all(path)?;
     } else if path.exists() {
@@ -551,7 +551,7 @@ fn finish(c: &Connection, root: &Path, cleanup: &Cleanup) -> Result<()> {
             .exists(params![a.id, a.storage_key])?;
         if !owned {
             let path = root.join("attachments").join(&a.storage_key);
-            no_symlink_components(&path)?;
+            no_link_below(root, &path)?;
             if path.exists() {
                 regular(&path)?;
                 fs::remove_file(&path)?;
@@ -577,7 +577,7 @@ fn finish(c: &Connection, root: &Path, cleanup: &Cleanup) -> Result<()> {
             {
                 return Err(fail(Code::UnsafePath));
             }
-            remove_path(&root.join(key))?;
+            remove_path(root, &root.join(key))?;
         }
         // Unowned managed extras are never listed in a marker either (an older build would refuse or keep
         // them): re-derive them now. A row that still lists a file keeps it.
@@ -589,11 +589,11 @@ fn finish(c: &Connection, root: &Path, cleanup: &Cleanup) -> Result<()> {
                 .prepare("SELECT 1 FROM attachments WHERE storage_key=?1 LIMIT 1")?
                 .exists([key])?;
             if !owned {
-                remove_path(&managed.join(key))?;
+                remove_path(root, &managed.join(key))?;
             }
         }
         // Never listed in a marker (see QUARANTINE); a whole-journal erase by this build removes it.
-        remove_path(&root.join(QUARANTINE))?;
+        remove_path(root, &root.join(QUARANTINE))?;
     }
     Ok(())
 }

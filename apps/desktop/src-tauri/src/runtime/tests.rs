@@ -654,3 +654,109 @@ fn the_cleanup_status_follows_deletion_and_retry_without_a_restart() {
     assert_eq!(rt.status().cleanup, CleanupOutcome::Clear);
     assert!(!file.exists());
 }
+
+/// TASK-018: a directory junction `link` -> `target`, made the way a relocated profile or Roaming folder is.
+#[cfg(windows)]
+fn junction(link: &Path, target: &Path) {
+    let made = std::process::Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(link)
+        .arg(target)
+        .output()
+        .unwrap();
+    assert!(made.status.success(), "mklink /J failed: {made:?}");
+}
+
+/// TASK-018: a junction above the data folder (a relocated profile, `C:\Users` or Roaming) is trusted as the OS
+/// resolved it: startup is Ready and the data controls that check app-owned paths work through it.
+#[cfg(windows)]
+#[test]
+fn a_data_folder_under_a_junctioned_parent_starts_ready_and_its_data_controls_work() {
+    let base = TempDir::new();
+    let real = base.0.join("real-profile");
+    std::fs::create_dir_all(&real).unwrap();
+    junction(&base.0.join("profile"), &real);
+    // A restore staged through the real path; startup through the junction installs it (the pending marker,
+    // the database swap and the attachments copy all run on app-owned paths below the junction).
+    {
+        let staging = Runtime::start(Ok(real.join("com.fundedflow.desktop").join(DB_FILE_NAME)));
+        staging
+            .with(|c| {
+                crate::store::accounts::create(c, crate::store::tests::account_input("Replaced"))
+            })
+            .unwrap();
+        let source = TempDir::new();
+        let request = staged_restore(&staging, &source);
+        staging.prepare_restore(request).unwrap();
+    }
+    let dir = TempDir(base.0.join("profile").join("com.fundedflow.desktop"));
+    assert!(dir.0.join("data-controls-pending.json").exists());
+    let rt = Runtime::start(Ok(dir.db()));
+    assert_eq!(
+        rt.status().state,
+        RuntimeState::Ready,
+        "{:?}",
+        rt.status().failure
+    );
+    assert!(!dir.0.join("data-controls-pending.json").exists());
+    assert_eq!(
+        count_accounts(&rt).unwrap(),
+        0,
+        "the staged (empty) archive replaced the journal"
+    );
+    // Whole-journal erase: the cleanup queue, recovery copies and their removal.
+    let request: crate::data_controls::PreviewRequest =
+        serde_json::from_value(serde_json::json!({"scope": {"kind": "journal"}})).unwrap();
+    let preview = rt
+        .with_controls(|c, root| crate::data_controls::preview_deletion(c, root, request))
+        .unwrap();
+    rt.delete_data(crate::data_controls::DeleteRequest {
+        scope: preview.scope.clone(),
+        preview_token: preview.preview_token.clone(),
+        confirmation: preview.required_confirmation.clone(),
+    })
+    .unwrap();
+    assert_eq!(rt.status().cleanup, CleanupOutcome::Clear);
+    // The restore's safety copy was a recovery copy: the erase removed it.
+    let held = std::fs::read_dir(dir.0.join("data-controls")).map_or(0, |d| d.count());
+    assert_eq!(held, 0);
+}
+
+/// TASK-018: a junction at the data folder itself is refused with its own category, which does not offer a
+/// retry, before anything is written through it.
+#[cfg(windows)]
+#[test]
+fn a_junction_at_the_data_folder_itself_is_refused_as_an_untrusted_link() {
+    let base = TempDir::new();
+    let elsewhere = base.0.join("elsewhere");
+    std::fs::create_dir_all(&elsewhere).unwrap();
+    std::fs::write(elsewhere.join("kept.txt"), b"kept").unwrap();
+    let dir = base.0.join("com.fundedflow.desktop");
+    junction(&dir, &elsewhere);
+    let rt = Runtime::start(Ok(dir.join(DB_FILE_NAME)));
+    let status = rt.status();
+    assert_eq!(status.state, RuntimeState::Failed);
+    let failure = status.failure.expect("a failure");
+    // The wire values the frontend reads (lib/data/runtime.ts).
+    assert_eq!(
+        serde_json::to_value(failure.category).unwrap(),
+        "data_folder_link"
+    );
+    assert_eq!(
+        serde_json::to_value(status.stage).unwrap(),
+        "data_directory"
+    );
+    assert!(!failure.retryable);
+    assert!(
+        failure
+            .message
+            .contains("The data folder is behind a link FundedFlow does not trust")
+    );
+    // Nothing was created or changed behind the link.
+    let names: Vec<_> = std::fs::read_dir(&elsewhere)
+        .unwrap()
+        .map(|e| e.unwrap().file_name())
+        .collect();
+    assert_eq!(names, ["kept.txt"]);
+    assert_eq!(std::fs::read(elsewhere.join("kept.txt")).unwrap(), b"kept");
+}

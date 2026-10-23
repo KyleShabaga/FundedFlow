@@ -680,6 +680,19 @@ A database problem never stops the window from opening, and neither does a slow 
 | `backup_failed` | The pre-upgrade backup could not be written; no upgrade was attempted | yes |
 | `migration_failed` | A migration failed and was rolled back. Each migration commits on its own, so earlier steps of the same upgrade may already be saved (`reachedVersion` > `fromVersion`) | yes |
 | `newer_schema` | Written by a newer FundedFlow; left untouched | no |
+| `data_folder_link` | The data folder itself, or its `fundedflow.lock`, is a symbolic link, junction or mount point; nothing was opened or written through it (stage `data_directory`) | no |
+
+**Links and the data folder (TASK-018).** Folders above the data folder are trusted as the OS resolved them, so a
+relocated profile, a junctioned `C:\Users` or a redirected Roaming folder does not block the journal. App-owned paths
+(the data folder and the `data-controls*`, `attachments/` and lock paths that go through
+`data_controls::filesystem::no_link_below`) are checked from the data folder down: on Windows any component that std
+reports as a link (`is_symlink`: symbolic links and name-surrogate reparse points such as junctions and mount points)
+is refused, and a link at the data folder itself fails startup with `data_folder_link`. On other platforms the full
+walk from the first component still applies. User-chosen export and restore paths keep the full walk
+(`no_symlink_components`, which also refuses every other reparse point on Windows) until TR-007/WIN-002 (V1.1).
+Known gap: restore inspection writes its comparison `trades.csv` through `export_csv`, which keeps the full walk, so
+inspecting or preparing a restore still fails with `unsafe_path` when a folder above the data folder is a junction
+(Triage card from TASK-018).
 
 `failure.message` is safe to show the user, and `failure.detail` is the technical error. For `migration_failed`
 the message says "your data has not been changed" only when the failed step was the first of the upgrade.
