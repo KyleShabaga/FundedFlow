@@ -44,3 +44,5 @@ Journal after the import: `fundedflow.db` 57,978,880 bytes, `-wal` 59,167,352 by
 **ISSUE-010 (slow import and export):** does not escalate. The import of 50,000 trades took 10.4 s in total and the UI stayed responsive.
 
 **New finding:** a journal with about 50,000 trades cannot be backed up at all. `data.json` (70.5 MB) is over the 64 MiB per-entry limit (`data_controls/filesystem.rs:9`, `MAX_ENTRY`). The refusal is clear and safe, but the owner loses full backup at that size. This is related to TASK-010 / ISSUE-002, which found 64 MiB reachable within 12 months. TASK-045 deduplicates calculation snapshots and does not shrink trade rows in `data.json`. Filed as a Triage card for an owner priority decision.
+
+**Owner decision (Kyle, 2026-10-23):** the full-backup size limit is accepted for V1 as a known gap. It goes in the V1 release notes (TASK-035) and in TASK-036's known-gaps input. The fix is planned for V1.1; Development Board card https://app.notion.com/p/4021bd4b6bde81249483d1071c21c6e6.
