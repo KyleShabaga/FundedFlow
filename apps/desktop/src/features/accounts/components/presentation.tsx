@@ -8,6 +8,7 @@ import { Badge, formatInstant, RulebookLine, StatusIndicator, type Tone } from "
 import { useImportHistory } from "../../imports/hooks/imports";
 import { useAccountRulebookAssignments, useRulebookVersion } from "../../references/hooks/references";
 import { useAccountLineage } from "../hooks/accounts";
+import { useTradingDay } from "../hooks/trading-day";
 import { currentAssignment, setupItems, verificationOf, type RulebookStatus, type SetupItem } from "../setup";
 import type { AccountViewModel } from "../view-models/account";
 
@@ -70,13 +71,19 @@ export interface AccountFacts {
 /** Everything the list and detail views show about one account, from existing commands only. */
 export function useAccountFacts(account: AccountViewModel): AccountFacts {
   const assignments = useAccountRulebookAssignments(account.id);
-  const current: AccountRulebookAssignment | null = assignments.data ? currentAssignment(assignments.data, account.timezone) : null;
+  // The version in force follows Rust's trading day; without it the rulebook is Unknown, never a calendar-day guess.
+  const tradingDay = useTradingDay(account.id);
+  const current: AccountRulebookAssignment | null = assignments.data && tradingDay.kind === "known" ? currentAssignment(assignments.data, tradingDay.day) : null;
   const version = useRulebookVersion(current?.rulebookVersionId ?? null);
   const lineage = useAccountLineage(account.id);
   const imports = useImportHistory(account.id);
-  const rulebook: RulebookStatus = assignments.data
-    ? current ? { kind: "assigned", assignment: current } : { kind: "none" }
-    : assignments.error ? { kind: "unknown" } : { kind: "loading" };
+  const rulebook: RulebookStatus = !assignments.data
+    ? assignments.error ? { kind: "unknown" } : { kind: "loading" }
+    : current ? { kind: "assigned", assignment: current }
+    : assignments.data.length === 0 ? { kind: "none" }
+    : tradingDay.kind === "known" ? { kind: "none" }
+    : tradingDay.kind === "loading" ? { kind: "loading" }
+    : { kind: "unknown", detail: "Today's trading day couldn't be read" };
   const lastImportAt = imports.data
     ? imports.data.reduce<string | null>((latest, b) => (latest === null || b.completedAt > latest ? b.completedAt : latest), null)
     : undefined;
@@ -92,7 +99,7 @@ export function useAccountFacts(account: AccountViewModel): AccountFacts {
 /** Rulebook column: name, version and verification, or a truthful Not set up / Unknown. */
 export function RulebookSummary({ facts }: { facts: Pick<AccountFacts, "rulebook" | "rulebookVersion"> }) {
   if (facts.rulebook.kind === "loading") return <span className="ds-faint">Checking…</span>;
-  if (facts.rulebook.kind === "unknown") return <StatusIndicator status="unknown" label="Unknown" variant="inline" detail="The rulebook assignment couldn't be read" />;
+  if (facts.rulebook.kind === "unknown") return <StatusIndicator status="unknown" label="Unknown" variant="inline" detail={facts.rulebook.detail ?? "The rulebook assignment couldn't be read"} />;
   if (facts.rulebook.kind === "none") return <span className="ds-faint">Not set up</span>;
   const v = facts.rulebookVersion;
   if (!v) return <span className="ds-faint">Assigned</span>;

@@ -18,13 +18,13 @@ import {
   RadioGroup,
   Select,
   StatList,
+  StatusIndicator,
   Stepper,
   Textarea,
   TextField,
   useToast,
   ValidationSummary,
   type ValidationIssue,
-  zonedDay,
   zonedWallTime,
   zonedWallTimeToInstant,
 } from "../../../design-system";
@@ -35,6 +35,7 @@ import { useFeatureQuery } from "../../shared/hooks/use-feature-query";
 import { fieldErrors, toMutationState } from "../../shared/presentation";
 import { featureKeys } from "../../shared/query-keys";
 import { useArchiveAccount, useChangeAccountStatus, useRestoreAccount, useResetAccountAttempt } from "../hooks/accounts";
+import { useTradingDayAt } from "../hooks/trading-day";
 import type { AccountViewModel } from "../view-models/account";
 import { AccountWriteReview } from "./AccountWriteReview";
 import { accountLabel } from "./presentation";
@@ -293,7 +294,10 @@ function ResetDialogBody({ account, attemptNumber, open, onOpenChange, onCreated
   const catalogue = useCatalogue();
 
   const effectiveAt = zonedWallTimeToInstant(effective, account.timezone);
-  const effectiveDay = effectiveAt ? zonedDay(effectiveAt, account.timezone) : null;
+  // The rulebook's first day is Rust's trading day for the chosen instant (zone, reset time, weekends), read
+  // again whenever the instant changes. Until it is known for this instant, an assignment can't be submitted.
+  const tradingDay = useTradingDayAt(account.id, open ? effectiveAt : null);
+  const effectiveDay = tradingDay.kind === "known" ? tradingDay.day : null;
   const options = useMemo<RulebookOption[]>(() => {
     const phases = new Map((catalogue.data?.graph.programmePhases ?? []).map(p => [p.id, p.providerLabel]));
     const paths = new Map((catalogue.data?.graph.phasePaths ?? []).map(p => [p.id, p.providerLabel]));
@@ -310,6 +314,10 @@ function ResetDialogBody({ account, attemptNumber, open, onOpenChange, onCreated
   }, [rulebooks.data, catalogue.data, effectiveDay]);
 
   const decision: RulebookDecision | null = rulebookKey === "later" ? { kind: "decideLater" } : (options.find(o => o.key === rulebookKey)?.decision ?? null);
+  // "Decide later" sends no date, so it never waits for the trading day.
+  const dayBlocked = decision?.kind === "assign" && effectiveDay === null
+    ? tradingDay.kind === "loading" ? "Reading the first trading day for this reset time" : "The first trading day for this reset time couldn't be read"
+    : null;
 
   const checkStep = (s: number): Record<string, string> => {
     const e: Record<string, string> = {};
@@ -341,7 +349,7 @@ function ResetDialogBody({ account, attemptNumber, open, onOpenChange, onCreated
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (step < 3) return advance();
-    if (!prior || !effectiveAt || !decision) return;
+    if (!prior || !effectiveAt || !decision || dayBlocked) return;
     reset
       .submit({
         predecessorAccountId: account.id,
@@ -400,7 +408,8 @@ function ResetDialogBody({ account, attemptNumber, open, onOpenChange, onCreated
       footer={
         <>
           {step > 0 ? <Button onClick={() => setStep(s => s - 1)} disabled={reset.isPending}>Back</Button> : <Button onClick={close}>Cancel</Button>}
-          <Button type="submit" form={`${base}-form`} variant="primary" loading={reset.isPending} disabled={step === 3 && !reset.canSubmit && !reset.isPending}>
+          <Button type="submit" form={`${base}-form`} variant="primary" loading={reset.isPending}
+            disabled={step === 3 && ((!reset.canSubmit && !reset.isPending) || dayBlocked !== null)} disabledReason={step === 3 && !reset.isPending ? dayBlocked ?? undefined : undefined}>
             {step < 3 ? "Next" : reset.isPending ? "Starting…" : "Start new attempt"}
           </Button>
         </>
@@ -457,6 +466,10 @@ function ResetDialogBody({ account, attemptNumber, open, onOpenChange, onCreated
                 ]}
               />
             </div>
+            {options.length > 0 && effectiveDay === null && (
+              <StatusIndicator status="unknown" label="First trading day: Unknown"
+                detail={tradingDay.kind === "loading" ? "Reading it for this reset time" : "It couldn't be read for this reset time"} />
+            )}
           </FormSection>
         )}
 
@@ -472,8 +485,10 @@ function ResetDialogBody({ account, attemptNumber, open, onOpenChange, onCreated
                 { label: "Account number", value: externalRef.trim() || "Not set" },
                 { label: "Starting balance", value: { kind: "money", amount: balance.trim(), signed: false, currency: account.currency } },
                 { label: "Rulebook", value: rulebookKey === "later" ? "Decide later" : (options.find(o => o.key === rulebookKey)?.label ?? "—") },
+                ...(decision?.kind === "assign" ? [{ label: "Rulebook from", value: effectiveDay ? `${effectiveDay} (trading day)` : <StatusIndicator status="unknown" variant="inline" label="Unknown" /> }] : []),
               ]}
             />
+            {dayBlocked && <InlineNotice tone="warning" live="polite" title="First trading day not known yet">{dayBlocked}. Go back and check the reset time, or choose Decide later.</InlineNotice>}
             <InlineNotice tone="info" live="off" title="The old attempt stays as it is">
               Its trades, imports, journal, history and rulebook evidence are kept under {account.name}. This doesn't erase a breach or move past trades.
             </InlineNotice>

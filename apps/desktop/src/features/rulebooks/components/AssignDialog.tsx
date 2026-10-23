@@ -5,8 +5,9 @@
 import type { AccountRulebookAssignment, RulebookVersionDetail } from "@fundedflow/domain";
 import { useState } from "react";
 
-import { Button, Dialog, InlineNotice, MutationFeedback, Select, Textarea, TextField, zonedDay } from "../../../design-system";
+import { Button, Dialog, InlineNotice, MutationFeedback, Select, Textarea, TextField } from "../../../design-system";
 import { fieldErrors, toMutationState } from "../../shared/presentation";
+import { useTradingDay } from "../../accounts/hooks/trading-day";
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import { useAssignRulebookVersion } from "../hooks/rulebooks";
 import { RulebookWriteReview } from "./RulebookWriteReview";
@@ -27,13 +28,16 @@ export function AssignDialog({ open, onOpenChange, account, assignments, candida
   onAssigned?: (assignment: AccountRulebookAssignment) => void;
 }) {
   const assign = useAssignRulebookVersion(account.id);
-  const today = zonedDay(new Date().toISOString(), account.timezone);
+  // The default is today's trading day as Rust reports it (never a weekend); left empty while it is unknown.
+  const tradingDay = useTradingDay(account.id);
+  const today = tradingDay.kind === "known" ? tradingDay.day : null;
   const latest = assignments.reduce<string | null>((m, a) => (m === null || a.effectiveFrom > m ? a.effectiveFrom : m), null);
   const open_ = openAssignment(assignments);
   const [versionId, setVersionId] = useState<string>(initialVersionId && candidates.some(c => c.version.id === initialVersionId) ? initialVersionId : candidates[0]?.version.id ?? "");
   const chosen = candidates.find(c => c.version.id === versionId) ?? null;
   const [where, setWhere] = useState<string>(NO_PHASE);
-  const [day, setDay] = useState(latest !== null && latest >= today ? "" : today);
+  const [edited, setDay] = useState<string | null>(null);
+  const day = edited ?? (today === null || (latest !== null && latest >= today) ? "" : today);
   const [reason, setReason] = useState("");
   const [local, setLocal] = useState<string | null>(null);
   const errors = fieldErrors(assign.error);
@@ -80,7 +84,7 @@ export function AssignDialog({ open, onOpenChange, account, assignments, candida
               options={phaseOptions} value={where} onValueChange={setWhere} error={errors.programmePhaseId} />
           )}
           <TextField label="First trading day" type="date" value={day} onChange={e => setDay(e.target.value)} min={latest ?? undefined}
-            description={`In ${account.timezone}. ${latest ? `After ${latest}, the latest assignment.` : "Days before it have no rulebook."}`} error={errors.effectiveFrom} />
+            description={`In ${account.timezone}. ${latest ? `After ${latest}, the latest assignment.` : "Days before it have no rulebook."}${tradingDay.kind === "unknown" ? " Today's trading day couldn't be read: choose the day." : ""}`} error={errors.effectiveFrom} />
           <Textarea label="Reason" optional rows={2} value={reason} onChange={e => setReason(e.target.value)} description="Kept in the rulebook history." />
           {chosen && (
             <InlineNotice tone="info" live="off" title="What changes">

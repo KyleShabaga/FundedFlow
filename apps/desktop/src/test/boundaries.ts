@@ -3,6 +3,7 @@
 // hooks, view models, components) is the real app. Test files wire these with vi.mock factories that import
 // this module, so it must not import application code (types only).
 import type { JournalRepository } from "@fundedflow/domain";
+import type { AccountFreshnessInputs } from "../lib/data/freshness";
 import type { LegalAcceptance } from "../lib/data/legal";
 import type { RuntimeStatus } from "../lib/data/runtime";
 
@@ -11,6 +12,10 @@ export const readyStatus: RuntimeStatus = { state: "ready", stage: "ready", sche
 export const initializingStatus: RuntimeStatus = { ...readyStatus, state: "initializing", stage: "migrate" };
 
 type Answer = RuntimeStatus | Error | Promise<RuntimeStatus>;
+
+/** What `list_account_freshness` answers from `from` on: fixed rows, an Error, or a promise the test settles itself. */
+export type FreshnessAnswer = AccountFreshnessInputs[] | Error | Promise<AccountFreshnessInputs[]>;
+export interface FreshnessEntry { from: string; answer: FreshnessAnswer }
 
 /** Mutable boundary state, reset by `resetBoundaries()` before every test. */
 export const boundary = {
@@ -23,8 +28,12 @@ export const boundary = {
   invocations: [] as string[],
   /** NA-3 per-install acceptance file: what `get_legal_acceptance` reads and `record_legal_acceptance` writes. */
   legal: { record: null as LegalAcceptance | null, writeError: null as Error | null, now: "2026-10-21T18:30:00.000Z" },
-  /** P0-D06 `list_account_freshness` rows (the Rust read is tested in Rust); none by default, so dots are unknown. */
-  freshness: [] as unknown[],
+  /**
+   * P0-D06 `list_account_freshness` (the Rust read is tested in Rust). Answers are looked up by `asOf`: the entry
+   * with the latest `from` at or before it answers. Rows are fixed by the test; nothing here computes a trading
+   * day. No entries by default, so dots and trading days are unknown. `calls` records every `asOf`.
+   */
+  freshness: { table: [] as FreshnessEntry[], calls: [] as string[] },
   /** Native save/open dialog answers: a path, null for Cancel, or an Error when the chooser can't open. */
   dialog: {
     save: [] as (string | null | Error)[],
@@ -40,8 +49,30 @@ export function resetBoundaries() {
   boundary.invocations = [];
   boundary.legal = { record: null, writeError: null, now: "2026-10-21T18:30:00.000Z" };
   boundary.dialog = { save: [], open: [], calls: [] };
-  boundary.freshness = [];
+  boundary.freshness = { table: [], calls: [] };
 }
+
+/** One account's fixed freshness row: the trading day and its boundaries as Rust would report them. */
+export function freshnessRow(accountId: string, currentTradingDay: string, nextTradingDayStart: string, over: Partial<AccountFreshnessInputs> = {}): AccountFreshnessInputs {
+  return {
+    accountId, currentTradingDay, nextTradingDayStart, tradingDayStarts: ["2026-10-01T21:00:00.000Z", "2026-09-30T21:00:00.000Z"],
+    lastCommittedImportAt: null, lastFailedImportAt: null, lastManualTradeAt: null, lastConfirmedCheckpointAt: null, ...over,
+  };
+}
+
+/** `list_account_freshness(asOf)` from the lookup table (also usable as a `freshnessGateway.list` mock). */
+export async function listFreshness(asOf: string): Promise<AccountFreshnessInputs[]> {
+  boundary.freshness.calls.push(asOf);
+  const at = Date.parse(asOf);
+  const entry = boundary.freshness.table.filter(e => Date.parse(e.from) <= at).sort((a, b) => Date.parse(b.from) - Date.parse(a.from))[0];
+  if (!entry) return [];
+  const rows = await entry.answer;
+  if (rows instanceof Error) throw rows;
+  return structuredClone(rows);
+}
+
+/** For feature tests: `vi.mock("…/lib/data/freshness", …)` with this gateway reads the same table. */
+export const freshnessGatewayMock = { list: listFreshness };
 
 const take = <T,>(queue: T[]): T | undefined => (queue.length > 1 ? queue.shift() : queue[0]);
 async function answer(value: Answer | undefined): Promise<RuntimeStatus> {
@@ -60,7 +91,7 @@ export const tauriCoreMock = {
       boundary.legal.record = { documents: structuredClone(args?.documents) as LegalAcceptance["documents"], acceptedAt: boundary.legal.now };
       return structuredClone(boundary.legal.record);
     }
-    if (command === "list_account_freshness") return structuredClone(boundary.freshness);
+    if (command === "list_account_freshness") return listFreshness(String(args?.asOf));
     if (command === "runtime_status") return answer(take(boundary.statusAnswers));
     if (command === "retry_runtime") {
       boundary.onRetry?.();

@@ -13,6 +13,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import type { RuntimeState } from "../../app/RuntimeProvider";
 import { ToastProvider } from "../../design-system";
 import { expectNoAxeViolations } from "../../test/axe";
+import { boundary, freshnessRow, resetBoundaries } from "../../test/boundaries";
 import { closedTrade } from "../rulebooks/test-store";
 import { createTodayStore, drawdownOutcome } from "../today/test-store";
 import { ACTIVE_ACCOUNT_SETTING } from "./active-account";
@@ -24,6 +25,8 @@ const runtime = vi.hoisted(() => ({ state: { kind: "ready" } as unknown as Runti
 const holder = vi.hoisted(() => ({ store: null as unknown as ReturnType<typeof createTodayStore> }));
 vi.mock("../../app/RuntimeProvider", () => ({ useRuntime: () => runtime }));
 vi.mock("../../lib/data/api", () => ({ get repository() { return holder.store.repository; } }));
+// TASK-021: today's trading day comes from Rust (`list_account_freshness`), answered here from fixed rows.
+vi.mock("../../lib/data/freshness", async importOriginal => ({ ...(await importOriginal<object>()), freshnessGateway: (await import("../../test/boundaries")).freshnessGatewayMock }));
 
 beforeAll(() => {
   Element.prototype.scrollIntoView ??= () => {};
@@ -92,6 +95,9 @@ beforeEach(() => {
   vi.useFakeTimers({ now: new Date(NOW), shouldAdvanceTime: true, toFake: ["Date"] });
   runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 17, supportedSchemaVersion: 17, created: false, failure: null } } as unknown as RuntimeState;
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false } } });
+  // Wednesday 2026-10-21 is each account's trading day until the 17:00 New York reset (fixed rows; Rust computes them).
+  resetBoundaries();
+  boundary.freshness.table = [{ from: "2000-01-01T00:00:00.000Z", answer: [A, B].map(id => freshnessRow(id, "2026-10-21", "2026-10-21T21:00:00.000Z")) }];
 });
 afterEach(() => {
   cleanup();
