@@ -141,7 +141,7 @@ Machine: a fresh Windows 11 VM or Windows Sandbox with **no** Node, Rust, Visual
 | Artifact name | |
 | Installer SHA-256 | |
 | Source SHA | |
-| TASK-018 and TASK-023 merged into the source SHA? (needed for B1 and B3) | |
+| TASK-018 merged into the source SHA? (needed for B1; TASK-023 was closed Not Needed) | |
 
 Steps 1–11 are the base smoke; B1–B7 below are added by TASK-028 and run on the same artifact. Every row records
 Pass/Fail, tester and date. A mandatory step that fails or is not run means the TASK-030 gate cannot be Passed.
@@ -163,10 +163,11 @@ Pass/Fail, tester and date. A mandatory step that fails or is not run means the 
 
 ### Added steps B1–B7 (TASK-028)
 
-State at this document's revision (`main` at `819f967`): TASK-011 has not recorded its results, and TASK-018 and
-TASK-023 are not merged. Until TASK-011 records them, B1 case (2) and B3 case (2) have no record to compare with:
-the tester records the observed behaviour as **unmeasured** and lists it as a known gap for Kyle's explicit
-acceptance in TASK-036, not as Pass. Any journal data loss is a Fail in every case.
+State at this revision: TASK-011 recorded parts (a) and (c) on 2026-10-23; part (b) (junctions) was not run.
+B3's expected result is therefore measured, and TASK-023 was closed Not Needed. TASK-018 is not merged yet. Until
+TASK-011(b) is recorded, B1 case (2) has no record to compare with: the tester records the observed behaviour as
+**unmeasured** and lists it as a known gap for Kyle's explicit acceptance in TASK-036, not as Pass. Any journal
+data loss is a Fail in every case.
 
 | # | Step | Expected result | Evidence fields | Mandatory | Pass/Fail | Tester / date |
 |---|---|---|---|---|---|---|
