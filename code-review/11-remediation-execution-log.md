@@ -81,3 +81,9 @@ A "—" in the Merge column means the merge SHA is in the PR's record and is not
 | TASK-023 state | Implemented in the candidate (#138). Its Windows recheck runs on this candidate (TASK-030 / Final manual tests §1). |
 
 The earlier 0.1.1 builds (`819f967`, `eeda9a1`) were throwaway TASK-011 builds, not candidates.
+
+## Gate decisions (Kyle, 2026-10-23)
+
+- **TASK-031 step 4a:** recorded as Not Run. Migrations 0022 and 0023 were added after the spec, so 0.1.0 refuses the 0.1.1 journal as NewerSchema before its cleanup recovery runs. The TASK-015/016 note "an older build finishes the cleanup" no longer applies for 0.1.0 → 0.1.1. Step 4 still records the refusal.
+- **TASK-030:** Windows Sandbox counts as the clean Windows 11 leg. The Windows 10 22H2 leg is Not Run and is listed as a TASK-036 known gap.
+- **Gate prompts:** `execution/gate-test-prompts-030-034.md`, mirrored on the Notion "Final manual tests" page.

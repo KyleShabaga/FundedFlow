@@ -12,6 +12,8 @@ open PR #139 (B1–B3 measured, new B8); candidate source `1d13c43` for the UI w
 
 ## Read this first: findings that change what the specs expect
 
+> **Owner decisions (Kyle, 2026-10-23):** TASK-031 step 4a is recorded as **Not Run** (the premise changed), so don't flag it as DECISION NEEDED. TASK-030 accepts **Windows Sandbox as the Windows 11 leg**. The Windows 10 22H2 leg is **Not Run** (a TASK-036 known gap).
+
 1. **The candidate has a newer journal schema than 0.1.0.** 0.1.0 (`7679edc`) stops at migration 21. The candidate
    (`1d13c43`) adds 0022 (TASK-042, fees recorded) and 0023 (TASK-045, frozen risk sources). TASK-031 r7 says "no
    migration was added", so the downgrade "is expected to open normally". That is no longer true:
