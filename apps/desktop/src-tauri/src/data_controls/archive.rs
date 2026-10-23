@@ -277,7 +277,8 @@ pub fn survey(conn: &Connection, root: &Path) -> Result<Survey> {
             return Err(fail(Code::UnsafePath));
         }
         let path = root.join(&a.storage_key);
-        no_symlink_components(&path)?;
+        // `root` is the app's attachments folder: anchored at it (TASK-018).
+        no_link_below(root, &path)?;
         if matches!(fs::symlink_metadata(&path), Err(e) if e.kind() == std::io::ErrorKind::NotFound)
         {
             survey.missing.push(a);
@@ -590,7 +591,9 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
         if bytes.len() as u64 != entry.size() {
             return Err(fail(Code::InvalidArchive));
         }
-        write_new(&dir.path().join(&name), &bytes)?;
+        // Staging lives under `workspace`, a folder FundedFlow made (`data-controls-work/`, or the export temp
+        // folder whose user-chosen location was checked in full by `export`): anchored at it (TASK-018).
+        write_new_under(workspace, &dir.path().join(&name), &bytes)?;
     }
     let manifest: ArchiveManifest =
         serde_json::from_slice(&fs::read(dir.path().join("manifest.json"))?)?;

@@ -37,13 +37,13 @@ afterEach(resetHarness);
 
 const PRIVATE = ["Jane Trader", "C:\\Users", "AppData", "journal.db", "SELECT", "acct-secret", "sk-live", "revenge", "1,250", "ESZ6"];
 const expectNoPrivateText = (text: string) => { for (const p of PRIVATE) expect(text, p).not.toContain(p); };
-const failedStatus = (category: "data_directory" | "open_failed" | "backup_failed" | "migration_failed" | "newer_schema"): RuntimeStatus => {
-  const stage = { data_directory: "data_directory", open_failed: "open", backup_failed: "backup", migration_failed: "migrate", newer_schema: "open" } as const;
+const failedStatus = (category: "data_directory" | "open_failed" | "backup_failed" | "migration_failed" | "newer_schema" | "data_folder_link"): RuntimeStatus => {
+  const stage = { data_directory: "data_directory", open_failed: "open", backup_failed: "backup", migration_failed: "migrate", newer_schema: "open", data_folder_link: "data_directory" } as const;
   return {
     state: "failed", stage: stage[category], created: false, supportedSchemaVersion: 20, cleanup: "clear",
-    schemaVersion: category === "newer_schema" ? 21 : category === "migration_failed" ? 19 : category === "data_directory" ? null : 18,
+    schemaVersion: category === "newer_schema" ? 21 : category === "migration_failed" ? 19 : category === "data_directory" || category === "data_folder_link" ? null : 18,
     failure: {
-      category, retryable: category !== "newer_schema", message: "Synthetic failure message.",
+      category, retryable: category !== "newer_schema" && category !== "data_folder_link", message: "Synthetic failure message.",
       // What native IO/SQLite errors look like: the detail is never shown or copied.
       detail: "Os { code: 5, kind: PermissionDenied } opening C:\\Users\\Jane Trader\\AppData\\Roaming\\com.fundedflow.desktop\\journal.db; SELECT name FROM sqlite_master",
       failedMigration: category === "migration_failed" ? { version: 20, name: "source_fact_immutability", fromVersion: 18, reachedVersion: 19 } : null,
@@ -81,6 +81,19 @@ describe("startup failures", () => {
     expect(diagnosticsText()).toContain("Code: newer_schema");
     expect(diagnosticsText()).toContain("Journal version: 21");
     expect(diagnosticsText()).toContain("Retry allowed: false");
+    expect(boundary.invocations).toEqual(["runtime_status"]);
+  });
+
+  it("refuses a data folder behind a link: no Retry, and the summary says why without the path (TASK-018)", async () => {
+    boundary.statusAnswers = [failedStatus("data_folder_link")];
+    renderApp("/");
+    await waitFor(() => expect(notice().textContent).toContain("FundedFlow doesn't trust its data folder"));
+    expect(notice().textContent).toContain("Synthetic failure message.");
+    expect(within(notice()).queryByRole("button", { name: /Retry|Reset|Restore/ })).toBeNull();
+    expect(diagnosticsText()).toContain("Code: data_folder_link");
+    expect(diagnosticsText()).toContain("Stage: data_directory");
+    expect(diagnosticsText()).toContain("Retry allowed: false");
+    expectNoPrivateText(document.body.textContent ?? "");
     expect(boundary.invocations).toEqual(["runtime_status"]);
   });
 

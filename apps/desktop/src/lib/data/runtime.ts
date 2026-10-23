@@ -15,6 +15,8 @@ export const failureCategories = [
   "backup_failed",
   "migration_failed",
   "newer_schema",
+  /** The data folder itself is a symbolic link, junction or mount point (TASK-018). Never retryable. */
+  "data_folder_link",
 ] as const;
 
 export const runtimeStages = ["data_directory", "open", "backup", "migrate", "ready"] as const;
@@ -63,11 +65,12 @@ export const runtimeStatusSchema = z.object({
   } else {
     const failure = status.failure;
     if (!failure) { invalid("Failed status must describe its failure"); return; }
-    const stage = { data_directory: "data_directory", open_failed: "open", backup_failed: "backup", migration_failed: "migrate", newer_schema: "open" };
+    const stage = { data_directory: "data_directory", open_failed: "open", backup_failed: "backup", migration_failed: "migrate", newer_schema: "open", data_folder_link: "data_directory" };
     if (status.stage !== stage[failure.category] || status.created) invalid("Failed status has contradictory stage or creation fields");
     if (failure.category === "newer_schema" && (failure.retryable || status.schemaVersion === null || status.schemaVersion <= status.supportedSchemaVersion)) {
       invalid("Newer schema must be newer than supported and cannot be retried");
     }
+    if (failure.category === "data_folder_link" && failure.retryable) invalid("A linked data folder cannot be retried");
     const migration = failure.failedMigration;
     if (failure.category === "migration_failed") {
       if (!migration || migration.fromVersion > migration.reachedVersion || migration.reachedVersion >= migration.version || status.schemaVersion !== migration.reachedVersion) {

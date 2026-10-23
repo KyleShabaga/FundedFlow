@@ -86,6 +86,8 @@ pub fn regular(path: &Path) -> Result<()> {
     }
     Ok(())
 }
+/// Full walk from the first component: no existing ancestor may be a link, nor on Windows any reparse point.
+/// Kept for user-chosen export and restore paths (TR-007/WIN-002); app-owned paths use `no_link_below`.
 pub fn no_symlink_components(path: &Path) -> Result<()> {
     let mut current = std::path::PathBuf::new();
     for part in path.components() {
@@ -107,14 +109,61 @@ pub fn no_symlink_components(path: &Path) -> Result<()> {
     }
     Ok(())
 }
+/// The root-anchored check for app-owned paths (TASK-018). `anchor` is the data folder, or a folder FundedFlow
+/// created beneath it; the OS-resolved prefix above it is trusted, so a junctioned profile, a redirected Roaming
+/// folder or a mount point above the data folder no longer blocks the journal. `path` must be `anchor` or lie
+/// inside it. On Windows the anchor and every existing component below it must not be a link: std's `is_symlink`
+/// is true for symbolic links and for name-surrogate reparse points such as junctions and mount points.
+/// Elsewhere the full walk of `no_symlink_components` still applies.
+pub fn no_link_below(anchor: &Path, path: &Path) -> Result<()> {
+    let rest = path
+        .strip_prefix(anchor)
+        .map_err(|_| fail(Code::UnsafePath))?;
+    if rest
+        .components()
+        .any(|c| !matches!(c, Component::Normal(_)))
+    {
+        return Err(fail(Code::UnsafePath));
+    }
+    #[cfg(windows)]
+    {
+        let mut current = anchor.to_path_buf();
+        let mut parts = rest.components();
+        loop {
+            match fs::symlink_metadata(&current) {
+                Ok(meta) if meta.file_type().is_symlink() => return Err(fail(Code::UnsafePath)),
+                Ok(_) => {}
+                Err(_) => break,
+            }
+            match parts.next() {
+                Some(part) => current.push(part),
+                None => break,
+            }
+        }
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        no_symlink_components(path)
+    }
+}
 pub fn space(dir: &Path, needed: u64) -> Result<()> {
     if fs2::available_space(dir)? < needed.saturating_add(16 * 1024 * 1024) {
         return Err(fail(Code::InsufficientSpace));
     }
     Ok(())
 }
+/// A new file in the export temp folder beside a user-chosen destination: full-walk check.
 pub fn write_new(path: &Path, bytes: &[u8]) -> Result<()> {
     no_symlink_components(path)?;
+    create_new(path, bytes)
+}
+/// A new file at an app-owned path below `anchor` (see `no_link_below`).
+pub fn write_new_under(anchor: &Path, path: &Path, bytes: &[u8]) -> Result<()> {
+    no_link_below(anchor, path)?;
+    create_new(path, bytes)
+}
+fn create_new(path: &Path, bytes: &[u8]) -> Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -149,8 +198,9 @@ pub fn publish(temp: tempfile::NamedTempFile, destination: &Path) -> Result<()> 
     sync_dir(destination.parent().ok_or_else(|| fail(Code::UnsafePath))?)
 }
 
-pub fn private_dir(path: &Path) -> Result<()> {
-    no_symlink_components(path)?;
+/// An app-owned private folder below `anchor` (see `no_link_below`).
+pub fn private_dir(anchor: &Path, path: &Path) -> Result<()> {
+    no_link_below(anchor, path)?;
     fs::create_dir_all(path)?;
     #[cfg(unix)]
     {

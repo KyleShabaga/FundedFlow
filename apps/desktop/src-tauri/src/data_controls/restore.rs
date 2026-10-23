@@ -51,7 +51,7 @@ fn operation(root: &Path, id: &str) -> Result<PathBuf> {
         return Err(fail(Code::UnsafePath));
     }
     let path = root.join("data-controls").join(id);
-    no_symlink_components(&path)?;
+    no_link_below(root, &path)?;
     Ok(path)
 }
 fn content_hash(c: &Connection) -> Result<String> {
@@ -113,7 +113,7 @@ pub(super) fn inspect_with(
     request: InspectRequest,
     available: Available,
 ) -> Result<RestorePreview> {
-    no_symlink_components(root)?;
+    no_link_below(root, root)?;
     let required = live_required(c)?;
     ensure(available, root, required.inspect_check)?;
     let stage = archive::inspect_to(Path::new(&request.source), &workspace(root)?)?;
@@ -178,8 +178,8 @@ pub(super) fn prepare_with(
     }
     let id = crate::domain::new_id();
     let op = operation(root, &id)?;
-    private_dir(op.parent().ok_or_else(|| fail(Code::UnsafePath))?)?;
-    private_dir(&op)?;
+    private_dir(root, op.parent().ok_or_else(|| fail(Code::UnsafePath))?)?;
+    private_dir(root, &op)?;
     // No persistent intent exists yet: any failure here leaves only an inert operation directory.
     let candidate = op.join("candidate.db");
     fs::copy(staged.directory.path().join("journal.sqlite"), &candidate)?;
@@ -190,6 +190,7 @@ pub(super) fn prepare_with(
     archive::validate_database(&candidate, db::latest_version())?;
     FileSync::sync(&candidate)?;
     copy_inventory(
+        root,
         &staged.directory.path().join("attachments"),
         &op.join("candidate-attachments"),
         &staged.manifest.attachments,
@@ -203,6 +204,7 @@ pub(super) fn prepare_with(
     // Copy the verified files and any unowned managed extras, refusing unsafe or unrecognised files: no
     // unbacked-up bytes can disappear. Changed files are recorded, so they are never taken for extras.
     copy_managed(
+        root,
         &root.join("attachments"),
         &op.join("safety-attachments"),
         &original_attachments,
@@ -210,23 +212,27 @@ pub(super) fn prepare_with(
     )?;
     // Changed bytes are kept apart before anything is replaced; if they cannot be, nothing is.
     let unverified = preserve_unverified(
+        root,
         &root.join("attachments"),
         &op.join("safety-changed-attachments"),
         &survey,
         available,
         &op,
     )?;
-    write_new(
+    write_new_under(
+        root,
         &op.join("safety-inventory.json"),
         &serde_json::to_vec(&original_attachments)?,
     )?;
     // Always written, empty when nothing is missing or changed. Nothing reads it back: rollback uses only the
     // safety inventory, so a folder from the previous version (which has no such file) rolls back the same way.
-    write_new(
+    write_new_under(
+        root,
         &op.join("safety-missing.json"),
         &serde_json::to_vec(&unverified)?,
     )?;
-    write_new(
+    write_new_under(
+        root,
         &op.join("candidate-inventory.json"),
         &serde_json::to_vec(&staged.manifest.attachments)?,
     )?;
@@ -257,7 +263,7 @@ impl FileSync {
     }
 }
 fn write_pending(root: &Path, value: &Pending) -> Result<()> {
-    no_symlink_components(&root.join(PENDING))?;
+    no_link_below(root, &root.join(PENDING))?;
     let mut temp = tempfile::NamedTempFile::new_in(root)?;
     use std::io::Write;
     temp.write_all(&serde_json::to_vec(value)?)?;
@@ -266,25 +272,27 @@ fn write_pending(root: &Path, value: &Pending) -> Result<()> {
         .map_err(|_| fail(Code::Io))?;
     sync_dir(root)
 }
+/// `source` and `target` are app-owned folders inside the data folder `root`; links are checked from `root`.
 pub(crate) fn copy_inventory(
+    root: &Path,
     source: &Path,
     target: &Path,
     list: &[super::Attachment],
 ) -> Result<()> {
-    no_symlink_components(source)?;
-    no_symlink_components(target)?;
+    no_link_below(root, source)?;
+    no_link_below(root, target)?;
     fs::create_dir_all(target)?;
     for a in list {
         relative(&a.storage_key)?;
         let path = source.join(&a.storage_key);
-        no_symlink_components(&path)?;
+        no_link_below(root, &path)?;
         regular(&path)?;
         if fs::metadata(&path)?.len() != a.byte_size || hash_file(&path)? != a.sha256 {
             return Err(fail(Code::MissingAttachment));
         }
         let dest = target.join(&a.storage_key);
         let data = fs::read(path)?;
-        write_new(&dest, &data)?;
+        write_new_under(root, &dest, &data)?;
         if hash_file(&dest)? != a.sha256 {
             return Err(fail(Code::MissingAttachment));
         }
@@ -304,7 +312,8 @@ pub(crate) fn managed_files(root: &Path, prefix: &str, names: &mut Vec<String>) 
     if !root.exists() {
         return Ok(());
     }
-    no_symlink_components(root)?;
+    // `root` is the app's attachments folder or a folder below it (each entry is checked before recursing).
+    no_link_below(root, root)?;
     for entry in fs::read_dir(root)? {
         let entry = entry?;
         let name = entry
@@ -349,6 +358,7 @@ struct Unverified {
 /// Copy each changed file, hash-verified, into `target` (after a free-space check at `op`); record missing ones.
 /// Any changed file that is not safely readable fails the restore before its intent is written.
 fn preserve_unverified(
+    root: &Path,
     source: &Path,
     target: &Path,
     survey: &archive::Survey,
@@ -378,7 +388,7 @@ fn preserve_unverified(
         for a in &survey.changed {
             relative(&a.storage_key)?;
             let path = source.join(&a.storage_key);
-            no_symlink_components(&path)?;
+            no_link_below(root, &path)?;
             regular(&path)?;
             let len = fs::metadata(&path)?.len();
             if len > MAX_ENTRY {
@@ -386,7 +396,7 @@ fn preserve_unverified(
             }
             let hash = hash_file(&path)?;
             let dest = target.join(&a.storage_key);
-            write_new(&dest, &fs::read(&path)?)?;
+            write_new_under(root, &dest, &fs::read(&path)?)?;
             if hash_file(&dest)? != hash {
                 return Err(fail(Code::Integrity));
             }
@@ -416,21 +426,22 @@ pub(crate) fn is_managed_extra(key: &str) -> bool {
 }
 /// Copies the listed attachments and, hash-verified, the unowned managed extras: no bytes are lost.
 pub(crate) fn copy_managed(
+    root: &Path,
     source: &Path,
     target: &Path,
     list: &[super::Attachment],
     changed: &BTreeSet<String>,
 ) -> Result<()> {
     let extras = validate_managed(source, list, changed)?;
-    copy_inventory(source, target, list)?;
+    copy_inventory(root, source, target, list)?;
     for key in &extras {
         let path = source.join(key);
-        no_symlink_components(&path)?;
+        no_link_below(root, &path)?;
         regular(&path)?;
         // Extras have no recorded hash: the copy must match the source as it was read.
         let hash = hash_file(&path)?;
         let dest = target.join(key);
-        write_new(&dest, &fs::read(&path)?)?;
+        write_new_under(root, &dest, &fs::read(&path)?)?;
         if hash_file(&dest)? != hash {
             return Err(fail(Code::Integrity));
         }
@@ -468,14 +479,15 @@ pub(crate) fn validate_managed(
 }
 fn replace_database(source: &Path, live: &Path) -> Result<()> {
     // No SQLite connection may exist here. Pending intent makes interrupted multi-file swaps recoverable.
+    // `parent` is the data folder: anchored at it (TASK-018).
     let parent = live.parent().ok_or_else(|| fail(Code::UnsafePath))?;
-    no_symlink_components(live)?;
+    no_link_below(parent, live)?;
     let mut staged = tempfile::NamedTempFile::new_in(parent)?;
     std::io::copy(&mut std::fs::File::open(source)?, &mut staged)?;
     staged.as_file().sync_all()?;
     for suffix in ["-wal", "-shm", "-journal"] {
         let path = PathBuf::from(format!("{}{suffix}", live.display()));
-        no_symlink_components(&path)?;
+        no_link_below(parent, &path)?;
         if path.exists() {
             fs::remove_file(path)?;
         }
@@ -485,11 +497,11 @@ fn replace_database(source: &Path, live: &Path) -> Result<()> {
 }
 fn replace_attachments(root: &Path, source: &Path, list: &[super::Attachment]) -> Result<()> {
     let target = root.join("attachments");
-    no_symlink_components(&target)?;
+    no_link_below(root, &target)?;
     if target.exists() {
         fs::remove_dir_all(&target)?;
     }
-    copy_inventory(source, &target, list)?;
+    copy_inventory(root, source, &target, list)?;
     sync_dir(root)
 }
 /// Called before opening SQLite, while this process holds the journal ownership lock.
@@ -575,7 +587,7 @@ pub(super) fn recover_failing(root: &Path, live: &Path) -> Result<()> {
 
 fn workspace(root: &Path) -> Result<PathBuf> {
     let path = root.join("data-controls-work");
-    private_dir(&path)?;
+    private_dir(root, &path)?;
     sync_dir(root)?;
     Ok(path)
 }

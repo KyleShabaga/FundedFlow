@@ -12,6 +12,7 @@ const TITLES: Record<RuntimeFailure["category"], string> = {
   backup_failed: "Your journal wasn't upgraded",
   migration_failed: "Your journal upgrade didn't finish",
   newer_schema: "This journal needs a newer FundedFlow",
+  data_folder_link: "FundedFlow doesn't trust its data folder",
 };
 const GUIDANCE: Record<RuntimeFailure["category"], string> = {
   data_directory: "Check access to your user data folder, then retry. Keep existing files in place.",
@@ -19,6 +20,7 @@ const GUIDANCE: Record<RuntimeFailure["category"], string> = {
   backup_failed: "Check free disk space and folder permissions, then retry. Keep your journal and existing backups in place.",
   migration_failed: "Keep your journal and pre-upgrade backup in place. Retry, or contact support if the upgrade still fails. Do not overwrite or restore files here.",
   newer_schema: "Install a FundedFlow version that supports this journal. Keep the journal in place; do not downgrade or replace it.",
+  data_folder_link: "The FundedFlow data folder is a link (a symbolic link, junction or mount point) to another place. Replace it with a real folder that holds the same files, then restart FundedFlow. Keep your journal files.",
 };
 const STAGE_TEXT: Record<RuntimeStatus["stage"], string> = {
   data_directory: "Opening your journal…",

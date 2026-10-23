@@ -11,6 +11,8 @@ mod restore;
 pub use restore::{InspectRequest, RestorePreview, RestoreRequest, RestoreResult};
 pub use restore::{inspect as inspect_restore, prepare as prepare_restore, recover};
 #[cfg(test)]
+mod link_tests;
+#[cfg(test)]
 mod security_tests;
 #[cfg(test)]
 mod tests;
@@ -179,10 +181,14 @@ pub fn export_trades(c: &rusqlite::Connection, request: CsvExportRequest) -> Res
 }
 
 /// Cross-process ownership is held by Runtime for its lifetime, including recovery.
+///
+/// `root` is the data folder. Folders above it are trusted as the OS resolved them; the data folder itself and
+/// the lock file must not be links (TASK-018). A link fails with `UnsafePath`, which startup reports as
+/// `data_folder_link`.
 pub fn filesystem_ownership(root: &std::path::Path) -> Result<std::fs::File> {
-    filesystem::no_symlink_components(root)?;
+    filesystem::no_link_below(root, root)?;
     let path = root.join("fundedflow.lock");
-    filesystem::no_symlink_components(&path)?;
+    filesystem::no_link_below(root, &path)?;
     let file = std::fs::OpenOptions::new()
         .create(true)
         .truncate(false)

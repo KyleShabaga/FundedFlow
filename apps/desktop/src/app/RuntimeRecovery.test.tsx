@@ -148,6 +148,15 @@ it("explains unsupported schema without exposing a retry, reset or downgrade act
   expect(screen.queryByRole("heading", { name: "Today is not built yet" })).toBeNull();
 });
 
+it("explains a linked data folder without offering a retry (TASK-018)", async () => {
+  invoke.mockResolvedValue(failed("data_folder_link"));
+  render(<App />);
+  await screen.findByRole("heading", { name: "FundedFlow doesn't trust its data folder" });
+  expect(screen.getByText(/Replace it with a real folder that holds the same files, then restart FundedFlow/)).toBeTruthy();
+  const offered = screen.queryAllByRole("button", { name: /retry|reset|restore/i }).filter(b => !b.closest('[aria-label="Developer tools"]'));
+  expect(offered).toEqual([]);
+});
+
 // Test-only data consumer demonstrates the gate contract without implementing Build 14 hooks.
 const accounts = vi.fn<() => Promise<unknown[]>>();
 function AccountsProbe() {

@@ -43,6 +43,8 @@ it.each(failureCategories)("models %s without inventing empty or ready data", as
   await tick();
   expect(runtime.state.kind).toBe(category === "newer_schema" ? "unsupported-schema" : "unavailable");
   expect(runtime.state.status).toEqual(failed(category));
+  // TASK-018: a linked data folder is an ordinary unavailable runtime; only retryable:false sets it apart.
+  if (category === "data_folder_link") expect(runtime.state).toMatchObject({ kind: "unavailable", reason: "runtime-failed" });
   if (category === "newer_schema") {
     await act(async () => { await runtime.retry(); });
     expect(transport).toHaveBeenCalledTimes(1);

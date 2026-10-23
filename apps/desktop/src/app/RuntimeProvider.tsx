@@ -58,6 +58,8 @@ export function RuntimeProvider({ children }: { children: ReactNode }) {
           if (status.state === "ready") { setLastReadyAt(Date.now()); update({ kind: "ready", status }); return; }
           if (status.state === "failed") {
             if (status.failure?.category === "newer_schema") update({ kind: "unsupported-schema", status });
+            // Every other category, data_folder_link included (TASK-018), is unavailable; its retryable:false
+            // hides Retry in the recovery notice.
             else update({ kind: "unavailable", status, reason: "runtime-failed" });
             return;
           }
