@@ -1108,7 +1108,13 @@ fn migration_18_upgrades_a_populated_v17_journal() {
     let mut conn = Connection::open_in_memory().unwrap();
     crate::db::migrate_with(&mut conn, &crate::db::MIGRATIONS[..17]).unwrap();
     let a = account(&mut conn, "Before");
+    // This build's trade code writes migration 0022's column: add it for the insert, then drop it so the
+    // journal has the version-17 schema again (TASK-042).
+    conn.execute_batch("ALTER TABLE trades ADD COLUMN fees_recorded INTEGER NOT NULL DEFAULT 1")
+        .unwrap();
     let t = trades::create(&mut conn, trade_input(&a)).unwrap();
+    conn.execute_batch("ALTER TABLE trades DROP COLUMN fees_recorded")
+        .unwrap();
     journal::create(
         &mut conn,
         JournalEntryInput {

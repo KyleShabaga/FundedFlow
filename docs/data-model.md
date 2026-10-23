@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 21 (P0-02; Build 23 adds no migration) (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`) `0017_trade_reviews.sql` `0018_daily_reviews.sql` `0019_rulebook_binding_provider.sql`, `0020_source_fact_immutability.sql` and `0021_risk_promotions.sql`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 22 (TASK-042; Build 23 adds no migration) (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`) `0017_trade_reviews.sql` `0018_daily_reviews.sql` `0019_rulebook_binding_provider.sql`, `0020_source_fact_immutability.sql`, `0021_risk_promotions.sql` and `0022_trade_fees_recorded.sql`; see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks, reviews, library, attachments),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -51,7 +51,7 @@ erDiagram
 | Entity | Table | Key fields |
 |---|---|---|
 | Account | `accounts` | `id`, `name`, `broker`, prop firm (`firm_id` → `firms.name`), `external_ref`, `account_type` (`evaluation`, `sim_funded`, `live_funded`, `personal`, `demo`, `other`), `status` (`active`, `paused`, `passed`, `failed`, `closed`), `currency`, `starting_balance_micros`, `timezone`, `trading_day_reset_time`, `created_at`, `updated_at` |
-| Trade | `trades` | `account_id`, `source` (`manual`/`csv_import`), `symbol`, `side` (`long`/`short`), `quantity`, `entry_at`, `entry_price`, `exit_at`, `exit_price`, `fees_micros`, `trading_day`, `reported_pnl_micros`, `gross_pnl_micros`, `net_pnl_micros`, `pnl_status`, `notes_md`, timestamps, `deleted_at` |
+| Trade | `trades` | `account_id`, `source` (`manual`/`csv_import`), `symbol`, `side` (`long`/`short`), `quantity`, `entry_at`, `entry_price`, `exit_at`, `exit_price`, `fees_micros`, `fees_recorded` (0/1: whether fees were given; when 0, `fees_micros` is 0 and the fees are unknown), `trading_day`, `reported_pnl_micros`, `gross_pnl_micros`, `net_pnl_micros`, `pnl_status`, `notes_md`, timestamps, `deleted_at` |
 | Journal entry | `journal_entries` + `journal_entry_tags` → `tags` | `account_id`, optional `trade_id`, `entry_at`, `title`, `body_md`, tags, timestamps |
 | CSV import | `import_batches` + `import_rows` | file name, SHA-256 and size, target `account_id`, `source_format` (`performance`/`generic`), mapping snapshot, `status` (`committed`/`failed`), `row_count`, `imported_count`, `skipped_count`, `duplicate_count`, `failed_count`, `warning_count`, `error_summary`, `created_at`, `completed_at`; per row: original cells, status, errors and warnings |
 | Round-trip source | `trade_round_trips` | For trades from a performance export: buy/sell fill IDs, prices, parsed and original timestamps, duration, contract metadata and which fill opened the trade. Immutable. |
@@ -528,6 +528,7 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 19 | `rulebook_binding_provider` | SQL | Build 10.5: additive INSERT/UPDATE guards prevent phase/path bindings to another provider's rulebook. Existing rows and historical references remain unchanged; production applicability reads fail closed for inconsistent or archived bindings. |
 | 20 | `source_fact_immutability` | SQL | Build 10.5: freezes captured source identity/content/date/hash facts without rewriting existing rows; independent reviewer/verification metadata remains updateable. |
 | 21 | `risk_promotions` | SQL | P0-02: append-only `risk_promotions` (account, snapshot, source fingerprint, promoted at); same-account, no-update and no-delete-while-the-account-exists triggers. Nothing backfilled: earlier snapshots stay history and are never current. See [P0-02](architecture/p0-02-risk-promotion.md) |
+| 22 | `trade_fees_recorded` | SQL | TASK-042: `trades.fees_recorded` (`ADD COLUMN`, CHECK `fees_recorded IN (0, 1)` and unrecorded fees are 0). Existing rows: fees above zero are recorded, zero is not recorded (a blank and an explicit zero were stored alike, and Performance imports are always 0). `updated_at`, `fees_micros` and `net_pnl_micros` are not touched. See [Fees recorded](#fees-recorded-task-042) |
 
 How an upgrade runs:
 
@@ -701,6 +702,16 @@ Computed in Rust (`domain::realized_pnl`) when a trade is saved, and stored:
 - Open trades: `open`, no P&L.
 - Net = gross − fees. Fees are one positive total per trade. Values are rounded half away from zero to whole
   micro-units. The schema enforces `net = gross − fees`.
+- **Fees recorded (TASK-042).** <a id="fees-recorded-task-042"></a>A blank fee is stored as 0 with
+  `fees_recorded = 0` (unknown); an explicit `0` or any amount is `fees_recorded = 1`, on create and on edit (a
+  blank → `0` correction is recorded as a change of `feesRecorded`). CSV: Performance rows are never recorded (the
+  export has no fee column); a generic row is recorded only when the fees column is mapped and its cell is non-blank
+  and valid. Stored P&L does not change: an unrecorded trade's `net_pnl_micros` stays gross − 0, so Insights and the
+  risk engine are unaffected. Per-trade views show Fees as "Not recorded" and Net P&L as `—` with a "Fees not
+  recorded" badge; desktop totals over the trade list keep their values, say "Includes N trades with fees not
+  recorded (counted before fees)" and mark the fees total incomplete. The Trade DTO carries `feesRecorded`; risk
+  inputs leave it out so the fingerprints of stored calculations do not change. The `trades.csv` export still
+  writes `0` for unrecorded fees.
 - The trade's **trading day** is derived from the exit time (or entry, while open); see below.
 
 ## Trading day
@@ -802,7 +813,8 @@ and `soldTimestamp` are present (e.g. Tradovate's Performance report). Each row 
 **long** (entry = buy, exit = sell). Sell first ⇒ **short** (entry = sell, exit = buy) — this is the
 "`soldTimestamp` earlier than `boughtTimestamp`" case. Such rows are imported but carry a warning, and both
 source timestamps, prices and fill IDs are kept unchanged in `trade_round_trips` for review. Equal timestamps
-are taken as long. The export has no fee column, so fees are 0.
+are taken as long. The export has no fee column, so fees are stored as 0 and marked not recorded
+(`fees_recorded = 0`; the net P&L is shown as unknown).
 
 **Generic trade CSV** — one trade per row. Required: symbol, side (`long`/`short`/`buy`/`sell`/`B`/`S`), quantity,
 entry time, entry price. Optional: exit time + exit price (together), fees, P&L, broker trade ID, notes. Common

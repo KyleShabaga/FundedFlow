@@ -70,7 +70,9 @@ Tabs: **Edit rules** (draft) / **Rules** (published), **Compare**, **Preview**, 
   "Simulated: {status}". The account's canonical inputs are read for an explicit cutoff (now, to the minute; "Use
   now" moves it) through `loadRiskCalculation` (no write), and `simulateRulebookVersion` evaluates this version,
   with the editor's unsaved edits when they are valid (otherwise the saved draft, with a warning). The trader
-  states, for this calculation only: whether trades, fees and ledger are complete; the currency of the rule
+  states, for this calculation only: whether trades, fees and ledger are complete (when the account has closed trades
+  with fees not recorded, "N closed trades have fees not recorded" shows beside "Fees are complete", which stays
+  selectable; TASK-042); the currency of the rule
   amounts; whether touching a limit is a breach; an optional personal caution buffer. Nothing is assumed: an
   unstated value leaves the affected rules Unknown with the reason. Prior breaches from earlier engine
   calculations are passed to the engine. Nothing is assigned, published or saved.

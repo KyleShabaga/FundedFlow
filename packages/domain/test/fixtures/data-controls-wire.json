@@ -159,7 +159,7 @@
         "trades": 0
       },
       "requiredConfirmation": "REPLACE ENTIRE JOURNAL",
-      "requiredFreeBytes": 1092730880,
+      "requiredFreeBytes": 1092739072,
       "state": "validated",
       "warnings": [
         "Plaintext archive; hashes are integrity checks, not authentication.",

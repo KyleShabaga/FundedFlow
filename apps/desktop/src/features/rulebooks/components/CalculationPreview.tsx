@@ -42,7 +42,7 @@ export function CalculationPreview({ accountId, currency, timeZone, version, for
   accountId: string; currency: string; timeZone: string; version: RulebookVersionDetail; form: DraftForm | null;
 }) {
   const [asOf, setAsOf] = useState(minute);
-  const settings = useCalculationSettings(currency, null);
+  const settings = useCalculationSettings(currency, null, accountId);
   const inputs = useCalculationInputs(accountId, asOf, settings.coverage, settings.policy);
   const proposal = useMemo(() => proposedVersion(version, form), [version, form]);
   const label = `${version.rulebook.displayName} v${version.version.versionNumber}${proposal.usesUnsavedEdits ? " (with your unsaved edits)" : ""}`;

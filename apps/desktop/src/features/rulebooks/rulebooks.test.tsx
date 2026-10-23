@@ -520,6 +520,24 @@ describe("engine integration", () => {
     expect(within(panel).getByText("The rules are not verified, so this is not a compliance result.")).toBeTruthy();
   });
 
+  it("names closed trades with fees not recorded beside 'Fees are complete', which stays the trader's statement (TASK-042)", async () => {
+    await assignCatalogue();
+    holder.store.trades.set(A, [{ ...closedTrade(A, 1, "-500"), feesRecorded: false }, closedTrade(A, 2, "20"), { ...closedTrade(A, 3, "5"), feesRecorded: false }]);
+    const user = userEvent.setup();
+    renderAt(`/accounts/${A}/rulebook`);
+    await user.click(await screen.findByRole("tab", { name: "Calculation" }));
+    const calc = within(screen.getByRole("tabpanel", { name: "Calculation" })).getByRole("region", { name: "Calculate now" });
+    expect(await within(calc).findByText("2 closed trades have fees not recorded")).toBeTruthy();
+    // Still selectable: the trader may know those fees were zero or included in a reported P&L.
+    await chooseOption(user, /Fees are complete/, "Yes, complete", calc);
+    await user.click(within(calc).getByRole("button", { name: "Calculate and save" }));
+    await waitFor(() => expect(holder.store.snapshots).toHaveLength(1));
+    const inputs = (holder.store.snapshots[0]!.explanation as { inputs: { coverage: { fees: string }; trades: object[] } }).inputs;
+    expect(inputs.coverage.fees).toBe("available");
+    // Risk inputs never carry the flag.
+    expect(inputs.trades.every(t => !("feesRecorded" in t))).toBe(true);
+  });
+
   it("saves a calculation on request, shows it typed, and stops calling it current when its sources change", async () => {
     await assignCatalogue();
     holder.store.trades.set(A, [closedTrade(A, 1, "-500")]);

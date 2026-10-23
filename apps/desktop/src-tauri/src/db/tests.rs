@@ -511,3 +511,87 @@ fn migration_11_upgrades_a_v10_journal_without_changing_its_rows() {
     );
     assert!(dup.is_err());
 }
+
+// ---------------------------------------------------------------------------
+// TASK-042: migration 0022 records whether a trade's fees were given.
+// ---------------------------------------------------------------------------
+
+/// (id, fees_micros, net_pnl_micros, updated_at) of every trade, by id.
+fn fee_facts(conn: &Connection) -> Vec<(String, i64, Option<i64>, String)> {
+    conn.prepare("SELECT id, fees_micros, net_pnl_micros, updated_at FROM trades ORDER BY id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap()
+}
+
+fn fees_recorded(conn: &Connection) -> Vec<(String, i64)> {
+    conn.prepare("SELECT id, fees_recorded FROM trades ORDER BY id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap()
+}
+
+#[test]
+fn migration_22_marks_zero_fee_trades_not_recorded_and_changes_nothing_else() {
+    let mut conn = Connection::open_in_memory().unwrap();
+    assert_eq!(migrate_with(&mut conn, &MIGRATIONS[..21]).unwrap(), 21);
+    seed_account(&conn, "acc1");
+    seed_batch(&conn, "batch1");
+    insert_imported_trade(&conn, "t1", "h:abc").unwrap(); // fees 1.24
+    let manual = "INSERT INTO trades (id, account_id, source, symbol, side, quantity, entry_at, entry_price,
+                                      exit_at, exit_price, fees_micros, trading_day, gross_pnl_micros,
+                                      net_pnl_micros, pnl_status, created_at, updated_at)
+                  VALUES (?1, 'acc1', 'manual', 'ES', 'long', '1', ?2, '5000', ?2, '5001', ?3, '2026-10-19',
+                          50000000, ?4, 'calculated', ?2, ?2)";
+    conn.execute(manual, params!["t2", T, 0, 50_000_000])
+        .unwrap();
+    conn.execute(manual, params!["t3", T, 2_500_000, 47_500_000])
+        .unwrap();
+    let open = "INSERT INTO trades (id, account_id, source, symbol, side, quantity, entry_at, entry_price,
+                                    trading_day, pnl_status, created_at, updated_at)
+                VALUES ('t4', 'acc1', 'manual', 'ES', 'short', '1', ?1, '5000', '2026-10-19', 'open', ?1, ?1)";
+    conn.execute(open, [T]).unwrap();
+    let before = fee_facts(&conn);
+
+    assert_eq!(migrate(&mut conn).unwrap(), 22);
+    assert_eq!(
+        fee_facts(&conn),
+        before,
+        "fees, net and updated_at unchanged"
+    );
+    assert_eq!(
+        fees_recorded(&conn),
+        [
+            ("t1".into(), 1),
+            ("t2".into(), 0),
+            ("t3".into(), 1),
+            ("t4".into(), 0)
+        ]
+    );
+}
+
+#[test]
+fn fees_recorded_is_a_flag_and_unrecorded_fees_are_zero() {
+    let conn = setup_trading();
+    let attempt = |sql: &str| {
+        conn.execute(&format!("UPDATE trades SET {sql} WHERE id = 't1'"), [])
+            .is_err()
+    };
+    assert!(
+        attempt("fees_recorded = 0"),
+        "fees above zero cannot be unrecorded"
+    );
+    assert!(attempt("fees_recorded = 2"));
+    assert!(attempt("fees_recorded = NULL"));
+    assert!(!attempt(
+        "fees_micros = 0, net_pnl_micros = gross_pnl_micros, fees_recorded = 0"
+    ));
+    assert!(
+        !attempt("fees_recorded = 1"),
+        "an explicit zero is recorded"
+    );
+}

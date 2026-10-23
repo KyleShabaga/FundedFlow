@@ -431,3 +431,99 @@ fn archiving_an_account_keeps_its_trades_and_journal_but_blocks_writes() {
     assert_eq!(trades::list(&conn, &a.id).unwrap().len(), 1);
     assert_eq!(trades::list(&conn, &keep.id).unwrap().len(), 1);
 }
+
+// ---------------------------------------------------------------------------
+// TASK-042: a blank fee is "not recorded"; an explicit 0 is recorded.
+// ---------------------------------------------------------------------------
+
+/// `feesRecorded` as the Trade DTO serializes it (None when the key is absent).
+fn fees_recorded(t: &trades::Trade) -> Option<bool> {
+    serde_json::to_value(t).unwrap()["feesRecorded"].as_bool()
+}
+
+fn stored_flag(conn: &Connection, id: &str) -> i64 {
+    conn.query_row(
+        "SELECT fees_recorded FROM trades WHERE id = ?1",
+        [id],
+        |r| r.get(0),
+    )
+    .unwrap()
+}
+
+#[test]
+fn manual_fees_are_recorded_only_when_given() {
+    let mut conn = db();
+    let a = accounts::create(&mut conn, account_input("Eval")).unwrap();
+    let with = |fees: Option<&str>| TradeInput {
+        fees: fees.map(str::to_string),
+        ..trade_input(&a.id)
+    };
+
+    let blank = trades::create(&mut conn, with(Some("  "))).unwrap();
+    assert_eq!(
+        (blank.fees.as_str(), fees_recorded(&blank)),
+        ("0", Some(false))
+    );
+    assert_eq!(stored_flag(&conn, &blank.id), 0);
+    // Stored P&L is unchanged: net is still gross − 0.
+    assert_eq!(blank.realized_pnl, blank.gross_pnl);
+    let missing = trades::create(&mut conn, with(None)).unwrap();
+    assert_eq!(fees_recorded(&missing), Some(false));
+    let zero = trades::create(&mut conn, with(Some("0"))).unwrap();
+    assert_eq!(
+        (zero.fees.as_str(), fees_recorded(&zero)),
+        ("0", Some(true))
+    );
+    assert_eq!(stored_flag(&conn, &zero.id), 1);
+    let paid = trades::create(&mut conn, with(Some("4.12"))).unwrap();
+    assert_eq!(fees_recorded(&paid), Some(true));
+
+    // Editing: blank → 0 records the fees and is a recorded correction; 0 → blank unrecords them.
+    let edited = trades::update(&mut conn, &blank.id, with(Some("0"))).unwrap();
+    assert_eq!(fees_recorded(&edited), Some(true));
+    let history = trades::corrections(&conn, &blank.id).unwrap();
+    assert_eq!(history.len(), 1);
+    assert_eq!(history[0].changed_fields, ["feesRecorded"]);
+    assert_eq!(history[0].before.as_ref().unwrap()["feesRecorded"], false);
+    assert_eq!(history[0].after.as_ref().unwrap()["feesRecorded"], true);
+    let cleared = trades::update(&mut conn, &zero.id, with(None)).unwrap();
+    assert_eq!(fees_recorded(&cleared), Some(false));
+    assert_eq!(stored_flag(&conn, &zero.id), 0);
+    // An edit that changes nothing still writes nothing.
+    let same = trades::update(&mut conn, &paid.id, with(Some("4.12"))).unwrap();
+    assert_eq!(same.updated_at, paid.updated_at);
+    assert!(trades::corrections(&conn, &paid.id).unwrap().is_empty());
+}
+
+#[test]
+fn a_session_settings_rederive_keeps_whether_fees_were_recorded() {
+    let mut conn = db();
+    let a = accounts::create(&mut conn, account_input("Eval")).unwrap();
+    let blank = trades::create(
+        &mut conn,
+        TradeInput {
+            fees: None,
+            ..trade_input(&a.id)
+        },
+    )
+    .unwrap();
+    let zero = trades::create(
+        &mut conn,
+        TradeInput {
+            fees: Some("0".into()),
+            ..trade_input(&a.id)
+        },
+    )
+    .unwrap();
+    accounts::update(
+        &mut conn,
+        &a.id,
+        AccountInput {
+            trading_day_reset_time: "18:00".into(),
+            ..account_input("Eval")
+        },
+    )
+    .unwrap();
+    assert_eq!(stored_flag(&conn, &blank.id), 0);
+    assert_eq!(stored_flag(&conn, &zero.id), 1);
+}

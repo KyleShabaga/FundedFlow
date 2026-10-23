@@ -76,11 +76,17 @@ export function createAppStore(seed: AppStoreSeed = {}) {
   imports.repository.commit.mockImplementation(async (req: CsvImportRequest): Promise<ImportBatch> => {
     const batch = await commit(req);
     const c = golden.cases.find(x => x.request.content === req.content)!;
-    c.expected.preview.rows.filter(r => r.status === "new" && r.trade).forEach((r, i) => {
+    // TASK-042, as Rust commits: Performance rows never record fees; a generic row does only when the fees column is
+    // mapped and its cell is not blank (an explicit 0 counts).
+    const { preview } = c.expected;
+    const feesHeader = preview.format === "generic" ? preview.mapping.find(m => m.field === "fees")?.header ?? null : null;
+    const feesColumn = feesHeader === null ? -1 : preview.headers.indexOf(feesHeader);
+    preview.rows.filter(r => r.status === "new" && r.trade).forEach((r, i) => {
       const t = r.trade!;
       const id = `${batch.id}-t${i + 1}`;
+      const feesRecorded = feesColumn >= 0 && (r.raw[feesColumn] ?? "").trim() !== "";
       journal.all.set(id, { trade: makeTrade({ id, accountId: req.accountId, source: "csv_import", importBatchId: batch.id, symbol: t.symbol, side: t.side as Trade["side"],
-        quantity: t.quantity, entryAt: t.entryAt, entryPrice: t.entryPrice, exitAt: t.exitAt, exitPrice: t.exitPrice, fees: t.fees, tradingDay: t.tradingDay,
+        quantity: t.quantity, entryAt: t.entryAt, entryPrice: t.entryPrice, exitAt: t.exitAt, exitPrice: t.exitPrice, fees: t.fees, feesRecorded, tradingDay: t.tradingDay,
         reportedPnl: t.reportedPnl, grossPnl: null, realizedPnl: t.realizedPnl, pnlStatus: t.pnlStatus as Trade["pnlStatus"] }), deletedAt: null });
     });
     version++;

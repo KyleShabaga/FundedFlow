@@ -43,7 +43,7 @@ import "../../daily-reviews/components/daily-review.css";
 import { useDailyReviewIndex } from "../../daily-reviews/hooks/daily-reviews";
 import { adherenceShort, dailyReviewPath, statusView } from "../../daily-reviews/view-models/daily-review";
 import { useJournalEntries } from "../hooks/journal";
-import { longDay, TagList, tradePath } from "./presentation";
+import { longDay, NetPnl, TagList, tradePath } from "./presentation";
 
 const SECTIONS = ["notes", "daily", "playbooks", "templates", "tags"] as const;
 type Section = (typeof SECTIONS)[number];
@@ -119,7 +119,7 @@ function TradeNotes({ account }: { account: AccountViewModel }) {
                     <Badge>{n.kind}</Badge>
                     <span className="ds-sym">{n.trade.symbol}</span>
                     <span className="ds-faint">{longDay(n.trade.tradingDay)}</span>
-                    <MoneyCell value={n.trade.realizedPnl} currency={n.trade.currency} />
+                    <NetPnl trade={n.trade} />
                     <Button size="sm" variant="ghost" onClick={() => navigate(tradePath(n.trade.id))}>Open trade</Button>
                   </div>
                   <strong>{n.title}</strong>

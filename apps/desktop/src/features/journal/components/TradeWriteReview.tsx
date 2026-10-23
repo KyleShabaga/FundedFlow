@@ -22,7 +22,7 @@ export function TradeWriteReview({ write, account, symbol, tradeId }: {
       {rows.length
         ? <StatList label={tradeId ? "The trade as saved now" : `Saved ${wanted} trades`} items={rows.map(t => ({
           label: `${t.symbol} ${t.side} ${t.quantity}`,
-          value: `entry ${formatInstant(t.entryAt, { timeZone: account.timezone })} · fees ${t.fees}`,
+          value: `entry ${formatInstant(t.entryAt, { timeZone: account.timezone })} · ${t.feesRecorded ? `fees ${t.fees}` : "fees not recorded"}`,
         }))} />
         : <p>{tradeId ? "This trade isn't in the journal any more." : `No ${wanted || "matching"} trade is saved in this account.`}</p>}
     </UncertainOutcomeReview>

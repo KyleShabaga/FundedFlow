@@ -19,4 +19,12 @@ describe.each(fixture.cases)("$name", (c) => {
   it("round-trips the Trade wire bytes", () => {
     expect(JSON.stringify(tradeSchema.parse(JSON.parse(c.tradeWire)))).toBe(c.tradeWire);
   });
+
+  // TASK-042: risk inputs carry trades without `feesRecorded` (fingerprints unchanged); they still parse unchanged.
+  it("round-trips the risk-input shape of the trade, without feesRecorded", () => {
+    const { feesRecorded, ...riskShape } = JSON.parse(c.tradeWire) as Record<string, unknown>;
+    expect(typeof feesRecorded).toBe("boolean");
+    const wire = JSON.stringify(riskShape);
+    expect(JSON.stringify(tradeSchema.parse(JSON.parse(wire)))).toBe(wire);
+  });
 });

@@ -28,6 +28,19 @@ describe("journal model", () => {
     expect(s.averageLoss).toBe("-50.05");
     const none = stats(rows([t[3], t[4]]));
     expect([none.net, none.winRate, none.profitFactor]).toEqual([null, null, null]);
+    expect([s.feesNotRecorded, s.feesIncomplete]).toEqual([0, false]);
+  });
+
+  it("keeps stored totals for trades with fees not recorded and counts them as before fees (TASK-042)", () => {
+    // Rust stores net = gross − 0 for these; the totals keep that value and say how many are included.
+    const unrecorded = vm({ id: "nf", accountId: "a", realizedPnl: "30", grossPnl: "30", fees: "0", feesRecorded: false, tradingDay: "2026-10-20" });
+    const openUnrecorded = vm({ id: "no", accountId: "a", exitAt: null, exitPrice: null, realizedPnl: null, grossPnl: null, pnlStatus: "open", fees: "0", feesRecorded: false });
+    const s = stats(rows([t[0], unrecorded, openUnrecorded]));
+    expect(s).toMatchObject({ known: 2, net: "130.1", gross: "134.1", fees: "4", feesNotRecorded: 1, feesIncomplete: true });
+    // An explicit zero is a recorded fee.
+    const zero = vm({ id: "z", accountId: "a", realizedPnl: "30", grossPnl: "30", fees: "0", feesRecorded: true });
+    expect(stats(rows([zero]))).toMatchObject({ feesNotRecorded: 0, feesIncomplete: false });
+    expect(stats(rows([openUnrecorded]))).toMatchObject({ feesNotRecorded: 0, feesIncomplete: true });
   });
 
   it("averages exactly with rounding half away from zero", () => {

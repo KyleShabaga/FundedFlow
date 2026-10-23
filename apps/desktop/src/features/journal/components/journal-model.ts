@@ -108,6 +108,13 @@ export interface Stats {
   net: string | null;
   gross: string | null;
   fees: string | null;
+  /**
+   * TASK-042 (R-NET): closed trades with a known P&L whose fees were not recorded. The sums above keep their stored
+   * values (gross − 0), so these trades are counted before fees; views say so beside the totals.
+   */
+  feesNotRecorded: number;
+  /** Some trade here has fees not recorded, so `fees` is a lower bound, not the total. */
+  feesIncomplete: boolean;
   contracts: string | null;
   /** Winners ÷ known, as a percentage; null with no known trades. Display only. */
   winRate: number | null;
@@ -147,6 +154,8 @@ export function stats(rows: readonly JournalRow[]): Stats {
     net: known.length ? sumMoney(known.map(t => t.realizedPnl)) : null,
     gross: known.length ? sumMoney(known.map(t => t.grossPnl)) : null,
     fees: trades.length ? sumMoney(trades.map(t => t.fees)) : null,
+    feesNotRecorded: known.filter(t => !t.feesRecorded).length,
+    feesIncomplete: trades.some(t => !t.feesRecorded),
     contracts: trades.length ? sumMoney(trades.map(t => t.quantity)) : null,
     winRate: known.length ? (wins.length / known.length) * 100 : null,
     profitFactor: losses.length && winN != null && lossN != null && lossN !== 0 ? winN / Math.abs(lossN) : null,

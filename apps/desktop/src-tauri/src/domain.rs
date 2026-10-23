@@ -268,6 +268,8 @@ pub struct TradeFields {
     pub exit_at: Option<DateTime<Utc>>,
     pub exit_price: Option<Decimal>,
     pub fees_micros: i64,
+    /// Whether a fee was given (an explicit 0 included). When false, `fees_micros` is 0 and the fees are unknown.
+    pub fees_recorded: bool,
     pub reported_pnl_micros: Option<i64>,
     pub notes: Option<String>,
 }
@@ -344,6 +346,7 @@ pub fn validate_trade(
     }
 
     let fees_micros = match present(d.fees) {
+        // Not given: stored as 0 with `fees_recorded` false (unknown, never an explicit zero).
         None => Some(0),
         Some(s) => match parse_decimal(s) {
             None => {
@@ -399,6 +402,7 @@ pub fn validate_trade(
         exit_at,
         exit_price,
         fees_micros: fees_micros.unwrap(),
+        fees_recorded: present(d.fees).is_some(),
         reported_pnl_micros,
         notes,
     })
@@ -712,6 +716,7 @@ mod tests {
             exit_at: Some(parse_instant("2026-10-20T13:45:00Z").unwrap()),
             exit_price: Some(Decimal::from_str(exit).unwrap()),
             fees_micros,
+            fees_recorded: true,
             reported_pnl_micros: None,
             notes: None,
         }

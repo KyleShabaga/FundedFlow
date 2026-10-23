@@ -841,3 +841,69 @@ fn a_mismatch_after_the_upgrade_fails_with_counts_only() {
     );
     assert_redacted(&message, &ids);
 }
+
+// ---------------------------------------------------------------------------
+// TASK-042: migration 0022 on the shipped fixture journals.
+// ---------------------------------------------------------------------------
+
+const V8: &[u8] = include_bytes!("fixtures/fundedflow-v8-legacy-rules.db");
+
+/// id → (fees_micros, net_pnl_micros, updated_at) of every trade, deleted ones included.
+type FeeFacts = BTreeMap<String, (i64, Option<i64>, String)>;
+
+fn fee_facts(conn: &Connection) -> FeeFacts {
+    conn.prepare("SELECT id, fees_micros, net_pnl_micros, updated_at FROM trades")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, (r.get(1)?, r.get(2)?, r.get(3)?))))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap()
+}
+
+/// Upgrades a copy of `fixture` and checks the legacy rule: fees above zero are recorded, zero is not, and no
+/// stored fee, net P&L or revision changes. Returns (recorded, not recorded) counts.
+fn upgrade_fees_recorded(fixture: &[u8], from: u32) -> (usize, usize) {
+    let db = Journal::copy_of(fixture);
+    let before = {
+        let conn = read_only(&db.0);
+        assert_eq!(version(&conn), from);
+        fee_facts(&conn)
+    };
+    let conn = open_file(&db.0).unwrap();
+    assert_eq!(version(&conn), latest_version());
+    // The re-derive of early upgrades may move trading days, but never fees, net P&L or updated_at.
+    assert_eq!(fee_facts(&conn), before);
+    let flags: BTreeMap<String, i64> = conn
+        .prepare("SELECT id, fees_recorded FROM trades")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert_eq!(flags.len(), before.len());
+    let mut counts = (0, 0);
+    for (id, (fees, _, _)) in &before {
+        let expected = i64::from(*fees > 0);
+        assert_eq!(
+            flags[id], expected,
+            "fees_recorded follows the legacy rule (fees above zero are recorded)"
+        );
+        if expected == 1 {
+            counts.0 += 1;
+        } else {
+            counts.1 += 1;
+        }
+    }
+    counts
+}
+
+#[test]
+fn migration_22_classifies_the_fees_of_every_fixture_journal() {
+    let v3 = upgrade_fees_recorded(V3, 3);
+    let v4 = upgrade_fees_recorded(V4, 4);
+    let v8 = upgrade_fees_recorded(V8, 8);
+    // The fixtures hold both kinds of trade, so both branches of the rule are exercised.
+    let total = (v3.0 + v4.0 + v8.0, v3.1 + v4.1 + v8.1);
+    assert!(total.0 > 0, "some fixture trade has fees above zero");
+    assert!(total.1 > 0, "some fixture trade has zero fees");
+}

@@ -72,6 +72,12 @@ export const tradeSchema = z.object({
   exitAt: z.string().nullable(),
   exitPrice: z.string().nullable(),
   fees: z.string(),
+  /**
+   * Whether fees were given (an explicit 0 included). When false, `fees` is "0" but the fees are unknown and views
+   * show the net P&L as unknown (stored P&L is gross − 0). Optional here: risk inputs leave it out so stored
+   * calculations keep their fingerprints (TASK-042); the desktop trade view model requires it.
+   */
+  feesRecorded: z.boolean().optional(),
   /** YYYY-MM-DD in the account's timezone and reset time. */
   tradingDay: z.string(),
   reportedPnl: z.string().nullable(),

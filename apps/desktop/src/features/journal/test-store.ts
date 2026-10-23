@@ -33,7 +33,7 @@ const invalid = (field: string, message: string) => new RepositoryError({ kind: 
 export function trade(over: Partial<Trade> & Pick<Trade, "id" | "accountId">): Trade {
   return {
     source: "manual", importBatchId: null, brokerTradeId: null, symbol: "ESZ6", side: "long", quantity: "1",
-    entryAt: "2026-10-19T13:30:00.000Z", entryPrice: "5000", exitAt: "2026-10-19T14:00:00.000Z", exitPrice: "5002", fees: "4",
+    entryAt: "2026-10-19T13:30:00.000Z", entryPrice: "5000", exitAt: "2026-10-19T14:00:00.000Z", exitPrice: "5002", fees: "4", feesRecorded: true,
     tradingDay: "2026-10-19", reportedPnl: null, grossPnl: "100", realizedPnl: "96", pnlStatus: "calculated", notes: null, roundTrip: null,
     createdAt: T, updatedAt: T, ...over,
   };
@@ -81,6 +81,11 @@ export function createJournalStore<B extends { repository: object; accounts: Map
     const net = gross - Number(input.fees ?? 0);
     return { exitAt: new Date(exitAt).toISOString(), exitPrice: input.exitPrice, grossPnl: String(gross), realizedPnl: String(net), pnlStatus: "calculated", tradingDay: new Date(exitAt).toISOString().slice(0, 10) };
   };
+  /** As Rust validates fees (TASK-042): a blank fee is stored as "0" and not recorded; any given value is recorded. */
+  const fees = (input: TradeInput) => {
+    const given = input.fees?.trim() ? input.fees.trim() : null;
+    return { fees: given ?? "0", feesRecorded: given !== null };
+  };
   const meta = (a: AttachmentMeta) => ({ ...a, fileStatus: files.get(a.id)?.status === "missing" ? "missing" as const : "ok" as const });
 
   const daily = createDailyReviewFake({
@@ -105,7 +110,7 @@ export function createJournalStore<B extends { repository: object; accounts: Map
         log("trades.create", input);
         account(input.accountId);
         const t = trade({ id: id("trade"), accountId: input.accountId, symbol: input.symbol.toUpperCase(), side: input.side, quantity: input.quantity,
-          entryAt: new Date(input.entryAt).toISOString(), entryPrice: input.entryPrice, fees: input.fees ?? "0", reportedPnl: input.realizedPnl ?? null,
+          entryAt: new Date(input.entryAt).toISOString(), entryPrice: input.entryPrice, ...fees(input), reportedPnl: input.realizedPnl ?? null,
           notes: input.notes ?? null, createdAt: now(), updatedAt: now(), ...derive(input) });
         all.set(t.id, { trade: t, deletedAt: null });
         return { ...t };
@@ -116,7 +121,7 @@ export function createJournalStore<B extends { repository: object; accounts: Map
         if (options?.expectedUpdatedAt && options.expectedUpdatedAt !== row.trade.updatedAt) throw conflict("changed");
         const before = { ...row.trade };
         row.trade = { ...row.trade, symbol: input.symbol, side: input.side, quantity: input.quantity, entryAt: new Date(input.entryAt).toISOString(),
-          entryPrice: input.entryPrice, fees: input.fees ?? "0", notes: input.notes ?? null, ...derive(input), updatedAt: now() };
+          entryPrice: input.entryPrice, ...fees(input), notes: input.notes ?? null, ...derive(input), updatedAt: now() };
         corrections.set(tradeId, [...(corrections.get(tradeId) ?? []), { id: id("c"), tradeId, kind: "edit", correctedAt: row.trade.updatedAt, actor: "local_user",
           reason: options?.reason ?? null, changedFields: ["fees"], before: { fees: before.fees }, after: { fees: row.trade.fees } }]);
         return { ...row.trade };

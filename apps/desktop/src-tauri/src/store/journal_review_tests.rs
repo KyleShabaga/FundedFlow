@@ -991,6 +991,9 @@ fn migration_17_keeps_reserved_rows_and_fills_review_ownership() {
     let mut conn = Connection::open_in_memory().unwrap();
     crate::db::configure(&conn).unwrap();
     crate::db::migrate_with(&mut conn, &crate::db::MIGRATIONS[..16]).unwrap();
+    // This build's trade code reads and writes migration 0022's column (TASK-042); migration 17 never touches it.
+    conn.execute_batch("ALTER TABLE trades ADD COLUMN fees_recorded INTEGER NOT NULL DEFAULT 1")
+        .unwrap();
     let a = account(&mut conn, "A");
     let t = trades::create(&mut conn, trade_input(&a)).unwrap();
     // A review row in the v16 (reserved) shape.

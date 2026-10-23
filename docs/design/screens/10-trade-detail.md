@@ -12,7 +12,11 @@ Mockup: `TradeDetail.dc.html`. References: `ts-trade-detail.png`, `tw-trade-hist
   rating (`RadioGroup segmented` 1–5, unrated until chosen, with Clear rating; P0-D24); strategy and checklist with per-item Followed/Missed/Not applicable; setup, mistake,
   mindset and other tag chips (`ChipGroup`); planned entry, stop, target and risk; plan/thesis and notes/reflection;
   then Screenshots. No price chart in V1 (see Decisions).
-- Right: Summary `StatList` (account, trading day, quantity, entry → exit, hold, gross, fees, net, P&L source),
+- Right: Summary `StatList` (account, trading day, quantity, entry → exit, hold, gross, fees, net, P&L source).
+  Fees that were never given show "Not recorded" (never `$0.00`); the net P&L is then `—` with a "Fees not recorded"
+  `Badge` (also in the header), and gross stays the known value (TASK-042). The correction form keeps an explicit `0`;
+  only unrecorded fees start blank, and its help text says a blank fee is not recorded.
+  Then
   Import source (file, line, original CSV row), Source fills (round-trip IDs, timestamps exactly as exported, which
   fill opened the trade, tick size; read only), Correction history.
 - Actions: previous/next trade (the account's trades in entry order), Correct trade, Delete (Undo; kept with its review).
