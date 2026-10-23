@@ -249,10 +249,23 @@ pub fn backup_path(path: &Path) -> std::path::PathBuf {
 /// Open (creating if needed) the journal database at `path`, take a backup
 /// copy before upgrading an existing journal, and migrate it.
 pub fn open_file(path: &Path) -> Result<Connection, MigrateError> {
+    open(path, false)
+}
+
+/// `open_file` for a restore candidate taken from an archive: schema code in the file is not trusted
+/// (`PRAGMA trusted_schema=OFF`) before any migration runs.
+pub fn open_restore_candidate(path: &Path) -> Result<Connection, MigrateError> {
+    open(path, true)
+}
+
+fn open(path: &Path, untrusted: bool) -> Result<Connection, MigrateError> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(MigrateError::Io)?;
     }
     let mut conn = Connection::open(path)?;
+    if untrusted {
+        conn.pragma_update(None, "trusted_schema", false)?;
+    }
     configure(&conn)?;
     // Refuse a newer journal before anything persistent is set on the file
     // (WAL mode is stored in the database header).

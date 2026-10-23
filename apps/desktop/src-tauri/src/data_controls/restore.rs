@@ -70,7 +70,7 @@ pub fn inspect(c: &Connection, root: &Path, request: InspectRequest) -> Result<R
     space(root, MAX_TOTAL * 4)?;
     let stage = archive::inspect_to(Path::new(&request.source), &workspace(root)?)?;
     // Also prove that all required upgrades can run without touching active data.
-    let mut candidate = db::open_file(&stage.directory.path().join("journal.sqlite"))
+    let mut candidate = db::open_restore_candidate(&stage.directory.path().join("journal.sqlite"))
         .map_err(|_| fail(Code::Integrity))?;
     db::migrate(&mut candidate).map_err(|_| fail(Code::Integrity))?;
     let archive_sha256 = stage.source_hash.clone();
@@ -113,7 +113,7 @@ pub fn prepare(c: &Connection, root: &Path, request: RestoreRequest) -> Result<R
     let candidate = op.join("candidate.db");
     fs::copy(staged.directory.path().join("journal.sqlite"), &candidate)?;
     {
-        let upgraded = db::open_file(&candidate).map_err(|_| fail(Code::Integrity))?;
+        let upgraded = db::open_restore_candidate(&candidate).map_err(|_| fail(Code::Integrity))?;
         upgraded.execute_batch("PRAGMA wal_checkpoint(TRUNCATE)")?;
     }
     archive::validate_database(&candidate, db::latest_version())?;
