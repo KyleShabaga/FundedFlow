@@ -569,7 +569,7 @@ The tests check:
 To try a copy of your own journal, close FundedFlow and copy its journal folder (`fundedflow.db` and any `-wal`/`-shm`) somewhere offline. Point `FUNDEDFLOW_UPGRADE_DB` at that copy, never at the live `%APPDATA%` journal, and run this under `apps/desktop/src-tauri`. The test copies the file again into a temp folder, refuses while its `fundedflow.lock` is held, and prints counts only (failures included), so `--nocapture` only adds the counts:
 
 ```
-FUNDEDFLOW_UPGRADE_DB=<copy folder>\fundedflow.db cargo test --lib upgrade_copy -- --ignored
+FUNDEDFLOW_UPGRADE_DB=<copy folder>\fundedflow.db cargo test --offline --locked --lib upgrade_copy -- --ignored
 ```
 
 ## Repository port

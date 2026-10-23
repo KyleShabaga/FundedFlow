@@ -511,7 +511,7 @@ fn upgrade_copy(source: &Path, tamper: impl FnOnce(&Connection)) -> Result<Vec<S
 /// Upgrade a copy of a real journal. Close FundedFlow, copy its journal folder (`fundedflow.db` and any
 /// `-wal`/`-shm`) somewhere offline, and point `FUNDEDFLOW_UPGRADE_DB` at that copy, never at the live
 /// `%APPDATA%` journal:
-/// `FUNDEDFLOW_UPGRADE_DB=<copy folder>\fundedflow.db cargo test --lib upgrade_copy -- --ignored`.
+/// `FUNDEDFLOW_UPGRADE_DB=<copy folder>\fundedflow.db cargo test --offline --locked --lib upgrade_copy -- --ignored`.
 /// The test copies it again into a temp folder and refuses while its `fundedflow.lock` is held. Output,
 /// failures included, is counts only, so `--nocapture` (to see the counts) shows no journal content.
 #[test]
