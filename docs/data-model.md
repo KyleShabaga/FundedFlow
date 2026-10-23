@@ -570,10 +570,10 @@ The tests check:
 - reopening is a no-op;
 - a failure in step 5 leaves the journal at version 4.
 
-To try a copy of your own journal (read-only on the source), run this under `apps/desktop/src-tauri`:
+To try a copy of your own journal, close FundedFlow and copy its journal folder (`fundedflow.db` and any `-wal`/`-shm`) somewhere offline. Point `FUNDEDFLOW_UPGRADE_DB` at that copy, never at the live `%APPDATA%` journal, and run this under `apps/desktop/src-tauri`. The test copies the file again into a temp folder, refuses while its `fundedflow.lock` is held, and prints counts only (failures included), so `--nocapture` only adds the counts:
 
 ```
-FUNDEDFLOW_UPGRADE_DB=%APPDATA%\com.fundedflow.desktop\fundedflow.db cargo test --lib upgrade_copy -- --ignored --nocapture
+FUNDEDFLOW_UPGRADE_DB=<copy folder>\fundedflow.db cargo test --offline --locked --lib upgrade_copy -- --ignored
 ```
 
 ## Repository port
