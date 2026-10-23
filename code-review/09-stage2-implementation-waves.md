@@ -191,7 +191,8 @@ Each line is one PR-sized change and one approval unit.
 | **W3b** release process | 027 | Needs correction (G4, G13) | 005 and 006 decided; merge after W1's fixture edits (017) | — |
 | **W3c** test safety | 034 code part (moved before the candidate, per G7) | Needs correction | 008 keeps the gate | Any |
 | **W3d** fees-recorded migration | 042 (Board review sync 2026-10-22) | Ready for Approval (r2) | 043 **Verified**; 019, 034 code part, 041 (if removal ruled), 022 and 024 merged; TASK-009 r4 approved with Kyle's explicit confirmation of decision 1; merge before 029 freezes the SHA so the 034 owner run exercises migration 0022 | — |
-| **W4** candidate | 029 | Needs correction (G5, G14) | All of W1 to W3 Verified, including 044, and 042 and 043 when TASK-009 r4 decision 1 is confirmed (Board review sync 2026-10-22; board review re-check 2026-10-22); 023 Verified, Not Needed or Deferred with Kyle's acknowledgement (TASK-029 r7); 001, 002, 005, 006 decided | — |
+| **W3e** calculation snapshot dedup (D-ARCH, ISSUE-002c) (TASK-045 sync 2026-10-22) | 045 | **Approved** at r2 (Kyle, 2026-10-22; OD-1 B, OD-2 compact, OD-3 V1, OD-4 strict archive v1, OD-5 no VACUUM, OD-6 none, OD-7 (1)+(2)) | 043 **Verified** (B2-1); 042 merged (migration order 0022 → 0023); merge before 029 freezes the SHA so the 034 owner run exercises migration 0023 | — |
+| **W4** candidate | 029 | Needs correction (G5, G14) | All of W1 to W3 Verified, including 044, and 042 and 043 when TASK-009 r4 decision 1 is confirmed (Board review sync 2026-10-22; board review re-check 2026-10-22); 045 Verified (TASK-045 sync 2026-10-22); 023 Verified, Not Needed or Deferred with Kyle's acknowledgement (TASK-029 r7); 001, 002, 005, 006 decided | — |
 | **W5** Windows gates | 030, 031, 032, 033; owner run of 034 | All need correction (G6, G8, G9) | 029 recorded | Each other (separate VMs) |
 | **W6** | 035 → 036 | Ready | W5 complete or each gate state recorded | — |
 
@@ -226,8 +227,9 @@ The full detail is in runbook §5.
 | W1e (043) | **Board review sync 2026-10-22:** TASK-043 Verified (an older-version safety copy rolls back) before TASK-042 opens. |
 | W1d, W2b (023) | Windows evidence recorded: SHA, EXE SHA-256 when packaged, Windows build, WebView2 version, tester, date. jsdom or mock results do not count. |
 | W3d (042) | **Board review sync 2026-10-22:** migration 0022 applies to a version-21 journal; existing risk fingerprints unchanged (B2-2); rollback with a pre-0022 safety copy works (B2-1, via TASK-043); merged before TASK-029 freezes the SHA. |
+| W3e (045) | **TASK-045 sync 2026-10-22:** migration 0023 applies after 0022 (TASK-042 merged first; order 0022 → 0023) and compacts existing snapshot rows (OD-2); rollback with a pre-0023 safety copy works (B2-1, via TASK-043); `Snapshot.explanation`, fingerprints and inputs hashes unchanged; merged before TASK-029 freezes the SHA. |
 | W3 | Notices check (`check:notices`) and `Cargo.lock` diff check if versions or dependencies changed; TASK-027 observed in Actions |
-| W4 | **Board review sync 2026-10-22:** TASK-042, TASK-043 and TASK-044 Verified and in the candidate SHA. Candidate recorded: a `ci.yml` push or dispatch run on the exact SHA (not a PR merge commit) whose advisory log says "no blocking advisories." with no "NOT RUN"; EXE SHA-256 from `SHA256SUMS.txt` (not the ZIP digest) |
+| W4 | **Board review sync 2026-10-22:** TASK-042, TASK-043 and TASK-044 Verified and in the candidate SHA; TASK-045 too (TASK-045 sync 2026-10-22). Candidate recorded: a `ci.yml` push or dispatch run on the exact SHA (not a PR merge commit) whose advisory log says "no blocking advisories." with no "NOT RUN"; EXE SHA-256 from `SHA256SUMS.txt` (not the ZIP digest) |
 | W5 | Each gate state is Passed, Failed, Not Run or Blocked, decided by its card's pass rule (after G9) |
 | W6 | Evidence register complete. Then Kyle's P0-18 decision. |
 

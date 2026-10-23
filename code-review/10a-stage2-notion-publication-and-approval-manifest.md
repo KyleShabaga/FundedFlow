@@ -312,3 +312,53 @@ Kyle answered in Claude Code:
 - The 0.1.0 artifact must be downloaded by 2026-11-20 (TASK-031 step 0).
 - Triage cards are proposed for the #107 packaged checks no gate covers (TASK-035 r5).
 - TASK-032 and 033 still say "first-run agreement"; this is fixed at execution.
+
+## 15. Execution, TASK-010 escalation and TASK-045 (2026-10-22)
+
+(TASK-045 sync 2026-10-22)
+
+**Pull requests merged so far:**
+- #107: Kyle's MIT/legal PR (privacy notice and License and product information, 0.2.1-draft).
+- #108: TASK-019.
+- #109: TASK-012.
+- #110: TASK-038.
+- #111: TASK-022.
+- #112: TASK-020.
+- #113: TASK-004.
+- #114: TASK-037.
+- #115: TASK-024.
+- #116: TASK-034 (code change).
+- #117: TASK-021.
+- #118: TASK-013.
+- #119: TASK-014.
+- #121: TASK-015.
+- #122: TASK-025.
+
+**TASK-037** was widened to r3; Kyle approved the r3 scope.
+
+**TASK-010** is Verified. Its result: 64 MiB is reachable within 12 months. Kyle escalated ISSUE-002 to P0 (runbook trigger, `10-stage2-approval-and-execution-runbook.md:122`).
+
+**TASK-045** (D-ARCH / ISSUE-002c, calculation snapshot dedup, migration 0023):
+- Drafted from the TASK-010 result.
+- Independent review: r1 CHANGES (25 items, all applied); r2 READY.
+- Approved by Kyle at r2 (sha256 `5dedc612733e566f…`), with these owner answers:
+  - OD-1: B.
+  - OD-2: compact existing rows.
+  - OD-3: V1 (a TASK-029 prerequisite).
+  - OD-4: strict archive v1 still applies.
+  - OD-5: no VACUUM.
+  - OD-6: none.
+  - OD-7: (1) and (2).
+- Wave: W3, after TASK-042 (migration order 0022 → 0023), with B2-1 covered by TASK-043.
+
+**Kyle's standing instructions (2026-10-22).** Claude may:
+- merge remediation PRs after review and green CI;
+- fix CI failures;
+- create and update Notion cards;
+- approve the recommended options for decisions: "For any decisions approve the recommended ones."
+
+**Board:** the columns Merged and Merged PR were added.
+
+**Board totals:**
+- Approved: 44 (including TASK-045).
+- Deferred: 023 r3.
