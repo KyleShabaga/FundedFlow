@@ -106,4 +106,4 @@ Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global 
 Block 4 review (10 §8.3): nits only — applied in r3.
 Independent review r3 (2026-10-22): CHANGES on 012, 024, 026 (citations, test construction, scope lines); applied. READY.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.
-Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; fixes folded in at r5. Independent re-check of r5: pending.
+Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; fixes folded in at r5. Independent re-check of r5 (two reviewers, 2026-10-22): blocking items applied; READY at r5.

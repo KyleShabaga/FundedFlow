@@ -112,4 +112,4 @@ Independent review r3 (two reviewers, then a re-check of the blocking fixes, 202
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r4.
 Independent review r5 (2026-10-22, owner-directed CI gate): CHANGES applied, re-check READY.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r6.
-Board review (2026-10-22, against main 92e7980): CHANGES (artifact expiry before W5; implicit TASK-023 route); fixes folded in at r7. Independent re-check of r7: pending.
+Board review (2026-10-22, against main 92e7980): CHANGES (artifact expiry before W5; implicit TASK-023 route); fixes folded in at r7. Independent re-check of r7 (two reviewers, 2026-10-22): blocking items applied; READY at r7.

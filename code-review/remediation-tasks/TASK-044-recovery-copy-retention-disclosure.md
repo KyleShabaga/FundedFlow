@@ -119,4 +119,4 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 ## Independent review notes
 Not yet reviewed. Created from the approved-task audit (TASK-009 MUST on decision 4). Open owner points, only if the merged TASK-025 privacy notice does not already disclose recovery-copy retention: order (A) or (B), the exact privacy-notice text, and whether to give manual removal steps.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r1.
-Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; notes folded in at r2. Independent re-check of r2: pending.
+Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; notes folded in at r2. Independent re-check of r2 (two reviewers, 2026-10-22): blocking items applied; READY at r2.

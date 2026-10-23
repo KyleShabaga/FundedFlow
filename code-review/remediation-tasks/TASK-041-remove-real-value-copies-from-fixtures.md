@@ -108,4 +108,4 @@ Under A: Kyle's ruling recorded verbatim with date and source. Under B: code and
 ## Independent review notes
 Reviewed (entries below; board review at r2 pending re-check). r1 was created from independent review review3_B of TASK-037 (value-level copies split out). Reviewer to confirm: (a) the weaker matches are real copies or coincidences; (b) the regeneration procedure in steps 5–6 reproduces fixtures the upgrade tests accept; (c) the conflict order with TASK-034.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r1.
-Board review (2026-10-22, against main 92e7980): CHANGES REQUESTED; fixes folded in at r2. Independent re-check of r2: pending.
+Board review (2026-10-22, against main 92e7980): CHANGES REQUESTED; fixes folded in at r2. Independent re-check of r2 (two reviewers, 2026-10-22): blocking items applied; READY at r2.

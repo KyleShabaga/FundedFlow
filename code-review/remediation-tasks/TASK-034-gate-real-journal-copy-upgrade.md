@@ -108,4 +108,4 @@ Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: W3c code / W5 owner-
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
 Independent review r4 (review3_B, 2026-10-22): READY; nits applied (see "Changes in r4"). Status stays Proposed until approval.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r4.
-Board review (2026-10-22, against main 92e7980): CHANGES REQUESTED; fixes folded in at r5. Independent re-check of r5: pending.
+Board review (2026-10-22, against main 92e7980): CHANGES REQUESTED; fixes folded in at r5. Independent re-check of r5 (two reviewers, 2026-10-22): blocking items applied; READY at r5.

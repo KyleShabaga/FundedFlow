@@ -93,4 +93,4 @@ Kyle's explicit choice recorded verbatim with date and source (trusted conversat
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).
 r3: reviewed in the approved-task audit pass (next line).
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r3.
-Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE (Kyle must explicitly confirm decision 1 at approval); fixes folded in at r4. Independent re-check of r4: pending.
+Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE (Kyle must explicitly confirm decision 1 at approval); fixes folded in at r4. Independent re-check of r4 (two reviewers, 2026-10-22): blocking items applied; READY at r4.

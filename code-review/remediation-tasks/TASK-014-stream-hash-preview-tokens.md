@@ -108,4 +108,4 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: READY.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r3.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.
-Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; notes folded in at r5. Independent re-check of r5: pending.
+Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; notes folded in at r5. Independent re-check of r5 (two reviewers, 2026-10-22): blocking items applied; READY at r5.

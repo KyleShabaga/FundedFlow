@@ -99,4 +99,4 @@ Kyle's explicit choice recorded verbatim with date and source (trusted conversat
 Reviewed (entries below; board review at r2 pending re-check). r1 was written from the Notion draft; options made concrete from local repository facts. GitHub-side facts (forks, PR refs, releases) are unverified and listed as unknowns.
 Independent review r1 (review3_B, 2026-10-22): CHANGES — copies list incomplete (affects option C cost). Corrections applied in "Changes in r1 (after independent review)"; awaiting re-check.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r1.
-Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; fixes folded in at r2. Independent re-check of r2: pending.
+Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; fixes folded in at r2. Independent re-check of r2 (two reviewers, 2026-10-22): blocking items applied; READY at r2.

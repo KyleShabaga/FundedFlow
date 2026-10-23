@@ -78,4 +78,4 @@ Documents updated; every factual statement checked against the cited source (fil
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).
 Block 4 review (10 §8.3): nits only — applied in r3.
 Independent review r3 (2026-10-22): CHANGES on 012, 024, 026 (citations, test construction, scope lines); applied. READY.
-Board review (2026-10-22, against main 92e7980): CHANGES REQUESTED (stale TASK-034 condition, decision range, missing register rows); fixes folded in at r4. Independent re-check of r4: pending.
+Board review (2026-10-22, against main 92e7980): CHANGES REQUESTED (stale TASK-034 condition, decision range, missing register rows); fixes folded in at r4. Independent re-check of r4 (two reviewers, 2026-10-22): blocking items applied; READY at r4.

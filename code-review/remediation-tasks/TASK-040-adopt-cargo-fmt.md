@@ -102,4 +102,4 @@ Reviewed (entries below; board review at r3 pending re-check). r1 was written fr
 Independent review r1 (review3_B, 2026-10-22): READY; merge-first order sound. Nits applied (see "Changes in r1 (after independent review)"). Status stays Proposed until approval. Open index nit: `08-…index.md:35` and the 09 waves table do not yet show TASK-040 merging first (not edited here).
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r1.
 Independent review r2 (2026-10-22, owner-directed CI gate): CHANGES applied, re-check READY.
-Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; fixes folded in at r3. Independent re-check of r3: pending.
+Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; fixes folded in at r3. Independent re-check of r3 (two reviewers, 2026-10-22): blocking items applied; READY at r3.

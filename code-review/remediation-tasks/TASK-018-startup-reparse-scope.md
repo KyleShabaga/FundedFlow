@@ -110,4 +110,4 @@ Independent review r1: CHANGES (applied, 08 §H). Independent re-check r2: CHANG
 Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: Windows-only CI wording (G14); runtime-contract consumers named (G11); `data-controls-quarantine/` among app-owned paths (G11); manual record fields (G14); fixture rule "unset (not `0`)".
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.
-Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; notes folded in at r5. Independent re-check of r5: pending.
+Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; notes folded in at r5. Independent re-check of r5 (two reviewers, 2026-10-22): blocking items applied; READY at r5.

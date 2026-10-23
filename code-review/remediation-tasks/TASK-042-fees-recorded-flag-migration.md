@@ -140,4 +140,4 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 ## Independent review notes
 Not yet reviewed. Created from the approved-task audit (TASK-009 MUST: the fee amendment needs storage and an owning task) and Kyle's 2026-10-22 decision. Open owner points: the legacy rule, the CSV rule, R-NET versus strict `—` totals, and the coverage-statement behaviour. Board and index follow-ups (not done here): add TASK-042 to 08 §A and the 09 waves (TASK-029 r6 already names it); update the "Performance-import fees show $0.00" roadmap card.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r1.
-Board review (2026-10-22, against main 92e7980): fixes folded in at r2. Independent re-check of r2: pending.
+Board review (2026-10-22, against main 92e7980): fixes folded in at r2. Independent re-check of r2 (two reviewers, 2026-10-22): blocking items applied; READY at r2.

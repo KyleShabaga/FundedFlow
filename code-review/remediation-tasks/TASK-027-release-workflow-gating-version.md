@@ -133,4 +133,4 @@ Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: `recovery.journey.te
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r4.
 Independent review r5 (2026-10-22, owner-directed CI gate): CHANGES applied, re-check READY.
-Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; fixes folded in at r6. Independent re-check of r6: pending.
+Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; fixes folded in at r6. Independent re-check of r6 (two reviewers, 2026-10-22): blocking items applied; READY at r6.
