@@ -146,8 +146,8 @@ Not in batch 1, for the reason given:
 |---|---|
 | 014 | Blocked by 013, which needs correction |
 | 024 | No functional prerequisite; merge order only — rebase onto whichever of 021/022 has merged (different regions of LifecycleDialogs.tsx / AccountSwitcher.tsx) (board review re-check 2026-10-22) |
-| 025 | Needs the 001 and 006 decisions and Kyle's v1.1 texts |
-| 026 | Needs the 006 decision |
+| 025 | Needs the 001 and 006 decisions and Kyle's v1.1 texts. Superseded 2026-10-22: V1 legal text is PR #107's documents; 025 r6 needs #107 merged |
+| 026 | Needs the 006 decision; PR #107 and TASK-027 merged |
 | 004 | Needs the 003 decision |
 | 010 | Doable now, but it is a measurement that needs dependency installation and a scratch harness. Proposed as batch 1b if Kyle approves the install. |
 | Owner decisions 001, 002, 003, 005, 006, 009 | Not Claude-executable. Kyle can decide them now, which unblocks 004, 025, 026, 027 and 029. |
@@ -216,7 +216,7 @@ Block 4 may not edit 08 or the cards. These corrections must be applied in a Blo
 | P0-05, P0-09, P0-10, D5 | 007 (after correction) | 035 |
 | Real-journal-copy gate; `cargo fmt` gate | 008 (after correction) | 034, 029 |
 | Fees, duplicate collapse, ledger UI, retention, archive format, network paths | 009 | V1.1 scope |
-| Keep the `user-agreement` id; supply the exact v1.1 texts | 025 | 025 |
+| Keep the `user-agreement` id; supply the exact v1.1 texts (superseded 2026-10-22: Kyle chose PR #107's documents; id kept) | 025 | 025 |
 | Pull TASK-019 into W1 | 019 | (batch 1 assumes yes) |
 | Downgrade with a pending cleanup: support it or declare it unsupported | 015/016 r3 | W1c |
 | Approve enabling actions (§1.3) | — | Any execution |

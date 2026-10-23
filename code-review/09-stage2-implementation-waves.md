@@ -155,7 +155,7 @@ This corrects 07 §E: W2 does not need W1 merged first.
 **Persistence:**
 - **Board review sync 2026-10-22:** TASK-042 adds a V1 migration (`0022_trade_fees_recorded.sql`, TASK-009 decision 1), so B2-1 (the rollback validating at `latest_version`) does block V1. TASK-043 fixes B2-1 and must be Verified before TASK-042 opens. (Superseded: "No V1 task needs a migration, so B2-1 does not block V1.")
 - Archive v1, the `data.json` format and the `legal-acceptance.json` format are unchanged.
-- `legal.rs:54-57` accepts `1.0.1-owner-only`, and acceptance re-prompts by design.
+- `legal.rs:54-57` accepts `0.2.1-draft` (PR #107), and acceptance re-prompts by design.
 - Downgrade compatibility of cleanup markers is the one open persistence issue (G8).
 
 **Wire contract:**
@@ -187,7 +187,7 @@ Each line is one PR-sized change and one approval unit.
 | **W2a** trading day | 020 → 021 | 020 **Ready**; 021 needs G10 | 021 needs 020 merged | W1 |
 | **W2b** navigation | 022 → 023 | 022 **Ready**; 023 needs G10/G14 | 023 needs 022 merged and 011(a) | W1 |
 | **W2c** wording | 024 | Ready | No functional prerequisite; merge order only — rebase onto whichever of 021/022 has merged (different regions of LifecycleDialogs.tsx / AccountSwitcher.tsx) (board review re-check 2026-10-22) | W1 |
-| **W3a** docs and notices | 025 → 044; 026 → 028 (Board review sync 2026-10-22: 025 no longer depends on 026; 026 now needs 027 merged) | See 08 §A | 025: TASK-001 and 006 decided (v1.1 text and `user-agreement` id already decided). 044: 025 merged and 015–017 merged (same dialogs), TASK-009 decision 4. 026: TASK-006 decided and TASK-027 (W3b) merged. 028: 025, 026 and 011. | W1, W2 |
+| **W3a** docs and notices | PR #107 merged → 025 and 044; 026 → 028 (Board review sync 2026-10-22: 025 no longer depends on 026; 026 now needs 027 merged. Legal-track decision 2026-10-22: PR #107's documents replace the owner-only v1.1 package; 044 no longer waits for 025) | See 08 §A | **#107 merged first** (Kyle's legal-track decision 2026-10-22; Kyle also chose that TASK-040 waits for #107, merged or closed, so #107 lands before TASK-040 and every Rust branch). 025: #107 merged, TASK-001 and 006 decided, Kyle's draft-status choice. 044: #107 merged and 015–017 merged (same dialogs), TASK-009 decision 4. 026: TASK-006 decided, #107 and TASK-027 (W3b) merged. 028: 025, 026 and 011. | W1, W2 |
 | **W3b** release process | 027 | Needs correction (G4, G13) | 005 and 006 decided; merge after W1's fixture edits (017) | — |
 | **W3c** test safety | 034 code part (moved before the candidate, per G7) | Needs correction | 008 keeps the gate | Any |
 | **W3d** fees-recorded migration | 042 (Board review sync 2026-10-22) | Ready for Approval (r2) | 043 **Verified**; 019, 034 code part, 041 (if removal ruled), 022 and 024 merged; TASK-009 r4 approved with Kyle's explicit confirmation of decision 1; merge before 029 freezes the SHA so the 034 owner run exercises migration 0022 | — |
@@ -237,7 +237,7 @@ The full detail is in runbook §5.
 
 | Gate | State |
 |---|---|
-| ISSUE-039 owner-only v1.1 notices | Not Run (implementation work pending, TASK-025) |
+| ISSUE-039 V1 legal notices (PR #107 documents; owner-only v1.1 superseded 2026-10-22) | Not Run (PR #107 open; TASK-025 r6 pending) |
 | ISSUE-040 candidate from the final SHA | Not Run (no valid candidate: `7679edc` lacks LegalGate; PR run `39730672821` at `b94fb1b` predates `92e7980`; neither is acceptance) |
 | ISSUE-041 clean smoke, ISSUE-043 offline | Not Run (checklist stale, TASK-028) |
 | ISSUE-042 upgrade/reinstall/downgrade/uninstall | Not Run |
