@@ -59,8 +59,8 @@ function DeletionDialogBody({ target, open, onOpenChange, onDeleted, onArchiveIn
 
   const confirm = async (typed: string) => {
     if (phase.kind !== "ready") return;
-    const result = await op.run("delete", () => api.deletePermanently(phase.preview, typed));
-    void runtime.check();
+    // Even a refused delete runs a cleanup pass first, which can change the cleanup state.
+    const result = await op.run("delete", () => api.deletePermanently(phase.preview, typed)).finally(() => void runtime.check());
     await op.forgetJournal();
     onDeleted?.(result);
     if (result.state === "cleanup_pending") {

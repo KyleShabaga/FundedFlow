@@ -1408,3 +1408,21 @@ fn markers_this_build_leaves_pending_are_readable_by_the_previous_build() {
         }
     }
 }
+#[test]
+fn a_marker_whose_metadata_cannot_be_read_is_left_pending_never_quarantined() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::create_dir_all(queue(dir.path())).unwrap();
+    // Metadata that cannot be read (here: the entry is gone) says nothing about the bytes: leave it in place.
+    let missing = queue(dir.path()).join(format!("{}.json", crate::domain::new_id()));
+    assert!(matches!(deletion::read_marker(&missing), deletion::Marker::Unavailable));
+    // Only an entry confirmed not to be a regular file, or bytes that are not a marker, count as unparseable.
+    let folder = queue(dir.path()).join("folder.json");
+    fs::create_dir(&folder).unwrap();
+    assert!(matches!(deletion::read_marker(&folder), deletion::Marker::Unparseable));
+    let garbage = queue(dir.path()).join("garbage.json");
+    fs::write(&garbage, b"not json").unwrap();
+    assert!(matches!(deletion::read_marker(&garbage), deletion::Marker::Unparseable));
+    let valid = queue(dir.path()).join("valid.json");
+    fs::write(&valid, marker_json(&crate::domain::new_id(), false, &[], &[])).unwrap();
+    assert!(matches!(deletion::read_marker(&valid), deletion::Marker::Parsed(_)));
+}

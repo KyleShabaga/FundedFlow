@@ -331,6 +331,8 @@ describe("permanent deletion", () => {
     await typePhrase(user, dialog, "DELETE ACCOUNT acct-a");
     await user.click(within(dialog).getByRole("button", { name: "Delete account permanently" }));
     expect(await within(dialog).findByText(/Your data changed after this preview/)).toBeTruthy();
+    // A refused delete may still have quarantined or finished earlier cleanup: the status is re-read anyway.
+    expect(runtime.check).toHaveBeenCalledTimes(1);
   });
 
   it("erases the whole journal through a separate flow and phrase, and offers file-cleanup retry", async () => {

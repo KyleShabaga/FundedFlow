@@ -456,16 +456,21 @@ pub fn cleanup_state(root: &Path) -> CleanupOutcome {
         CleanupOutcome::Clear
     }
 }
-enum Marker {
+#[derive(Debug)]
+pub(super) enum Marker {
     Parsed(Cleanup),
     /// Bytes that are not a `Cleanup`, or an entry that is not a regular file.
     Unparseable,
     /// Could not be read now (locked, or larger than any build writes); left in place.
     Unavailable,
 }
-fn read_marker(file: &Path) -> Marker {
-    if regular(file).is_err() {
-        return Marker::Unparseable;
+pub(super) fn read_marker(file: &Path) -> Marker {
+    // `regular` reports unreadable metadata as MissingAttachment and a confirmed non-regular entry as UnsafePath.
+    // Only the second says anything about the entry; the first may be transient, so the marker stays queued.
+    match regular(file) {
+        Ok(()) => {}
+        Err(e) if e.code == Code::MissingAttachment => return Marker::Unavailable,
+        Err(_) => return Marker::Unparseable,
     }
     // Older builds wrote markers of any size, so accept up to the archive total rather than the 1 MiB written now.
     match fs::metadata(file) {
