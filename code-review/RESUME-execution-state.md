@@ -7,7 +7,19 @@ Coordinator: the Claude Code board-review session. Kyle's standing permissions f
 
 Kyle approves; Claude never records an approval.
 
-## Remaining plan (as of 2026-10-23 15:30 MDT)
+## Remaining plan (as of 2026-10-23 14:30 MDT, after the candidate; weekly usage 91%)
+00000. **Candidate recorded.** TASK-029 has Gate State Passed: 0.1.1 at `1d13c43`, run 40014761941, EXE SHA-256 60091daf…, stored in `FundedFlow-release-artifacts\0.1.1-1d13c43`. 35 PRs merged; the latest are #138 (TASK-023 close veto plus the TASK-022 back-navigation fix, `1d13c43`) and #139 (smoke checklist, `cbc47aa`).
+   - **TASK-022 and TASK-023:** Implemented. Their Windows recheck is §1 on the Notion page "Final manual tests" (4021bd4b6bde8095871ec9c99a69b300), with the candidate details filled in.
+   - **Gate prompts for TASK-030 to TASK-034:** `execution/gate-test-prompts-030-034.md`. An agent is putting them on that Notion page as child pages.
+   - **Kyle's decisions:** TASK-031 4a is Not Run. TASK-030 accepts Sandbox as the Windows 11 leg; the Windows 10 leg is Not Run and a TASK-036 known gap.
+   - **Kyle runs the gates later.** Do not wait for them.
+   - **Next for Claude:**
+     - When gate reports arrive, record them on the cards and in the log.
+     - TASK-035: the evidence register and NA-7 release notes. Known gaps so far: backup limit about 50k trades; Windows 10 leg; 4a; B2 OneDrive; the restore-inspect junction gap; the legal record written through a junction.
+     - TASK-036: go/no-go (Kyle).
+   - **Kyle still to do:** dismiss the CodeQL test-code alerts.
+
+## Earlier plan (2026-10-23 15:30 MDT)
 0000. Every W1–W3 task is Verified. Merged: #135 TASK-045 (c0c7c2f) and #136 TASK-004 line references (eaf7ee3). 32 PRs merged in total. Execution log: `code-review/11-remediation-execution-log.md`.
    - TASK-011(b) is done (all evidence in `execution/sandbox/results-2026-10-23`).
    - Kyle is rerunning TASK-011 (a) and (c), case B6 and the TASK-022 X1/Alt+Left check in Windows Sandbox on another PC (prompt given, CSV kit at `execution/sandbox/kit`). When the report comes in, record the results, mark TASK-011 Verified and close out the TASK-022 check.
