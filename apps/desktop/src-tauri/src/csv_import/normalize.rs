@@ -417,6 +417,8 @@ fn performance(row: &mut Row) -> Option<NormalizedTrade> {
         exit_at: Some(exit_at),
         exit_price: Some(exit_price),
         fees_micros: 0,
+        // The Performance export has no fee column, so its fees are unknown.
+        fees_recorded: false,
         reported_pnl_micros: reported,
         notes: None,
     };

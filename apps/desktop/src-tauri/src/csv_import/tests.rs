@@ -666,3 +666,71 @@ mod wire_limits;
 
 #[path = "direction_pnl_tests.rs"]
 mod direction_pnl;
+
+// ---------------------------------------------------------------------------
+// TASK-042: whether an imported trade's fees were recorded.
+// ---------------------------------------------------------------------------
+
+/// Symbol → `feesRecorded` of the account's trades, as the Trade DTO serializes it.
+fn fees_recorded_by_symbol(conn: &Connection, account: &str) -> Vec<(String, Option<bool>)> {
+    let mut out: Vec<_> = trade_store::list(conn, account)
+        .unwrap()
+        .into_iter()
+        .map(|t| {
+            let flag = serde_json::to_value(&t).unwrap()["feesRecorded"].as_bool();
+            (t.symbol, flag)
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+#[test]
+fn performance_imports_never_record_fees() {
+    let (mut conn, account) = setup();
+    // Invented paired fills in the Performance layout; the format has no fee column.
+    let content = "symbol,_priceFormat,_priceFormatType,_tickSize,buyFillId,sellFillId,qty,buyPrice,sellPrice,pnl,boughtTimestamp,soldTimestamp,duration
+MNQZ6,-2,0,0.25,800000000001,800000000002,1,20000.00,20001.00,$2.00,10/19/2026 09:30:00,10/19/2026 09:31:00,1min
+MESZ6,-2,0,0.25,800000000003,800000000004,1,6000.00,5999.00,$(5.00),10/19/2026 09:40:00,10/19/2026 09:41:00,1min
+";
+    let b = commit(&mut conn, &request(&account, content)).unwrap();
+    assert_eq!(
+        (b.source_format.as_str(), b.imported_count),
+        ("performance", 2)
+    );
+    assert_eq!(
+        fees_recorded_by_symbol(&conn, &account),
+        [("MESZ6".into(), Some(false)), ("MNQZ6".into(), Some(false))]
+    );
+}
+
+#[test]
+fn generic_imports_record_fees_only_from_a_mapped_non_blank_cell() {
+    let (mut conn, account) = setup();
+    let mapped = "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Fees
+ESZ6,Buy,1,2026-10-19 09:30:00,5000,2026-10-19 09:31:00,5001,0
+MESZ6,Buy,1,2026-10-19 09:32:00,5000,2026-10-19 09:33:00,5001,
+MNQZ6,Buy,1,2026-10-19 09:34:00,20000,2026-10-19 09:35:00,20001,1.24
+";
+    let b = commit(&mut conn, &request(&account, mapped)).unwrap();
+    assert_eq!((b.source_format.as_str(), b.imported_count), ("generic", 3));
+    assert_eq!(
+        fees_recorded_by_symbol(&conn, &account),
+        [
+            ("ESZ6".into(), Some(true)),   // an explicit 0 is recorded
+            ("MESZ6".into(), Some(false)), // a blank cell is not
+            ("MNQZ6".into(), Some(true)),
+        ]
+    );
+
+    let (mut conn, account) = setup();
+    let unmapped = "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price
+ESZ6,Buy,1,2026-10-19 09:30:00,5000,2026-10-19 09:31:00,5001
+";
+    commit(&mut conn, &request(&account, unmapped)).unwrap();
+    assert_eq!(
+        fees_recorded_by_symbol(&conn, &account),
+        [("ESZ6".into(), Some(false))],
+        "no fee column: not recorded"
+    );
+}

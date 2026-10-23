@@ -65,6 +65,9 @@ pub struct Trade {
     pub exit_at: Option<String>,
     pub exit_price: Option<String>,
     pub fees: String,
+    /// Whether fees were given (an explicit 0 included). When false, `fees` is "0" but the fees are unknown,
+    /// so views show the net P&L as unknown; stored P&L is unchanged (gross − 0). Never part of risk inputs.
+    pub fees_recorded: bool,
     pub trading_day: String,
     pub reported_pnl: Option<String>,
     pub gross_pnl: Option<String>,
@@ -143,9 +146,9 @@ pub(crate) fn insert(
         "INSERT INTO trades (id, account_id, source, import_batch_id, import_row_id, dedup_key, broker_trade_id,
                              symbol, instrument_id, side, quantity, entry_at, entry_price, exit_at, exit_price,
                              fees_micros, trading_day, reported_pnl_micros, gross_pnl_micros, net_pnl_micros,
-                             pnl_status, notes_md, created_at, updated_at)
+                             pnl_status, notes_md, created_at, updated_at, fees_recorded)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20,
-                 ?21, ?22, ?23, ?23)",
+                 ?21, ?22, ?23, ?23, ?24)",
         params![
             id,
             account_id,
@@ -170,6 +173,7 @@ pub(crate) fn insert(
             d.pnl.status,
             f.notes,
             now,
+            f.fees_recorded,
         ],
     )?;
     Ok(id)
@@ -181,17 +185,17 @@ const SELECT: &str = "SELECT t.id, t.account_id, t.source, t.import_batch_id, t.
         t.updated_at,
         r.trade_id, r.buy_fill_id, r.sell_fill_id, r.buy_price, r.sell_price, r.bought_at, r.sold_at,
         r.bought_at_source, r.sold_at_source, r.duration_source, r.duration_seconds, r.price_format,
-        r.price_format_type, r.tick_size, r.entry_basis
+        r.price_format_type, r.tick_size, r.entry_basis, t.fees_recorded
     FROM trades t LEFT JOIN trade_round_trips r ON r.trade_id = t.id";
 
-/// `SELECT` plus the deletion time as column 36.
+/// `SELECT` plus the deletion time as column 37.
 const SELECT_DELETED: &str = "SELECT t.id, t.account_id, t.source, t.import_batch_id, t.broker_trade_id, t.symbol, t.side,
         t.quantity, t.entry_at, t.entry_price, t.exit_at, t.exit_price, t.fees_micros, t.trading_day,
         t.reported_pnl_micros, t.gross_pnl_micros, t.net_pnl_micros, t.pnl_status, t.notes_md, t.created_at,
         t.updated_at,
         r.trade_id, r.buy_fill_id, r.sell_fill_id, r.buy_price, r.sell_price, r.bought_at, r.sold_at,
         r.bought_at_source, r.sold_at_source, r.duration_source, r.duration_seconds, r.price_format,
-        r.price_format_type, r.tick_size, r.entry_basis, t.deleted_at
+        r.price_format_type, r.tick_size, r.entry_basis, t.fees_recorded, t.deleted_at
     FROM trades t LEFT JOIN trade_round_trips r ON r.trade_id = t.id";
 
 fn round_trip_from_row(r: &Row) -> rusqlite::Result<Option<RoundTripSource>> {
@@ -232,6 +236,7 @@ fn from_row(r: &Row) -> rusqlite::Result<Trade> {
         exit_at: r.get(10)?,
         exit_price: r.get(11)?,
         fees: micros_to_string(r.get(12)?),
+        fees_recorded: r.get(36)?,
         trading_day: r.get(13)?,
         reported_pnl: money(14)?,
         gross_pnl: money(15)?,
@@ -306,7 +311,7 @@ fn values(t: &Trade) -> serde_json::Value {
     serde_json::json!({
         "symbol": t.symbol, "side": t.side, "quantity": t.quantity, "entryAt": t.entry_at,
         "entryPrice": t.entry_price, "exitAt": t.exit_at, "exitPrice": t.exit_price, "fees": t.fees,
-        "tradingDay": t.trading_day, "reportedPnl": t.reported_pnl, "grossPnl": t.gross_pnl,
+        "feesRecorded": t.fees_recorded, "tradingDay": t.trading_day, "reportedPnl": t.reported_pnl, "grossPnl": t.gross_pnl,
         "realizedPnl": t.realized_pnl, "pnlStatus": t.pnl_status, "notes": t.notes,
     })
 }
@@ -411,7 +416,7 @@ pub fn update_with(
         "UPDATE trades SET symbol = ?2, instrument_id = ?3, side = ?4, quantity = ?5, entry_at = ?6,
                 entry_price = ?7, exit_at = ?8, exit_price = ?9, fees_micros = ?10, trading_day = ?11,
                 reported_pnl_micros = ?12, gross_pnl_micros = ?13, net_pnl_micros = ?14, pnl_status = ?15,
-                notes_md = ?16, updated_at = ?17
+                notes_md = ?16, updated_at = ?17, fees_recorded = ?18
          WHERE id = ?1",
         params![
             id,
@@ -431,6 +436,7 @@ pub fn update_with(
             d.pnl.status,
             fields.notes,
             at,
+            fields.fees_recorded,
         ],
     )?;
     let after = get(&tx, id)?;
@@ -585,7 +591,7 @@ pub fn list_deleted(conn: &Connection, account_id: &str) -> AppResult<Vec<Delete
     let rows = stmt.query_map([account_id], |r| {
         Ok(DeletedTrade {
             trade: from_row(r)?,
-            deleted_at: r.get(36)?,
+            deleted_at: r.get(37)?,
         })
     })?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -720,7 +726,7 @@ pub(crate) fn rederive_account(conn: &Connection, account_id: &str) -> AppResult
     let instruments = load_instruments(conn)?;
     let mut stmt = conn.prepare(
         "SELECT id, symbol, side, quantity, entry_at, entry_price, exit_at, exit_price, fees_micros,
-                reported_pnl_micros
+                reported_pnl_micros, fees_recorded
          FROM trades WHERE account_id = ?1",
     )?;
     let rows: Vec<(String, TradeFields)> = stmt
@@ -735,7 +741,7 @@ pub(crate) fn rederive_account(conn: &Connection, account_id: &str) -> AppResult
                     r.get(5)?,
                 ],
                 [r.get::<_, Option<String>>(6)?, r.get(7)?],
-                r.get::<_, i64>(8)?,
+                (r.get::<_, i64>(8)?, r.get::<_, bool>(10)?),
                 r.get::<_, Option<i64>>(9)?,
             ))
         })?
@@ -744,7 +750,7 @@ pub(crate) fn rederive_account(conn: &Connection, account_id: &str) -> AppResult
                 id,
                 [symbol, side, qty, entry_at, entry_price],
                 [exit_at, exit_price],
-                fees,
+                (fees, fees_recorded),
                 reported,
             ) = row?;
             let corrupt = || AppError::Database {
@@ -764,6 +770,7 @@ pub(crate) fn rederive_account(conn: &Connection, account_id: &str) -> AppResult
                     .map(|s| dec(&s).ok_or_else(corrupt))
                     .transpose()?,
                 fees_micros: fees,
+                fees_recorded,
                 reported_pnl_micros: reported,
                 notes: None,
             };

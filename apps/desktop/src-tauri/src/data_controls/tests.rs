@@ -2440,3 +2440,135 @@ fn export_still_refuses_a_missing_attachment_and_names_it() {
         Some("missing or changed attachments: image")
     );
 }
+
+// ---------------------------------------------------------------------------
+// TASK-042: archives at schema 22 carry fees_recorded; schema-21 archives still inspect and restore.
+// ---------------------------------------------------------------------------
+
+/// Restores `archive` over a fresh journal through the runtime, as the app does, and returns
+/// (symbol, fees_micros, fees_recorded) of the restored journal's trades.
+fn restore_fee_flags(archive: &Path) -> Vec<(String, i64, i64)> {
+    let target = tempfile::tempdir().unwrap();
+    let path = target.path().join(db::DB_FILE_NAME);
+    let rt = crate::runtime::Runtime::start(Ok(path.clone()));
+    let preview = rt
+        .with_controls(|c, root| {
+            restore::inspect(
+                c,
+                root,
+                restore::InspectRequest {
+                    source: archive.to_string_lossy().into(),
+                },
+            )
+        })
+        .unwrap();
+    let result = rt
+        .prepare_restore(confirm(archive, preview.preview_token))
+        .unwrap();
+    assert_eq!(result.state, "restart_required");
+    assert!(rt.begin_initialize());
+    assert_eq!(rt.initialize().state, crate::runtime::RuntimeState::Ready);
+    rt.with_controls(|c, _| {
+        let version: u32 = c.pragma_query_value(None, "user_version", |r| r.get(0))?;
+        assert_eq!(version, db::latest_version());
+        let mut s =
+            c.prepare("SELECT symbol, fees_micros, fees_recorded FROM trades ORDER BY symbol")?;
+        let rows = s
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+            .collect::<rusqlite::Result<_>>()?;
+        Ok(rows)
+    })
+    .unwrap()
+}
+
+#[test]
+fn a_schema_22_archive_carries_fees_recorded_and_restores_it() {
+    use crate::store::trades;
+    let source = tempfile::tempdir().unwrap();
+    let mut c = journal(&source.path().join("source.db"));
+    let a = account(&mut c, "fees");
+    for (symbol, fees) in [
+        ("ESZ6", None),
+        ("MESZ6", Some("0")),
+        ("MNQZ6", Some("1.24")),
+    ] {
+        trades::create(
+            &mut c,
+            trades::TradeInput {
+                account_id: a.clone(),
+                symbol: symbol.into(),
+                side: "long".into(),
+                quantity: "1".into(),
+                entry_at: "2026-10-19T13:30:00Z".into(),
+                entry_price: "5000".into(),
+                exit_at: Some("2026-10-19T14:00:00Z".into()),
+                exit_price: Some("5001".into()),
+                fees: fees.map(str::to_string),
+                realized_pnl: None,
+                notes: None,
+            },
+        )
+        .unwrap();
+    }
+    let out = source.path().join("v22.zip");
+    archive::export(&c, &source.path().join("attachments"), &out, true).unwrap();
+    let inspected = archive::inspect_to(&out, source.path()).unwrap();
+    assert_eq!(inspected.manifest.schema_version, 22);
+    let data = archive::dump(
+        &archive::readonly(&inspected.directory.path().join("journal.sqlite")).unwrap(),
+    )
+    .unwrap();
+    assert!(data["trades"].columns.iter().any(|c| c == "fees_recorded"));
+    assert_eq!(
+        restore_fee_flags(&out),
+        [
+            ("ESZ6".into(), 0, 0),
+            ("MESZ6".into(), 0, 1),
+            ("MNQZ6".into(), 1_240_000, 1)
+        ]
+    );
+}
+
+#[test]
+fn a_schema_21_archive_still_inspects_and_restores_with_the_legacy_fee_rule() {
+    let source = tempfile::tempdir().unwrap();
+    let path = source.path().join("source.db");
+    {
+        let mut c = Connection::open(&path).unwrap();
+        db::migrate_with(&mut c, &db::MIGRATIONS[..21]).unwrap();
+        let a = account(&mut c, "v21");
+        let insert = "INSERT INTO trades (id, account_id, source, symbol, side, quantity, entry_at, entry_price,
+                                          exit_at, exit_price, fees_micros, trading_day, gross_pnl_micros,
+                                          net_pnl_micros, pnl_status, created_at, updated_at)
+                      VALUES (?1, ?2, 'manual', ?3, 'long', '1', '2026-10-19T13:30:00.000Z', '5000',
+                              '2026-10-19T14:00:00.000Z', '5001', ?4, '2026-10-19', 50000000, ?5, 'calculated',
+                              '2026-10-19T14:00:00.000Z', '2026-10-19T14:00:00.000Z')";
+        c.execute(insert, rusqlite::params!["t1", a, "ESZ6", 0, 50_000_000])
+            .unwrap();
+        c.execute(
+            insert,
+            rusqlite::params!["t2", a, "MNQZ6", 1_240_000, 48_760_000],
+        )
+        .unwrap();
+    }
+    let c = archive::readonly(&path).unwrap();
+    let out = source.path().join("v21.zip");
+    archive::export(&c, &source.path().join("attachments"), &out, true).unwrap();
+    drop(c);
+    // Inspection validates the archive at its own version, re-exporting trades.csv unchanged.
+    let inspected = archive::inspect_to(&out, source.path()).unwrap();
+    assert_eq!(inspected.manifest.schema_version, 21);
+    assert!(
+        !archive::dump(
+            &archive::readonly(&inspected.directory.path().join("journal.sqlite")).unwrap()
+        )
+        .unwrap()["trades"]
+            .columns
+            .iter()
+            .any(|c| c == "fees_recorded")
+    );
+    assert_eq!(
+        restore_fee_flags(&out),
+        [("ESZ6".into(), 0, 0), ("MNQZ6".into(), 1_240_000, 1)]
+    );
+}

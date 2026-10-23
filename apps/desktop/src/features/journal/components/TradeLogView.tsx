@@ -27,10 +27,10 @@ import type { AccountViewModel } from "../../accounts/view-models/account";
 import { useLibrary } from "../../library/hooks/library";
 import { retryRead, toAsyncState } from "../../shared/presentation";
 import { useDeletedTrades, useRestoreTrade } from "../../trades/hooks/trades";
-import type { TradeViewModel } from "../../trades/view-models/trade";
+import { shownNetPnl, type TradeViewModel } from "../../trades/view-models/trade";
 import { tradeColumns, UnknownNote } from "./ByDayView";
 import { filterRows, isFiltered, NO_FILTERS, page, sortRows, stats, type JournalFilters, type JournalRow, type ResultFilter, type SortColumn } from "./journal-model";
-import { SideBadge, zoneLabel } from "./presentation";
+import { FeesNotRecordedBadge, SideBadge, zoneLabel } from "./presentation";
 
 const RESULTS: { value: ResultFilter; label: string }[] = [
   { value: "all", label: "All" }, { value: "win", label: "Wins" }, { value: "loss", label: "Losses" },
@@ -138,7 +138,8 @@ function DeletedTrades({ account, onClose }: { account: AccountViewModel; onClos
                 <span className="ds-sym">{d.trade.symbol}</span>
                 <SideBadge side={d.trade.side} />
                 <span className="ds-faint">{d.trade.tradingDay}</span>
-                <MoneyCell value={d.trade.realizedPnl} currency={d.trade.currency} />
+                <MoneyCell value={shownNetPnl(d.trade)} currency={d.trade.currency} />
+                <FeesNotRecordedBadge trade={d.trade} />
                 <span className="ds-faint">Deleted {formatInstant(d.deletedAt, { timeZone: account.timezone })}</span>
                 <Button size="sm" loading={restore.isPending} disabled={readOnly || !restore.canSubmit} disabledReason={readOnly ? "Archived accounts are read-only" : undefined}
                   onClick={() => restore.submit(d.trade.id).then(

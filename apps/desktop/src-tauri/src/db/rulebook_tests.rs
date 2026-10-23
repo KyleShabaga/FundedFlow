@@ -348,7 +348,8 @@ fn migration_19_retains_old_bindings_but_never_resolves_a_foreign_provider() {
         super::upgrade_tests::version(&super::upgrade_tests::read_only(&db.backup())),
         18
     );
-    let mut after = super::upgrade_tests::dump(&conn, &[]);
+    // Migration 22 (TASK-042) adds `trades.fees_recorded`; every other column is compared.
+    let mut after = super::upgrade_tests::dump(&conn, &[("trades", "fees_recorded")]);
     // Migration 21 (P0-02) adds an empty promotion table; nothing in it, and every existing table unchanged.
     assert!(
         after

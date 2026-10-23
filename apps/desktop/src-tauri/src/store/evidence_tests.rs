@@ -340,6 +340,10 @@ fn reconciliation_parity_fixture() {
     trade.account_id = "attempt-a".into();
     trade.created_at = baseline.recorded_at.clone();
     trade.updated_at = baseline.recorded_at.clone();
+    // Trades in the portable fixture keep the shape risk inputs give them, without `feesRecorded` (TASK-042):
+    // reconciliation never reads the flag, and the fixture is unchanged by migration 0022.
+    let mut trade = json!(trade);
+    trade.as_object_mut().unwrap().remove("feesRecorded");
     let base = json!({"name":"complete_net_pnl","request":request("attempt-a","baseline","observation"),"observation":observation,"baseline":baseline,"trades":[trade],"ledger":[],"superseded":[]});
     let mut cases = vec![base.clone()];
     for (name, path, value) in [
@@ -476,12 +480,21 @@ fn compare_case(v: &Value) -> reconciliation::Comparison {
         &serde_json::from_value(v["request"].clone()).unwrap(),
         &serde_json::from_value(v["observation"].clone()).unwrap(),
         &serde_json::from_value(v["baseline"].clone()).unwrap(),
-        &serde_json::from_value::<Vec<super::trades::Trade>>(v["trades"].clone()).unwrap(),
+        &trades_without_flag(&v["trades"]),
         &serde_json::from_value::<Vec<ledger::LedgerEntry>>(v["ledger"].clone()).unwrap(),
         &serde_json::from_value::<Vec<String>>(v["superseded"].clone()).unwrap(),
         &[],
     )
     .unwrap()
+}
+
+/// Fixture trades (risk-input shape, no `feesRecorded`) as Trade DTOs. The flag does not affect a comparison.
+fn trades_without_flag(v: &Value) -> Vec<super::trades::Trade> {
+    let mut v = v.clone();
+    for t in v.as_array_mut().unwrap() {
+        t["feesRecorded"] = json!(true);
+    }
+    serde_json::from_value(v).unwrap()
 }
 
 #[test]

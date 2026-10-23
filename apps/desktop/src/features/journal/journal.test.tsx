@@ -238,6 +238,76 @@ describe("Trade detail", () => {
   });
 });
 
+describe("Fees not recorded (TASK-042)", () => {
+  // nf: Performance-style import with no fees (stored net = gross − 0); z0: an explicit zero fee.
+  const feeSeed = () => [
+    trade({ id: "nf", accountId: A, symbol: "MNQZ6", source: "csv_import", importBatchId: "batch", entryAt: "2026-10-20T13:30:00.000Z", exitAt: "2026-10-20T13:31:00.000Z",
+      tradingDay: "2026-10-20", realizedPnl: "26", grossPnl: "26", fees: "0", feesRecorded: false }),
+    trade({ id: "z0", accountId: A, symbol: "ESZ6", entryAt: "2026-10-20T14:30:00.000Z", exitAt: "2026-10-20T14:31:00.000Z", tradingDay: "2026-10-20",
+      realizedPnl: "100", grossPnl: "100", fees: "0", feesRecorded: true }),
+  ];
+  beforeEach(() => { holder.store = createJournalStore(accounts(), feeSeed()); });
+
+  it("shows fees as Not recorded and the net P&L as unknown on the trade, never $0.00 or an after-fees net", async () => {
+    renderAt("/journal/trades/nf");
+    expect(await screen.findByRole("heading", { name: "MNQZ6" })).toBeTruthy();
+    const summary = screen.getByLabelText("Trade summary");
+    const value = (label: string) => within(summary).getByText(label).closest(".ds-stats-row")!.querySelector("dd")!.textContent;
+    expect(value("Fees")).toBe("Not recorded");
+    expect(value("Gross P&L")).toBe("+$26.00");
+    expect(value("Net P&L")).toBe("— Fees not recorded");
+    expect(within(summary).queryByText("$0.00")).toBeNull();
+    expect(screen.getAllByText("Fees not recorded").length).toBeGreaterThan(1); // header badge too
+  });
+
+  it("shows the review's outcome as unknown with the badge, not a dollar net, when fees were not recorded", async () => {
+    renderAt("/journal/trades/nf");
+    const label = await screen.findByText("Outcome");
+    const fact = label.closest(".jr-review-fact") as HTMLElement;
+    expect(within(fact).queryByText("+$26.00")).toBeNull();
+    expect(within(fact).getByText("—")).toBeTruthy();
+    expect(within(fact).getByText("Fees not recorded")).toBeTruthy();
+  });
+
+  it("keeps an explicit zero fee as 0 when correcting, and leaves unrecorded fees blank", async () => {
+    const user = userEvent.setup();
+    renderAt("/journal/trades/z0");
+    const summary = await screen.findByLabelText("Trade summary");
+    expect(within(summary).getByText("Fees").closest(".ds-stats-row")!.querySelector("dd")!.textContent).toBe("$0.00");
+    await user.click(screen.getByRole("button", { name: "Correct trade" }));
+    const dialog = await screen.findByRole("dialog", { name: /Correct ESZ6 trade/ });
+    expect((within(dialog).getByLabelText(/^Fees/) as HTMLInputElement).value).toBe("0");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    cleanup();
+
+    renderAt("/journal/trades/nf");
+    await user.click(await screen.findByRole("button", { name: "Correct trade" }));
+    const other = await screen.findByRole("dialog", { name: /Correct MNQZ6 trade/ });
+    const fees = within(other).getByLabelText(/^Fees/) as HTMLInputElement;
+    expect(fees.value).toBe("");
+    expect(fees.getAttribute("placeholder")).not.toBe("0");
+    expect(within(other).getByText(/left blank, the fees are not recorded/)).toBeTruthy();
+  });
+
+  it("keeps list totals with a note on trades counted before fees, and marks the fees total incomplete", async () => {
+    renderAt("/journal");
+    const day = await screen.findByRole("article", { name: "Tue, Oct 20, 2026" });
+    expect(within(day).getByText("Includes 1 trade with fees not recorded (counted before fees).")).toBeTruthy();
+    const dayStats = within(day).getByRole("group", { name: "Day statistics" });
+    expect(within(dayStats).getByText("Incomplete")).toBeTruthy();
+    expect(within(day).getAllByText("+$126.00").length).toBeGreaterThan(0); // 26 (before fees) + 100
+    const table = within(day).getByRole("table", { name: /Trades on/ });
+    const row = within(table).getByRole("rowheader", { name: "MNQZ6" }).closest("tr")!;
+    expect(within(row).getByText("Fees not recorded")).toBeTruthy();
+    expect(within(row).queryByText("+$26.00")).toBeNull();
+    cleanup();
+
+    renderAt("/journal?view=log");
+    await screen.findByRole("table", { name: "Trade log" });
+    expect(screen.getByText("Includes 1 trade with fees not recorded (counted before fees).")).toBeTruthy();
+  });
+});
+
 describe("Review", () => {
   async function seedLibrary() {
     const lib = holder.store.repository.library;

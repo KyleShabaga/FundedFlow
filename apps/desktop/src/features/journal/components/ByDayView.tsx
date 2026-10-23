@@ -58,7 +58,9 @@ export function DayStats({ rows, currency }: { rows: readonly JournalRow[]; curr
       <LabeledValue label="Trades" value={String(s.trades)} />
       <LabeledValue label="Win rate" value={s.winRate == null ? null : formatPercent(s.winRate, 0).replace("+", "")} />
       <LabeledValue label="Gross P&L" value={money(s.gross)} />
-      <LabeledValue label="Fees" value={money(s.fees, false)} />
+      <LabeledValue label="Fees" value={s.fees != null && s.feesIncomplete
+        ? <span className="jr-pnl" title="Some trades here have fees not recorded, so this is only the fees that were recorded.">{money(s.fees, false)} <Badge tone="warn">Incomplete</Badge></span>
+        : money(s.fees, false)} />
       <LabeledValue label="Contracts" value={s.contracts} />
       <LabeledValue label="Winners" value={String(s.winners)} />
       <LabeledValue label="Losers" value={String(s.losers)} />
@@ -69,10 +71,16 @@ export function DayStats({ rows, currency }: { rows: readonly JournalRow[]; curr
 
 export function UnknownNote({ rows }: { rows: readonly JournalRow[] }) {
   const s = stats(rows);
-  if (!s.open && !s.unknown) return null;
+  if (!s.open && !s.unknown && !s.feesNotRecorded) return null;
   const trades = (n: number) => (n === 1 ? "trade" : "trades");
   const parts = [s.open ? `${s.open} open ${trades(s.open)}` : null, s.unknown ? `${s.unknown} ${trades(s.unknown)} without a known P&L` : null].filter(Boolean);
-  return <p className="ds-faint jr-note">{parts.join(" and ")} {s.open + s.unknown === 1 ? "is" : "are"} not in the P&amp;L figures.</p>;
+  return (
+    <>
+      {parts.length > 0 && <p className="ds-faint jr-note">{parts.join(" and ")} {s.open + s.unknown === 1 ? "is" : "are"} not in the P&amp;L figures.</p>}
+      {/* TASK-042 (R-NET): totals keep the stored values; trades without recorded fees count before fees. */}
+      {s.feesNotRecorded > 0 && <p className="ds-faint jr-note">Includes {s.feesNotRecorded} {trades(s.feesNotRecorded)} with fees not recorded (counted before fees).</p>}
+    </>
+  );
 }
 
 /** The day's review: status, plan adherence (process only) and the action that opens it. Unknown while reviews load. */

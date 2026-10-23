@@ -310,8 +310,19 @@ pub(crate) fn risk_inputs_in(
     if applicable_assignment.is_none() {
         missing.push("rulebook_assignment");
     }
+    // TASK-042 (B2-2): risk inputs keep the Trade DTO as it was before migration 0022. `feesRecorded` is left out,
+    // so the source fingerprint of every stored calculation is unchanged; fee completeness reaches the engine
+    // only through the coverage statement.
+    let mut trades = serde_json::json!(super::trades::list(tx, &query.account_id)?);
+    if let Some(list) = trades.as_array_mut() {
+        for trade in list {
+            if let Some(fields) = trade.as_object_mut() {
+                fields.remove("feesRecorded");
+            }
+        }
+    }
     let out = serde_json::json!({"schemaVersion":1,"account":account,"asOf":format_instant(at),"effectiveTradingDay":trading_day(at,tz,reset).to_string(),
-        "observations":observations,"trades":super::trades::list(tx,&query.account_id)?,"ledger":super::ledger::list(tx,&query.account_id)?,
+        "observations":observations,"trades":trades,"ledger":super::ledger::list(tx,&query.account_id)?,
         "ledgerHistory":super::ledger::history(tx,&query.account_id)?,"phaseHistory":super::catalogue::list_phase_events(tx,&query.account_id)?,
         "catalogueLink":super::catalogue::get_link(tx,&query.account_id)?,"assignments":assignments,"rulebookVersions":versions,
         "applicableAssignment":applicable_assignment,"applicableRulebook":null,"coverage":query.coverage,"missingInputs":missing});

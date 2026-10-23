@@ -156,7 +156,7 @@ function CalculationWriteReview({ write, accountId, timeZone, sentAt }: { write:
 
 /** The explicit "calculate and save" action (also Today's Calculate estimate, Build 21). Never runs on its own. */
 export function CalculateNow({ accountId, currency, current, onSaved, timeZone = "UTC" }: { accountId: string; currency: string; current: RulebookVersionDetail | null; onSaved?: () => void; timeZone?: string }) {
-  const settings = useCalculationSettings(currency, current);
+  const settings = useCalculationSettings(currency, current, accountId);
   const calculate = useCalculateRisk(accountId);
   const toast = useToast();
   const [sentAt, setSentAt] = useState<string | null>(null);

@@ -31,7 +31,8 @@ import { retryRead, toAsyncState } from "../../shared/presentation";
 import { useRemoveTrade, useRestoreTrade, useTradeRecord } from "../../trades/hooks/trades";
 import type { TradeRecordView } from "../../trades/api/trades";
 import { holdTime } from "./journal-model";
-import { clock, JournalAccountGate, longDay, tradePath, ResultBadge, SideBadge, SourceBadge, STATUS_EXPLANATION, zoneLabel } from "./presentation";
+import { feesUnknown, shownNetPnl } from "../../trades/view-models/trade";
+import { clock, FEES_NOT_RECORDED_EXPLANATION, FeesNotRecordedBadge, JournalAccountGate, longDay, tradePath, ResultBadge, SideBadge, SourceBadge, STATUS_EXPLANATION, zoneLabel } from "./presentation";
 import { ReviewCard } from "./ReviewCard";
 import { TradeFormDialog } from "./TradeFormDialog";
 import "./journal.css";
@@ -157,7 +158,8 @@ function TradeView({ account, record, named = false }: { account: AccountViewMod
           <SideBadge side={t.side} />
           <ResultBadge trade={t} />
           <SourceBadge trade={t} />
-          <Pnl value={t.realizedPnl} size="xl" currency={t.currency} />
+          <FeesNotRecordedBadge trade={t} />
+          <Pnl value={shownNetPnl(t)} size="xl" currency={t.currency} />
         </div>
         <div className="jr-detail-actions">
           <Button size="sm" icon={<ChevronLeft size={14} aria-hidden="true" />} disabled={!record.previousTradeId}
@@ -184,12 +186,13 @@ function TradeView({ account, record, named = false }: { account: AccountViewMod
               { label: "Exit", value: t.exitPrice ? `${t.exitPrice} at ${at(t.exitAt)}` : "Open" },
               { label: "Hold", value: holdTime(t) },
               { label: "Gross P&L", value: money(t.grossPnl) },
-              { label: "Fees", value: money(t.fees, false) },
-              { label: "Net P&L", value: money(t.realizedPnl) },
+              // TASK-042: fees that were never given are "Not recorded" (never $0.00), and the net is then unknown.
+              { label: "Fees", value: t.feesRecorded ? money(t.fees, false) : "Not recorded" },
+              { label: "Net P&L", value: feesUnknown(t) ? <span className="jr-pnl">{UNKNOWN} <Badge tone="warn">Fees not recorded</Badge></span> : money(t.realizedPnl) },
               { label: "P&L source", value: PNL_SOURCE[t.pnlStatus] },
               ...(t.reportedPnl != null && t.pnlStatus !== "reported" ? [{ label: "Broker P&L (as given)", value: money(t.reportedPnl) }] : []),
             ]} />
-            <p className="ds-faint jr-note">{STATUS_EXPLANATION[t.pnlStatus]} Times are in {zoneLabel(tz)}.</p>
+            <p className="ds-faint jr-note">{STATUS_EXPLANATION[t.pnlStatus]}{feesUnknown(t) ? ` ${FEES_NOT_RECORDED_EXPLANATION} Correct the trade to enter its fees (0 if there were none).` : ""} Times are in {zoneLabel(tz)}.</p>
             {t.notes && <p className="jr-trade-notes"><span className="ds-label">Trade notes</span>{t.notes}</p>}
           </section>
 

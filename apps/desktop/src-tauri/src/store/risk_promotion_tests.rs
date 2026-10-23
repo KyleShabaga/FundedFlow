@@ -987,12 +987,16 @@ fn a_populated_v20_journal_upgrades_without_promoting_its_history() {
         let mut c = Connection::open(&path).unwrap();
         crate::db::configure(&c).unwrap();
         crate::db::migrate_with(&mut c, &crate::db::MIGRATIONS[..20]).unwrap();
+        // This build's trade code needs migration 0022's column; it is dropped again below (TASK-042).
+        c.execute_batch("ALTER TABLE trades ADD COLUMN fees_recorded INTEGER NOT NULL DEFAULT 1")
+            .unwrap();
         let ctx = seeded(&mut c);
         account = ctx.account;
         let cap = risk_promotion::capture(&mut c, query(&account, CUTOFF)).unwrap();
         let a = snapshots::save(&mut c, calc(&cap, true)).unwrap();
         let b = snapshots::save(&mut c, calc(&cap, false)).unwrap();
         ids = vec![a.id, b.id];
+        without_fees_recorded(&c, 20);
         let version: u32 = c
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
@@ -1501,4 +1505,84 @@ fn every_write_command_is_classified_for_risk_promotion() {
         };
         assert!(known, "{line}: names no matrix row");
     }
+}
+
+// ---------------------------------------------------------------------------
+// TASK-042 (B2-2): migration 0022 does not change the fingerprint of stored calculations.
+// ---------------------------------------------------------------------------
+
+/// Turns a journal this build wrote back into the version-21 schema of `trades`: the only schema change
+/// migration 0022 makes is the `fees_recorded` column. Lets a test use this build's store code "before" 0022.
+fn without_fees_recorded(c: &Connection, version: u32) {
+    c.execute_batch("ALTER TABLE trades DROP COLUMN fees_recorded")
+        .unwrap();
+    c.pragma_update(None, "user_version", version).unwrap();
+}
+
+#[test]
+fn risk_inputs_never_carry_fees_recorded() {
+    let mut c = db();
+    let ctx = seeded(&mut c);
+    let cap = capture(&mut c, &ctx.account, CUTOFF);
+    let listed = cap.inputs["trades"].as_array().unwrap();
+    assert_eq!(listed.len(), 1);
+    for t in listed {
+        let keys: Vec<&str> = t.as_object().unwrap().keys().map(String::as_str).collect();
+        assert!(
+            !keys.contains(&"feesRecorded"),
+            "risk inputs leave the flag out"
+        );
+        assert!(keys.contains(&"fees"));
+    }
+    // The command DTO itself does carry it.
+    let listed = serde_json::to_value(trades::list(&c, &ctx.account).unwrap()).unwrap();
+    assert_eq!(listed[0]["feesRecorded"], true);
+}
+
+#[test]
+fn a_calculation_promoted_before_migration_22_stays_current_after_it() {
+    let file = JournalFile::new();
+    let path = file.0.join(crate::db::DB_FILE_NAME);
+    let (account, id, explicit_zero);
+    {
+        let mut c = file.open();
+        account = seeded(&mut c).account;
+        // An explicit 0 is recorded now; the legacy rule of migration 0022 will mark it "not recorded",
+        // so the flag changes across the migration while the calculation's sources do not.
+        explicit_zero = trades::create(
+            &mut c,
+            trades::TradeInput {
+                fees: Some("0".into()),
+                ..trade_input(&account)
+            },
+        )
+        .unwrap()
+        .id;
+        let cap = capture(&mut c, &account, CUTOFF);
+        id = risk_promotion::promote(&mut c, calc(&cap, false))
+            .unwrap()
+            .id;
+        assert_eq!(unchanged(&mut c, &account), Some(true));
+    }
+    without_fees_recorded(&Connection::open(&path).unwrap(), 21);
+
+    let mut c = file.open();
+    assert_eq!(
+        c.query_row("PRAGMA user_version", [], |r| r.get::<_, u32>(0))
+            .unwrap(),
+        crate::db::latest_version()
+    );
+    let flag: i64 = c
+        .query_row(
+            "SELECT fees_recorded FROM trades WHERE id = ?1",
+            [&explicit_zero],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(flag, 0, "the legacy rule applied");
+    let current = risk_promotion::current(&mut c, &account).unwrap();
+    assert_eq!(
+        (current.snapshot.map(|s| s.id), current.sources_unchanged),
+        (Some(id), Some(true))
+    );
 }

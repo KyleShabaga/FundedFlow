@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { Badge, Button, EmptyState, ErrorState, LoadingState, MoneyCell, tradeResult, UNKNOWN } from "../../../design-system";
 import { useActiveAccount } from "../../accounts/active-account";
 import type { AccountViewModel } from "../../accounts/view-models/account";
-import type { TradeViewModel } from "../../trades/view-models/trade";
+import { feesUnknown, shownNetPnl, type TradeViewModel } from "../../trades/view-models/trade";
 
 /**
  * A trade's detail page. With `accountId` the page shows exactly that attempt's trade (Insights drill-downs across
@@ -41,12 +41,19 @@ export function SideBadge({ side }: { side: "long" | "short" }) {
 export function SourceBadge({ trade }: { trade: TradeViewModel }) {
   return trade.source === "csv_import" ? <Badge tone="flow">Imported</Badge> : <Badge>Manual</Badge>;
 }
+export const FEES_NOT_RECORDED = "Fees not recorded";
+export const FEES_NOT_RECORDED_EXPLANATION = "No fees were entered or imported for this trade, so its net P&L is unknown. Gross P&L is shown as recorded.";
+/** The "Fees not recorded" badge for a closed trade whose net P&L is unknown for that reason (TASK-042). */
+export function FeesNotRecordedBadge({ trade }: { trade: TradeViewModel }) {
+  return feesUnknown(trade) ? <Badge tone="warn">{FEES_NOT_RECORDED}</Badge> : null;
+}
 export function NetPnl({ trade }: { trade: TradeViewModel }) {
   const note = trade.pnlStatus === "open" ? null : STATUS_NOTE[trade.pnlStatus];
   return (
     <span className="jr-pnl" title={note ? STATUS_EXPLANATION[trade.pnlStatus] : undefined}>
-      <MoneyCell value={trade.realizedPnl} currency={trade.currency} />
+      <MoneyCell value={shownNetPnl(trade)} currency={trade.currency} />
       {note && <Badge tone={trade.pnlStatus === "reported" ? "flow" : "warn"}>{note}</Badge>}
+      <FeesNotRecordedBadge trade={trade} />
     </span>
   );
 }

@@ -207,7 +207,8 @@ export function createRulebookStore(seed: Account[]) {
     const baseline = coverage.baseline === "available" ? "available" : coverage.baseline;
     return {
       schemaVersion: 1, account: structuredClone(account), asOf, effectiveTradingDay: day,
-      observations: [opening], trades: structuredClone(trades.get(accountId) ?? []), ledger: [], ledgerHistory: [], phaseHistory: [],
+      // Risk inputs carry trades without `feesRecorded`, as Rust strips it (TASK-042).
+      observations: [opening], trades: structuredClone(trades.get(accountId) ?? []).map(({ feesRecorded: _, ...t }) => t), ledger: [], ledgerHistory: [], phaseHistory: [],
       catalogueLink: { accountId, providerId: null, programmeVariantId: null, catalogueVersionId: null, selectedPhasePathId: null, parentAccountId: null, sizeSource: "unknown" },
       assignments: structuredClone(mine),
       rulebookVersions: [...new Set(mine.map(a => a.rulebookVersionId))].map(get),
@@ -237,6 +238,8 @@ export function createRulebookStore(seed: Account[]) {
       },
     },
     catalogue: { load: async () => { throw notFound("no catalogue"); } },
+    // The trade list (list_trades), read for the "fees not recorded" note beside the coverage statement.
+    trades: { list: async (accountId: string) => structuredClone(trades.get(accountId) ?? []) },
   };
   const promotion = attachRiskPromotion(repository as never, () => snapshots);
   return { ...base, repository, versions, rulebooks, assignments, events, writes, evidenceCalls, trades, snapshots, promotions: promotion.promotions, verifiedVersionId: verified.version.id };
@@ -246,7 +249,7 @@ export function createRulebookStore(seed: Account[]) {
 export function closedTrade(accountId: string, n: number, realizedPnl: string, day = "2026-10-20"): Trade {
   return {
     id: `${accountId}-t${n}`, accountId, source: "manual", importBatchId: null, brokerTradeId: null, symbol: "ES", side: "long", quantity: "1",
-    entryAt: `${day}T14:00:00.000Z`, exitAt: `${day}T15:${String(n).padStart(2, "0")}:00.000Z`, entryPrice: "5000", exitPrice: "5001", fees: "0",
+    entryAt: `${day}T14:00:00.000Z`, exitAt: `${day}T15:${String(n).padStart(2, "0")}:00.000Z`, entryPrice: "5000", exitPrice: "5001", fees: "0", feesRecorded: true,
     tradingDay: day, reportedPnl: realizedPnl, grossPnl: realizedPnl, realizedPnl, pnlStatus: "reported", notes: null, roundTrip: null,
     createdAt: "2026-10-20T15:00:00.000Z", updatedAt: "2026-10-20T15:00:00.000Z",
   };

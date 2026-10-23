@@ -7,6 +7,7 @@ import type { EnginePolicy, EvidenceState, RulebookVersionDetail, RiskInputsQuer
 import { useMemo, useState } from "react";
 
 import { Select, TextField } from "../../../design-system";
+import { useTrades } from "../../trades/hooks/trades";
 
 type Coverage = RiskInputsQuery["coverage"];
 const ASSERTABLE = [
@@ -28,7 +29,19 @@ function backingClaims(version: RulebookVersionDetail | null, field: string): st
     .map(c => c.id);
 }
 
-export function useCalculationSettings(currency: string, version: RulebookVersionDetail | null) {
+/**
+ * TASK-042: closed trades of the account whose fees were not recorded, from the trade list (no new command). Beside
+ * "Fees are complete" as a fact the trader weighs; the statement stays theirs to make (they may know those fees were
+ * zero or included in a reported P&L). Null while unknown.
+ */
+function useFeesNotRecorded(accountId: string | null): number | null {
+  const trades = useTrades(accountId);
+  if (!trades.data) return null;
+  return trades.data.filter(t => t.pnlStatus !== "open" && !t.feesRecorded).length;
+}
+
+export function useCalculationSettings(currency: string, version: RulebookVersionDetail | null, accountId: string | null = null) {
+  const feesNotRecorded = useFeesNotRecorded(accountId);
   const [assert, setAssert] = useState<Record<(typeof ASSERTABLE)[number][0], EvidenceState>>({ closedTrades: "incomplete", fees: "incomplete", ledger: "incomplete" });
   const [ruleCurrency, setRuleCurrency] = useState<string>(NOT_STATED);
   const [boundary, setBoundary] = useState<string>(NOT_STATED);
@@ -58,7 +71,8 @@ export function useCalculationSettings(currency: string, version: RulebookVersio
       <p className="ds-faint">Not saved as a setting and not verified. A saved calculation keeps what you stated with it.</p>
       <div className="rb-inline-fields">
         {ASSERTABLE.map(([key, label]) => (
-          <Select key={key} label={label} size="sm" options={ASSERT_OPTIONS} value={assert[key]} onValueChange={v => setAssert(a => ({ ...a, [key]: v }))} />
+          <Select key={key} label={label} size="sm" options={ASSERT_OPTIONS} value={assert[key]} onValueChange={v => setAssert(a => ({ ...a, [key]: v }))}
+            description={key === "fees" && feesNotRecorded ? `${feesNotRecorded} closed ${feesNotRecorded === 1 ? "trade has" : "trades have"} fees not recorded` : undefined} />
         ))}
       </div>
       <div className="rb-inline-fields">

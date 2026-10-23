@@ -75,7 +75,8 @@ export function tradeValues(trade: TradeViewModel): TradeFormValues {
     entryPrice: trade.entryPrice,
     exitAt: trade.exitAt ? zonedWallTime(trade.exitAt, trade.timeZone) : "",
     exitPrice: trade.exitPrice ?? "",
-    fees: trade.fees === "0" ? "" : trade.fees,
+    // TASK-042: an explicit 0 stays 0; only fees that were never recorded start blank.
+    fees: trade.feesRecorded ? trade.fees : "",
     reportedPnl: trade.reportedPnl ?? "",
     notes: trade.notes ?? "",
     reason: "",
@@ -267,7 +268,7 @@ function TradeFormBody({ account, trade, open, onOpenChange, onSaved }: TradeFor
           </FormSection>
           <FormSection title="Costs and P&L" description="FundedFlow calculates gross and net P&L when you save. Nothing here is estimated.">
             <div className="jr-form-row">
-              <TextField id={fieldId(base, "fees")} label={TRADE_FIELD_LABELS.fees} optional numeric inputMode="decimal" suffix={account.currency} value={values.fees} onChange={e => set("fees")(e.target.value)} error={errorFor("fees")} placeholder="0" description="Total for the round trip, as a positive cost." />
+              <TextField id={fieldId(base, "fees")} label={TRADE_FIELD_LABELS.fees} optional numeric inputMode="decimal" suffix={account.currency} value={values.fees} onChange={e => set("fees")(e.target.value)} error={errorFor("fees")} description="Total for the round trip, as a positive cost. Enter 0 if there were none; left blank, the fees are not recorded and the net P&L stays unknown." />
               <TextField id={fieldId(base, "reportedPnl")} label={TRADE_FIELD_LABELS.reportedPnl} optional numeric inputMode="decimal" suffix={account.currency} value={values.reportedPnl} onChange={e => set("reportedPnl")(e.target.value)} error={errorFor("reportedPnl")} description="Used only when the symbol's point value is unknown." />
             </div>
           </FormSection>

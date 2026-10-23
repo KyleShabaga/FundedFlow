@@ -5,7 +5,7 @@ export const account: Account = { id: "a", name: "Test account", broker: null, p
   accountType: "evaluation", status: "active", currency: "USD", startingBalance: "9007199254740.993", timezone: "America/New_York",
   tradingDayResetTime: "17:00", notes: null, createdAt: T, updatedAt: T, archivedAt: null, predecessorAccountId: null, successorAccountId: null };
 export const trade: Trade = { id: "t", accountId: "a", source: "manual", importBatchId: null, brokerTradeId: null, symbol: "MES", side: "long", quantity: "1",
-  entryAt: T, entryPrice: "5000", exitAt: null, exitPrice: null, fees: "0", tradingDay: "2026-10-20", reportedPnl: null,
+  entryAt: T, entryPrice: "5000", exitAt: null, exitPrice: null, fees: "0", feesRecorded: true, tradingDay: "2026-10-20", reportedPnl: null,
   grossPnl: null, realizedPnl: null, pnlStatus: "open", notes: null, roundTrip: null, createdAt: T, updatedAt: T };
 export const journal: JournalEntry = { id: "j", accountId: "a", tradeId: null, entryAt: T, title: "Test note", body: "", tags: [], createdAt: T, updatedAt: T };
 export const batch: ImportBatch = { id: "b", accountId: "a", fileName: "fixture.csv", fileSha256: "0".repeat(64), fileSize: 100, sourceFormat: "generic", status: "committed",
