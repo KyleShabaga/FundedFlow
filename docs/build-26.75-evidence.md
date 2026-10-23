@@ -137,18 +137,23 @@ Machine: a fresh Windows 11 VM or Windows Sandbox with **no** Node, Rust, Visual
 | Tester / date | |
 | Windows edition and build (`winver`) | |
 | WebView2 runtime present before install? (Installed apps → "Microsoft Edge WebView2 Runtime") | |
+| WebView2 runtime version after install (Installed apps, or "absent") | |
 | Artifact name | |
 | Installer SHA-256 | |
 | Source SHA | |
+| TASK-018 and TASK-023 merged into the source SHA? (needed for B1 and B3) | |
+
+Steps 1–11 are the base smoke; B1–B7 below are added by TASK-028 and run on the same artifact. Every row records
+Pass/Fail, tester and date. A mandatory step that fails or is not run means the TASK-030 gate cannot be Passed.
 
 | # | Step | Expected | Pass/Fail | Notes |
 |---|---|---|---|---|
 | 1 | Download the artifact zip from the run, extract it, and run `Get-FileHash .\FundedFlow_<version>_x64-setup.exe -Algorithm SHA256`. | Matches `SHA256SUMS.txt` and the table above (case-insensitive). | | |
 | 2 | Run the installer. SmartScreen shows "Windows protected your PC" because it is unsigned: choose **More info → Run anyway**. | No UAC prompt (per-user install). Installs to `%LOCALAPPDATA%\FundedFlow`; Start menu entry created. Publisher shows "Kyle Shabaga" in Installed apps. | | |
 | 3 | Disconnect the network (disable the adapter, or in Sandbox turn networking off). | Offline from here to step 10. | | |
-| 4 | First launch. | The runtime gate shows briefly, then Today's empty state. No error, no network prompt. | | |
+| 4 | First launch (still offline). Read the first-run screen, then choose **Acknowledge and continue**. | The first-run acknowledgment screen shows before any app content, titled "Before you start", with the "Draft documents" warning, the "Your privacy" summary and two documents: "Privacy notice (draft)" and "License and product information (draft)", both version `0.2.1-draft`. Its buttons are **Close** and **Acknowledge and continue**. After **Acknowledge and continue**, Today's empty state opens. No error, no network prompt. Evidence: expand each document ("Read the privacy notice", "Read the license and product information"; collapsed they show only these labels, `LegalDocuments.tsx:13-14`), then record the title and the "Version 0.2.1-draft" line each one shows, and a screenshot of the screen. | | |
 | 4a | Check the installed legal files: `dir $env:LOCALAPPDATA\FundedFlow`, then `notepad $env:LOCALAPPDATA\FundedFlow\THIRD_PARTY_NOTICES.txt`. In the app, open Settings → Privacy & legal → **Licence and third-party notices** → **Read the third-party notices**. | The folder lists `LICENSE` and `THIRD_PARTY_NOTICES.txt` next to `fundedflow.exe`. The notices file opens in Notepad (starts "FundedFlow third-party notices"). The in-app notices, offline, show the same text (Rust crates, npm packages, Fonts and Licence texts sections with the same counts). | | |
-| 5 | Record the exact journal path (`dir $env:APPDATA\com.fundedflow.desktop`). | `fundedflow.db` exists under `%APPDATA%\com.fundedflow.desktop`. Write the full path. | | |
+| 5 | Record the exact journal path (`dir $env:APPDATA\com.fundedflow.desktop`). | `fundedflow.db` exists under `%APPDATA%\com.fundedflow.desktop`, with `legal-acceptance.json` (the step-4 acknowledgment record) beside it. Write the full path. | | |
 | 6 | Create an account, import a small synthetic CSV (a few rows; not real trading data), close the app, reopen. | Account and trades are still there after reopening. | | |
 | 7 | Look for developer tools: sidebar has no **Add Fake Data** / **Reset All Data**; `#/settings/developer` is not reachable; F12 / Ctrl+Shift+I do nothing. | None visible. | | |
 | 8 | Uninstall from Installed apps, leaving "Delete the application data" **unchecked**. List what remains: `%LOCALAPPDATA%\FundedFlow`, `%APPDATA%\com.fundedflow.desktop`, `%LOCALAPPDATA%\com.fundedflow.desktop`, Start menu, `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall`. | Program files (including `LICENSE` and `THIRD_PARTY_NOTICES.txt`), shortcuts and the uninstall entry are gone; the journal folder remains. Record exactly what is left. | | |
@@ -156,9 +161,29 @@ Machine: a fresh Windows 11 VM or Windows Sandbox with **no** Node, Rust, Visual
 | 10 | Run the same installer again over the existing install (choose the reinstall option if offered). Launch. | Install completes; the journal is kept. | | |
 | 11 | Optional: with the network reconnected, run Resource Monitor (Network tab) or Wireshark while using the app for a few minutes. No connections from `fundedflow.exe` or its `msedgewebview2.exe` children to non-Microsoft hosts. WebView2 itself may contact Microsoft (for example SmartScreen); record any such hosts. | | |
 
-Attach screenshots of steps 2, 4, 4a, 5, 8 and 9. Any failure gets a Triage card.
+### Added steps B1–B7 (TASK-028)
+
+State at this document's revision (`main` at `819f967`): TASK-011 has not recorded its results, and TASK-018 and
+TASK-023 are not merged. Until TASK-011 records them, B1 case (2) and B3 case (2) have no record to compare with:
+the tester records the observed behaviour as **unmeasured** and lists it as a known gap for Kyle's explicit
+acceptance in TASK-036, not as Pass. Any journal data loss is a Fail in every case.
+
+| # | Step | Expected result | Evidence fields | Mandatory | Pass/Fail | Tester / date |
+|---|---|---|---|---|---|---|
+| B1 | Data root behind a junction: on a test account, place `%APPDATA%` (or the relocated profile) behind a junction, then launch. | Record first whether TASK-018 is merged into the source SHA. **(1) TASK-018 in the candidate:** the app reaches the first-run acknowledgment screen / Today with the journal under the junctioned path; no "retry" failure. If the app folder itself is a junction: refused with TASK-018's non-retry message. **(2) TASK-018 not in the candidate** (only if Kyle formally defers TASK-018; the remediation plan and TASK-029 otherwise require every W1 task Verified): the expected result is the pre-018 behaviour that TASK-011(b) recorded for the same junction setup; the step passes only as a **known gap** (listed for Kyle's explicit acceptance in TASK-036) when the observed behaviour equals that record and no journal data is lost; behaviour different from the record is a Fail. Without a TASK-011(b) record, see the note above. | Junction command used and `dir /AL` (or `fsutil reparsepoint query`) output for the junctioned folder; resolved journal path; screenshot of the screen reached; message text if refused; TASK-018 state at the source SHA and, for case (2), the TASK-011(b) record compared with (or "unmeasured"). | Yes | | |
+| B2 | Export to OneDrive Documents (Files On-Demand on) and to a junctioned folder. | Known limitation (V1.1): the export is refused with a clear message and the journal is unchanged, unless TASK-011(b) recorded that it works, in which case the archive is saved and its name, size and SHA-256 are shown. TASK-011(b) has not recorded this yet, so the known-limitation result applies. | Target path; OneDrive Files On-Demand state; on-screen result (screenshot); archive SHA-256 if produced; whether any file was left at the target. | Yes | | |
+| B3 | Title-bar close (X) and Alt+F4 with unsaved text in a trade review and a daily review. | Record first TASK-023's state at the source SHA. **(1) TASK-023 Verified and merged into the candidate:** a prompt asks before discarding; Cancel keeps the text; Leave closes. **(2) TASK-023 not in the candidate (still Deferred, or closed Not Needed):** the behaviour matches what TASK-011(a) recorded for the same close action. If TASK-011(a) recorded a prompt (Not Needed case), that prompt appears, Cancel keeps the text and Leave closes. If it recorded that the window closes and the unsaved text is lost, the step passes only as a **known gap** (ISSUE-009 window close): the observed behaviour equals the TASK-011(a) record, and the gap is listed for Kyle's explicit acceptance in TASK-036; behaviour different from the record is a Fail. TASK-011 r3 measures only the title-bar X, so if there is no TASK-011(a) record for Alt+F4, record the observed Alt+F4 behaviour as **unmeasured** and list it as a known gap for TASK-036, not as Pass. In every case a clean window closes immediately. | TASK-023 state at the source SHA (Verified / Deferred / Not Needed) and, for case (2), the TASK-011(a) record compared with (or "unmeasured", separately for X and Alt+F4); screen and field dirtied; screenshot of the prompt (or of the closed window and the lost text on reopening, for a known gap); result of Cancel and of Leave; text present after Cancel. | Yes | | |
+| B4 | Ticked uninstall after an export (part of V-023): export an archive to a folder outside `%APPDATA%` and `%LOCALAPPDATA%`, then uninstall with "Delete the application data" ticked. | Removes exactly the folders listed under [Uninstall and data](#bundle-configuration-appsdesktopsrc-tauritauriconfjson) (`%APPDATA%\com.fundedflow.desktop` and `%LOCALAPPDATA%\com.fundedflow.desktop`) plus the program folder, shortcuts and uninstall entry; the exported archive remains. | `dir` of `%LOCALAPPDATA%\FundedFlow`, `%APPDATA%\com.fundedflow.desktop` and `%LOCALAPPDATA%\com.fundedflow.desktop` before and after; the `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall` entry before and after; archive path still present; any leftover listed exactly. | Yes | | |
+| B5 | Second instance: with the app open, launch it again from the Start menu. | Known limitation (V1.1, ISSUE-031/WIN-012): the second window may show a failure screen; the first instance keeps working and the journal opens normally on the next launch. Any data loss is a Fail. | Screenshots of both windows; message text; first instance still saves; next-launch result. | Yes | | |
+| B6 | Windows scaling 125%, 150% and 200% (first-run acknowledgment screen, Today, Settings). | Every primary action reachable; nothing clipped that blocks a task. The full matrix is TASK-033. | Scaling; physical resolution; screenshots per scaling. | Yes | | |
+| B7 | Install without WebView2, online and offline (V-023): on a Windows image whose Installed apps lists no "Microsoft Edge WebView2 Runtime", run the installer (a) with the network on, (b) on a fresh copy of the image with the network off. | `downloadBootstrapper` (TASK-006 Option A, `apps/desktop/src-tauri/tauri.conf.json:49-52`), as documented above: (a) the installer downloads the runtime from Microsoft and the app launches; (b) the runtime cannot be fetched: pass if the installer stops with a message or the app reports that WebView2 is missing, no journal is created or changed, and the behaviour matches the NA-7 sentence that installing needs internet when WebView2 is missing; record the exact message. | Windows edition and build; proof that WebView2 was absent before (Installed apps screenshot); network state; installer screens and messages; WebView2 version after install (or "absent"); first-launch result. | Yes | | |
+
+Attach screenshots of steps 2, 4, 4a, 5, 8 and 9 and the screenshots B1–B7 list. Any failure gets a Triage card.
 
 ## Install and verify (for the NA-7 release notes)
+
+**Draft.** Not release text: the final wording is TASK-035, after the smoke above has run. Each statement is checked
+against the sources listed under the draft at `main` `819f967`.
 
 > **Install FundedFlow on Windows 10 or 11**
 >
@@ -168,13 +193,36 @@ Attach screenshots of steps 2, 4, 4a, 5, 8 and 9. Any failure gets a Triage card
 >    The hash must match the line in `SHA256SUMS.txt`. If it doesn't, delete the file and don't run it.
 > 3. Run the installer. The installer isn't code-signed yet, so Windows SmartScreen says "Windows protected your PC".
 >    Choose **More info**, check the file name, then **Run anyway**. No administrator rights are needed.
-> 4. FundedFlow works offline. If your PC lacks the Microsoft Edge WebView2 runtime (Windows 10 and 11 normally
->    include it), the installer downloads it from Microsoft once.
+> 4. If your PC lacks the Microsoft Edge WebView2 runtime, the installer downloads it from Microsoft, so installing
+>    then needs an internet connection. Once installed, FundedFlow works offline.
+> 5. On first launch, FundedFlow shows its privacy notice and its License and product information (both drafts,
+>    version `0.2.1-draft`). Choose **Acknowledge and continue** to open the app, or **Close** to exit.
 >
-> **Your data** lives in `%APPDATA%\com.fundedflow.desktop\fundedflow.db` on this PC only.
+> **Your data:** the journal is stored, without app encryption, in `%APPDATA%\com.fundedflow.desktop\fundedflow.db`,
+> with attachments beside it. FundedFlow doesn't upload it. Exports and copies you save elsewhere are yours to
+> protect: saving one in a cloud-synced folder, or sharing it, can transmit it through the services you choose.
 >
 > **Updating:** download the new installer, verify it the same way and run it. If it offers to uninstall the old
 > version first, go ahead, but leave "Delete the application data" **unticked**: that keeps your journal.
 > FundedFlow doesn't check for updates.
 >
-> **Uninstalling** keeps your journal unless you tick "Delete the application data".
+> **Uninstalling** removes the program, its shortcuts and its uninstall entry. With "Delete the application data"
+> unticked (the default) it keeps your journal; ticked, it also removes `%APPDATA%\com.fundedflow.desktop` and
+> `%LOCALAPPDATA%\com.fundedflow.desktop`. Exports and other copies saved elsewhere are never touched. Uninstall is
+> not the journal-erasure control: do not rely on it to remove per-user data, recovery files or exports. To erase
+> the journal, export a backup first if you want one, then use Settings → **Delete data permanently** → **Erase the
+> entire local journal**.
+
+Sources for the draft (all at `main` `819f967`):
+
+| Statement | Source |
+|---|---|
+| Windows 10 or 11 | `README.md:7`, `README.md:11` |
+| Download, `Get-FileHash`, `SHA256SUMS.txt` | `README.md:76`; workflow summary in [Release workflow](#release-workflow-githubworkflowsrelease-installeryml) |
+| Unsigned, SmartScreen, no administrator rights | Decisions in force (unsigned NSIS); `apps/desktop/src-tauri/tauri.conf.json:53-55` (`installMode: currentUser`); `README.md:77` |
+| WebView2 downloaded when missing; install then needs internet; offline afterwards | `apps/desktop/src-tauri/tauri.conf.json:49-52` (`downloadBootstrapper`, TASK-006 Option A); `README.md:78` (TASK-026); `apps/desktop/src/legal/privacy-notice.ts:29` |
+| First-run screen, document titles and versions, buttons | `apps/desktop/src/features/legal/components/LegalGate.tsx:55-58, 63-67`; `apps/desktop/src/legal/privacy-notice.ts:5-6`; `apps/desktop/src/legal/user-agreement.ts:5-6` |
+| Journal path, attachments beside it, no app encryption | `apps/desktop/src/legal/privacy-notice.ts:20, 22` |
+| No upload; exports and cloud-synced or shared copies | `apps/desktop/src/legal/privacy-notice.ts:28, 30, 46` |
+| Updating, "Delete the application data" unticked | `README.md:79`; Decisions in force (manual updates) |
+| Uninstall removal list; copies elsewhere untouched; not the erasure control; Settings erase path | [Uninstall and data](#bundle-configuration-appsdesktopsrc-tauritauriconfjson) (TASK-026); `apps/desktop/src/legal/privacy-notice.ts:46`; `apps/desktop/src/features/data-controls/components/DataControlsPage.tsx:201, 224`. The ticked removal is expected, not yet observed: B4 and TASK-031 confirm it. |
