@@ -182,7 +182,7 @@ Each line is one PR-sized change and one approval unit.
 | **W1b** size caps | 013 → 014 | 013 needs G3/G10; 014 Ready but blocked by 013 | 012 merged; 010 result informs priority | W2 |
 | **W1c** cleanup and attachments | 015 → 016 → 017 | All need correction (G8, G11, G12) | 014 merged | W2 |
 | **W1d** startup reparse | 018 | Needs correction (G11, G14) | 017 merged; 011(b) result | W2 |
-| **W1e** rollback at an older schema (B2-1) | 043 (Board review sync 2026-10-22) | Ready for Approval (r1) | 017 and 018 merged (serial on `restore.rs`, per its card); must be **Verified** before 042 opens | W2 |
+| **W1e** rollback at an older schema (B2-1) | 043 (Board review sync 2026-10-22) | Approved r2 | 017 merged (serial on `restore.rs`; TASK-018 is no longer a prerequisite, TASK-043 r2, 2026-10-23); must be **Verified** before 042 opens | W2 |
 | **W1-opt** | 019 | **Ready** | None | All |
 | **W2a** trading day | 020 → 021 | 020 **Ready**; 021 needs G10 | 021 needs 020 merged | W1 |
 | **W2b** navigation | 022 → 023 | 022 **Ready**; 023 needs G10/G14 | 023 needs 022 merged and 011(a) | W1 |

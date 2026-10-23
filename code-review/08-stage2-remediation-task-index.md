@@ -79,7 +79,7 @@ Card paths are relative to `code-review/`. Every card carries the full field set
 | Wave | Purpose | Tasks |
 |---|---|---|
 | W0 | Owner decisions and measurements. No code. | 001, 002, 003, 004 (docs after 003), 005, 006, 007, 008, 009, 010, 011 |
-| W1 | Data safety (native), merged in this order because they share `data_controls` files | 012 → 013 → 014 → 015 → 016 → 017 → 018 → 043 (W1 tail; Board review sync 2026-10-22); 019 is an optional pull-in that can run in parallel |
+| W1 | Data safety (native), merged in this order because they share `data_controls` files | 012 → 013 → 014 → 015 → 016 → 017 → 043 (W1 tail; no longer waits for 018, TASK-043 r2, 2026-10-23) → 018 when TASK-011(b) results exist (Board review sync 2026-10-22); 019 is an optional pull-in that can run in parallel |
 | W2 | Correctness (Rust, then UI). W2 and the independent units (019, 020, 022, 026, and the TASK-034 code change in W3c) may run alongside W1 (09 §4; r3). | 020 → 021; 022 → 023 (023 needs the result of 011(a)); 024: no functional prerequisite; merge order only — rebase onto whichever of 021/022 has merged (board review re-check 2026-10-22) |
 | W3 | Legal, release and docs | PR #107 merged → 025 and 044 (044 also after 015–017); 027 (after 005 and 006; merges after 017, before 029) → 026; 028 (after 025, 026 and 011); W3c: the TASK-034 code change, before 029 (gate kept by TASK-008 A); 042 after 043 Verified and 019, the 034 code change, 041 (if ruled), 022 and 024 merged, before 029 (Board review sync 2026-10-22); 045 after 042 merged (migration 0023), before 029 (TASK-045 sync 2026-10-22) |
 | W4 | Candidate | 029 |

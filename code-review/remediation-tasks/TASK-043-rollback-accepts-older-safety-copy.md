@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r1) |
+| Status | Ready for Approval (r2) |
 | Type | Fix |
 | Audit priority | P1 (V1: hard prerequisite of the TASK-042 migration; was P2 while no V1 migration existed, 07 §F.1) |
 | Roadmap lane | Unassigned (owner) |
@@ -12,12 +12,12 @@
 | Canonical issue | ISSUE-018 (B2-1 planning constraint) (see `code-review/remediation-findings-ledger.md`; `code-review/07-stage2-priorities-and-dependencies.md` §F.1; `code-review/08-stage2-remediation-task-index.md:93`) |
 | Original Stage 1 finding IDs | None (B2-1 was found in Block 2, 07 §A/§F.1) |
 | Source card / date | Approved-task audit 2026-10-22 (TASK-009 fee decision needs a V1 migration; 08:93 "Any future migration task must list B2-1 as its prerequisite") |
-| Wave | W1 tail (serial on `restore.rs` after TASK-012, TASK-014, TASK-016, TASK-017 and TASK-018); must be Verified before TASK-042 opens |
+| Wave | W1 tail (serial on `restore.rs` after TASK-012, TASK-014, TASK-016 and TASK-017; not after TASK-018, see Changes in r2); must be Verified before TASK-042 opens |
 | Effort / risk | S / Low |
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | 9430f2a (application source identical to 92e7980) |
-| Specification revision | r1 (2026-10-22; created from the approved-task audit) |
+| Specification revision | r2 (2026-10-23; r1 + TASK-018 dropped as a prerequisite) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 9430f2a (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -58,7 +58,7 @@ Test reproduction without a new migration: write a `safety.db` at version `lates
    - The existing `failed_swap_and_interrupted_install_restore_the_original_journal` (`data_controls/tests.rs:251-295`) still passes unchanged.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-012, TASK-014, TASK-016, TASK-017 and TASK-018 merged (all edit `restore.rs`; TASK-018 switches its `no_symlink_components` call sites; W1 is strictly serial on that file, 07 §D). TASK-040 (cargo fmt) merged first if approved.
+- Prerequisites: TASK-012, TASK-014, TASK-016 and TASK-017 merged (all edit `restore.rs`; W1 is strictly serial on that file, 07 §D). TASK-040 (cargo fmt) merged first. TASK-018 is not a prerequisite: `rollback` makes no `no_symlink_components` call, so the two changes touch different regions of `restore.rs`. Whichever of 043 and 018 merges second rebases.
 - Blocks: TASK-042 (any new migration; 07 §F.1, 08:93).
 - Likely shared-file conflicts: `data_controls/restore.rs` (`rollback`) with TASK-017 (operation-folder files that must survive rollback; owner amendment), TASK-018 (`no_symlink_components` call sites) and TASK-012 (adds a previous-version rollback test, step 6); `data_controls/tests.rs` with TASK-012, TASK-014, TASK-015, TASK-016 and TASK-017.
 
@@ -92,6 +92,10 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Wave, prerequisites and conflicts: TASK-018 added, since it switches `no_symlink_components` call sites in `restore.rs` and W1 is serial on that file (independent review (review4), reviewer A N2).
 - Follow-ups: the stale 08:93 sentence is listed for update; the TASK-029 dependency follow-up is removed because TASK-029 r6 already names TASK-043 (independent review (review4), reviewer A N3 and reviewer B nit).
 
+## Changes in r2
+- Wave and prerequisites: TASK-018 removed as a prerequisite. The board review found it was merge-order hygiene only: `rollback` has no link-check calls, and TASK-018 needs owner-run Windows VM results (TASK-011(b)) that would otherwise block 043, 042 and 045. Whichever of 043 and 018 merges second rebases. No change to scope, implementation or acceptance criteria (board review recommendation, 2026-10-23).
+
 ## Independent review notes
 Not yet reviewed. Created from the approved-task audit (TASK-009 MUST: the fee decision needs a V1 migration, and B2-1 "must precede any new migration", 07 §A and §F.1). Board and index follow-ups (not done here): add TASK-043 to 08 §A and the 09 waves, and update 08:93 ("No V1 task adds a migration, so B2-1 does not block V1"), which TASK-042 makes stale. TASK-029 r6 already names TASK-043.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r1.
+Revised to r2 (2026-10-23): prerequisite change only. Re-check of r2 (coordinator, 2026-10-23): verified that `rollback` on origin/main makes no `no_symlink_components` call; READY at r2.
