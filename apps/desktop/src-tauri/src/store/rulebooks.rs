@@ -782,8 +782,11 @@ pub fn flag_conflict(conn: &mut Connection, input: SourceConflictInput) -> AppRe
     Ok(detail.claims.into_iter().find(|c| c.id == id).expect("claim just written"))
 }
 
+/// A `YYYY-MM-DD` date that falls Monday to Friday.
 fn is_trading_day(s: &str) -> bool {
-    chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").is_ok_and(|d| d.format("%Y-%m-%d").to_string() == s)
+    use chrono::Datelike;
+    chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
+        .is_ok_and(|d| d.format("%Y-%m-%d").to_string() == s && d.weekday().number_from_monday() <= 5)
 }
 
 /// Assign a version to an account from a trading day. The account's current
@@ -833,7 +836,7 @@ pub fn assign_with(
 /// evaluation reset) can make the assignment part of its own atomic unit.
 pub(crate) fn assign_in(conn: &Connection, input: AssignmentInput) -> AppResult<AccountRulebookAssignment> {
     if !is_trading_day(&input.effective_from) {
-        return Err(AppError::invalid("effectiveFrom", "Use a trading day as YYYY-MM-DD"));
+        return Err(AppError::invalid("effectiveFrom", "Use a Monday-to-Friday trading day as YYYY-MM-DD"));
     }
     if input.phase_path_id.is_some() && input.programme_phase_id.is_none() {
         return Err(AppError::invalid("phasePathId", "A path needs its phase"));
