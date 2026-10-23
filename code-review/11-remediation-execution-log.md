@@ -8,9 +8,9 @@ The post-merge verification sweep ran on 2026-10-23 against `main` at c0c7c2f. T
 
 | Task | PR | Merge | Status | Pending, and where it moves |
 |---|---|---|---|---|
-| TASK-004 r4 | #113 | — | Implemented | `packages.md:140-141` line references have drifted; fix PR in progress |
+| TASK-004 r4 | #113, #136 | eaf7ee3 | Verified | Drifted line references fixed in #136 |
 | TASK-010 r2 | — | — | Verified | Measurement (`execution/task-010-journal-growth-results.md`) |
-| TASK-011 r3 | — | — | In Progress | (a) and (c) recorded; (b) not run (`execution/task-011-windows-baseline-results.md`); scripted Sandbox run with Kyle |
+| TASK-011 r3 | — | — | In Progress | (a), (b) and (c) recorded (`execution/task-011-windows-baseline-results.md`); environment header pending a sandbox rerun of (a), (c), B6 and the TASK-022 check |
 | TASK-012 r3 | #109 | — | Verified | — |
 | TASK-013 r4 | #118 | — | Verified | — |
 | TASK-014 r5 | #119 | — | Verified | — |
@@ -26,7 +26,7 @@ The post-merge verification sweep ran on 2026-10-23 against `main` at c0c7c2f. T
 | TASK-024 r5 | #115 | — | Verified | — |
 | TASK-025 r6 | #122 | — | Verified | Packaged first-run check → TASK-030 |
 | TASK-026 r5 | #130 | 819f967 | Verified | — |
-| TASK-027 r6 | #120 | cc63bc5 | Implemented | Three Actions observations in progress (src-only trigger, failing check blocks packaging, ci.yml dispatch) |
+| TASK-027 r6 | #120 | cc63bc5 | Verified | Actions observations: src-only PR runs 39999226696 (installer built); failing check run 39999274705 (packaging skipped, no artifact); ci.yml dispatch 39999179989 (success) |
 | TASK-028 r7 | #131, #133 | aebd450, f2f9c33 | Verified | B1/B2 stay "unmeasured" until TASK-011(b) runs → TASK-036 known gaps |
 | TASK-037 r3 | #114 | — | Verified | — |
 | TASK-038 r1 | #110 | — | Verified | — |
@@ -60,6 +60,5 @@ A "—" in the Merge column means the merge SHA is in the PR's record and is not
 
 ## Remaining before TASK-029 (release candidate)
 
-1. TASK-004 line-reference fix merged → Verified.
-2. TASK-027 observations recorded → Verified.
-3. Then TASK-029: dispatch `release-installer.yml` on the chosen main SHA, record the run, advisory result, version and EXE SHA-256, and store the artifact outside GitHub.
+1. Done: TASK-004 and TASK-027 Verified (2026-10-23).
+2. Next, TASK-029: dispatch `release-installer.yml` on the chosen main SHA, record the run, advisory result, version and EXE SHA-256, and store the artifact outside GitHub.
