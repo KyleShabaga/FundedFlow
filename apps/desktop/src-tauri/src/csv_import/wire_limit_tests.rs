@@ -105,9 +105,9 @@ fn duration_file() -> String {
     for (i, (duration, _)) in DURATIONS.iter().enumerate() {
         // Distinct fill pairs so no row is a duplicate of another.
         let row = line
-            .replace("707776450007", &format!("9100000000{i:02}"))
-            .replace("707776450023", &format!("9200000000{i:02}"));
-        csv.push_str(&row.replace("32sec", duration));
+            .replace("500000000001", &format!("9100000000{i:02}"))
+            .replace("500000000002", &format!("9200000000{i:02}"));
+        csv.push_str(&row.replace("33sec", duration));
         csv.push('\n');
     }
     csv

@@ -1,5 +1,6 @@
-//! Import pipeline tests. `Performance.csv` (repo-root `test_csvimport/`) is the
-//! required compatibility fixture and is only read, never modified.
+//! Import pipeline tests. `Performance.csv` (repo-root `test_csvimport/`) is the synthetic
+//! compatibility fixture in the broker Performance export format (rules in
+//! `docs/architecture/build-17-csv-backend.md`). It is only read, never modified.
 
 use rusqlite::Connection;
 
@@ -86,17 +87,17 @@ fn fixture_money_and_duration_styles_parse() {
 
     let first = t(2);
     assert_eq!((first.symbol.as_str(), first.quantity.as_str()), ("MNQZ6", "1"));
-    assert_eq!((first.entry_price.as_str(), first.exit_price.as_deref()), ("29774.25", Some("29787.25")));
-    assert_eq!(first.reported_pnl.as_deref(), Some("26"));
-    assert_eq!(first.realized_pnl.as_deref(), Some("26"), "(29787.25 − 29774.25) × 1 × $2");
-    assert_eq!((first.duration.as_deref(), first.duration_seconds), (Some("32sec"), Some(32)));
-    assert_eq!((first.buy_fill_id.as_deref(), first.sell_fill_id.as_deref()), (Some("707776450007"), Some("707776450023")));
-    assert_eq!(first.entry_at, "2026-10-19T11:47:48.000Z", "M/D/YYYY read in America/New_York (EDT)");
+    assert_eq!((first.entry_price.as_str(), first.exit_price.as_deref()), ("21009.25", Some("21010.5")));
+    assert_eq!(first.reported_pnl.as_deref(), Some("2.5"), "$2.50");
+    assert_eq!(first.realized_pnl.as_deref(), Some("2.5"), "(21010.50 − 21009.25) × 1 × $2");
+    assert_eq!((first.duration.as_deref(), first.duration_seconds), (Some("33sec"), Some(33)), "09:30:17 → 09:30:50");
+    assert_eq!((first.buy_fill_id.as_deref(), first.sell_fill_id.as_deref()), (Some("500000000001"), Some("500000000002")));
+    assert_eq!(first.entry_at, "2026-10-19T13:30:17.000Z", "M/D/YYYY 09:30:17 read in America/New_York (EDT, UTC−4)");
     assert_eq!(t(3).reported_pnl.as_deref(), Some("0"), "$0.00");
-    assert_eq!((t(8).duration.as_deref(), t(8).duration_seconds), (Some("1min 17sec"), Some(77)));
-    assert_eq!(t(17).reported_pnl.as_deref(), Some("-36"), "$(36.00)");
-    assert_eq!(t(17).realized_pnl.as_deref(), Some("-36"));
-    assert_eq!(t(21).duration_seconds, Some(164), "2min 44sec");
+    assert_eq!((t(8).duration.as_deref(), t(8).duration_seconds), (Some("1min 54sec"), Some(114)), "60 + 54");
+    assert_eq!(t(17).reported_pnl.as_deref(), Some("-4.5"), "$(4.50)");
+    assert_eq!(t(17).realized_pnl.as_deref(), Some("-4.5"), "short: (21028.00 − 21030.25) × 1 × $2");
+    assert_eq!(t(21).duration_seconds, Some(191), "3min 11sec = 180 + 11");
     // Every exported P&L matches the calculation, so no P&L warnings.
     assert!(p.rows.iter().all(|r| r.warnings.iter().all(|w| w.field != "realizedPnl")));
 }
@@ -127,21 +128,22 @@ fn fixture_sell_before_buy_keeps_both_timestamps_and_warns() {
     let r = row(&p, 8);
     assert_eq!(r.status, "new", "an order anomaly is a warning, not an error");
     assert_eq!(fields(&r.warnings), ["soldTimestamp"]);
-    assert!(r.warnings[0].message.contains("10/19/2026 07:52:38") && r.warnings[0].message.contains("short"));
+    assert!(r.warnings[0].message.contains("10/19/2026 09:54:59") && r.warnings[0].message.contains("short"));
     let t = r.trade.as_ref().unwrap();
     assert_eq!((t.side, t.entry_basis), ("short", Some("sell_first")));
-    assert_eq!(t.bought_at_source.as_deref(), Some("10/19/2026 07:53:55"));
-    assert_eq!(t.sold_at_source.as_deref(), Some("10/19/2026 07:52:38"));
-    assert_eq!((t.entry_at.as_str(), t.exit_at.as_deref()), ("2026-10-19T11:52:38.000Z", Some("2026-10-19T11:53:55.000Z")));
-    assert_eq!(t.realized_pnl.as_deref(), Some("30"));
+    assert_eq!(t.bought_at_source.as_deref(), Some("10/19/2026 09:56:53"));
+    assert_eq!(t.sold_at_source.as_deref(), Some("10/19/2026 09:54:59"));
+    // Entry = sell 09:54:59 EDT, exit = buy 09:56:53 EDT (UTC−4).
+    assert_eq!((t.entry_at.as_str(), t.exit_at.as_deref()), ("2026-10-19T13:54:59.000Z", Some("2026-10-19T13:56:53.000Z")));
+    assert_eq!(t.realized_pnl.as_deref(), Some("7"), "short: (21024.75 − 21021.25) × 1 × $2");
     assert_eq!(row(&p, 2).trade.as_ref().unwrap().entry_basis, Some("buy_first"));
 
     commit(&mut conn, &request(&account, PERFORMANCE)).unwrap();
     let saved = trade_store::list(&conn, &account).unwrap();
-    let st = saved.iter().find(|t| t.round_trip.as_ref().unwrap().sell_fill_id.as_deref() == Some("707776450114")).unwrap();
+    let st = saved.iter().find(|t| t.round_trip.as_ref().unwrap().sell_fill_id.as_deref() == Some("500000000013")).unwrap();
     let rt = st.round_trip.as_ref().unwrap();
-    assert_eq!((rt.bought_at_source.as_str(), rt.sold_at_source.as_str()), ("10/19/2026 07:53:55", "10/19/2026 07:52:38"));
-    assert_eq!((rt.buy_price.as_str(), rt.sell_price.as_str(), rt.entry_basis.as_str()), ("29728.25", "29733.25", "sell_first"));
+    assert_eq!((rt.bought_at_source.as_str(), rt.sold_at_source.as_str()), ("10/19/2026 09:56:53", "10/19/2026 09:54:59"));
+    assert_eq!((rt.buy_price.as_str(), rt.sell_price.as_str(), rt.entry_basis.as_str()), ("21021.25", "21024.75", "sell_first"));
     assert_eq!((rt.price_format.as_deref(), rt.price_format_type.as_deref(), rt.tick_size.as_deref()), (Some("-2"), Some("0"), Some("0.25")));
 }
 
@@ -170,8 +172,8 @@ fn fixture_import_persists_and_reimport_flags_fill_pairs() {
     assert!(p.file_previously_imported);
     assert_eq!((p.new_count, p.duplicate_count), (0, 67));
     let dup = row(&p, 2).duplicate.as_ref().unwrap();
-    assert_eq!((dup.of, dup.key.as_str()), ("saved", "fills2:12:707776450007:707776450023"));
-    assert!(dup.reason.contains("buy/sell fill IDs (707776450007 / 707776450023)"), "{}", dup.reason);
+    assert_eq!((dup.of, dup.key.as_str()), ("saved", "fills2:12:500000000001:500000000002"));
+    assert!(dup.reason.contains("buy/sell fill IDs (500000000001 / 500000000002)"), "{}", dup.reason);
     assert!(dup.reason.contains("'Performance.csv'"));
 
     let b = commit(&mut conn, &request(&account, PERFORMANCE)).unwrap();
@@ -185,15 +187,16 @@ fn fixture_import_persists_and_reimport_flags_fill_pairs() {
 fn invalid_values_get_row_specific_errors_and_are_excluded() {
     let (mut conn, account) = setup();
     let header = PERFORMANCE.lines().next().unwrap();
-    let ok = "MNQZ6,-2,0,0.25,9001,9002,1,29774.25,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,32sec";
+    // Synthetic row: (21043.00 − 21040.00) × 1 × $2 = $6.00; 09:40:00 → 09:40:45 = 45sec.
+    let ok = "MNQZ6,-2,0,0.25,9001,9002,1,21040.00,21043.00,$6.00,10/19/2026 09:40:00,10/19/2026 09:40:45,45sec";
     let content = [
         header,
-        "MNQZ6,-2,0,0.25,9011,9012,0,29774.25,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,32sec",
-        "MNQZ6,-2,0,0.25,9021,9022,1,29774.25,29787.25,$26.00x,10/19/2026 07:47:48,10/19/2026 07:48:21,32sec",
-        "MNQZ6,-2,0,0.25,9031,9032,1,29774.25,29787.25,$26.00,19/10/2026 07:47:48,10/19/2026 07:48:21,32sec",
-        "MNQZ6,-2,0,0.25,9041,9042,1,29774.25,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,5 parsecs",
-        "MNQZ6,-2,0,0.25,9051,9052,1,29774.25,abc,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,32sec",
-        "<b>MNQ</b>,-2,0,0.25,9061,9062,1,29774.25,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,32sec",
+        "MNQZ6,-2,0,0.25,9011,9012,0,21040.00,21043.00,$6.00,10/19/2026 09:40:00,10/19/2026 09:40:45,45sec",
+        "MNQZ6,-2,0,0.25,9021,9022,1,21040.00,21043.00,$6.00x,10/19/2026 09:40:00,10/19/2026 09:40:45,45sec",
+        "MNQZ6,-2,0,0.25,9031,9032,1,21040.00,21043.00,$6.00,19/10/2026 09:40:00,10/19/2026 09:40:45,45sec",
+        "MNQZ6,-2,0,0.25,9041,9042,1,21040.00,21043.00,$6.00,10/19/2026 09:40:00,10/19/2026 09:40:45,5 parsecs",
+        "MNQZ6,-2,0,0.25,9051,9052,1,21040.00,abc,$6.00,10/19/2026 09:40:00,10/19/2026 09:40:45,45sec",
+        "<b>MNQ</b>,-2,0,0.25,9061,9062,1,21040.00,21043.00,$6.00,10/19/2026 09:40:00,10/19/2026 09:40:45,45sec",
         "MNQZ6,-2,0",
         "",
         ",,,,,,,,,,,,",
@@ -234,8 +237,8 @@ fn a_failed_save_leaves_no_partial_import() {
     let (mut conn, account) = setup();
     // Fail on the last row's source record, after 66 trades were written.
     conn.execute_batch(
-        "CREATE TRIGGER boom BEFORE INSERT ON trade_round_trips WHEN NEW.sell_fill_id = '707776451304'
-           AND NEW.buy_fill_id = '707776451294'
+        "CREATE TRIGGER boom BEFORE INSERT ON trade_round_trips WHEN NEW.sell_fill_id = '500000000134'
+           AND NEW.buy_fill_id = '500000000133'
          BEGIN SELECT RAISE(ABORT, 'disk full (simulated)'); END;",
     )
     .unwrap();
@@ -253,9 +256,9 @@ fn a_failed_save_leaves_no_partial_import() {
 fn performance_rows_without_fill_ids_fall_back_to_trade_values() {
     let (mut conn, account) = setup();
     let content = "symbol,qty,buyPrice,sellPrice,pnl,boughtTimestamp,soldTimestamp
-MNQZ6,1,29834.00,29834.50,$1.00,10/19/2026 08:19:37,10/19/2026 08:20:59
-MNQZ6,1,29834.00,29834.50,$1.00,10/19/2026 08:19:37,10/19/2026 08:20:59
-MNQZ6,1,29834.00,29834.75,$1.50,10/19/2026 08:19:37,10/19/2026 08:20:59
+MNQZ6,1,21050.00,21050.50,$1.00,10/19/2026 11:05:10,10/19/2026 11:06:40
+MNQZ6,1,21050.00,21050.50,$1.00,10/19/2026 11:05:10,10/19/2026 11:06:40
+MNQZ6,1,21050.00,21050.75,$1.50,10/19/2026 11:05:10,10/19/2026 11:06:40
 ";
     let p = preview(&conn, &request(&account, content)).unwrap();
     assert_eq!(p.format, Format::Performance);

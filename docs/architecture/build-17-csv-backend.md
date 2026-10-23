@@ -11,7 +11,28 @@ The card's earlier static audit referenced schema v10 at `07a18b8`; this verifie
 No migration changes are needed. Rust `csv_import/{parse,detect,values,normalize,dedup,mod}.rs` already owns
 RFC 4180 parsing, automatic/explicit column mapping, date selection, row validation, financial derivation via
 the existing domain/store helpers, deduplication, read-only preview, atomic commit and history. The existing
-`test_csvimport/Performance.csv` is unchanged. Its original 67-row compatibility tests remain in use.
+`test_csvimport/Performance.csv` is a synthetic fixture in the broker Performance export format. It replaced the
+real export under TASK-037 and keeps its 67-row compatibility tests. It changes only through an approved roadmap card.
+It was written from these rules, not from real rows:
+
+- The real export's header, column order and value styles: 13 columns, CRLF line endings with a trailing CRLF, no
+  BOM, no quoted fields; `symbol` MNQZ6, `_priceFormat` -2, `_priceFormatType` 0, `_tickSize` 0.25.
+- 67 data rows, every fill on Monday 10/19/2026 (`MM/DD/YYYY HH:MM:SS`, New York time) between 09:30:17 and 13:55:50.
+  Row *k* (CSV line *k* + 1) opens 4 min × (*k* − 1) + (17*k* mod 60) s after 09:30:00.
+- Sell-before-buy (short) rows on lines 8–22 and 52–57 (21 rows, each with one `soldTimestamp` warning); all others
+  buy first.
+- Shared fills (a shared fill shares its timestamp and price): lines 2–4 one buy fill, with lines 3 and 4 also
+  sharing the sold time and price; lines 30–31 and 45–47 one buy fill each; lines 20–22 one sell fill, sold first;
+  lines 60–61 one sell fill closing two buys 10 s apart. 5 shared IDs; every (buy, sell) pair is unique.
+- Fill IDs are 12 digits, from 500000000001 upward, one per new fill in row order.
+- Opening price 21000.00 + (37*k* mod 160) ticks of 0.25; the move is (7*k* mod 25) − 10 ticks in the trade's favour
+  (line 2: +5; lines 3–4: 0; line 17: −9). Quantity 3 on line numbers divisible by 11, else 2 on multiples of 5,
+  else 1.
+- `pnl` = (sellPrice − buyPrice) × qty × $2, written `$n.nn`, `$(n.nn)` for a loss and `$0.00` for zero (27 losses,
+  5 zero), so no row gets a P&L-mismatch warning.
+- `duration` equals the gap between the fills: `<s>sec` under a minute (41 rows) and `<m>min <s>sec` otherwise
+  (26 rows: every line divisible by 3, plus lines 4, 8, 22 and 61, whose holds follow from the shared fills or the
+  line 8/21 rule).
 
 The production path remains `JournalRepository.imports` → existing Tauri adapter/commands → Rust → SQLite.
 The request/preview/batch DTO schemas, decimal primitives and repository port in `@fundedflow/domain` already
@@ -20,7 +41,7 @@ The developer CSV panel and Build 13/14 hooks are existing frontend work, outsid
 
 | Requirement | Evidence before / work in this branch |
 | --- | --- |
-| Generic and paired-fill formats, mapping, source cells, errors/warnings | Existing parser/importer and unchanged Performance fixture; new synthetic baseline covers both formats |
+| Generic and paired-fill formats, mapping, source cells, errors/warnings | Existing parser/importer and synthetic Performance fixture; new synthetic baseline covers both formats |
 | Account-scoped IDs and fallback identity | New native preview/commit tests cover generic broker IDs, fill pairs and both format-specific fallback keys across two accounts, including a deleted trade in one account |
 | 10 MiB inclusive UTF-8 byte cap | New exact-cap and one-byte-over native preview/commit tests; multibyte source metadata survives losslessly at the cap |
 | 50,000 data rows inclusive | New boundary commit persists all 50,000 row records; 50,001 rejects without committing a truncated prefix |

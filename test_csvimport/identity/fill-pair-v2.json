@@ -4,10 +4,10 @@
   "note": "Hand-written vectors checked by csv_import identity tests (Rust is authoritative). Target for a future portable implementation (P0-04).",
   "vectors": [
     {
-      "buy": "707776450007",
-      "sell": "707776450023",
-      "key": "fills2:12:707776450007:707776450023",
-      "legacyKey": "fills:707776450007:707776450023"
+      "buy": "500000000001",
+      "sell": "500000000002",
+      "key": "fills2:12:500000000001:500000000002",
+      "legacyKey": "fills:500000000001:500000000002"
     },
     {
       "buy": "buy17",
