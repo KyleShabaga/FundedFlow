@@ -37,6 +37,12 @@ const tradeOf: Record<Account, string> = { [A]: "t-a", [B]: "t-b" };
 const BACKUP = "C:\\Users\\trader\\Backups\\fundedflow-2026-10-20.ffj.zip";
 const isDisabled = (el: HTMLElement) => el.getAttribute("aria-disabled") === "true" || (el as HTMLButtonElement).disabled === true;
 const paste = async (user: User, field: HTMLElement, text: string) => { await user.clear(field); await user.click(field); await user.paste(text); };
+/**
+ * Waits that follow a route change: the new page's first render and reads. Under CPU contention they took up to 1.6 s
+ * locally and failed the 1 s default on Windows CI (#117, #121), always rendering in the end, so they get the
+ * repository's 3 s convention. Assertions keep the default.
+ */
+const PAGE = { timeout: 3000 };
 
 function newStore() {
   return createAppStore({
@@ -83,8 +89,8 @@ const openReview = async (user: User, account: Account) => {
     await chooseActive(user, account);
   }
   window.location.hash = `/journal/trades/${tradeOf[account]}`;
-  const region = await screen.findByRole("region", { name: "Review" });
-  await within(region).findByLabelText(/^Notes and reflection/);
+  const region = await screen.findByRole("region", { name: "Review" }, PAGE);
+  await within(region).findByLabelText(/^Notes and reflection/, {}, PAGE);
   return region;
 };
 const reflection = (scope: HTMLElement) => within(scope).getByLabelText(/^Notes and reflection/) as HTMLTextAreaElement;
@@ -99,9 +105,9 @@ const tradeReview: Surface = {
   savedReview: /^keep me$/, notSavedReview: /^No review is saved for this trade\.$/, success: /^Review saved\.?$/,
   reopen: async () => {
     window.location.hash = "/journal";
-    await screen.findByRole("heading", { level: 1, name: "Journal" });
+    await screen.findByRole("heading", { level: 1, name: "Journal" }, PAGE);
     window.location.hash = `/journal/trades/${tradeOf[A]}`;
-    return screen.findByRole("region", { name: "Review" });
+    return screen.findByRole("region", { name: "Review" }, PAGE);
   },
   other: async (user, store) => {
     const other = await openReview(user, B);
@@ -114,7 +120,7 @@ const tradeReview: Surface = {
 
 const openPlaybook = async (user: User) => {
   window.location.hash = "/journal?view=library&section=playbooks";
-  await user.click(await screen.findByRole("button", { name: "New playbook" }));
+  await user.click(await screen.findByRole("button", { name: "New playbook" }, PAGE));
   return screen.findByRole("dialog", { name: "New playbook" });
 };
 const description = (scope: HTMLElement) => within(scope).getByRole("textbox", { name: /^Description/ }) as HTMLTextAreaElement;
@@ -152,7 +158,7 @@ const library: Surface = {
 const isLastExport = (args: unknown[]) => args[0] === LAST_EXPORT_SETTING;
 const openSettings = async () => {
   window.location.hash = "/settings";
-  await screen.findByRole("button", { name: "Choose location and export…" });
+  await screen.findByRole("button", { name: "Choose location and export…" }, PAGE);
   return document.body;
 };
 const settings: Surface = {
@@ -186,7 +192,7 @@ const SURFACES = [tradeReview, library, settings];
 async function setup(surface: Surface, options: { fakeTimers?: boolean } = {}) {
   const store = newStore();
   const { user } = renderApp("/", store, options);
-  await screen.findByRole("heading", { level: 1 });
+  await screen.findByRole("heading", { level: 1 }, PAGE);
   const scope = await surface.open(user, A);
   await surface.edit(user, scope);
   return { store, user, scope };
