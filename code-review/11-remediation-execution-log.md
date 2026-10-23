@@ -21,8 +21,8 @@ The post-merge verification sweep ran on 2026-10-23 against `main` at c0c7c2f. T
 | TASK-019 r2 | #108 | — | Verified | — |
 | TASK-020 r2 | #112 | — | Verified | — |
 | TASK-021 r5 | #117 | — | Verified | — |
-| TASK-022 r5 | #111 | — | Implemented (reopened) | Manual check FAILED in the 2026-10-23 sandbox rerun: X1/Alt+Left leave with no dialog; fix needed |
-| TASK-023 | — | — | Needed (reopened 2026-10-23) | Sandbox rerun: no prompt on X/Alt+F4, text lost; Kyle to approve execution |
+| TASK-022 r5 | #111, #138 | 1d13c43 | Implemented | Back-navigation fix merged in #138; Windows recheck on the candidate pending (Final manual tests §1) |
+| TASK-023 r3 | #138 | 1d13c43 | Implemented | Kyle approved 2026-10-23; close veto merged; Windows recheck on the candidate pending (Final manual tests §1) |
 | TASK-024 r5 | #115 | — | Verified | — |
 | TASK-025 r6 | #122 | — | Verified | Packaged first-run check → TASK-030 |
 | TASK-026 r5 | #130 | 819f967 | Verified | — |
@@ -62,3 +62,22 @@ A "—" in the Merge column means the merge SHA is in the PR's record and is not
 
 1. Done: TASK-004 and TASK-027 Verified (2026-10-23).
 2. Next, TASK-029: dispatch `release-installer.yml` on the chosen main SHA, record the run, advisory result, version and EXE SHA-256, and store the artifact outside GitHub.
+
+## TASK-029: release candidate recorded (2026-10-23)
+
+| Field | Value |
+|---|---|
+| Source SHA | `1d13c438c2cfa4752fb57fba8cef693ad3398d8f` (main after #138) |
+| Release run | https://github.com/KyleShabaga/FundedFlow/actions/runs/40014761941 (`workflow_dispatch`) |
+| Check jobs | `checks / build-and-test`, `checks / dependency-audit` and `nsis-installer` all succeeded. Each reported checked-out commit `1d13c43`, and the installer job asserted that it equals `SOURCE_SHA`. `cargo fmt --check` ran in build-and-test. |
+| Advisory result | npm audit and cargo audit: "no blocking advisories" (both run with `--fail-on-outage`) |
+| Version | 0.1.1, the first recorded candidate (TASK-005 option A). It matches the file name and `SHA256SUMS.txt`. |
+| Artifact | `fundedflow-0.1.1-1d13c43-windows-nsis` (the GitHub copy expires 2026-11-22) |
+| Installer | `FundedFlow_0.1.1_x64-setup.exe`, 5,386,814 bytes |
+| EXE SHA-256 | `60091dafd5bd8e6cdf9d40eb4610f75b735c15e0fbf7be3e5f3b94a7e0048646` (Get-FileHash; matches `SHA256SUMS.txt`) |
+| Hashed on | Windows 11 Pro 25H2, build 26200.9711 (coordinator PC) |
+| Stored copy | `C:\Users\Kyle\Documents\FundedFlow-release-artifacts\0.1.1-1d13c43\` |
+| Contains | TASK-037, 038, 040 and 034 (code). TASK-039 disposition A is recorded. |
+| TASK-023 state | Implemented in the candidate (#138). Its Windows recheck runs on this candidate (TASK-030 / Final manual tests §1). |
+
+The earlier 0.1.1 builds (`819f967`, `eeda9a1`) were throwaway TASK-011 builds, not candidates.
