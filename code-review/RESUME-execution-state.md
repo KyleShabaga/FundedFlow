@@ -7,7 +7,14 @@ Coordinator: the Claude Code board-review session. Kyle's standing permissions f
 
 Kyle approves; Claude never records an approval.
 
-## Remaining plan (as of 2026-10-23 12:45 MDT; save point before Kyle restarts the PC)
+## Remaining plan (as of 2026-10-23 15:30 MDT)
+0000. Every W1–W3 task is Verified. Merged: #135 TASK-045 (c0c7c2f) and #136 TASK-004 line references (eaf7ee3). 32 PRs merged in total. Execution log: `code-review/11-remediation-execution-log.md`.
+   - TASK-011(b) is done (all evidence in `execution/sandbox/results-2026-10-23`).
+   - Kyle is rerunning TASK-011 (a) and (c), case B6 and the TASK-022 X1/Alt+Left check in Windows Sandbox on another PC (prompt given, CSV kit at `execution/sandbox/kit`). When the report comes in, record the results, mark TASK-011 Verified and close out the TASK-022 check.
+   - Then TASK-029. Kyle chose to WAIT for those reruns before building. When ready, dispatch release-installer.yml on the main SHA, record it, and store the files in `FundedFlow-release-artifacts\0.1.1-<sha>`.
+   - Kyle still needs to dismiss the CodeQL test-code alerts: 3 on #135, plus the earlier ones.
+
+## Earlier plan (2026-10-23 12:45 MDT; save point before Kyle restarts the PC)
 000. Merged: #133 (smoke checklist B3, f2f9c33) and #134 TASK-018 (eeda9a1; cards updated; the manual junction check moves to TASK-030). 30 PRs merged in total.
    - TASK-045 PR #135: the review fixes were pushed at f289149. Kyle confirmed the 8 KiB bound applies from the 2nd calculation on (comment on the approval card). After the restart, check whether the re-review of 9fac5f9..f289149 finished; if not, run it again. Then wait for CI and merge.
    - TASK-011: (a) and (c) are recorded (`execution/task-011-windows-baseline-results.md`). TASK-023 is Not Needed. The backup limit is a V1 known gap, tracked on the Development Board card 4021bd4b6bde81249483d1071c21c6e6.
