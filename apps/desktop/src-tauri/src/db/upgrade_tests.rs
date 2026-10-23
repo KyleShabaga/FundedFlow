@@ -423,37 +423,188 @@ fn the_rederive_skips_rows_it_cannot_parse() {
     assert_eq!((day("t1").as_str(), day("t2").as_str()), ("2026-10-19", "2026-10-17"));
 }
 
-/// Upgrade a copy of a real journal. Read-only on the source: it is copied
-/// with `VACUUM INTO` first. Run with
-/// `FUNDEDFLOW_UPGRADE_DB=%APPDATA%\com.fundedflow.desktop\fundedflow.db cargo test --lib upgrade_copy -- --ignored --nocapture`.
-#[test]
-#[ignore]
-fn upgrade_copy_of_a_real_journal() {
-    let source = PathBuf::from(std::env::var("FUNDEDFLOW_UPGRADE_DB").expect("FUNDEDFLOW_UPGRADE_DB"));
+/// Rows of `before` and `after` that do not pair up, counted as a multiset difference in both directions.
+fn mismatched(before: &[String], after: &[String]) -> usize {
+    let mut counts: BTreeMap<&str, i64> = BTreeMap::new();
+    before.iter().for_each(|r| *counts.entry(r).or_default() += 1);
+    after.iter().for_each(|r| *counts.entry(r).or_default() -= 1);
+    counts.values().map(|n| n.unsigned_abs() as usize).sum()
+}
+
+/// Upgrade a copy of the journal at `source` and compare it with the original. `tamper` runs on the
+/// upgraded copy before the comparison (tests use it to force a mismatch).
+///
+/// The source is only read: when a `fundedflow.lock` sits beside it, it must be free (a held lock means
+/// the app is using the journal) and stays held while `fundedflow.db` and any `-wal`/`-shm` are copied
+/// into a temp folder. Everything returned, the success lines and the error, is counts and table
+/// names only: never ids, column values or row text.
+fn upgrade_copy(source: &Path, tamper: impl FnOnce(&Connection)) -> Result<Vec<String>, String> {
     let db = Journal::copy_of(&[]);
-    std::fs::remove_file(&db.0).unwrap();
-    let by_id = |conn: &Connection| -> BTreeMap<String, (String, String)> {
-        conn.prepare("SELECT id, exit_at IS NULL, trading_day FROM trades")
+    {
+        let lock_path = source.with_file_name("fundedflow.lock");
+        let _lock = match std::fs::File::open(&lock_path) {
+            Ok(file) => {
+                fs2::FileExt::try_lock_exclusive(&file)
+                    .map_err(|_| "fundedflow.lock is held: close FundedFlow and copy its journal folder first".to_string())?;
+                Some(file)
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+            Err(e) => return Err(format!("cannot open fundedflow.lock ({:?})", e.kind())),
+        };
+        for suffix in ["", "-wal", "-shm"] {
+            let from = PathBuf::from(format!("{}{suffix}", source.display()));
+            let to = PathBuf::from(format!("{}{suffix}", db.0.display()));
+            match std::fs::copy(&from, &to) {
+                Ok(_) => {}
+                Err(e) if !suffix.is_empty() && e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => return Err(format!("cannot copy fundedflow.db{suffix} ({:?})", e.kind())),
+            }
+        }
+    }
+    let trading_days = |conn: &Connection| -> BTreeMap<String, String> {
+        conn.prepare("SELECT id, trading_day FROM trades")
             .unwrap()
-            .query_map([], |r| Ok((r.get(0)?, (if r.get(1)? { "open" } else { "closed" }.to_string(), r.get(2)?))))
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
             .unwrap()
             .collect::<rusqlite::Result<_>>()
             .unwrap()
     };
     let (from, before, days_before) = {
-        let src = read_only(&source);
-        src.execute("VACUUM INTO ?1", [db.0.to_string_lossy()]).unwrap();
         let copy = read_only(&db.0);
-        (version(&copy), dump(&copy, &[("trades", "trading_day")]), by_id(&copy))
+        (version(&copy), dump(&copy, &[("trades", "trading_day")]), trading_days(&copy))
     };
-    let conn = open_file(&db.0).unwrap();
-    assert_healthy(&conn);
-    assert_eq!(dump_like(&conn, &before), before);
-    let days_after = by_id(&conn);
-    let changed: Vec<_> = days_before.iter().filter(|(k, v)| days_after[*k].1 != v.1).collect();
-    let rows: usize = before.values().map(|(_, rows)| rows.len()).sum();
-    println!("v{from} -> v{}: {rows} rows kept, {} trading days corrected", version(&conn), changed.len());
-    for (id, (state, day)) in changed {
-        println!("  trade {id} ({state}): {day} -> {}", days_after[id].1);
+    let conn = open_file(&db.0).map_err(|_| format!("migrating the v{from} copy failed (error text withheld)"))?;
+    tamper(&conn);
+
+    let integrity: Vec<String> =
+        conn.prepare("PRAGMA integrity_check").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+    let fk_problems: i64 = conn.query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| r.get(0)).unwrap();
+    let after = dump_like(&conn, &before);
+    let mut problems = Vec::new();
+    if integrity != ["ok"] {
+        problems.push(format!("integrity_check: {} problems", integrity.len()));
     }
+    if fk_problems != 0 {
+        problems.push(format!("foreign_key_check: {fk_problems} problems"));
+    }
+    for (table, (_, rows)) in &before {
+        let after_rows = &after[table].1;
+        let n = mismatched(rows, after_rows);
+        if n != 0 {
+            problems.push(format!("{table}: {} rows before, {} after, {n} mismatched", rows.len(), after_rows.len()));
+        }
+    }
+    if !problems.is_empty() {
+        return Err(format!("upgrade v{from} -> v{} changed the journal:\n  {}", version(&conn), problems.join("\n  ")));
+    }
+
+    let days_after = trading_days(&conn);
+    let corrected = days_before.iter().filter(|(id, day)| days_after.get(*id) != Some(*day)).count();
+    let rows: usize = before.values().map(|(_, rows)| rows.len()).sum();
+    let per_table: Vec<String> = before.iter().map(|(table, (_, rows))| format!("{table} {}", rows.len())).collect();
+    Ok(vec![
+        format!("v{from} -> v{}: {rows} rows kept, {corrected} trading days corrected", version(&conn)),
+        format!("  rows per table: {}", per_table.join(", ")),
+    ])
+}
+
+/// Upgrade a copy of a real journal. Close FundedFlow, copy its journal folder (`fundedflow.db` and any
+/// `-wal`/`-shm`) somewhere offline, and point `FUNDEDFLOW_UPGRADE_DB` at that copy, never at the live
+/// `%APPDATA%` journal:
+/// `FUNDEDFLOW_UPGRADE_DB=<copy folder>\fundedflow.db cargo test --lib upgrade_copy -- --ignored`.
+/// The test copies it again into a temp folder and refuses while its `fundedflow.lock` is held. Output,
+/// failures included, is counts only, so `--nocapture` (to see the counts) shows no journal content.
+#[test]
+#[ignore]
+fn upgrade_copy_of_a_real_journal() {
+    let source = PathBuf::from(std::env::var("FUNDEDFLOW_UPGRADE_DB").expect("FUNDEDFLOW_UPGRADE_DB"));
+    match upgrade_copy(&source, |_| {}) {
+        Ok(lines) => lines.iter().for_each(|l| println!("{l}")),
+        Err(message) => panic!("{message}"),
+    }
+}
+
+const MARKER: &str = "synthetic-marker-5c1e";
+
+/// A synthetic file journal in its own temp folder: one account and one trade whose notes hold `MARKER`.
+/// The connection stays open, so the writes are still in `fundedflow.db-wal`.
+fn synthetic_journal() -> (Journal, Connection) {
+    let db = Journal::copy_of(&[]);
+    std::fs::remove_file(&db.0).unwrap();
+    let mut conn = open_file(&db.0).unwrap();
+    let account = accounts::create(&mut conn, crate::store::tests::account_input("Synthetic")).unwrap();
+    let input = trades::TradeInput { notes: Some(MARKER.into()), ..crate::store::tests::trade_input(&account.id) };
+    trades::create(&mut conn, input).unwrap();
+    (db, conn)
+}
+
+/// Every account and trade id in the journal: none may appear in the gate's output.
+fn ids(conn: &Connection) -> Vec<String> {
+    conn.prepare("SELECT id FROM accounts UNION ALL SELECT id FROM trades")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap()
+}
+
+fn assert_redacted(text: &str, ids: &[String]) {
+    assert!(!text.contains(MARKER), "the gate's output contains row content");
+    assert!(ids.iter().all(|id| !text.contains(id.as_str())), "the gate's output contains an id");
+    assert!(!text.contains("2026-10-19"), "the gate's output contains a trade date");
+}
+
+#[test]
+fn upgrade_copy_refuses_a_journal_whose_lock_is_held() {
+    let (db, _conn) = synthetic_journal();
+    let lock = crate::data_controls::filesystem_ownership(db.0.parent().unwrap()).unwrap();
+    let err = upgrade_copy(&db.0, |_| {}).expect_err("a held journal lock must refuse the copy");
+    assert!(err.contains("fundedflow.lock is held"), "{err}");
+    drop(lock);
+    assert!(upgrade_copy(&db.0, |_| {}).is_ok(), "a lock file nobody holds does not block the copy");
+}
+
+#[test]
+fn upgrade_copy_reads_wal_content_leaves_the_source_alone_and_reports_counts_only() {
+    let (db, conn) = synthetic_journal();
+    assert!(std::fs::metadata(db.0.with_extension("db-wal")).unwrap().len() > 0, "the writes are still in the WAL");
+    let folder = |dir: &Path| -> Vec<(String, Vec<u8>)> {
+        let mut files: Vec<_> = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .map(|p| (p.file_name().unwrap().to_string_lossy().into_owned(), std::fs::read(&p).unwrap()))
+            .collect();
+        files.sort();
+        files
+    };
+    let source_before = folder(db.0.parent().unwrap());
+    let lines = upgrade_copy(&db.0, |_| {}).unwrap();
+    assert_eq!(folder(db.0.parent().unwrap()), source_before, "the source folder is only read");
+    // 1 account and 1 trade came through the copy, so the WAL content was copied with the database.
+    let text = lines.join("\n");
+    assert!(text.contains(&format!("v{v} -> v{v}", v = latest_version())), "{text}");
+    assert!(text.contains("accounts 1, ") && text.contains("trades 1"), "{text}");
+    assert!(text.contains("0 trading days corrected"), "{text}");
+    assert_redacted(&text, &ids(&conn));
+}
+
+#[test]
+fn a_mismatch_after_the_upgrade_fails_with_counts_only() {
+    let (db, conn) = synthetic_journal();
+    let ids = ids(&conn);
+    // Force a mismatch after the migration by changing the marker trade's notes in the copy, then run
+    // the gate's failure path and capture its panic message.
+    let failed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let tamper = |copy: &Connection| {
+            copy.execute("UPDATE trades SET notes_md = notes_md || '-changed'", []).unwrap();
+        };
+        if let Err(message) = upgrade_copy(&db.0, tamper) {
+            panic!("{message}");
+        }
+    }));
+    let payload = failed.expect_err("the forced mismatch fails the gate");
+    let message =
+        payload.downcast_ref::<String>().cloned().or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string())).unwrap();
+    assert!(message.contains("trades: 1 rows before, 1 after, 2 mismatched"), "{message}");
+    assert_redacted(&message, &ids);
 }
