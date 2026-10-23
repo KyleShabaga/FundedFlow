@@ -27,9 +27,30 @@ Caveat: the recorded "prompt text" is the app's in-app dialog copy, for example 
 
 **TASK-028 B3:** the expected result is "prompt on both X and Alt+F4; Cancel keeps the text".
 
-## (b) Junctions: not run
+## (b) Junctions: scripted run in Windows Sandbox (2026-10-23)
 
-B1 to B7 were not run. TASK-018 keeps its own `cfg(windows)` junction tests (step 5), which build the junctions in temp directories. Its manual Windows check is still owed and moves to the candidate smoke run (TASK-030). TASK-028 B1 and B2 stay "unmeasured", as r7 allows.
+Kyle ran the script `code-review/execution/sandbox/run-cases.ps1` through Claude Code on another PC, with no clicks. Report: `task-011b-findings.md`, uploaded to the coordinator session.
+
+- **Build:** `FundedFlow_0.1.1_x64-setup.exe` from release-installer run 39991525917 (main eeda9a1, includes TASK-018). SHA-256 `91c1288926ac35503545b1a59ea73dda2838c1114b6ed72ce5341deb7a51e29c` (matches). Silent install exit code 0.
+- **Environment:** Windows Sandbox, Windows 10 Enterprise 26H1 build 28000.2269, user `wdagutilityaccount`. No WebView2 before install (the installer added it), no `%APPDATA%` folder before install, and `FUNDEDFLOW_DEV_DATA_DIR` unset.
+
+| Case | Setup | Screen | Data folder after launch | Result |
+|---|---|---|---|---|
+| B1 standard profile | none | "Before you start" (first-run) | `fundedflow.db`, `-shm`, `-wal`, `fundedflow.lock` | Pass |
+| B2 Roaming behind a junction | `C:\FFRelocated` → `C:\FFRelocatedReal` (junction); User Shell Folders `AppData` = `C:\FFRelocated\Roaming` | "Before you start" | db files created, seen through the link and in the real folder | Pass (TASK-018 behaviour: a junction above the data folder is trusted) |
+| B3 app folder is itself a junction | `<APPDATA>\com.fundedflow.desktop` → `C:\FFJunctionTarget\com.fundedflow.desktop` | "Before you start", no error, no Retry, at 5, 20 and 60 s | junction and target both stay **empty**: no db or lock file created anywhere | Journal refused, as intended. The `data_folder_link` screen is not shown before the first-run screen (see below). |
+| B3 undo, then relaunch | junction removed, original folder restored | "Before you start" | original db files intact | Pass |
+| B4 to B7 | — | — | — | Not run. B5 is covered, because the run itself was in Windows Sandbox. B6 and B7 need clicks. |
+
+**Reading of B3.** The first-run notice is shown before any app content by design (NA-3): `App.tsx:30` wraps every route in `LegalGate`, and the `RuntimeGate` that shows `data_folder_link` sits inside it. The junction target holds no acceptance record, so the first-run screen comes first. The backend refused the folder, since no journal file was created. The expected result written into the run instructions ("B3 shows a non-retry error") was wrong for a profile with no acceptance record.
+
+Two follow-ups:
+- Kyle is running one more probe to confirm the error screen appears after "Acknowledge and continue".
+- Writing the acknowledgement goes through `legal::write` (`legal.rs:60-83`), which has no link check. It would write `legal-acceptance.json` through the junction into the target folder. That file is the acknowledgement record, not journal data. It is covered by the TASK-018 follow-up Triage card for the legal-record, database, backup and attachment paths (4021bd4b6bde818f8b81cacaf66ff026).
+
+**Results for other tasks:**
+- **TASK-018** manual check ("junctioned profile layout starts Ready; standard profile unaffected"): met by B2 and B1 on the eeda9a1 build, in Windows Sandbox.
+- **TASK-028** B1/B2 expected results: now measured. B1 and B2 reach the app normally. B3 refuses the journal behind the first-run screen.
 
 ## (c) Write timing
 
