@@ -15,8 +15,9 @@ on a fresh Windows 11 VM or Windows Sandbox and fills in the results.
   the new installer over the old one. For a newer version, Tauri's NSIS installer pre-selects "Uninstall before
   installing", which runs the old uninstaller; its "Delete the application data" checkbox is unchecked by default and
   must stay unchecked to keep the journal. Testing that upgrade path belongs to NA-5, not this smoke.
-- **No phone-home.** Neither the installer nor the app contacts a server of ours. The one network touch is
-  Microsoft's WebView2 bootstrapper, and only on a machine without WebView2 (below).
+- **No phone-home.** Neither the installer nor the app contacts a server of ours. The installer's only download is
+  Microsoft's WebView2 bootstrapper, and only on a machine without WebView2 (below). WebView2 and Windows are separate
+  software with their own network behaviour; the privacy notice makes no promise about it.
 
 ## Bundle configuration (`apps/desktop/src-tauri/tauri.conf.json`)
 
@@ -29,7 +30,7 @@ on a fresh Windows 11 VM or Windows Sandbox and fills in the results.
 | `bundle.windows.webviewInstallMode` | `{ "type": "downloadBootstrapper", "silent": true }` | Tauri's default, set explicitly so the choice is visible. See below. |
 | `bundle.windows.nsis.installMode` | `currentUser` | See below. |
 | `identifier` | `com.fundedflow.desktop` (**unchanged**) | It names the journal folder `%APPDATA%\com.fundedflow.desktop`; changing it would orphan existing journals. |
-| Licence page | none | The user agreement is shown in the app (NA-3), not by the installer. `licenseFile` stays unset. |
+| Licence page | none | The License and product information is shown in the app (NA-3), not by the installer. `licenseFile` stays unset. |
 | `bundle.resources` | `LICENSE`, `THIRD_PARTY_NOTICES.txt` (Build 26.78) | Licence notices travel with the binaries. See [Third-party notices](#third-party-notices). |
 
 **WebView2: `downloadBootstrapper` (silent).** Windows 11, and Windows 10 kept current by Windows Update, normally have the Evergreen WebView2 runtime,
@@ -48,10 +49,19 @@ under `HKCU`. It matches the journal, which is per-user in `%APPDATA%\com.funded
 without admin rights install and update. `perMachine` would need admin for every manual update.
 `both` would show an extra choice that V1 users don't need.
 
-**Uninstall and data.** Tauri's NSIS uninstaller has a "Delete the application data" checkbox, **unchecked by
-default**. Left unchecked, the journal (`%APPDATA%\com.fundedflow.desktop\fundedflow.db` and its backups) and the
-WebView2 profile (`%LOCALAPPDATA%\com.fundedflow.desktop`) are kept, so a reinstall opens the existing journal. Checked,
-both folders are removed. The smoke confirms this on a real machine (steps 8–9).
+**Uninstall and data.** Uninstall is not the journal-erasure control (privacy notice, "Deletion and uninstall"). To
+remove journal data, export a backup first if you want one, then use Settings → "Delete data permanently" → **Erase
+the entire local journal**. Tauri's NSIS uninstaller has a "Delete the application data" checkbox, **unchecked by default**. Left
+unchecked, both folders below are kept, so a reinstall opens the existing journal. Checked, it is *expected* to remove
+both; this is unverified until TASK-031 and the smoke (steps 8–9) confirm it on a real machine:
+
+- `%APPDATA%\com.fundedflow.desktop`: the journal (`fundedflow.db` and its WAL), managed attachments including
+  screenshots, pre-upgrade backups (`fundedflow.db.before-v*.bak`), restore safety copies and working files
+  (`data-controls`, `data-controls-work`), the cleanup queue (`data-controls-cleanup`) and the first-run
+  acknowledgment record (`legal-acceptance.json`);
+- `%LOCALAPPDATA%\com.fundedflow.desktop`: the WebView2 data.
+
+Exports and other copies saved outside these folders are never touched by uninstall.
 
 **Developer tools cannot ship.** `tauri build` always runs `beforeBuildCommand` (`npm run build`), whose `build:app`
 ends with `scripts/check-no-dev-tools.mjs`; a leak exits non-zero and fails the build. The workflow never passes
@@ -60,7 +70,11 @@ dev commands are registered only under `cfg(debug_assertions)`, which a release 
 
 ## Release workflow (`.github/workflows/release-installer.yml`)
 
-- **Triggers:** manual (`workflow_dispatch`), tags `v*`, and pull requests that change `tauri.conf.json` or the workflow.
+- **Triggers:** manual (`workflow_dispatch`), tags `v*`, and pull requests that change bundler inputs: `apps/desktop/**`,
+  `packages/**`, `LICENSE`, `apps/desktop/THIRD_PARTY_NOTICES.txt`, the root `package.json` and `package-lock.json`,
+  `.github/workflows/checks.yml` and the workflow itself.
+- **Checks first (TASK-027):** a `checks` job runs every check in `checks.yml` on the exact commit that is packaged;
+  the installer job `needs` it, so failed, cancelled or timed-out checks mean no installer and no artifact.
 - **Job (`windows-latest`, `permissions: contents: read`, no secrets):** checkout → Node LTS with npm cache → `npm ci` →
   stable Rust with `x86_64-pc-windows-msvc` → rust-cache → read the version from `tauri.conf.json` (a `v*` tag must
   equal `v<version>`) → `npm run tauri -- build` → dev-tools check → exactly one `.exe` in
@@ -68,7 +82,7 @@ dev commands are registered only under `cfg(debug_assertions)`, which a release 
 - **Source SHA:** a pull request builds its **head commit**, not GitHub's temporary merge commit, so the recorded SHA
   is a real commit you can check out. Tag and manual runs use `github.sha`.
 - **Artifact:** `fundedflow-<version>-<short sha>-windows-nsis`, containing the installer and `SHA256SUMS.txt`; kept
-  30 days. The hash and SHA are also in the run's job summary.
+  3 days for pull requests and 30 days for tag and manual runs. The hash and SHA are also in the run's job summary.
 - `SHA256SUMS.txt` has three `#` comment lines (title, `source_sha`, `version`) and one `<sha256>  <file>` line.
 
 ## Third-party notices
