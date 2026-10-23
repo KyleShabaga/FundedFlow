@@ -556,9 +556,17 @@ fn recover_with(
     Ok(())
 }
 fn rollback(root: &Path, live: &Path, op: &Path, safety: &[super::Attachment]) -> Result<()> {
-    archive::validate_database(&op.join("safety.db"), db::latest_version())?;
+    // The safety copy was taken by the build that started the restore, which may be older than this one. Accept
+    // it at its own schema version (never newer than this build); the next open upgrades it like any journal.
+    let safety_db = op.join("safety.db");
+    let version: u32 =
+        archive::readonly(&safety_db)?.pragma_query_value(None, "user_version", |r| r.get(0))?;
+    if !(3..=db::latest_version()).contains(&version) {
+        return Err(fail(Code::Integrity));
+    }
+    archive::validate_database(&safety_db, version)?;
     replace_attachments(root, &op.join("safety-attachments"), safety)?;
-    replace_database(&op.join("safety.db"), live)
+    replace_database(&safety_db, live)
 }
 #[cfg(test)]
 pub(super) fn recover_failing(root: &Path, live: &Path) -> Result<()> {
