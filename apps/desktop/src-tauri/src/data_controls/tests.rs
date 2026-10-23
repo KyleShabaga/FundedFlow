@@ -1991,3 +1991,348 @@ fn an_interrupted_whole_journal_cleanup_removes_extras_on_retry_without_listing_
     assert!(!dir.path().join("attachments").join(&part).exists());
     assert!(!held.exists());
 }
+const PREFIX: &str = "Missing or changed attachment: ";
+/// A journal with one account, one note and the screenshots `(id, key)`, each linked to the note.
+fn with_screens(path: &Path, screens: &[(&str, &str)]) -> (Connection, std::path::PathBuf) {
+    let mut c = journal(path);
+    let a = account(&mut c, "original");
+    let j = journal_note(&mut c, &a);
+    let root = path.parent().unwrap().to_path_buf();
+    for (id, key) in screens {
+        if let Some(parent) = Path::new(key).parent() {
+            fs::create_dir_all(root.join("attachments").join(parent)).unwrap();
+        }
+        image(&c, &root, &j, id, key);
+    }
+    (c, root)
+}
+/// Same size as `image`'s bytes, different content: only the checksum tells them apart.
+const CHANGED: &[u8] = b"private screenshoX";
+fn json(path: &Path) -> serde_json::Value {
+    serde_json::from_slice(&fs::read(path).unwrap()).unwrap()
+}
+fn op_dir(root: &Path, result: &restore::RestoreResult) -> std::path::PathBuf {
+    root.join("data-controls").join(&result.operation_id)
+}
+fn confirm(source: &Path, preview_token: String) -> restore::RestoreRequest {
+    restore::RestoreRequest {
+        source: source.to_string_lossy().into(),
+        preview_token,
+        confirmation: "REPLACE ENTIRE JOURNAL".into(),
+    }
+}
+#[test]
+fn a_missing_attachment_does_not_block_restore_or_erase_and_is_named_in_both_previews() {
+    let source = tempfile::tempdir().unwrap();
+    let incoming = backup_with_account(source.path(), "incoming");
+    for rollback in [false, true] {
+        let target = tempfile::tempdir().unwrap();
+        let live = target.path().join(db::DB_FILE_NAME);
+        let (c, root) = with_screens(&live, &[("image", "image.png"), ("kept", "kept.png")]);
+        c.execute(
+            "UPDATE attachments SET original_name='chart.png' WHERE id='image'",
+            [],
+        )
+        .unwrap();
+        fs::remove_file(root.join("attachments/image.png")).unwrap();
+        let before = archive::dump(&c).unwrap();
+        let erase = deletion::preview(
+            &c,
+            &root,
+            deletion::PreviewRequest {
+                scope: deletion::Scope::Journal,
+            },
+        )
+        .unwrap();
+        assert!(
+            erase.warnings.contains(&format!("{PREFIX}chart.png")),
+            "erase preview warnings should name chart.png"
+        );
+        assert_eq!(
+            erase.attachments.len(),
+            2,
+            "the erase lists every row, missing ones too"
+        );
+        let p = restore::inspect(
+            &c,
+            &root,
+            restore::InspectRequest {
+                source: incoming.to_string_lossy().into(),
+            },
+        )
+        .unwrap();
+        assert!(
+            p.warnings.contains(&format!("{PREFIX}chart.png")),
+            "inspect warnings should name chart.png"
+        );
+        let result = restore::prepare(&c, &root, confirm(&incoming, p.preview_token)).unwrap();
+        drop(c);
+        let op = op_dir(&root, &result);
+        let missing = json(&op.join("safety-missing.json"));
+        assert_eq!(missing.as_array().unwrap().len(), 1);
+        assert_eq!(missing[0]["id"], "image");
+        assert_eq!(missing[0]["state"], "missing");
+        let inventory = json(&op.join("safety-inventory.json"));
+        assert_eq!(
+            inventory
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|a| a["id"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            vec!["kept"]
+        );
+        if rollback {
+            // Rollback with a recorded-missing file: only the present files come back.
+            let marker = root.join("data-controls-pending.json");
+            let text = fs::read_to_string(&marker)
+                .unwrap()
+                .replace("prepared", "installing");
+            fs::write(&marker, text).unwrap();
+            restore::recover(&root, &live).unwrap();
+            assert_eq!(archive::dump(&journal(&live)).unwrap(), before);
+            assert!(root.join("attachments/kept.png").exists());
+            assert!(!root.join("attachments/image.png").exists());
+        } else {
+            restore::recover(&root, &live).unwrap();
+            assert_eq!(archive::account_ids(&journal(&live)).unwrap().len(), 1);
+        }
+    }
+}
+#[test]
+fn changed_attachment_bytes_are_preserved_apart_through_restore_and_rollback() {
+    let source = tempfile::tempdir().unwrap();
+    let incoming = backup_with_account(source.path(), "incoming");
+    let managed = format!("screenshots/{}.png", crate::domain::new_id());
+    for fail_install in [false, true] {
+        let target = tempfile::tempdir().unwrap();
+        let live = target.path().join(db::DB_FILE_NAME);
+        let (c, root) = with_screens(
+            &live,
+            &[
+                ("opaque", "opaque/file.png"),
+                ("managed", &managed),
+                ("kept", "kept.png"),
+            ],
+        );
+        for key in ["opaque/file.png", managed.as_str()] {
+            fs::write(root.join("attachments").join(key), CHANGED).unwrap();
+        }
+        let p = restore::inspect(
+            &c,
+            &root,
+            restore::InspectRequest {
+                source: incoming.to_string_lossy().into(),
+            },
+        )
+        .unwrap();
+        let result = restore::prepare(&c, &root, confirm(&incoming, p.preview_token)).unwrap();
+        drop(c);
+        let op = op_dir(&root, &result);
+        let check = |stage: &str| {
+            for key in ["opaque/file.png", managed.as_str()] {
+                assert_eq!(
+                    fs::read(op.join("safety-changed-attachments").join(key)).unwrap(),
+                    CHANGED,
+                    "{stage}: {key}"
+                );
+                assert!(
+                    !op.join("safety-attachments").join(key).exists(),
+                    "{stage}: {key} is not a verified copy"
+                );
+            }
+            assert!(op.join("safety-attachments/kept.png").exists());
+        };
+        check("prepared");
+        let missing = json(&op.join("safety-missing.json"));
+        let entries = missing.as_array().unwrap();
+        assert_eq!(entries.len(), 2);
+        for e in entries {
+            assert_eq!(e["state"], "changed");
+            assert_eq!(e["sha256"], filesystem::digest(b"private screenshot"));
+            assert_eq!(e["actualSha256"], filesystem::digest(CHANGED));
+            assert_eq!(e["actualByteSize"], CHANGED.len());
+        }
+        if fail_install {
+            assert!(restore::recover_failing(&root, &live).is_err());
+            // Rolled back: the changed bytes are not reinstated, so the journal shows them as missing.
+            assert!(!root.join("attachments/opaque/file.png").exists());
+            assert!(root.join("attachments/kept.png").exists());
+        } else {
+            restore::recover(&root, &live).unwrap();
+        }
+        check(if fail_install {
+            "rolled back"
+        } else {
+            "installed"
+        });
+    }
+}
+#[test]
+fn a_changed_file_with_a_managed_name_is_never_an_extra_and_the_erase_lists_every_row() {
+    let dir = tempfile::tempdir().unwrap();
+    let managed = format!("screenshots/{}.png", crate::domain::new_id());
+    let extra = format!("screenshots/{}.png", crate::domain::new_id());
+    let (mut c, root) = with_screens(
+        &dir.path().join("live.db"),
+        &[
+            ("gone", "gone.png"),
+            ("opaque", "opaque/file.png"),
+            ("managed", &managed),
+        ],
+    );
+    fs::remove_file(root.join("attachments/gone.png")).unwrap();
+    fs::write(root.join("attachments/opaque/file.png"), CHANGED).unwrap();
+    fs::write(root.join("attachments").join(&managed), CHANGED).unwrap();
+    fs::write(root.join("attachments").join(&extra), b"a real leftover").unwrap();
+    let p = deletion::preview(
+        &c,
+        &root,
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Journal,
+        },
+    )
+    .unwrap();
+    assert_eq!(extra_files(&p), vec![extra.clone()]);
+    let mut ids: Vec<_> = p.attachments.iter().map(|a| a.id.as_str()).collect();
+    ids.sort();
+    assert_eq!(ids, vec!["gone", "managed", "opaque"]);
+    for id in ["gone", "managed", "opaque"] {
+        assert!(
+            p.warnings.contains(&format!("{PREFIX}{id}")),
+            "preview warnings should name {id}"
+        );
+    }
+    assert_eq!(
+        deletion::execute(&mut c, &root, approved(&p))
+            .unwrap()
+            .state,
+        "completed"
+    );
+    // `opaque/file.png` is not a managed-extra name: only its listing in the marker removes it.
+    assert!(!root.join("attachments/opaque/file.png").exists());
+    assert!(!root.join("attachments").join(&managed).exists());
+    assert!(!root.join("attachments").join(&extra).exists());
+}
+#[test]
+fn prepare_fails_before_any_intent_when_changed_bytes_cannot_be_preserved() {
+    let source = tempfile::tempdir().unwrap();
+    let incoming = backup_with_account(source.path(), "incoming");
+    for case in ["space", "non-regular"] {
+        let target = tempfile::tempdir().unwrap();
+        let live = target.path().join(db::DB_FILE_NAME);
+        let (c, root) = with_screens(&live, &[("opaque", "opaque/file.png")]);
+        let file = root.join("attachments/opaque/file.png");
+        if case == "space" {
+            fs::write(&file, CHANGED).unwrap();
+        } else {
+            fs::remove_file(&file).unwrap();
+            fs::create_dir(&file).unwrap();
+        }
+        let p = restore::inspect(
+            &c,
+            &root,
+            restore::InspectRequest {
+                source: incoming.to_string_lossy().into(),
+            },
+        );
+        let token = match p {
+            Ok(p) => p.preview_token,
+            Err(e) => {
+                assert_eq!(case, "non-regular");
+                assert_eq!(e.code, Code::UnsafePath);
+                continue;
+            }
+        };
+        // The operation folder has room for the safety copy, then none for the changed bytes.
+        let operations = root.join("data-controls");
+        let calls = std::cell::Cell::new(0);
+        let available = |dir: &Path| {
+            if !dir.starts_with(&operations) {
+                return Ok(u64::MAX);
+            }
+            calls.set(calls.get() + 1);
+            Ok(if calls.get() == 1 { u64::MAX } else { 0 })
+        };
+        let refused =
+            restore::prepare_with(&c, &root, confirm(&incoming, token), &available).unwrap_err();
+        assert_eq!(refused.code, Code::InsufficientSpace, "{case}");
+        assert!(!root.join("data-controls-pending.json").exists());
+        assert_eq!(fs::read(&file).unwrap(), CHANGED);
+        assert!(!archive::account_ids(&c).unwrap().is_empty());
+    }
+}
+#[test]
+fn a_new_prepare_always_writes_safety_missing_json() {
+    let source = tempfile::tempdir().unwrap();
+    let incoming = backup_with_account(source.path(), "incoming");
+    let target = tempfile::tempdir().unwrap();
+    let (c, root) = with_screens(
+        &target.path().join(db::DB_FILE_NAME),
+        &[("kept", "kept.png")],
+    );
+    let p = restore::inspect(
+        &c,
+        &root,
+        restore::InspectRequest {
+            source: incoming.to_string_lossy().into(),
+        },
+    )
+    .unwrap();
+    assert!(p.warnings.iter().all(|w| !w.starts_with(PREFIX)));
+    let result = restore::prepare(&c, &root, confirm(&incoming, p.preview_token)).unwrap();
+    assert_eq!(
+        json(&op_dir(&root, &result).join("safety-missing.json")),
+        serde_json::json!([])
+    );
+}
+#[test]
+fn a_restore_prepared_by_the_previous_version_still_rolls_back() {
+    let source = tempfile::tempdir().unwrap();
+    let incoming = backup_with_account(source.path(), "incoming");
+    let target = tempfile::tempdir().unwrap();
+    let live = target.path().join(db::DB_FILE_NAME);
+    let (c, root) = with_screens(&live, &[("kept", "kept.png")]);
+    let before = archive::dump(&c).unwrap();
+    let p = restore::inspect(
+        &c,
+        &root,
+        restore::InspectRequest {
+            source: incoming.to_string_lossy().into(),
+        },
+    )
+    .unwrap();
+    let result = restore::prepare(&c, &root, confirm(&incoming, p.preview_token)).unwrap();
+    drop(c);
+    // The previous version writes no safety-missing.json.
+    let _ = fs::remove_file(op_dir(&root, &result).join("safety-missing.json"));
+    let marker = root.join("data-controls-pending.json");
+    let text = fs::read_to_string(&marker)
+        .unwrap()
+        .replace("prepared", "installing");
+    fs::write(&marker, text).unwrap();
+    restore::recover(&root, &live).unwrap();
+    assert_eq!(archive::dump(&journal(&live)).unwrap(), before);
+    assert_eq!(
+        fs::read(root.join("attachments/kept.png")).unwrap(),
+        b"private screenshot"
+    );
+}
+#[test]
+fn export_still_refuses_a_missing_attachment_and_names_it() {
+    let dir = tempfile::tempdir().unwrap();
+    let (c, root) = with_screens(&dir.path().join("live.db"), &[("image", "image.png")]);
+    fs::remove_file(root.join("attachments/image.png")).unwrap();
+    let err = archive::export(
+        &c,
+        &root.join("attachments"),
+        &dir.path().join("out.zip"),
+        true,
+    )
+    .unwrap_err();
+    assert_eq!(err.code, Code::MissingAttachment);
+    assert_eq!(
+        err.detail.as_deref(),
+        Some("missing or changed attachments: image")
+    );
+}

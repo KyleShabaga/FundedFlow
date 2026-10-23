@@ -10,6 +10,7 @@ import { Button, Dialog, formatBytes, formatInstant, InlineNotice, LoadingState,
 import * as api from "../api/data-controls";
 import { useDataControlOperation } from "../hooks/data-controls";
 import { DestructiveActionDialog } from "./DestructiveActionDialog";
+import { MissingAttachmentsNotice } from "./DeletionDialog";
 
 export interface RestoreArchiveDialogProps {
   /** Local path from the file chooser. Only its file name is shown. */
@@ -169,6 +170,10 @@ function RestorePreviewDetails({ preview, supportedSchema }: { preview: ArchiveR
         Their status, archive state and provider account numbers are restored as saved; nothing is reactivated, and any newer attempt you
         created after this archive was made will be gone.
       </InlineNotice>
+      <MissingAttachmentsNotice warnings={preview.warnings}>
+        In the current journal, these files were already gone from disk or no longer match what was saved. Any changed bytes are kept
+        in the local pre-restore safety copy, apart from the verified screenshots; nothing is lost by replacing.
+      </MissingAttachmentsNotice>
       <InlineNotice tone="warning" title="Before you replace">
         <ul className="dc-list">
           <li>Everything in the current journal is replaced, including accounts, trades, notes, reviews and screenshots added since this archive was made.</li>

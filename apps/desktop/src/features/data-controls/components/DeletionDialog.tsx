@@ -168,6 +168,9 @@ function PreviewDetails({ preview, isAccount }: { preview: PermanentDeletionPrev
           <p className="dc-note">{preview.attachments.length} screenshot or file{preview.attachments.length === 1 ? "" : "s"} ({formatBytes(attachmentBytes)}) removed from disk.</p>
         )}
         {!isAccount && preview.extraFiles.length > 0 && <ExtraFiles keys={preview.extraFiles} />}
+        <MissingAttachmentsNotice warnings={preview.warnings}>
+          Their files were already gone from disk, or no longer match what was saved. They are counted above and erased with the journal; nothing else needs to be done.
+        </MissingAttachmentsNotice>
         {!isAccount && preview.localRecoveryCopies > 0 && (
           <p className="dc-note">{preview.localRecoveryCopies} local recovery cop{preview.localRecoveryCopies === 1 ? "y" : "ies"} kept by FundedFlow will also be removed.</p>
         )}
@@ -179,6 +182,18 @@ function PreviewDetails({ preview, isAccount }: { preview: PermanentDeletionPrev
         Archives or CSV files you exported yourself are not touched, wherever you saved them. This is not a forensic secure erase.
       </InlineNotice>
     </>
+  );
+}
+
+/** Screenshots whose file was already gone or no longer matched when the preview was taken. */
+export function MissingAttachmentsNotice({ warnings, children }: { warnings: readonly string[]; children: ReactNode }) {
+  const names = api.missingAttachments(warnings);
+  if (names.length === 0) return null;
+  return (
+    <InlineNotice tone="warning" title="Some screenshots are already missing or changed">
+      {children}
+      <ul className="dc-list">{names.map((name, i) => <li key={i}><code className="dc-id">{name}</code></li>)}</ul>
+    </InlineNotice>
   );
 }
 

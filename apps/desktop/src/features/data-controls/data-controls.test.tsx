@@ -432,3 +432,40 @@ describe("account menu", () => {
     expect(archived).toContain("Delete permanently…");
   });
 });
+
+describe("missing or changed attachments (TASK-017)", () => {
+  const PREFIX = "Missing or changed attachment: ";
+  const FIXED_ERASE = "External/user-exported backups remain untouched; this is not a forensic secure-erase guarantee.";
+
+  it("names them in the erase dialog and never shows the fixed native warnings", async () => {
+    const user = userEvent.setup();
+    controls.previewDeletion.mockResolvedValue({ ...journalPreview, warnings: [...journalPreview.warnings, `${PREFIX}chart.png`, `${PREFIX}att-7`] });
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Erase entire journal…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Erase the entire local journal?" });
+    expect(await within(dialog).findByText("Some screenshots are already missing or changed")).toBeTruthy();
+    expect(within(dialog).getByText("chart.png")).toBeTruthy();
+    expect(within(dialog).getByText("att-7")).toBeTruthy();
+    expect(within(dialog).queryByText(FIXED_ERASE)).toBeNull();
+    expect(within(dialog).queryByText(new RegExp(PREFIX))).toBeNull();
+  });
+
+  it("names them in the restore dialog and shows nothing when the list is empty", async () => {
+    const user = userEvent.setup();
+    controls.inspectArchive.mockResolvedValue({ ...restorePreview, warnings: ["Plaintext archive; hashes are integrity checks, not authentication.", `${PREFIX}chart.png`] });
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Choose backup to restore…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Replace the journal with this archive?" });
+    expect(await within(dialog).findByText("Some screenshots are already missing or changed")).toBeTruthy();
+    expect(within(dialog).getByText("chart.png")).toBeTruthy();
+    expect(within(dialog).queryByText(/Plaintext archive; hashes are integrity checks/)).toBeNull();
+    cleanup();
+
+    controls.inspectArchive.mockResolvedValue(restorePreview);
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Choose backup to restore…" }));
+    const empty = await screen.findByRole("dialog", { name: "Replace the journal with this archive?" });
+    await within(empty).findByText("Checksums, version and contents verified");
+    expect(within(empty).queryByText("Some screenshots are already missing or changed")).toBeNull();
+  });
+});
