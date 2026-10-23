@@ -1,0 +1,10 @@
+{
+    "build":  "new",
+    "user":  "ef1a14f1-2d8c-4\\wdagutilityaccount",
+    "os":  "Windows 10 Enterprise 26H1 28000.2269",
+    "webview2Before":  null,
+    "installer":  "FundedFlow_0.1.1_x64-setup.exe",
+    "sha256":  "91c1288926ac35503545b1a59ea73dda2838c1114b6ed72ce5341deb7a51e29c",
+    "appdataBefore":  false,
+    "devDataDir":  null
+}

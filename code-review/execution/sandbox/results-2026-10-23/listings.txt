@@ -1,0 +1,8 @@
+### C:\FFJunctionTarget\com.fundedflow.desktop
+C:\FFJunctionTarget\com.fundedflow.desktop\legal-acceptance.json	Archive	383	2026-10-23T12:08:03.3770222-06:00
+### C:\Users\WDAGUtilityAccount\AppData\Roaming\com.fundedflow.desktop.b3-orig
+C:\Users\WDAGUtilityAccount\AppData\Roaming\com.fundedflow.desktop.b3-orig\fundedflow.db	Archive	4096	2026-10-23T12:07:28.6573158-06:00
+C:\Users\WDAGUtilityAccount\AppData\Roaming\com.fundedflow.desktop.b3-orig\fundedflow.db-shm	Archive	32768	2026-10-23T12:07:28.6573158-06:00
+C:\Users\WDAGUtilityAccount\AppData\Roaming\com.fundedflow.desktop.b3-orig\fundedflow.db-wal	Archive	1561512	2026-10-23T12:07:28.8659358-06:00
+C:\Users\WDAGUtilityAccount\AppData\Roaming\com.fundedflow.desktop.b3-orig\fundedflow.lock	Archive	0	2026-10-23T12:07:28.4995629-06:00
+legal-acceptance.json in junction target: True

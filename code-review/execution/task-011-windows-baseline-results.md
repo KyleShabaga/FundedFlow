@@ -44,13 +44,17 @@ Kyle ran the script `code-review/execution/sandbox/run-cases.ps1` through Claude
 
 **Reading of B3.** The first-run notice is shown before any app content by design (NA-3): `App.tsx:30` wraps every route in `LegalGate`, and the `RuntimeGate` that shows `data_folder_link` sits inside it. The junction target holds no acceptance record, so the first-run screen comes first. The backend refused the folder, since no journal file was created. The expected result written into the run instructions ("B3 shows a non-retry error") was wrong for a profile with no acceptance record.
 
-Two follow-ups:
-- Kyle is running one more probe to confirm the error screen appears after "Acknowledge and continue".
-- Writing the acknowledgement goes through `legal::write` (`legal.rs:60-83`), which has no link check. It would write `legal-acceptance.json` through the junction into the target folder. That file is the acknowledgement record, not journal data. It is covered by the TASK-018 follow-up Triage card for the legal-record, database, backup and attachment paths (4021bd4b6bde818f8b81cacaf66ff026).
+**B3 after "Acknowledge and continue"** (probe `b3-ack.ps1`, clicked through UI Automation): the app shows the Today page with the error card "FundedFlow doesn't trust its data folder". The card explains that the data folder is behind a link and the journal was not opened, that the data is unchanged, and how to replace the link and restart. It offers no Retry, shows stage `data_directory`, and the sidebar stays usable. No db or lock file was created anywhere. The screen was identical 30 s later. B3 therefore **passes** (TASK-018: the app root itself a junction is refused with the new non-retry category).
+
+Evidence: `execution/sandbox/results-2026-10-23/` (findings, screenshots, results.json, listings).
+
+Follow-ups:
+- Two copy nits on the error card. Its two paragraphs say nearly the same thing. "Quick Import" stays visible while accounts are unavailable. Neither blocks V1.
+- **Confirmed:** writing the acknowledgement goes through `legal::write` (`legal.rs:60-83`), which has no link check. It wrote `legal-acceptance.json` through the junction into the target folder. That file is the acknowledgement record, not journal data. It is covered by the TASK-018 follow-up Triage card for the legal-record, database, backup and attachment paths (4021bd4b6bde818f8b81cacaf66ff026).
 
 **Results for other tasks:**
 - **TASK-018** manual check ("junctioned profile layout starts Ready; standard profile unaffected"): met by B2 and B1 on the eeda9a1 build, in Windows Sandbox.
-- **TASK-028** B1/B2 expected results: now measured. B1 and B2 reach the app normally. B3 refuses the journal behind the first-run screen.
+- **TASK-028** B1/B2 expected results: now measured. B1 and B2 reach the app normally. B3 shows the first-run notice, then the non-retry data-folder error after Acknowledge.
 
 ## (c) Write timing
 

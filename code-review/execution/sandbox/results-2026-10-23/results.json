@@ -1,0 +1,34 @@
+[
+    {
+        "case":  "B1 standard profile",
+        "setup":  "none",
+        "links":  "-",
+        "dataFolder":  "C:\\Users\\WDAGUtilityAccount\\AppData\\Roaming\\com.fundedflow.desktop",
+        "processAliveAfter20s":  true,
+        "filesInDataFolder":  "fundedflow.db, fundedflow.db-shm, fundedflow.db-wal, fundedflow.lock"
+    },
+    {
+        "case":  "B3 app folder is junction",
+        "setup":  "New-Item -ItemType Junction \u003cAPPDATA\u003e\\com.fundedflow.desktop -\u003e C:\\FFJunctionTarget\\com.fundedflow.desktop",
+        "links":  " Volume in drive C has no label.\n Volume Serial Number is 42E6-CFC1\n\n Directory of C:\\Users\\WDAGUtilityAccount\\AppData\\Roaming\n\n10/23/2026  11:37 AM    \u003cJUNCTION\u003e     com.fundedflow.desktop [\\??\\C:\\FFJunctionTarget\\com.fundedflow.desktop]\n               0 File(s)              0 bytes\n               1 Dir(s)  81,422,942,208 bytes free",
+        "dataFolder":  "C:\\Users\\WDAGUtilityAccount\\AppData\\Roaming\\com.fundedflow.desktop",
+        "processAliveAfter20s":  true,
+        "filesInDataFolder":  "link:  | target: "
+    },
+    {
+        "case":  "B3 undo -\u003e relaunch",
+        "setup":  "junction removed, original restored",
+        "links":  "-",
+        "dataFolder":  "C:\\Users\\WDAGUtilityAccount\\AppData\\Roaming\\com.fundedflow.desktop",
+        "processAliveAfter20s":  true,
+        "filesInDataFolder":  "fundedflow.db, fundedflow.db-shm, fundedflow.db-wal, fundedflow.lock"
+    },
+    {
+        "case":  "B2 Roaming behind a junction (registry redirect)",
+        "setup":  "C:\\FFRelocated -\u003e C:\\FFRelocatedReal (junction); User Shell Folders\\AppData = C:\\FFRelocated\\Roaming",
+        "links":  " Volume in drive C has no label.\n Volume Serial Number is 42E6-CFC1\n\n Directory of C:\\\n\n10/23/2026  11:15 AM    \u003cJUNCTION\u003e     Documents and Settings [C:\\Users]\n10/23/2026  11:38 AM    \u003cJUNCTION\u003e     FFRelocated [\\??\\C:\\FFRelocatedReal]\n               0 File(s)              0 bytes\n               2 Dir(s)  81,419,755,520 bytes free",
+        "dataFolder":  "C:\\FFRelocated\\Roaming\\com.fundedflow.desktop",
+        "processAliveAfter20s":  true,
+        "filesInDataFolder":  "via link: fundedflow.db, fundedflow.db-shm, fundedflow.db-wal, fundedflow.lock | real: fundedflow.db, fundedflow.db-shm, fundedflow.db-wal, fundedflow.lock"
+    }
+]

@@ -1,0 +1,4 @@
+12:08:03.133 UIA: found button, enabled=True
+12:08:03.300 UIA: Invoke() called
+12:08:03.338 RESULT: method=UIA InvokePattern clicked=True
+12:08:34.530 process alive at ack+30s: True
