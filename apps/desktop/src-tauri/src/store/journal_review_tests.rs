@@ -275,8 +275,10 @@ fn trade_detail_gives_neighbours_in_entry_order() {
 // CSV re-import keeps reviews; source rows are immutable
 // ---------------------------------------------------------------------------
 
+// Invented rows (TASK-041). Row 1: MNQ long, (24396.00 - 24387.25) = 8.75 points x $2 x 1 = $17.50 gross;
+// 07:12:15 to 07:13:00 = 45 s.
 const CSV: &str = "symbol,_priceFormat,_priceFormatType,_tickSize,buyFillId,sellFillId,qty,buyPrice,sellPrice,pnl,boughtTimestamp,soldTimestamp,duration
-MNQZ6,-2,0,0.25,9001,9002,1,29774.25,29787.25,$26.00,10/19/2026 07:47:48,10/19/2026 07:48:21,32sec
+MNQZ6,-2,0,0.25,9001,9002,1,24387.25,24396.00,$17.50,10/19/2026 07:12:15,10/19/2026 07:13:00,45sec
 MNQZ6,-2,0,0.25,9003,9004,2,29790.00,29780.00,$(40.00),10/19/2026 08:10:00,10/19/2026 08:05:00,5min
 ";
 
@@ -341,9 +343,10 @@ fn reimporting_the_same_file_keeps_reviews_and_source_rows() {
     edit.fees = Some("1.24".into());
     edit.notes = None;
     let edited = trades::update(&mut conn, &t.id, edit).unwrap();
+    // Gross: (24396.00 - 24387.25) x $2 x 1 = 17.5; realized: 17.5 - 1.24 fees = 16.26.
     assert_eq!(
         (edited.gross_pnl.as_deref(), edited.realized_pnl.as_deref()),
-        (Some("26"), Some("24.76"))
+        (Some("17.5"), Some("16.26"))
     );
     assert_eq!(edited.source, "csv_import");
 

@@ -58,7 +58,7 @@ const seed = () => [
   trade({ id: "t1", accountId: A, symbol: "ESZ6", entryAt: "2026-10-19T13:30:00.000Z", exitAt: "2026-10-19T14:00:00.000Z", tradingDay: "2026-10-19", realizedPnl: "96", grossPnl: "100", fees: "4" }),
   trade({ id: "t2", accountId: A, symbol: "NQZ6", side: "short", entryAt: "2026-10-19T15:00:00.000Z", exitAt: "2026-10-19T15:10:00.000Z", tradingDay: "2026-10-19", realizedPnl: "-54", grossPnl: "-50", fees: "4" }),
   trade({ id: "t3", accountId: A, symbol: "MNQZ6", source: "csv_import", importBatchId: "batch", entryAt: "2026-10-20T13:30:00.000Z", exitAt: "2026-10-20T13:31:00.000Z", tradingDay: "2026-10-20", realizedPnl: "26", grossPnl: "26", fees: "0",
-    roundTrip: { buyFillId: "9001", sellFillId: "9002", buyPrice: "29774.25", sellPrice: "29787.25", boughtAt: "2026-10-20T13:30:00.000Z", soldAt: "2026-10-20T13:31:00.000Z",
+    roundTrip: { buyFillId: "9001", sellFillId: "9002", buyPrice: "24387.25", sellPrice: "24400.25", boughtAt: "2026-10-20T13:30:00.000Z", soldAt: "2026-10-20T13:31:00.000Z",
       boughtAtSource: "10/20/2026 09:30:00", soldAtSource: "10/20/2026 09:31:00", durationSource: "1min", durationSeconds: 60, priceFormat: "-2", priceFormatType: "0", tickSize: "0.25", entryBasis: "buy_first" } }),
   trade({ id: "t4", accountId: A, symbol: "XYZ", entryAt: "2026-10-20T15:00:00.000Z", exitAt: "2026-10-20T15:05:00.000Z", tradingDay: "2026-10-20", realizedPnl: null, grossPnl: null, pnlStatus: "missing_instrument" }),
   // Same instant and symbol in another account: never shown or linked here.
