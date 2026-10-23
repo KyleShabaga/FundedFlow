@@ -87,3 +87,15 @@ The earlier 0.1.1 builds (`819f967`, `eeda9a1`) were throwaway TASK-011 builds, 
 - **TASK-031 step 4a:** recorded as Not Run. Migrations 0022 and 0023 were added after the spec, so 0.1.0 refuses the 0.1.1 journal as NewerSchema before its cleanup recovery runs. The TASK-015/016 note "an older build finishes the cleanup" no longer applies for 0.1.0 → 0.1.1. Step 4 still records the refusal.
 - **TASK-030:** Windows Sandbox counts as the clean Windows 11 leg. The Windows 10 22H2 leg is Not Run and is listed as a TASK-036 known gap.
 - **Gate prompts:** `execution/gate-test-prompts-030-034.md`, mirrored on the Notion "Final manual tests" page.
+- **OneDrive export (Kyle, 2026-10-23):** removed from V1 test scope (smoke checklist B2, the TASK-030 prompt, and a note on the TASK-030 spec). It is listed as an untested known gap for TASK-035 and TASK-036: "Exporting a full backup into a OneDrive-synced Documents folder (Files On-Demand) is untested." Checklist PR #140.
+- **TASK-030 Windows 10 22H2 leg:** skipped (Kyle reconfirmed 2026-10-23).
+
+## Known gaps for TASK-035 / TASK-036 (running list)
+1. A full backup is refused above about 45,000–50,000 trades, because data.json is over 64 MiB. Fix planned for V1.1 (Development Board card 4021bd4b6bde81249483d1071c21c6e6).
+2. Exporting to a OneDrive-synced Documents folder (Files On-Demand) is untested.
+3. Windows 10 22H2 is untested; only Windows 11 (Sandbox) was tested.
+4. TASK-031 step 4a (an older build finishing an interrupted cleanup after a downgrade) was Not Run: 0.1.0 refuses a schema-23 journal.
+5. With a junctioned profile, inspecting or preparing a restore fails with `unsafe_path` (Triage card 4021bd4b6bde81f7b23fddb43ca43a1c).
+6. When the app data folder is itself a junction, "Acknowledge and continue" writes `legal-acceptance.json` through the junction before the folder is refused (Triage card 4021bd4b6bde818f8b81cacaf66ff026).
+7. TASK-022: a history entry without `history.state.idx` is not guarded (by design; covered by a test).
+8. While an editor is dirty, a hung page makes X and Alt+F4 do nothing; the fallback is Task Manager (Triage card 4021bd4b6bde81808ce7ff147801d4e7).

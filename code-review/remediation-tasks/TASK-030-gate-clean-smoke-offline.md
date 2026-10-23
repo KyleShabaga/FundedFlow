@@ -94,3 +94,9 @@ Block 4 review (10 §8.2/§8.3): CHANGES — applied in r3: explicit pass rule w
 Independent review r3 (two reviewers, then a re-check of the blocking fixes, 2026-10-22): READY after the corrections listed in "Changes in r3" were applied.
 Independent review (approved-task audit fixes, 2026-10-22): three reviewers plus a re-check of the blocking fixes; READY at r4.
 Revised for Kyle's legal-track decision (PR #107 documents), 2026-10-22. Independent re-check of r5 (2026-10-22): READY; nits applied.
+
+
+## Owner scope changes (Kyle, 2026-10-23, after approval)
+- The OneDrive export case (TASK-028 B2, OneDrive part) is removed from V1 scope. It is listed as an untested known gap for TASK-035 and TASK-036.
+- Windows Sandbox counts as the clean Windows 11 leg. The Windows 10 22H2 leg is skipped and is a TASK-036 known gap.
+- These are recorded owner decisions. The approved revision's text above is unchanged. See `code-review/11-remediation-execution-log.md`.
