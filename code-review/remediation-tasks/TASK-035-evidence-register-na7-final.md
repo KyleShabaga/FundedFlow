@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r4) |
+| Status | Ready for Approval (r5) |
 | Type | Documentation |
 | Audit priority | Gate |
 | Roadmap lane | NA-7 |
@@ -11,13 +11,13 @@
 | Confidence | High |
 | Canonical issue | ISSUE-049 (see `code-review/remediation-findings-ledger.md`) |
 | Original Stage 1 finding IDs | N/A (existing gate/decision) |
-| Source card / date | Final Push V1 — https://app.notion.com/p/4001bd4b6bde8044ab04f75d167950cd; docs/build-26.75-evidence.md:145-166 |
+| Source card / date | Final Push V1 — https://app.notion.com/p/4001bd4b6bde8044ab04f75d167950cd; docs/build-26.75-evidence.md:145-166; legal track: PR #107 documents and revised P0-13 criteria (Kyle, 2026-10-22; `10a-stage2-notion-publication-and-approval-manifest.md` §12) |
 | Wave | W6 |
 | Effort / risk | S / Low |
 | Verification platform | Any OS |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
-| Inspected source revision | 4d4e66d (application source identical to 92e7980) |
-| Specification revision | r4 (2026-10-22; r3 + board review fixes) |
+| Inspected source revision | 4d4e66d (application source identical to 92e7980); PR #107 head `c0a076e` (branch `feat/mit-license-transition`, base 92e7980, draft, open). Citations written `#107 <path>:<line>` are to `c0a076e`. |
+| Specification revision | r5 (2026-10-22; r4 + PR #107 legal-track alignment) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 4d4e66d (HEAD at r3; application source unchanged). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -43,18 +43,35 @@ Evidence register document and NA-7 notes.
    - TASK-023 state: Verified (contained in the candidate SHA), closed Not Needed with the TASK-011(a) evidence, or Deferred with the window-close gap (ISSUE-009) listed for Kyle's explicit acceptance in TASK-036 (TASK-029 (r6 or later)).
    - TASK-007 dispositions: P0-05 waived (owner-only), P0-09 with link to existing reconciliation evidence, P0-10 deferred, D5 closed (as approved in TASK-007).
    - TASK-010 outcome: whether ISSUE-002 was escalated to P0 (with the TASK-010 evidence).
-   - TASK-030 R1 (owner-run real-export import, counts by kind only): present only while the TASK-007 r4 condition on the P0-05 waiver is approved; otherwise the row records "not required (TASK-007 condition not approved)".
-   - TASK-037, TASK-038, TASK-039 (with Kyle's separate disposition and, for option B or C, its execution task state), TASK-040, TASK-041 (with Kyle's ruling: remove, or accept as residual low-risk), TASK-042 and TASK-043 (when Kyle confirmed TASK-009 r4 decision 1; otherwise each row records "not started: TASK-009 r4 decision 1 not confirmed") and TASK-044: state, and for code tasks whether the change is contained in the candidate SHA.
-2. Finalize NA-7 against observed candidate behaviour.
+   - TASK-030 R1 (owner-run real-export import, counts by kind only): mandatory, because Kyle accepted the TASK-007 r4 condition on the P0-05 waiver on 2026-10-22 (`10a-stage2-notion-publication-and-approval-manifest.md` §12); the row records the TASK-030 R1 result (Passed, Failed, or Blocked if not run).
+   - Revised P0-13 release inputs (adopted by Kyle 2026-10-22, `#107 docs/privacy-product-verification.md:27-33`; summary `#107 docs/licensing-transition.md:44, 46`). Each row names the item put to Kyle and its approval state: recorded (date and source) or "pending: TASK-036". The register never records an approval Kyle has not given; `#107 docs/privacy-product-verification.md:46` records release approval as not given.
+     - Document versions: privacy notice and License and product information `0.2.1-draft`, digests `8b83157f3e1075a64fb631e39616c37e5b70cc3c70e54f473c05ec9d0db1c392` and `96894603aff89db92b60b307f85693756d0e540f03851c2d39568a441c68911a` (content approval recorded at `#107 docs/privacy-product-verification.md:35-44`; TASK-025's check that main carries these digests), or the finalized versions and digests if Kyle chose TASK-025 (B). The row states that content approval is not release approval (`:44`) and holds Kyle's explicit approval of these versions for release (`:31`).
+     - Release commit: the candidate source SHA (and installer SHA-256) recorded by TASK-029, for Kyle's explicit approval (`:31, 46`).
+     - Distribution scope: the proposed scope (owner-only V1 use unless Kyle states otherwise), for Kyle's explicit approval (`:31, 46`).
+     - Recorded risk list: each unresolved factual and legal risk with its disposition (resolved, with evidence, or for Kyle to resolve or expressly accept in TASK-036; `:31`). It includes at least the legal uncertainties in `:52`; each packaged check #107 lists (`#107 docs/privacy-product-verification.md:58, 86-91, 93`) with the row that covers it, or "not covered"; and the open gaps and known limitations from the gate rows. Expected mapping, which the register confirms against the executed rows:
+       - Install without WebView2 (`:86`): TASK-030 B7 (TASK-028 checklist).
+       - Settings documents (`:88`): TASK-030 "Legal documents" (steps 4 and 4a).
+       - Uninstall retention (`:91`): TASK-028 B4, executed by TASK-030, and TASK-031 step 5.
+       - Restore interruption (`:89`): TASK-032 R5.
+       - Cleanup interruption (`:89`): not covered (TASK-031 step 4a is optional and only partial).
+       - Old acceptance record prompt (`:88`): TASK-030 "Legal prompt", conditional only (seen only if the VM profile already holds an earlier record).
+       - Whole-journal erasure retention: exports, acknowledgment file and WebView storage kept (`:90`): TASK-032 R0, partial.
+       - "Close writes no acknowledgment" (`:87`) and "account deletion keeps recovery copies" (`:90`): not covered.
+       Each uncovered or partial check is recorded as a risk for Kyle's disposition in TASK-036, and a Triage card is proposed for each gap; this card does not add the checks.
+     - Factual and packaged verification and relevant checks (`:31`): pointers to the TASK-025 row and the TASK-029..033 rows. Independent legal review is optional (`:31, 33`); the row records "not obtained" unless a review was actually obtained, with its source.
+   - TASK-025 draft-status choice: (A) ship the `0.2.1-draft` documents unchanged with the draft banners, or (B) a finalized revision (with the TASK-025 revision and digests), with Kyle's recorded choice.
+   - TASK-037, TASK-038, TASK-039 (with Kyle's separate disposition and, for option B or C, its execution task state), TASK-040, TASK-041 (with Kyle's ruling: remove, or accept as residual low-risk), TASK-042 and TASK-043 (required: Kyle confirmed TASK-009 r4 decision 1 on 2026-10-22, `10a-stage2-notion-publication-and-approval-manifest.md` §12) and TASK-044: state, and for code tasks whether the change is contained in the candidate SHA.
+2. Finalize NA-7 against observed candidate behaviour. Its uninstall and network statements stay consistent with the approved privacy notice (`#107 apps/desktop/src/legal/privacy-notice.ts:29, 46`: uninstall is not the journal-erasure control), as required of the TASK-028 draft.
 
 ## Prerequisites, dependencies and conflicts
-- Prerequisites: TASK-029..TASK-034 (TASK-034 is unconditional: TASK-008 decided Option A, gate kept).
+- Prerequisites: TASK-029..TASK-034 (TASK-034 is unconditional: TASK-008 decided Option A, gate kept); TASK-025 (draft-status choice and the digest check on main; PR #107 merged, legal-track decision 2026-10-22).
 - Likely shared-file conflicts: Docs only.
 
 ## Acceptance criteria (pass/fail)
 - [ ] Every gate row has state, source SHA, installer EXE SHA-256, environment and evidence link; NA-7 statements match observed behaviour.
 - [ ] Every row's source SHA and installer SHA-256 equal the candidate recorded by TASK-029 (from `SHA256SUMS.txt`, not the artifact ZIP digest); a row from a different build is marked as such and does not count toward the gate. Decision and verification rows (TASK-001..011) record the installer hash as N/A.
-- [ ] The register contains the TASK-023 state row, the TASK-007 dispositions row (P0-05 waived, P0-09 with its reconciliation evidence link, P0-10 deferred, D5 closed), the TASK-010 outcome row (ISSUE-002 escalated or not), the TASK-030 R1 row (or its "not required" entry) and one row each for TASK-037 to TASK-044 (TASK-042/043 as "not started" if TASK-009 r4 decision 1 was not confirmed), as listed in step 1, matching the inputs of TASK-036 step 1.
+- [ ] The register contains the TASK-023 state row, the TASK-007 dispositions row (P0-05 waived, P0-09 with its reconciliation evidence link, P0-10 deferred, D5 closed), the TASK-010 outcome row (ISSUE-002 escalated or not), the TASK-030 R1 row and one row each for TASK-037 to TASK-044, as listed in step 1, matching the inputs of TASK-036 step 1.
+- [ ] The register contains the revised P0-13 rows (document versions and digests, release commit, distribution scope, risk list with dispositions, factual and packaged verification) and the TASK-025 draft-status row, as listed in step 1. Each approval is shown as recorded (date and source) or pending, never inferred; no row says independent legal review was obtained unless it was.
 
 ## Verification plan
 Reviewer.
@@ -74,8 +91,15 @@ Documents updated; every factual statement checked against the cited source (fil
 - Step 1 and a new acceptance criterion: register rows added for the TASK-023 state (Verified / Deferred / Not Needed with TASK-011(a) evidence), TASK-030 R1 (conditional on TASK-007) and TASK-037–044, matching TASK-036 step 1 (board review 2026-10-22).
 - Step 1 and the register criterion: added the TASK-007 dispositions row (P0-05 waived, P0-09 linked to existing reconciliation evidence, P0-10 deferred, D5 closed) and the TASK-010 outcome row, both inputs of TASK-036 step 1; TASK-042/043 rows are conditional on Kyle confirming TASK-009 r4 decision 1; TASK-029 cited as "(r6 or later)" as in TASK-036; "Decision rows" reworded to "Decision and verification rows" (TASK-010/011 are verification tasks) (board review re-check 2026-10-22).
 
+## Changes in r5
+- Step 1 and a new criterion: register rows for the revised P0-13 inputs (`#107 docs/privacy-product-verification.md:31, 44, 46, 58`; `#107 docs/licensing-transition.md:44, 46`): Kyle's approval of the document versions (`0.2.1-draft`, digests `8b83157f…1c392` and `96894603…8911a`), the release commit, the distribution scope, the recorded risk list with dispositions, and the verification pointers; independent legal review recorded only if obtained (legal-track decision 2026-10-22).
+- Step 1: a row for Kyle's TASK-025 draft-status choice (A or B) (legal-track decision 2026-10-22).
+- Step 2: final NA-7 stays consistent with `#107 privacy-notice.ts:29, 46`; prerequisites add TASK-025 (legal-track decision 2026-10-22). Existing rows unchanged.
+- Step 1 and the register criterion: the TASK-030 R1 row is mandatory (Kyle accepted the TASK-007 r4 condition) and the TASK-042/043 rows are required (Kyle confirmed TASK-009 r4 decision 1), both 2026-10-22 per `10a-stage2-notion-publication-and-approval-manifest.md` §12, so the "not required" and "not started" branches are removed; the risk-list row cites `#107 docs/privacy-product-verification.md:58, 86-91, 93` and states the expected mapping of each #107 packaged check to its covering row (TASK-028 B4/B7, TASK-030, TASK-031 step 5, TASK-032 R0/R5), with cleanup interruption, "Close writes no acknowledgment" and "account deletion keeps recovery copies" not covered; uncovered or partial checks go to Kyle as risks in TASK-036, with a Triage card proposed for each gap (board re-check 2026-10-22).
+
 ## Independent review notes
 Independent review (Block 3, 2026-10-22): READY as drafted. r2 adds only global items (execution-log pointer; Triage-card step on Fix/Test cards).
 Block 4 review (10 §8.3): nits only — applied in r3.
 Independent review r3 (2026-10-22): CHANGES on 012, 024, 026 (citations, test construction, scope lines); applied. READY.
 Board review (2026-10-22, against main 92e7980): CHANGES REQUESTED (stale TASK-034 condition, decision range, missing register rows); fixes folded in at r4. Independent re-check of r4 (two reviewers, 2026-10-22): blocking items applied; READY at r4.
+Revised for Kyle's legal-track decision (PR #107 documents), 2026-10-22. Independent re-check of r5 (2026-10-22): READY; nits applied.

@@ -261,3 +261,28 @@ Kyle answered each question in Claude Code, one at a time. His choice is recorde
 - Approved: 40 cards.
 - Changes Requested: 025, 026, 044.
 - Deferred: 023.
+
+## 13. Legal-track follow-through (2026-10-22, same session)
+
+**Cards revised around PR #107.** Kyle's direction, quoted exactly:
+> Yes. Revise TASK-025, TASK-026 and TASK-044 around PR #107's documents (or recommend closing any that #107 fully covers), re-check them independently, and republish for re-approval.
+
+- All three were revised; none was closed: TASK-025 r6, TASK-026 r5, TASK-044 r3.
+- Each was independently re-checked and set to **Pending Review**.
+
+**Approved cards reopened for the legal track.** Kyle's direction, quoted exactly:
+> Yes. Revise TASK-028, 030, 031, 035 and 036 for the PR #107 legal track (Acknowledge wording, uninstall wording per privacy-notice.ts:46, revised P0-13 inputs), re-check them and republish for re-approval.
+
+- These five previously Approved cards were reopened at Kyle's direction. This supersedes §11's "must not be edited" for these five cards only.
+- Revised to TASK-028 r7, TASK-030 r5, TASK-031 r7, TASK-035 r5 and TASK-036 r5.
+- Re-checked: READY. The board re-check fixes (2026-10-22) were folded into the same revisions: TASK-030 R1 is mandatory (Kyle accepted the TASK-007 r4 condition, §12); TASK-035 and TASK-036 carry Kyle's §12 decisions (TASK-009 r4 decision 1, TASK-039 option A, TASK-041 partial B); TASK-035 maps each PR #107 packaged check to its covering row.
+- Set to **Pending Review**. The prior approvals remain in the Approved fields as history.
+
+**Board state:**
+- Approved: 35 cards.
+- Pending Review: 8 (025, 026, 028, 030, 031, 035, 036, 044).
+- Deferred: 1 (023).
+
+**Open follow-ups:**
+- Approved TASK-032 (line 62) still says the candidate shows the "first-run agreement" again and to "accept it", and approved TASK-033 (line 49) still says "first-run agreement". Both cite `apps/desktop/src/legal/index.ts:40-43` at 92e7980, which is `#107 apps/desktop/src/legal/index.ts:44-47` at `c0a076e`. These cards stay frozen; the wording is handled at execution.
+- Triage cards are proposed for the PR #107 packaged checks that no card covers, or covers only in part (TASK-035 r5 mapping): cleanup interruption, "Close writes no acknowledgment", account deletion keeping recovery copies, the old-acceptance-record prompt (conditional only) and whole-journal erasure retention (partial).
