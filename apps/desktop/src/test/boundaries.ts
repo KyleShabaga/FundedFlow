@@ -8,7 +8,7 @@ import type { LegalAcceptance } from "../lib/data/legal";
 import type { RuntimeStatus } from "../lib/data/runtime";
 
 export const SCHEMA = 18;
-export const readyStatus: RuntimeStatus = { state: "ready", stage: "ready", schemaVersion: SCHEMA, supportedSchemaVersion: SCHEMA, created: false, failure: null };
+export const readyStatus: RuntimeStatus = { state: "ready", stage: "ready", schemaVersion: SCHEMA, supportedSchemaVersion: SCHEMA, created: false, failure: null, cleanup: "clear" };
 export const initializingStatus: RuntimeStatus = { ...readyStatus, state: "initializing", stage: "migrate" };
 
 type Answer = RuntimeStatus | Error | Promise<RuntimeStatus>;

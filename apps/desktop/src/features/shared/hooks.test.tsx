@@ -18,7 +18,7 @@ vi.mock("../../lib/data/api", () => ({ repository: repo }));
 let client: QueryClient;
 const input: AccountInput = { name: "Test account", accountType: "evaluation", status: "active", currency: "USD", startingBalance: "100", timezone: "America/New_York", tradingDayResetTime: "17:00" };
 const csv = { accountId: "a", fileName: "test.csv", timezone: "UTC", content: "Symbol,Qty\nMES,1" };
-const ready = () => { runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 13, supportedSchemaVersion: 13, created: false, failure: null } }; };
+const ready = () => { runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 13, supportedSchemaVersion: 13, created: false, failure: null, cleanup: "clear" } }; };
 function Wrapper({ children }: { children: ReactNode }) { return <QueryClientProvider client={client}>{children}</QueryClientProvider>; }
 beforeEach(() => {
   vi.resetAllMocks(); ready(); runtime.check.mockResolvedValue(undefined);

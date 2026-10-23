@@ -37,7 +37,7 @@ beforeEach(() => {
   })));
   invoke.mockReset().mockResolvedValue({
     state: "ready", stage: "ready", schemaVersion: 13,
-    supportedSchemaVersion: 13, created: true, failure: null,
+    supportedSchemaVersion: 13, created: true, failure: null, cleanup: "clear",
   });
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });

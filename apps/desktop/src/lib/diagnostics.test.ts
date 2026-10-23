@@ -11,7 +11,7 @@ describe("diagnostic summary allowlist", () => {
   it("keeps only typed runtime fields, never the native message or detail", () => {
     const state = {
       kind: "unavailable", reason: "runtime-failed",
-      status: { state: "failed", stage: "migrate", schemaVersion: 19, supportedSchemaVersion: 20, created: false,
+      status: { state: "failed", stage: "migrate", schemaVersion: 19, supportedSchemaVersion: 20, created: false, cleanup: "clear",
         failure: { category: "migration_failed", retryable: true, message: "Saved as journal.db for Jane", detail: "SELECT * FROM trades at C:\Users\Jane\journal.db",
           failedMigration: { version: 20, name: "source_fact_immutability", fromVersion: 18, reachedVersion: 19 } } },
     } as unknown as RuntimeState;
@@ -22,6 +22,7 @@ describe("diagnostic summary allowlist", () => {
     expect(text).toContain("Supported journal version: 20");
     expect(text).toContain("Failed upgrade step: step 20 (from 18, reached 19)");
     expect(text).toContain("Retry allowed: true");
+    expect(text).toContain("Deletion cleanup: clear");
     expect(text).toContain("Screen: accounts");
     expect(text).toContain(`FundedFlow version: ${APP_VERSION}`);
     expect(text).toContain("Time (UTC): 2026-10-21T18:00:00.000Z");
@@ -34,6 +35,7 @@ describe("diagnostic summary allowlist", () => {
     expect(text).toContain("Code: unknown");
     expect(text).toContain("Stage: unknown");
     expect(text).toContain("Journal version: unknown");
+    expect(text).toContain("Deletion cleanup: unknown");
     expect(text).toContain("Screen: unknown");
     clean(text);
   });

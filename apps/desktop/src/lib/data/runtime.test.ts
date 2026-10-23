@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { COMMAND_TIMEOUT_MS, createRuntimeGateway, failureCategories, runtimeStatusSchema } from "./runtime";
+import { cleanupStates, COMMAND_TIMEOUT_MS, createRuntimeGateway, failureCategories, runtimeStatusSchema } from "./runtime";
 import { deferred, failed, initializing, ready } from "../../test/runtime-fixtures";
 
 beforeEach(() => { vi.useFakeTimers(); });
@@ -27,6 +27,7 @@ it.each([
   { ...failed("open_failed"), created: true },
   { ...failed("migration_failed"), failure: { ...failed("migration_failed").failure, failedMigration: null } },
   { ...failed("newer_schema"), failure: { ...failed("newer_schema").failure, retryable: true } },
+  { ...ready, cleanup: undefined }, { ...ready, cleanup: "unknown" }, { ...ready, cleanup: null },
 ])("rejects malformed or contradictory status %j for both commands", async reply => {
   const gateway = createRuntimeGateway(vi.fn().mockResolvedValue(reply));
   await expect(gateway.status()).rejects.toMatchObject({ kind: "invalid-response" });
@@ -68,4 +69,10 @@ it.each(["status", "retry"] as const)("bounds %s without overlapping the uncance
   await vi.advanceTimersByTimeAsync(0);
   expect(await gateway.retry()).toEqual(ready);
   expect(transport.mock.calls[1]).toEqual(["retry_runtime"]);
+});
+
+it.each(cleanupStates)("accepts a ready journal whose deletion cleanup is %s, and any state with it", cleanup => {
+  for (const status of [{ ...ready, cleanup }, { ...initializing, cleanup }, { ...failed("open_failed"), cleanup }]) {
+    expect(runtimeStatusSchema.parse(status)).toEqual(status);
+  }
 });

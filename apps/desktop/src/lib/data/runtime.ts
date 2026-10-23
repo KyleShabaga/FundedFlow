@@ -19,6 +19,9 @@ export const failureCategories = [
 
 export const runtimeStages = ["data_directory", "open", "backup", "migrate", "ready"] as const;
 
+/** Deletion cleanup left on disk; never a failure (`CleanupOutcome` in src-tauri/src/data_controls/deletion.rs). */
+export const cleanupStates = ["clear", "quarantined", "pending"] as const;
+
 const version = z.number().int().min(0).max(4_294_967_295);
 
 export const runtimeFailureSchema = z.object({
@@ -47,6 +50,8 @@ export const runtimeStatusSchema = z.object({
   supportedSchemaVersion: version,
   created: z.boolean(),
   failure: runtimeFailureSchema.nullable(),
+  /** Files a permanent deletion could not remove yet ("pending"), or unreadable cleanup records set aside. */
+  cleanup: z.enum(cleanupStates),
 }).superRefine((status, ctx) => {
   const invalid = (message: string) => ctx.addIssue({ code: "custom", message });
   if (status.state === "ready") {

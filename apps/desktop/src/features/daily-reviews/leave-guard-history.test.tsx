@@ -59,7 +59,7 @@ function renderApp() {
 
 let client: QueryClient;
 function fresh() {
-  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 18, supportedSchemaVersion: 18, created: false, failure: null } } as unknown as RuntimeState;
+  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 18, supportedSchemaVersion: 18, created: false, failure: null, cleanup: "clear" } } as unknown as RuntimeState;
   runtime.check.mockReset().mockResolvedValue(undefined);
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false } } });
   holder.store = createJournalStore([makeAccount({ id: A, name: "Eval A" })], [

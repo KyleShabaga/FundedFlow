@@ -628,7 +628,7 @@ A database problem never stops the window from opening, and neither does a slow 
 - **Data commands:** until the runtime is ready they return `{ kind: "unavailable" }` at once, without waiting
   for initialization. The UI never reads that as "no accounts".
 
-`runtime_status()` (read-only) returns `{ state, stage, schemaVersion, supportedSchemaVersion, created, failure }`:
+`runtime_status()` (read-only) returns `{ state, stage, schemaVersion, supportedSchemaVersion, created, failure, cleanup }`:
 
 | Field | Meaning |
 |---|---|
@@ -637,6 +637,7 @@ A database problem never stops the window from opening, and neither does a slow 
 | `schemaVersion` | The journal's version whenever known, also on failure: a newer journal's version, the version a failed upgrade left, or the version before a failed backup. `null` only when the file could not be read |
 | `created` | True only when this start created a new, empty journal |
 | `failure` | `{ category, retryable, message, detail, failedMigration }`; `failedMigration` is `{ version, name, fromVersion, reachedVersion }` for `migration_failed` |
+| `cleanup` | Deletion cleanup left on disk, in any state: `clear`; `pending` (a cleanup marker in `data-controls-cleanup/` could not finish yet, for example a locked file); `quarantined` (an unreadable cleanup record or non-regular entry was moved to `data-controls-quarantine/`, never deleted). Never a failure |
 
 - `retry_runtime()` starts the real open → backup → migrate path again in the background and returns at once
   (`initializing`). It is a no-op when ready, and while an attempt is already running it only reports the status.
@@ -656,6 +657,17 @@ A database problem never stops the window from opening, and neither does a slow 
   notice available. A previously opened data gate retains its mounted content/draft, labels it unavailable/stale,
   and disables form controls and the inert subtree until ready returns. New data content does not mount until
   ready. Feature hooks must separately gate queries/actions on readiness; Build 14 owns that integration.
+- **Deletion cleanup (TASK-015):** startup runs pending file cleanup but never fails on it: the runtime becomes
+  ready and reports `cleanup`. Each marker is tried even after another fails. A marker that parses is never
+  quarantined; one that cannot finish stays queued (`pending`). Unparseable or non-regular entries move to
+  `data-controls-quarantine/` under a unique name (`quarantined`), or stay queued if the move fails. Markers are
+  written as a temporary file in the data root, synced, then moved into the queue without replacing anything
+  (directory sync is a no-op on Windows), and every marker is published before the deletion commits. A cleanup
+  over 1 MiB is split into `<op>-<n>.json` markers of the unchanged schema, so an older build can still read
+  them; markers up to 256 MiB from older builds are read. `retry_data_cleanup` fails and a new erase or restore
+  is refused while a marker is pending; quarantined records block neither. A whole-journal erase also removes
+  `data-controls-quarantine/`. `cleanup` is updated after `permanently_delete_data`, `retry_data_cleanup` and
+  restore prepare, and the frontend re-reads the status after the first two.
 - Recovery never deletes, resets, downgrades or replaces the journal. A file that fails to open stays
   byte-for-byte unchanged. A newer journal is refused before anything is written to it, including the WAL
   journal mode.

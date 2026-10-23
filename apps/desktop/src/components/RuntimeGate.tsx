@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 
 import { SLOW_MS, useRuntime } from "../app/RuntimeProvider";
-import { Button, DiagnosticDetails } from "../design-system";
+import { Button, DiagnosticDetails, InlineNotice } from "../design-system";
 import type { RuntimeFailure, RuntimeStatus } from "../lib/data/runtime";
 import { formatDiagnostics, newIncidentId, runtimeDiagnostics } from "../lib/diagnostics";
 import "./RuntimeGate.css";
@@ -26,6 +26,17 @@ const STAGE_TEXT: Record<RuntimeStatus["stage"], string> = {
   backup: "Saving a backup before upgrading your journal…",
   migrate: "Upgrading your journal…",
   ready: "Opening your journal…",
+};
+/** Shown while the journal is ready but a deletion left work on disk. Never a failure: data stays usable. */
+const CLEANUP: Record<Exclude<RuntimeStatus["cleanup"], "clear">, { title: string; body: string }> = {
+  pending: {
+    title: "Some deleted files are still on disk",
+    body: "A permanent deletion is saved, but FundedFlow couldn't remove every file yet, for example because another program has one open. Your journal is fully usable. FundedFlow tries again each time it starts.",
+  },
+  quarantined: {
+    title: "A damaged cleanup record was set aside",
+    body: "FundedFlow found a deletion cleanup record it couldn't read and moved it to its data-controls-quarantine folder instead of deleting it. No files were removed because of it, and your journal is fully usable. Erasing the entire journal also removes that folder.",
+  },
 };
 function versions(status: RuntimeStatus): string {
   return `Journal version ${status.schemaVersion ?? "unknown"}; this app supports ${status.supportedSchemaVersion}. Stage: ${status.stage}.`;
@@ -69,7 +80,8 @@ export function RuntimeRecoveryNotice() {
     retryRequested.current = true;
     void retry();
   };
-  return (
+  const cleanup = state.kind === "ready" && state.status.cleanup !== "clear" ? CLEANUP[state.status.cleanup] : null;
+  return (<>
     <section className={ready ? "ds-sr-only" : "ff-gate ds-card"}
       role={busy || ready ? "status" : "alert"} aria-live={busy || ready ? "polite" : "assertive"}
       aria-atomic="true" aria-labelledby={ready ? undefined : titleId}>
@@ -98,7 +110,8 @@ export function RuntimeRecoveryNotice() {
         {showDetails && incident && <DiagnosticDetails text={formatDiagnostics(runtimeDiagnostics(state, incident.id, incident.at, window.location.hash))} />}
       </>}
     </section>
-  );
+    {cleanup && <InlineNotice tone="warning" title={cleanup.title}>{cleanup.body}</InlineNotice>}
+  </>);
 }
 
 /** Mount data content only after readiness; retain its local state through later runtime loss.

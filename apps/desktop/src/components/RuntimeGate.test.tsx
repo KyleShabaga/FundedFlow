@@ -21,6 +21,7 @@ const base: RuntimeStatus = {
   supportedSchemaVersion: 10,
   created: false,
   failure: null,
+  cleanup: "clear",
 };
 const ready: RuntimeStatus = { ...base, state: "ready", stage: "ready", schemaVersion: 10 };
 const failed: RuntimeStatus = {
@@ -124,4 +125,26 @@ it("pauses automatic checks without claiming a running upgrade failed, then Retr
   await act(async () => { screen.getByRole("button", { name: "Retry" }).click(); });
   expect(gateway.retry).toHaveBeenCalledTimes(1);
   expect(screen.getByText("journal")).toBeTruthy();
+});
+
+it.each([
+  ["pending", "Some deleted files are still on disk", /tries again each time it starts/],
+  ["quarantined", "A damaged cleanup record was set aside", /data-controls-quarantine/],
+] as const)("keeps a ready journal open and explains %s deletion cleanup", async (cleanup, title, body) => {
+  gateway.status.mockResolvedValue({ ...ready, cleanup });
+  render(<RuntimeProvider><RuntimeGate><p>journal</p></RuntimeGate></RuntimeProvider>);
+  await tick(0);
+  expect(screen.getByText("journal")).toBeTruthy();
+  expect(screen.getByText(title)).toBeTruthy();
+  expect(screen.getByText(body)).toBeTruthy();
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+});
+
+it("shows no cleanup notice when cleanup is clear", async () => {
+  gateway.status.mockResolvedValue(ready);
+  render(<RuntimeProvider><RuntimeGate><p>journal</p></RuntimeGate></RuntimeProvider>);
+  await tick(0);
+  expect(screen.getByText("journal")).toBeTruthy();
+  expect(screen.queryByText(/still on disk|set aside/)).toBeNull();
 });

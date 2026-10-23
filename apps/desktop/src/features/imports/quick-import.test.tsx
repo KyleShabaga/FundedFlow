@@ -101,7 +101,7 @@ const ready = async () => {
 };
 
 beforeEach(() => {
-  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 14, supportedSchemaVersion: 14, created: false, failure: null } } as unknown as RuntimeState;
+  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 14, supportedSchemaVersion: 14, created: false, failure: null, cleanup: "clear" } } as unknown as RuntimeState;
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
   setup();
 });

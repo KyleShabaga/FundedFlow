@@ -40,7 +40,7 @@ const expectNoPrivateText = (text: string) => { for (const p of PRIVATE) expect(
 const failedStatus = (category: "data_directory" | "open_failed" | "backup_failed" | "migration_failed" | "newer_schema"): RuntimeStatus => {
   const stage = { data_directory: "data_directory", open_failed: "open", backup_failed: "backup", migration_failed: "migrate", newer_schema: "open" } as const;
   return {
-    state: "failed", stage: stage[category], created: false, supportedSchemaVersion: 20,
+    state: "failed", stage: stage[category], created: false, supportedSchemaVersion: 20, cleanup: "clear",
     schemaVersion: category === "newer_schema" ? 21 : category === "migration_failed" ? 19 : category === "data_directory" ? null : 18,
     failure: {
       category, retryable: category !== "newer_schema", message: "Synthetic failure message.",

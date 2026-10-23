@@ -77,7 +77,7 @@ const card = (name: RegExp | string) => screen.getByRole("article", { name });
 
 beforeEach(() => {
   vi.useFakeTimers({ now: new Date(NOW), shouldAdvanceTime: true, toFake: ["Date"] });
-  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 17, supportedSchemaVersion: 17, created: false, failure: null } } as unknown as RuntimeState;
+  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 17, supportedSchemaVersion: 17, created: false, failure: null, cleanup: "clear" } } as unknown as RuntimeState;
   client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
 });
 afterEach(() => {

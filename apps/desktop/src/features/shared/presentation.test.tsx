@@ -32,7 +32,7 @@ beforeAll(() => {
 
 let client: QueryClient;
 const ready = () => {
-  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 13, supportedSchemaVersion: 13, created: false, failure: null } } as unknown as RuntimeState;
+  runtime.state = { kind: "ready", status: { state: "ready", stage: "ready", schemaVersion: 13, supportedSchemaVersion: 13, created: false, failure: null, cleanup: "clear" } } as unknown as RuntimeState;
 };
 function Wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;

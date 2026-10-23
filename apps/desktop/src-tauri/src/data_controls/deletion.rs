@@ -1,9 +1,14 @@
 //! Permanent deletion uses normal live constraints. Ambiguous ownership/lineage is blocked.
-use super::{Code, Counts, Result, archive, fail, filesystem::*};
+use super::{Code, Counts, Result, archive, fail, filesystem::*, over_limit};
 use crate::db;
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeSet, fs, path::Path};
+use std::{
+    collections::BTreeSet,
+    fs,
+    io::{Read, Write},
+    path::{Path, PathBuf},
+};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Scope {
@@ -46,13 +51,91 @@ pub struct DeleteResult {
     pub state: String,
     pub affected_entities: Counts,
 }
+/// A pending file cleanup. The schema is the one every earlier build reads (`deny_unknown_fields`): never add a
+/// field or a recovery-copy key, so an older build can still finish a marker this build writes.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct Cleanup {
-    operation_id: String,
-    whole_journal: bool,
-    attachments: Vec<super::Attachment>,
-    recovery_copies: Vec<String>,
+pub(super) struct Cleanup {
+    pub(super) operation_id: String,
+    pub(super) whole_journal: bool,
+    pub(super) attachments: Vec<super::Attachment>,
+    pub(super) recovery_copies: Vec<String>,
+}
+const QUEUE: &str = "data-controls-cleanup";
+/// Unparseable or non-regular cleanup entries are moved here, never deleted. A sibling of the queue, outside
+/// `data-controls/`, and never listed in a marker (older builds would refuse the key).
+const QUARANTINE: &str = "data-controls-quarantine";
+/// Every marker this build writes fits the 1 MiB that earlier builds read.
+pub(super) const MARKER_LIMIT: usize = 1024 * 1024;
+/// What a cleanup pass, or the queue right now, leaves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CleanupOutcome {
+    /// Nothing is left to do.
+    Clear,
+    /// Nothing is pending; unreadable cleanup records were set aside in `data-controls-quarantine/`.
+    Quarantined,
+    /// A marker is still waiting: it parses but could not finish, or it could not be read or set aside.
+    Pending,
+}
+/// The marker files for one cleanup, each within `MARKER_LIMIT`. A large cleanup splits its attachments, in
+/// order, across several markers for the same operation; recovery copies go in the first only.
+pub(super) fn marker_files(cleanup: &Cleanup) -> Result<Vec<Vec<u8>>> {
+    let whole = serde_json::to_vec(cleanup)?;
+    if whole.len() <= MARKER_LIMIT {
+        return Ok(vec![whole]);
+    }
+    let part = |attachments: &[super::Attachment], first: bool| {
+        serde_json::to_vec(&Cleanup {
+            operation_id: cleanup.operation_id.clone(),
+            whole_journal: cleanup.whole_journal,
+            attachments: attachments.to_vec(),
+            recovery_copies: if first { cleanup.recovery_copies.clone() } else { vec![] },
+        })
+    };
+    let mut files = Vec::new();
+    let mut start = 0;
+    let mut size = part(&[], true)?.len();
+    for (i, a) in cleanup.attachments.iter().enumerate() {
+        // The entry plus its separating comma.
+        let entry = serde_json::to_vec(a)?.len() + 1;
+        if size + entry > MARKER_LIMIT && i > start {
+            files.push(part(&cleanup.attachments[start..i], files.is_empty())?);
+            start = i;
+            size = part(&[], false)?.len();
+        }
+        size += entry;
+    }
+    files.push(part(&cleanup.attachments[start..], files.is_empty())?);
+    if let Some(len) = files.iter().map(Vec::len).find(|len| *len > MARKER_LIMIT) {
+        return Err(over_limit("cleanup marker", len as u64, MARKER_LIMIT as u64, "bytes"));
+    }
+    Ok(files)
+}
+/// Publishes the markers for `operation_id`: each is written to a temporary file in the data root (never in
+/// the queue, where any build would read it as a marker), synced, then moved into the queue without replacing
+/// an existing file. `observe` sees each temporary file before it moves (tests).
+pub(super) fn write_markers(
+    root: &Path,
+    operation_id: &str,
+    files: &[Vec<u8>],
+    observe: &mut dyn FnMut(&Path),
+) -> Result<()> {
+    let queue = root.join(QUEUE);
+    no_symlink_components(&queue)?;
+    private_dir(&queue)?;
+    for (i, bytes) in files.iter().enumerate() {
+        let name = if files.len() == 1 {
+            format!("{operation_id}.json")
+        } else {
+            format!("{operation_id}-{}.json", i + 1)
+        };
+        let mut temp = tempfile::NamedTempFile::new_in(root)?;
+        temp.write_all(bytes)?;
+        observe(temp.path());
+        publish(temp, &queue.join(name))?;
+    }
+    sync_dir(root)
 }
 fn owned_attachments(c: &Connection, id: &str) -> Result<Vec<super::Attachment>> {
     let mut s=c.prepare("SELECT DISTINCT a.id FROM attachments a WHERE a.account_id=?1 OR a.id IN (
@@ -254,7 +337,9 @@ fn execute_durable(
     root: &Path,
     request: DeleteRequest,
 ) -> Result<DeleteResult> {
-    recover_cleanup(c, root)?;
+    if recover_cleanup(c, root)? == CleanupOutcome::Pending {
+        return Err(fail(Code::RecoveryRequired));
+    }
     if root.join("data-controls-pending.json").exists() {
         return Err(fail(Code::RecoveryRequired));
     }
@@ -289,13 +374,8 @@ fn execute_durable(
             vec![]
         },
     };
-    let queue = root.join("data-controls-cleanup");
-    no_symlink_components(&queue)?;
-    private_dir(&queue)?;
-    let marker = queue.join(format!("{operation_id}.json"));
-    write_new(&marker, &serde_json::to_vec(&cleanup)?)?;
-    sync_dir(&queue)?;
-    sync_dir(root)?;
+    // Every marker is published before the commit; until then its files are still owned and nothing is removed.
+    write_markers(root, &operation_id, &marker_files(&cleanup)?, &mut |_| {})?;
     match &request.scope {
         Scope::Account { account_id } => remove_account(c, account_id, &p.attachments)?,
         Scope::Journal => {
@@ -311,7 +391,7 @@ fn execute_durable(
             }
         }
     }
-    let state = if recover_cleanup(c, root).is_ok() {
+    let state = if matches!(recover_cleanup(c, root), Ok(CleanupOutcome::Clear)) {
         "completed"
     } else {
         "cleanup_pending"
@@ -323,69 +403,155 @@ fn execute_durable(
     })
 }
 /// Retry after commit/startup. Never remove bytes if a live DB row still owns the key or id.
-pub fn recover_cleanup(c: &Connection, root: &Path) -> Result<()> {
-    let queue = root.join("data-controls-cleanup");
+///
+/// Every marker is tried, in name order, even after one fails. A marker that parses is never quarantined: if it
+/// cannot finish it stays queued (`Pending`). Unparseable or non-regular entries move to `data-controls-quarantine/`
+/// (`Quarantined`), or stay queued if that move fails. `Err` only when the queue itself cannot be read.
+pub fn recover_cleanup(c: &Connection, root: &Path) -> Result<CleanupOutcome> {
+    let queue = root.join(QUEUE);
     no_symlink_components(&queue)?;
     if !queue.exists() {
+        return Ok(CleanupOutcome::Clear);
+    }
+    let mut files = fs::read_dir(&queue)?
+        .map(|e| e.map(|e| e.path()))
+        .collect::<std::io::Result<Vec<PathBuf>>>()?;
+    files.sort();
+    let (mut pending, mut quarantined) = (false, false);
+    for file in files {
+        match read_marker(&file) {
+            Marker::Parsed(cleanup) => {
+                let done = finish(c, root, &cleanup).and_then(|()| {
+                    fs::remove_file(&file)?;
+                    sync_dir(&queue)
+                });
+                pending |= done.is_err();
+            }
+            Marker::Unparseable => match quarantine_entry(root, &file) {
+                Ok(()) => quarantined = true,
+                Err(_) => pending = true,
+            },
+            Marker::Unavailable => pending = true,
+        }
+    }
+    Ok(if pending {
+        CleanupOutcome::Pending
+    } else if quarantined {
+        CleanupOutcome::Quarantined
+    } else {
+        CleanupOutcome::Clear
+    })
+}
+/// What the queue and the quarantine hold now, without processing anything.
+pub fn cleanup_state(root: &Path) -> CleanupOutcome {
+    let holds = |name: &str| match fs::read_dir(root.join(name)) {
+        Ok(mut entries) => entries.next().is_some(),
+        Err(e) => e.kind() != std::io::ErrorKind::NotFound,
+    };
+    if holds(QUEUE) {
+        CleanupOutcome::Pending
+    } else if holds(QUARANTINE) {
+        CleanupOutcome::Quarantined
+    } else {
+        CleanupOutcome::Clear
+    }
+}
+#[derive(Debug)]
+pub(super) enum Marker {
+    Parsed(Cleanup),
+    /// Bytes that are not a `Cleanup`, or an entry that is not a regular file.
+    Unparseable,
+    /// Could not be read now (locked, or larger than any build writes); left in place.
+    Unavailable,
+}
+pub(super) fn read_marker(file: &Path) -> Marker {
+    // `regular` reports unreadable metadata as MissingAttachment and a confirmed non-regular entry as UnsafePath.
+    // Only the second says anything about the entry; the first may be transient, so the marker stays queued.
+    match regular(file) {
+        Ok(()) => {}
+        Err(e) if e.code == Code::MissingAttachment => return Marker::Unavailable,
+        Err(_) => return Marker::Unparseable,
+    }
+    // Older builds wrote markers of any size, so accept up to the archive total rather than the 1 MiB written now.
+    match fs::metadata(file) {
+        Ok(meta) if meta.len() <= MAX_TOTAL => {}
+        _ => return Marker::Unavailable,
+    }
+    let Ok(input) = fs::File::open(file) else {
+        return Marker::Unavailable;
+    };
+    match serde_json::from_reader(std::io::BufReader::new(input.take(MAX_TOTAL + 1))) {
+        Ok(cleanup) => Marker::Parsed(cleanup),
+        Err(e) if e.is_io() => Marker::Unavailable,
+        Err(_) => Marker::Unparseable,
+    }
+}
+/// Move a queue entry into the quarantine under a new unique name, never replacing anything there.
+fn quarantine_entry(root: &Path, entry: &Path) -> Result<()> {
+    let held = root.join(QUARANTINE);
+    private_dir(&held)?;
+    let name = entry.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let target = held.join(format!("{}-{name}", crate::domain::new_id()));
+    if fs::symlink_metadata(&target).is_ok() {
+        return Err(fail(Code::Io));
+    }
+    fs::rename(entry, &target)?;
+    sync_dir(&held)?;
+    sync_dir(entry.parent().ok_or_else(|| fail(Code::UnsafePath))?)
+}
+fn remove_path(path: &Path) -> Result<()> {
+    no_symlink_components(path)?;
+    if path.is_dir() {
+        fs::remove_dir_all(path)?;
+    } else if path.exists() {
+        fs::remove_file(path)?;
+    } else {
         return Ok(());
     }
-    for e in fs::read_dir(&queue)? {
-        let file = e?.path();
-        regular(&file)?;
-        if fs::metadata(&file)?.len() > 1024 * 1024 {
-            return Err(fail(Code::LimitExceeded));
-        }
-        let cleanup: Cleanup = serde_json::from_slice(&fs::read(&file)?)?;
-        for a in &cleanup.attachments {
-            relative(&a.storage_key)?;
-            let owned = c
-                .prepare("SELECT 1 FROM attachments WHERE id=?1 OR storage_key=?2 LIMIT 1")?
-                .exists(params![a.id, a.storage_key])?;
-            if !owned {
-                let path = root.join("attachments").join(&a.storage_key);
-                no_symlink_components(&path)?;
-                if path.exists() {
-                    regular(&path)?;
-                    fs::remove_file(&path)?;
-                    if let Some(parent) = path.parent() {
-                        sync_dir(parent)?;
-                    }
+    if let Some(parent) = path.parent() {
+        sync_dir(parent)?;
+    }
+    Ok(())
+}
+/// Remove what one marker lists. Bytes a row still owns are never removed.
+fn finish(c: &Connection, root: &Path, cleanup: &Cleanup) -> Result<()> {
+    for a in &cleanup.attachments {
+        relative(&a.storage_key)?;
+        let owned = c
+            .prepare("SELECT 1 FROM attachments WHERE id=?1 OR storage_key=?2 LIMIT 1")?
+            .exists(params![a.id, a.storage_key])?;
+        if !owned {
+            let path = root.join("attachments").join(&a.storage_key);
+            no_symlink_components(&path)?;
+            if path.exists() {
+                regular(&path)?;
+                fs::remove_file(&path)?;
+                if let Some(parent) = path.parent() {
+                    sync_dir(parent)?;
                 }
             }
         }
-        let marker: Option<String> = c
-            .query_row(
-                "SELECT value FROM app_meta WHERE key='data_controls.erase_operation'",
-                [],
-                |r| r.get(0),
-            )
-            .optional()?;
-        if cleanup.whole_journal && marker.as_deref() == Some(&cleanup.operation_id) {
-            for key in &cleanup.recovery_copies {
-                relative(key)?;
-                if !(key == "data-controls-work"
-                    || key.starts_with("data-controls/")
-                    || (key.starts_with("fundedflow.db.before-v") && key.ends_with(".bak")))
-                {
-                    return Err(fail(Code::UnsafePath));
-                }
-                let path = root.join(key);
-                no_symlink_components(&path)?;
-                if path.is_dir() {
-                    fs::remove_dir_all(&path)?;
-                    if let Some(parent) = path.parent() {
-                        sync_dir(parent)?;
-                    }
-                } else if path.exists() {
-                    fs::remove_file(&path)?;
-                    if let Some(parent) = path.parent() {
-                        sync_dir(parent)?;
-                    }
-                }
+    }
+    let marker: Option<String> = c
+        .query_row(
+            "SELECT value FROM app_meta WHERE key='data_controls.erase_operation'",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?;
+    if cleanup.whole_journal && marker.as_deref() == Some(&cleanup.operation_id) {
+        for key in &cleanup.recovery_copies {
+            relative(key)?;
+            if !(key == "data-controls-work"
+                || key.starts_with("data-controls/")
+                || (key.starts_with("fundedflow.db.before-v") && key.ends_with(".bak")))
+            {
+                return Err(fail(Code::UnsafePath));
             }
+            remove_path(&root.join(key))?;
         }
-        fs::remove_file(&file)?;
-        sync_dir(&queue)?;
+        // Never listed in a marker (see QUARANTINE); a whole-journal erase by this build removes it.
+        remove_path(&root.join(QUARANTINE))?;
     }
     Ok(())
 }
