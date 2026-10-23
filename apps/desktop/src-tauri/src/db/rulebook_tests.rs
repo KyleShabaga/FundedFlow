@@ -356,6 +356,10 @@ fn migration_19_retains_old_bindings_but_never_resolves_a_foreign_provider() {
             .remove("risk_promotions")
             .is_some_and(|(_, rows)| rows.is_empty())
     );
+    // Migration 23 (TASK-045) adds the empty frozen-source tables.
+    for table in ["risk_frozen_records", "risk_frozen_spans"] {
+        assert!(after.remove(table).is_some_and(|(_, rows)| rows.is_empty()));
+    }
     assert_eq!(after, before, "no historical binding is rewritten");
     let q = ApplicableRulebookQuery {
         programme_phase_id: id(0x43),

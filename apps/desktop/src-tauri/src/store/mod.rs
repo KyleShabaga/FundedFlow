@@ -9,6 +9,7 @@ pub mod authoring;
 pub mod catalogue;
 pub mod daily_reviews;
 pub mod freshness;
+pub(crate) mod frozen_v1;
 pub mod insights;
 pub mod journal;
 pub mod ledger;
@@ -132,6 +133,9 @@ mod evidence_tests;
 mod engine_snapshot_tests;
 #[cfg(test)]
 mod risk_promotion_tests;
+
+#[cfg(test)]
+pub(crate) mod frozen_v1_tests;
 
 #[cfg(test)]
 mod journal_review_tests;

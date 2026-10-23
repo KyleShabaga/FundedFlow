@@ -2485,7 +2485,9 @@ fn restore_fee_flags(archive: &Path) -> Vec<(String, i64, i64)> {
 fn a_schema_22_archive_carries_fees_recorded_and_restores_it() {
     use crate::store::trades;
     let source = tempfile::tempdir().unwrap();
-    let mut c = journal(&source.path().join("source.db"));
+    // A journal at exactly schema 22 (TASK-045 added 23).
+    let mut c = Connection::open(source.path().join("source.db")).unwrap();
+    db::migrate_with(&mut c, &db::MIGRATIONS[..22]).unwrap();
     let a = account(&mut c, "fees");
     for (symbol, fees) in [
         ("ESZ6", None),
@@ -2571,4 +2573,81 @@ fn a_schema_21_archive_still_inspects_and_restores_with_the_legacy_fee_rule() {
         restore_fee_flags(&out),
         [("ESZ6".into(), 0, 0), ("MNQZ6".into(), 1_240_000, 1)]
     );
+}
+
+// ---------------------------------------------------------------------------
+// TASK-045: schema-23 integrity of the frozen risk sources.
+// ---------------------------------------------------------------------------
+
+/// Runs `sql` on a copy of `source` with `trigger` dropped and then recreated from its own stored SQL (so the
+/// schema still matches), and returns whether `validate_database` accepts the copy.
+fn validates_after(dir: &Path, source: &Path, trigger: &str, sql: &str) -> bool {
+    let copy = dir.join(format!("tampered-{}.db", crate::domain::new_id()));
+    fs::copy(source, &copy).unwrap();
+    {
+        let c = Connection::open(&copy).unwrap();
+        let text: String = c
+            .query_row(
+                "SELECT sql FROM sqlite_schema WHERE type = 'trigger' AND name = ?1",
+                [trigger],
+                |r| r.get(0),
+            )
+            .unwrap();
+        c.execute_batch(&format!("DROP TRIGGER {trigger}; {sql}; {text};"))
+            .unwrap();
+    }
+    archive::validate_database(&copy, db::latest_version()).is_ok()
+}
+
+#[test]
+fn tampered_frozen_spans_records_and_breach_pointers_fail_validation() {
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("compact.db");
+    let (pointer, foreign) = crate::store::frozen_v1_tests::compact_journal(&source);
+    assert!(
+        archive::validate_database(&source, db::latest_version()).is_ok(),
+        "the untampered journal validates"
+    );
+    // A span whose multiplicity changed: the record set the calculation decodes no longer re-proves its hash.
+    assert!(!validates_after(
+        dir.path(),
+        &source,
+        "risk_frozen_span_close_once",
+        "UPDATE risk_frozen_spans SET multiplicity = multiplicity + 1 WHERE rowid = (SELECT min(rowid) FROM risk_frozen_spans WHERE kind = 'trades')",
+    ));
+    // A span that starts a generation later: the list at the calculations' generation loses a record.
+    assert!(!validates_after(
+        dir.path(),
+        &source,
+        "risk_frozen_span_close_once",
+        "UPDATE risk_frozen_spans SET from_generation = from_generation + 1 WHERE rowid = (SELECT min(rowid) FROM risk_frozen_spans WHERE kind = 'observations')",
+    ));
+    // A record moved to another account.
+    assert!(!validates_after(
+        dir.path(),
+        &source,
+        "risk_frozen_record_no_update",
+        "PRAGMA foreign_keys = OFF; UPDATE risk_frozen_records SET account_id = (SELECT account_id FROM account_snapshots WHERE id = '{foreign}') WHERE rowid = (SELECT min(rowid) FROM risk_frozen_records WHERE account_id = (SELECT account_id FROM account_snapshots WHERE id = '{pointer}'))"
+            .replace("{foreign}", &foreign)
+            .replace("{pointer}", &pointer)
+            .as_str(),
+    ));
+    // A record whose content no longer matches its hash.
+    assert!(!validates_after(
+        dir.path(),
+        &source,
+        "risk_frozen_record_no_update",
+        "UPDATE risk_frozen_records SET record_json = '{}' WHERE rowid = (SELECT min(rowid) FROM risk_frozen_records)",
+    ));
+    // Breach pointers to a missing calculation and to another account's calculation.
+    for target in ["00000000-0000-4000-8000-00000000dead", foreign.as_str()] {
+        assert!(!validates_after(
+            dir.path(),
+            &source,
+            "account_snapshot_no_update",
+            &format!(
+                "UPDATE account_snapshots SET explanation_json = json_set(explanation_json, '$.breaches[0][1]', '{target}') WHERE id = '{pointer}'"
+            ),
+        ));
+    }
 }

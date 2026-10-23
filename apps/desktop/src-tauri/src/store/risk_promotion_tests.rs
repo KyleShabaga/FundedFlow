@@ -21,18 +21,18 @@ use crate::rulebook::{AssignmentInput, SourceConflictInput};
 
 const AT: &str = "2026-10-01T00:00:00.000Z";
 const VERSION: &str = "00000000-0000-4000-8000-0000000000a1";
-const RULE: &str = "00000000-0000-4000-8000-0000000000b1";
-const CUTOFF: &str = "2026-10-20T20:00:00.000Z";
+pub(super) const RULE: &str = "00000000-0000-4000-8000-0000000000b1";
+pub(super) const CUTOFF: &str = "2026-10-20T20:00:00.000Z";
 const PROVIDER: &str = "00000000-0000-4000-8000-0000000000c1";
 const BOOK: &str = "00000000-0000-4000-8000-0000000000c2";
-const SOURCE: &str = "00000000-0000-4000-8000-0000000000c3";
+pub(super) const SOURCE: &str = "00000000-0000-4000-8000-0000000000c3";
 
-struct JournalFile(PathBuf);
+pub(super) struct JournalFile(pub(super) PathBuf);
 impl JournalFile {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self(std::env::temp_dir().join(format!("fundedflow-p002-{}", uuid::Uuid::now_v7())))
     }
-    fn open(&self) -> Connection {
+    pub(super) fn open(&self) -> Connection {
         crate::db::open_file(&self.0.join(crate::db::DB_FILE_NAME)).unwrap()
     }
 }
@@ -58,7 +58,7 @@ fn seed_catalogue(c: &Connection) {
     c.execute("INSERT INTO catalogue_sources(id,source_type,descriptor,captured_at,verification_status) VALUES(?1,'official','Synthetic terms page',?2,'draft')", params![SOURCE, AT]).unwrap();
 }
 
-fn observation(account: &str, kind: &str, value: &str, at: &str) -> ObservationInput {
+pub(super) fn observation(account: &str, kind: &str, value: &str, at: &str) -> ObservationInput {
     ObservationInput {
         account_id: account.into(),
         kind: kind.into(),
@@ -89,7 +89,7 @@ fn coverage() -> Coverage {
     }
 }
 
-fn query(account: &str, as_of: &str) -> RiskInputsQuery {
+pub(super) fn query(account: &str, as_of: &str) -> RiskInputsQuery {
     RiskInputsQuery {
         account_id: account.into(),
         as_of: as_of.into(),
@@ -109,19 +109,19 @@ fn movement(account: &str, amount: &str) -> LedgerEntryInput {
 }
 
 /// Ids of the records each mutation family changes.
-struct Ctx {
-    account: String,
-    other: String,
-    trade: String,
-    opening: String,
-    balance: String,
-    ledger: String,
+pub(super) struct Ctx {
+    pub(super) account: String,
+    pub(super) other: String,
+    pub(super) trade: String,
+    pub(super) opening: String,
+    pub(super) balance: String,
+    pub(super) ledger: String,
     review: String,
 }
 
 /// Two accounts on the shared catalogue version; account A also has a trade, checkpoints, a ledger movement and a
 /// reconciliation review, so every family has something to change.
-fn seeded(c: &mut Connection) -> Ctx {
+pub(super) fn seeded(c: &mut Connection) -> Ctx {
     seed_catalogue(c);
     let account = accounts::create(c, account_input("Eval A")).unwrap().id;
     let other = accounts::create(c, account_input("Eval B")).unwrap().id;
@@ -182,16 +182,39 @@ fn seeded(c: &mut Connection) -> Ctx {
     }
 }
 
-fn capture(c: &mut Connection, account: &str, as_of: &str) -> RiskCapture {
+pub(super) fn capture(c: &mut Connection, account: &str, as_of: &str) -> RiskCapture {
     risk_promotion::capture(c, query(account, as_of)).unwrap()
+}
+
+thread_local! {
+    /// TASK-045: when set, `calc` freezes `inputs` and `policy` canonically, as the TypeScript mapper does
+    /// (`snapshot.ts`), so the calculation is stored in the compact `frozen-v1` form. When clear, `inputs` is
+    /// the capture as read (not canonical), which is stored inline.
+    static CANONICAL: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Runs a P0-02 test with canonical (compact) calculations, and checks that some were stored compact.
+fn on_the_compact_path(test: fn()) {
+    CANONICAL.with(|c| c.set(true));
+    let before = super::frozen_v1::compact_writes();
+    test();
+    assert!(
+        super::frozen_v1::compact_writes() > before,
+        "the compact path was exercised"
+    );
+    CANONICAL.with(|c| c.set(false));
 }
 
 /// What the TypeScript engine would hand to native: a calculation of exactly this capture (an Unknown result, or
 /// a Stop that records a breach of the assigned rule), with the same frozen identity and hash rules.
-fn calc(cap: &RiskCapture, breach: bool) -> SnapshotInput {
-    let inputs = cap.inputs.clone();
-    let policy = json!({ "ruleCurrency": null, "ruleCurrencySourceClaimIds": [], "boundary": null, "boundarySourceClaimIds": [],
+pub(super) fn calc(cap: &RiskCapture, breach: bool) -> SnapshotInput {
+    let mut inputs = cap.inputs.clone();
+    let mut policy = json!({ "ruleCurrency": null, "ruleCurrencySourceClaimIds": [], "boundary": null, "boundarySourceClaimIds": [],
         "reconciliationRevisionIds": cap.reconciliation_revision_ids, "personalCautionHeadroom": null, "priorBreaches": cap.prior_breaches });
+    if CANONICAL.with(std::cell::Cell::get) {
+        inputs = serde_json::from_str(&canonical_engine_json(&inputs)).unwrap();
+        policy = serde_json::from_str(&canonical_engine_json(&policy)).unwrap();
+    }
     let engine_version = "fundedflow-risk/1";
     let hash = format!(
         "{:x}",
@@ -238,7 +261,7 @@ fn promote_now(
     risk_promotion::promote(c, calc(&cap, breach))
 }
 
-fn count(c: &Connection, table: &str) -> i64 {
+pub(super) fn count(c: &Connection, table: &str) -> i64 {
     c.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0))
         .unwrap()
 }
@@ -1130,7 +1153,7 @@ fn pin_updated_at(c: &Connection, account: &str) {
     .unwrap();
 }
 
-fn promoted_and_current(c: &mut Connection, account: &str) -> snapshots::Snapshot {
+pub(super) fn promoted_and_current(c: &mut Connection, account: &str) -> snapshots::Snapshot {
     let promoted = promote_now(c, account, CUTOFF, false).unwrap();
     assert_eq!(unchanged(c, account), Some(true));
     promoted
@@ -1233,7 +1256,7 @@ fn a_catalogue_link_change_invalidates_and_a_new_calculation_promotes() {
     assert_eq!(unchanged(&mut c, &ctx.account), Some(true));
 }
 
-fn export_archive(c: &Connection, file: &JournalFile, dest: &std::path::Path) {
+pub(super) fn export_archive(c: &Connection, file: &JournalFile, dest: &std::path::Path) {
     data_controls::export_journal(
         c,
         &file.0,
@@ -1246,7 +1269,11 @@ fn export_archive(c: &Connection, file: &JournalFile, dest: &std::path::Path) {
 }
 
 /// `restore_journal_archive` end to end: prepare under the open connection, close it, install at the next open.
-fn restore_archive(c: Connection, file: &JournalFile, archive: &std::path::Path) -> Connection {
+pub(super) fn restore_archive(
+    c: Connection,
+    file: &JournalFile,
+    archive: &std::path::Path,
+) -> Connection {
     let source: String = archive.to_string_lossy().into();
     let preview = data_controls::inspect_restore(
         &c,
@@ -1313,7 +1340,7 @@ fn a_journal_restore_keeps_a_result_current_only_when_its_sources_are_byte_ident
 }
 
 /// `permanently_delete_data` as the desktop calls it: preview, then delete with the preview's token and phrase.
-fn delete_data(c: &mut Connection, root: &std::path::Path, scope: Value) {
+pub(super) fn delete_data(c: &mut Connection, root: &std::path::Path, scope: Value) {
     let preview = data_controls::preview_deletion(
         c,
         root,
@@ -1513,7 +1540,14 @@ fn every_write_command_is_classified_for_risk_promotion() {
 
 /// Turns a journal this build wrote back into the version-21 schema of `trades`: the only schema change
 /// migration 0022 makes is the `fees_recorded` column. Lets a test use this build's store code "before" 0022.
-fn without_fees_recorded(c: &Connection, version: u32) {
+pub(super) fn without_fees_recorded(c: &Connection, version: u32) {
+    // TASK-045: a journal before version 23 has no frozen-source tables and stores calculations inline.
+    if c.query_row("PRAGMA user_version", [], |r| r.get::<_, u32>(0))
+        .unwrap()
+        >= 23
+    {
+        super::frozen_v1_tests::before_migration_23(c);
+    }
     c.execute_batch("ALTER TABLE trades DROP COLUMN fees_recorded")
         .unwrap();
     c.pragma_update(None, "user_version", version).unwrap();
@@ -1585,4 +1619,38 @@ fn a_calculation_promoted_before_migration_22_stays_current_after_it() {
         (current.snapshot.map(|s| s.id), current.sources_unchanged),
         (Some(id), Some(true))
     );
+}
+
+// ---------------------------------------------------------------------------
+// TASK-045: the P0-02 matrix again, with canonical calculations stored in the compact `frozen-v1` form. Every
+// outcome must be identical to the inline (non-canonical) runs above.
+// ---------------------------------------------------------------------------
+
+macro_rules! compact_twins {
+    ($($twin:ident => $test:ident),* $(,)?) => {
+        $(#[test]
+        fn $twin() {
+            on_the_compact_path($test);
+        })*
+    };
+}
+
+compact_twins! {
+    compact_unchanged_sources_promote_and_stay_current => unchanged_sources_promote_and_the_result_stays_current_after_reopen,
+    compact_capture_is_one_database_state => capture_is_one_database_state_while_another_connection_writes_between_its_reads,
+    compact_mutation_matrix => each_mutation_family_after_capture_rejects_promotion_and_invalidates_the_current_result,
+    compact_non_risk_records_do_not_invalidate => non_risk_records_and_failed_writes_do_not_invalidate,
+    compact_no_write_between_comparison_and_commit => a_source_write_cannot_land_between_the_comparison_and_the_commit,
+    compact_failed_promotion_rolls_back => a_failed_promotion_rolls_back_the_calculation_and_the_promotion,
+    compact_older_cutoff_cannot_displace => an_older_calculation_cannot_displace_a_newer_cutoff_on_the_same_sources,
+    compact_stale_read_cannot_replace_a_stop => a_calculation_read_before_a_new_stop_cannot_replace_it,
+    compact_reversed_changes_count => changes_that_are_reversed_still_count_as_new_history,
+    compact_history_saves_and_eod_idempotence => history_saves_never_become_current_and_eod_rows_stay_idempotent,
+    compact_archived_accounts => archived_accounts_keep_their_current_result_readable_but_promote_nothing,
+    compact_archive_and_restore_account => archive_and_restore_account_driven_directly_invalidate_and_a_new_calculation_promotes,
+    compact_attempt_reset => an_attempt_reset_invalidates_the_predecessor_and_both_attempts_promote_afresh,
+    compact_catalogue_link_change => a_catalogue_link_change_invalidates_and_a_new_calculation_promotes,
+    compact_journal_restore => a_journal_restore_keeps_a_result_current_only_when_its_sources_are_byte_identical,
+    compact_account_deletion => permanently_deleting_an_account_removes_its_results_and_leaves_others_current,
+    compact_whole_journal_erase => erasing_the_whole_journal_removes_every_result_and_a_new_journal_promotes,
 }

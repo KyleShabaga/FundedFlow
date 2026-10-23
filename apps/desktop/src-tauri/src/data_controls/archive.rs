@@ -747,6 +747,11 @@ pub fn validate_database(path: &Path, version: u32) -> Result<()> {
     }
     if version >= 18 && c.prepare("SELECT 1 FROM daily_review_trades l JOIN daily_reviews r ON r.id=l.daily_review_id JOIN trades t ON t.id=l.trade_id WHERE r.account_id<>t.account_id LIMIT 1")?.exists([])? {
         return Err(fail(Code::Integrity));}
+    // TASK-045: frozen records match their hashes, and every compact calculation's generation, records and
+    // breach pointers resolve within its own account and still re-prove its inputs hash.
+    if version >= 23 && !crate::store::frozen_v1::verify(&c).map_err(|_| fail(Code::Integrity))? {
+        return Err(fail(Code::Integrity));
+    }
     // Cross-account provenance which FK checks alone cannot establish.
     for sql in [
         "SELECT 1 FROM trades t JOIN import_batches b ON b.id=t.import_batch_id WHERE t.account_id<>b.account_id LIMIT 1",
