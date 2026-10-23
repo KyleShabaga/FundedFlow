@@ -3,13 +3,17 @@
 
 use rusqlite::Connection;
 
-use super::authoring::{self, ClaimInput, DraftInput, OfferInput, PathInput, PhaseInput, PhaseRef, SourceInput};
+use super::authoring::{
+    self, ClaimInput, DraftInput, OfferInput, PathInput, PhaseInput, PhaseRef, SourceInput,
+};
 use super::catalogue::{self, AccountLinkInput};
 use super::offers::{self, OfferSelectionInput};
 use super::tests::account_input;
 use super::{accounts, trades};
-use crate::catalogue::{AccountFieldSource, BillingModel, ClaimOrigin, PathStatus, PhaseKey, SourceType};
-use crate::db::{catalogue_tests_seeded, migrate_with, MIGRATIONS};
+use crate::catalogue::{
+    AccountFieldSource, BillingModel, ClaimOrigin, PathStatus, PhaseKey, SourceType,
+};
+use crate::db::{MIGRATIONS, catalogue_tests_seeded, migrate_with};
 use crate::error::AppError;
 
 fn id(n: u32) -> String {
@@ -64,7 +68,11 @@ fn draft(variant: &str, source_id: &str) -> DraftInput {
             }],
         }],
         offers: vec![OfferInput {
-            phase: Some(PhaseRef { phase_key: PhaseKey::Evaluation, provider_label: "Phase 1".into(), path_key: Some("standard".into()) }),
+            phase: Some(PhaseRef {
+                phase_key: PhaseKey::Evaluation,
+                provider_label: "Phase 1".into(),
+                path_key: Some("standard".into()),
+            }),
             billing_model: BillingModel::OneTime,
             currency: Some("USD".into()),
             list_price: Some("150".into()),
@@ -79,7 +87,12 @@ fn draft(variant: &str, source_id: &str) -> DraftInput {
 }
 
 fn status(conn: &Connection, version: &str) -> String {
-    conn.query_row("SELECT verification_status FROM catalogue_versions WHERE id = ?1", [version], |r| r.get(0)).unwrap()
+    conn.query_row(
+        "SELECT verification_status FROM catalogue_versions WHERE id = ?1",
+        [version],
+        |r| r.get(0),
+    )
+    .unwrap()
 }
 
 fn validation_fields(e: AppError) -> Vec<String> {
@@ -95,18 +108,50 @@ fn validation_fields(e: AppError) -> Vec<String> {
 fn a_draft_version_is_authored_with_sources_claims_phases_paths_and_offers() {
     let mut conn = catalogue_tests_seeded();
     let src = authoring::create_source(&mut conn, source()).unwrap();
-    assert_eq!(src.verification_status, crate::catalogue::VerificationStatus::Draft);
+    assert_eq!(
+        src.verification_status,
+        crate::catalogue::VerificationStatus::Draft
+    );
     let v = authoring::create_draft(&mut conn, draft(&id(0x22), &src.id)).unwrap();
-    assert_eq!((v.version_number, v.source_ids.clone(), v.claims.len()), (2, vec![src.id.clone()], 1), "next version of the variant");
+    assert_eq!(
+        (v.version_number, v.source_ids.clone(), v.claims.len()),
+        (2, vec![src.id.clone()], 1),
+        "next version of the variant"
+    );
     assert_eq!(status(&conn, &v.id), "draft");
 
     let g = catalogue::load(&conn).unwrap().graph;
-    let phase = g.programme_phases.iter().find(|p| p.catalogue_version_id == v.id).unwrap();
-    let path = g.phase_paths.iter().find(|p| p.programme_phase_id == phase.id).unwrap();
-    let offer = g.commercial_offers.iter().find(|o| o.catalogue_version_id == v.id).unwrap();
-    assert_eq!((offer.programme_phase_id.as_deref(), offer.phase_path_id.as_deref()), (Some(phase.id.as_str()), Some(path.id.as_str())));
+    let phase = g
+        .programme_phases
+        .iter()
+        .find(|p| p.catalogue_version_id == v.id)
+        .unwrap();
+    let path = g
+        .phase_paths
+        .iter()
+        .find(|p| p.programme_phase_id == phase.id)
+        .unwrap();
+    let offer = g
+        .commercial_offers
+        .iter()
+        .find(|o| o.catalogue_version_id == v.id)
+        .unwrap();
+    assert_eq!(
+        (
+            offer.programme_phase_id.as_deref(),
+            offer.phase_path_id.as_deref()
+        ),
+        (Some(phase.id.as_str()), Some(path.id.as_str()))
+    );
     // Known free is "0"; unknown stays absent.
-    assert_eq!((offer.sale_price.as_deref(), offer.list_price.as_deref(), offer.reset_fee.clone()), (Some("0"), Some("150"), None));
+    assert_eq!(
+        (
+            offer.sale_price.as_deref(),
+            offer.list_price.as_deref(),
+            offer.reset_fee.clone()
+        ),
+        (Some("0"), Some("150"), None)
+    );
     assert_eq!(offer.source_ids, std::slice::from_ref(&src.id));
 }
 
@@ -125,29 +170,53 @@ fn authoring_validates_and_a_failure_part_way_changes_nothing() {
     bad.claims[0].field = " ".into();
     assert_eq!(
         validation_fields(authoring::create_draft(&mut conn, bad).unwrap_err()),
-        ["capturedAt", "supersedesVersionId", "claims[0].field", "offers[0].salePrice", "offers[0].currency"]
+        [
+            "capturedAt",
+            "supersedesVersionId",
+            "claims[0].field",
+            "offers[0].salePrice",
+            "offers[0].currency"
+        ]
     );
     let mut no_reason = draft(&id(0x22), &src.id);
     no_reason.supersedes_version_id = Some(id(0x32));
-    assert_eq!(validation_fields(authoring::create_draft(&mut conn, no_reason).unwrap_err()), ["correctionReason"]);
+    assert_eq!(
+        validation_fields(authoring::create_draft(&mut conn, no_reason).unwrap_err()),
+        ["correctionReason"]
+    );
     let unknown_variant = draft("nope", &src.id);
-    assert!(matches!(authoring::create_draft(&mut conn, unknown_variant), Err(AppError::Validation { .. })));
+    assert!(matches!(
+        authoring::create_draft(&mut conn, unknown_variant),
+        Err(AppError::Validation { .. })
+    ));
     // A correction must supersede a version of the same variant.
     let mut cross = draft(&id(0x22), &src.id);
     cross.supersedes_version_id = Some(id(0x31));
     cross.correction_reason = Some("fix".into());
-    assert!(matches!(authoring::create_draft(&mut conn, cross), Err(AppError::Validation { .. })));
+    assert!(matches!(
+        authoring::create_draft(&mut conn, cross),
+        Err(AppError::Validation { .. })
+    ));
 
     // Fails after the version and phases were written: an offer naming a phase the version lacks.
     let mut late = draft(&id(0x22), &src.id);
     late.offers[0].phase.as_mut().unwrap().provider_label = "Phase 9".into();
-    assert!(matches!(authoring::create_draft(&mut conn, late), Err(AppError::Validation { .. })));
+    assert!(matches!(
+        authoring::create_draft(&mut conn, late),
+        Err(AppError::Validation { .. })
+    ));
     let mut unknown_source = draft(&id(0x22), &src.id);
     unknown_source.source_ids = vec!["no-such-source".into()];
     assert!(authoring::create_draft(&mut conn, unknown_source).is_err());
 
-    assert_eq!(count(&conn, "SELECT COUNT(*) FROM catalogue_versions"), versions);
-    assert_eq!(count(&conn, "SELECT COUNT(*) FROM programme_phases"), phases);
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM catalogue_versions"),
+        versions
+    );
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM programme_phases"),
+        phases
+    );
 }
 
 #[test]
@@ -162,20 +231,57 @@ fn only_a_draft_can_be_replaced() {
     edit.phases[0].paths.clear();
     edit.offers[0].phase.as_mut().unwrap().path_key = None;
     let after = authoring::replace_draft(&mut conn, &v.id, edit).unwrap();
-    assert_eq!((after.id.as_str(), after.revision_label.as_deref(), after.version_number), (v.id.as_str(), Some("Nov pricing"), 2));
+    assert_eq!(
+        (
+            after.id.as_str(),
+            after.revision_label.as_deref(),
+            after.version_number
+        ),
+        (v.id.as_str(), Some("Nov pricing"), 2)
+    );
     let g = catalogue::load(&conn).unwrap().graph;
-    assert_eq!(g.commercial_offers.iter().find(|o| o.catalogue_version_id == v.id).unwrap().sale_price.as_deref(), Some("99"));
-    assert_eq!(count(&conn, &format!("SELECT COUNT(*) FROM phase_paths WHERE programme_phase_id IN (SELECT id FROM programme_phases WHERE catalogue_version_id = '{}')", v.id)), 0);
+    assert_eq!(
+        g.commercial_offers
+            .iter()
+            .find(|o| o.catalogue_version_id == v.id)
+            .unwrap()
+            .sale_price
+            .as_deref(),
+        Some("99")
+    );
+    assert_eq!(
+        count(
+            &conn,
+            &format!(
+                "SELECT COUNT(*) FROM phase_paths WHERE programme_phase_id IN (SELECT id FROM programme_phases WHERE catalogue_version_id = '{}')",
+                v.id
+            )
+        ),
+        0
+    );
 
     // Another variant is refused, and a version in review or reviewed cannot be edited at all.
-    assert!(matches!(authoring::replace_draft(&mut conn, &v.id, draft(&id(0x21), &src.id)), Err(AppError::Validation { .. })));
-    assert!(matches!(authoring::replace_draft(&mut conn, &id(0x31), draft(&id(0x21), &src.id)), Err(AppError::Validation { .. })), "needs_review");
+    assert!(matches!(
+        authoring::replace_draft(&mut conn, &v.id, draft(&id(0x21), &src.id)),
+        Err(AppError::Validation { .. })
+    ));
+    assert!(
+        matches!(
+            authoring::replace_draft(&mut conn, &id(0x31), draft(&id(0x21), &src.id)),
+            Err(AppError::Validation { .. })
+        ),
+        "needs_review"
+    );
     catalogue::transition_version(&mut conn, &v.id, "needs_review", None).unwrap();
-    let in_review = authoring::replace_draft(&mut conn, &v.id, draft(&id(0x22), &src.id)).unwrap_err();
+    let in_review =
+        authoring::replace_draft(&mut conn, &v.id, draft(&id(0x22), &src.id)).unwrap_err();
     assert!(in_review.to_string().contains("superseding"), "{in_review}");
     catalogue::transition_version(&mut conn, &v.id, "verified", Some("Kyle")).unwrap();
     assert!(authoring::replace_draft(&mut conn, &v.id, draft(&id(0x22), &src.id)).is_err());
-    assert!(matches!(authoring::replace_draft(&mut conn, "nope", draft(&id(0x22), &src.id)), Err(AppError::NotFound { .. })));
+    assert!(matches!(
+        authoring::replace_draft(&mut conn, "nope", draft(&id(0x22), &src.id)),
+        Err(AppError::NotFound { .. })
+    ));
 }
 
 #[test]
@@ -188,42 +294,94 @@ fn a_correction_is_a_superseding_version_and_the_original_never_changes() {
 
     // Verified content is frozen, at the schema and through the commands.
     for sql in [
-        format!("UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{}'", original.id),
-        format!("UPDATE commercial_offers SET sale_price_micros = 1 WHERE catalogue_version_id = '{}'", original.id),
-        format!("DELETE FROM programme_phases WHERE catalogue_version_id = '{}'", original.id),
-        format!("DELETE FROM catalogue_versions WHERE id = '{}'", original.id),
+        format!(
+            "UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{}'",
+            original.id
+        ),
+        format!(
+            "UPDATE commercial_offers SET sale_price_micros = 1 WHERE catalogue_version_id = '{}'",
+            original.id
+        ),
+        format!(
+            "DELETE FROM programme_phases WHERE catalogue_version_id = '{}'",
+            original.id
+        ),
+        format!(
+            "DELETE FROM catalogue_versions WHERE id = '{}'",
+            original.id
+        ),
     ] {
         assert!(conn.execute(&sql, []).is_err(), "{sql} must be refused");
     }
-    assert!(matches!(catalogue::transition_version(&mut conn, &original.id, "draft", None), Err(AppError::Conflict { .. })));
+    assert!(matches!(
+        catalogue::transition_version(&mut conn, &original.id, "draft", None),
+        Err(AppError::Conflict { .. })
+    ));
 
     let mut fix = draft(&id(0x22), &src.id);
     fix.supersedes_version_id = Some(original.id.clone());
     fix.correction_reason = Some("sale price was a typo".into());
     fix.offers[0].sale_price = Some("10".into());
     let correction = authoring::create_draft(&mut conn, fix).unwrap();
-    assert_eq!((correction.version_number, correction.supersedes_version_id.as_deref()), (3, Some(original.id.as_str())));
+    assert_eq!(
+        (
+            correction.version_number,
+            correction.supersedes_version_id.as_deref()
+        ),
+        (3, Some(original.id.as_str()))
+    );
 
     // The original is retired only once its correction is verified.
     let early = catalogue::transition_version(&mut conn, &original.id, "superseded", None);
-    assert!(matches!(early, Err(AppError::Validation { .. })), "{early:?}");
+    assert!(
+        matches!(early, Err(AppError::Validation { .. })),
+        "{early:?}"
+    );
     catalogue::transition_version(&mut conn, &correction.id, "needs_review", None).unwrap();
     catalogue::transition_version(&mut conn, &correction.id, "verified", Some("Kyle")).unwrap();
     catalogue::transition_version(&mut conn, &original.id, "superseded", None).unwrap();
     assert_eq!(status(&conn, &original.id), "superseded");
     let g = catalogue::load(&conn).unwrap().graph;
-    let old_offer = g.commercial_offers.iter().find(|o| o.catalogue_version_id == original.id).unwrap();
-    assert_eq!(old_offer.sale_price.as_deref(), Some("0"), "the original's terms are untouched");
+    let old_offer = g
+        .commercial_offers
+        .iter()
+        .find(|o| o.catalogue_version_id == original.id)
+        .unwrap();
+    assert_eq!(
+        old_offer.sale_price.as_deref(),
+        Some("0"),
+        "the original's terms are untouched"
+    );
 }
 
 #[test]
 fn sources_validate_and_are_never_edited() {
     let mut conn = catalogue_tests_seeded();
-    let no_origin = SourceInput { url: None, descriptor: None, ..source() };
-    assert_eq!(validation_fields(authoring::create_source(&mut conn, no_origin).unwrap_err()), ["descriptor"]);
-    let bad = SourceInput { url: Some("ftp://x".into()), content_hash: Some("sha256:XYZ".into()), effective_from: Some("2026-10-02T00:00:00Z".into()), effective_to: Some("2026-10-01T00:00:00Z".into()), ..source() };
-    assert_eq!(validation_fields(authoring::create_source(&mut conn, bad).unwrap_err()), ["url", "effectiveTo", "contentHash"]);
-    let only_descriptor = SourceInput { url: None, descriptor: Some("Discord announcement".into()), ..source() };
+    let no_origin = SourceInput {
+        url: None,
+        descriptor: None,
+        ..source()
+    };
+    assert_eq!(
+        validation_fields(authoring::create_source(&mut conn, no_origin).unwrap_err()),
+        ["descriptor"]
+    );
+    let bad = SourceInput {
+        url: Some("ftp://x".into()),
+        content_hash: Some("sha256:XYZ".into()),
+        effective_from: Some("2026-10-02T00:00:00Z".into()),
+        effective_to: Some("2026-10-01T00:00:00Z".into()),
+        ..source()
+    };
+    assert_eq!(
+        validation_fields(authoring::create_source(&mut conn, bad).unwrap_err()),
+        ["url", "effectiveTo", "contentHash"]
+    );
+    let only_descriptor = SourceInput {
+        url: None,
+        descriptor: Some("Discord announcement".into()),
+        ..source()
+    };
     assert!(authoring::create_source(&mut conn, only_descriptor).is_ok());
 }
 
@@ -231,13 +389,42 @@ fn sources_validate_and_are_never_edited() {
 fn captured_source_facts_are_immutable_even_when_written_through_sql() {
     let mut conn = catalogue_tests_seeded();
     let captured = authoring::create_source(&mut conn, source()).unwrap();
-    assert!(conn.execute("UPDATE catalogue_sources SET url = 'https://rewritten.example/' WHERE id = ?1", [&captured.id]).is_err());
-    assert!(conn.execute("UPDATE catalogue_sources SET captured_at = '2026-10-01T00:00:00.000Z' WHERE id = ?1", [&captured.id]).is_err());
-    let after = catalogue::load(&conn).unwrap().sources.into_iter().find(|s| s.id == captured.id).unwrap();
+    assert!(
+        conn.execute(
+            "UPDATE catalogue_sources SET url = 'https://rewritten.example/' WHERE id = ?1",
+            [&captured.id]
+        )
+        .is_err()
+    );
+    assert!(
+        conn.execute(
+            "UPDATE catalogue_sources SET captured_at = '2026-10-01T00:00:00.000Z' WHERE id = ?1",
+            [&captured.id]
+        )
+        .is_err()
+    );
+    let after = catalogue::load(&conn)
+        .unwrap()
+        .sources
+        .into_iter()
+        .find(|s| s.id == captured.id)
+        .unwrap();
     assert_eq!(after, captured);
-    conn.execute("UPDATE catalogue_sources SET verification_status = 'needs_review' WHERE id = ?1", [&captured.id]).unwrap();
-    assert_eq!(catalogue::load(&conn).unwrap().sources.into_iter().find(|s| s.id == captured.id).unwrap().verification_status,
-        crate::catalogue::VerificationStatus::NeedsReview);
+    conn.execute(
+        "UPDATE catalogue_sources SET verification_status = 'needs_review' WHERE id = ?1",
+        [&captured.id],
+    )
+    .unwrap();
+    assert_eq!(
+        catalogue::load(&conn)
+            .unwrap()
+            .sources
+            .into_iter()
+            .find(|s| s.id == captured.id)
+            .unwrap()
+            .verification_status,
+        crate::catalogue::VerificationStatus::NeedsReview
+    );
 }
 
 #[test]
@@ -246,16 +433,34 @@ fn source_guard_migration_failure_keeps_the_prior_schema_and_facts() {
     migrate_with(&mut conn, &MIGRATIONS[..19]).unwrap();
     let captured = authoring::create_source(&mut conn, source()).unwrap();
     conn.execute_batch("CREATE TRIGGER trg_catalogue_source_facts_immutable BEFORE UPDATE ON catalogue_sources BEGIN SELECT 1; END;").unwrap();
-    assert!(matches!(crate::db::migrate(&mut conn), Err(crate::db::MigrateError::Migration { version: 20, reached: 19, .. })));
-    let version: u32 = conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
+    assert!(matches!(
+        crate::db::migrate(&mut conn),
+        Err(crate::db::MigrateError::Migration {
+            version: 20,
+            reached: 19,
+            ..
+        })
+    ));
+    let version: u32 = conn
+        .pragma_query_value(None, "user_version", |r| r.get(0))
+        .unwrap();
     assert_eq!(version, 19);
-    assert_eq!(catalogue::load(&conn).unwrap().sources.into_iter().find(|s| s.id == captured.id).unwrap(), captured);
+    assert_eq!(
+        catalogue::load(&conn)
+            .unwrap()
+            .sources
+            .into_iter()
+            .find(|s| s.id == captured.id)
+            .unwrap(),
+        captured
+    );
 }
 
 // --- 9.1 populated upgrade ---------------------------------------------------
 
 #[test]
-fn a_populated_v7_journal_reads_through_the_production_loader_after_upgrading_to_the_latest_schema() {
+fn a_populated_v7_journal_reads_through_the_production_loader_after_upgrading_to_the_latest_schema()
+{
     let mut conn = Connection::open_in_memory().unwrap();
     migrate_with(&mut conn, &MIGRATIONS[..7]).unwrap();
     let (_, fixture) = crate::parity::catalogue_fixture();
@@ -264,7 +469,10 @@ fn a_populated_v7_journal_reads_through_the_production_loader_after_upgrading_to
 
     migrate_with(&mut conn, MIGRATIONS).unwrap();
     let loaded = catalogue::load(&conn).unwrap();
-    assert_eq!(loaded.graph, fixture.graph, "every catalogue record survives the upgrade and reads back identically");
+    assert_eq!(
+        loaded.graph, fixture.graph,
+        "every catalogue record survives the upgrade and reads back identically"
+    );
     assert_eq!(loaded.sources, fixture.sources);
     assert_eq!(count(&conn, "SELECT COUNT(*) FROM trades"), before_trades);
 }
@@ -276,11 +484,17 @@ fn selecting_a_version_and_recording_phases_never_rewrites_history_or_trades() {
     let mut conn = catalogue_tests_seeded();
     // A legacy account with no catalogue link stays usable.
     let legacy = accounts::create(&mut conn, account_input("Legacy")).unwrap();
-    assert_eq!(catalogue::get_link(&conn, &legacy.id).unwrap().catalogue_version_id, None);
+    assert_eq!(
+        catalogue::get_link(&conn, &legacy.id)
+            .unwrap()
+            .catalogue_version_id,
+        None
+    );
     trades::create(&mut conn, super::tests::trade_input(&legacy.id)).unwrap();
     let before_trades = format!("{:?}", trades::list(&conn, &legacy.id).unwrap());
 
-    let first = catalogue::record_phase_event(&mut conn, phase_event(&legacy.id, "Phase 1")).unwrap();
+    let first =
+        catalogue::record_phase_event(&mut conn, phase_event(&legacy.id, "Phase 1")).unwrap();
     catalogue::set_link(
         &mut conn,
         AccountLinkInput {
@@ -306,7 +520,10 @@ fn selecting_a_version_and_recording_phases_never_rewrites_history_or_trades() {
     .unwrap();
     let events = catalogue::list_phase_events(&conn, &legacy.id).unwrap();
     assert_eq!(events, std::slice::from_ref(&first));
-    assert_eq!(format!("{:?}", trades::list(&conn, &legacy.id).unwrap()), before_trades);
+    assert_eq!(
+        format!("{:?}", trades::list(&conn, &legacy.id).unwrap()),
+        before_trades
+    );
 }
 
 fn phase_event(account_id: &str, label: &str) -> catalogue::PhaseEventInput {
@@ -357,54 +574,157 @@ fn selection(account: &str, offer: u32, promotion: Option<u32>, at: &str) -> Off
 fn an_offer_selection_freezes_the_terms_and_provenance_it_was_recorded_with() {
     let mut conn = catalogue_tests_seeded();
     let account = linked_account(&mut conn);
-    let sel = offers::select(&mut conn, selection(&account, 0x61, Some(0x71), "2026-10-20T12:00:00Z")).unwrap();
-    assert_eq!((sel.catalogue_version_id.as_str(), sel.note.as_deref()), (id(0x31).as_str(), Some("bought on the 20th")));
+    let sel = offers::select(
+        &mut conn,
+        selection(&account, 0x61, Some(0x71), "2026-10-20T12:00:00Z"),
+    )
+    .unwrap();
+    assert_eq!(
+        (sel.catalogue_version_id.as_str(), sel.note.as_deref()),
+        (id(0x31).as_str(), Some("bought on the 20th"))
+    );
     assert_eq!(sel.terms["offer"]["salePrice"], "105.2");
-    assert_eq!(sel.terms["offer"]["activationFee"], serde_json::Value::Null, "unknown stays null, not 0");
+    assert_eq!(
+        sel.terms["offer"]["activationFee"],
+        serde_json::Value::Null,
+        "unknown stays null, not 0"
+    );
     assert_eq!(sel.terms["promotion"]["code"], conn_code(&conn));
-    assert!(sel.terms["sources"].as_array().is_some_and(|s| !s.is_empty()));
-    assert_eq!(sel.terms["catalogueVersion"]["verificationStatus"], "needs_review");
+    assert!(
+        sel.terms["sources"]
+            .as_array()
+            .is_some_and(|s| !s.is_empty())
+    );
+    assert_eq!(
+        sel.terms["catalogueVersion"]["verificationStatus"],
+        "needs_review"
+    );
 
     // Editing the (unreviewed) offer afterwards, or the promotion, cannot change what was recorded.
-    conn.execute("UPDATE commercial_offers SET sale_price_micros = 1, list_price_micros = 2 WHERE id = ?1", [id(0x61)]).unwrap();
-    conn.execute("UPDATE promotions SET code = 'CHANGED' WHERE id = ?1", [id(0x71)]).unwrap();
+    conn.execute(
+        "UPDATE commercial_offers SET sale_price_micros = 1, list_price_micros = 2 WHERE id = ?1",
+        [id(0x61)],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE promotions SET code = 'CHANGED' WHERE id = ?1",
+        [id(0x71)],
+    )
+    .unwrap();
     let again = offers::list(&conn, &account).unwrap();
     assert_eq!(again, std::slice::from_ref(&sel));
     // The referenced offer and version cannot be deleted from under it, and the record is append-only.
-    assert!(conn.execute("DELETE FROM commercial_offers WHERE id = ?1", [id(0x61)]).is_err());
-    assert!(conn.execute("DELETE FROM catalogue_versions WHERE id = ?1", [id(0x31)]).is_err());
-    assert!(conn.execute("UPDATE account_offer_selections SET note = 'x'", []).is_err());
-    assert!(conn.execute("DELETE FROM account_offer_selections", []).is_err());
+    assert!(
+        conn.execute("DELETE FROM commercial_offers WHERE id = ?1", [id(0x61)])
+            .is_err()
+    );
+    assert!(
+        conn.execute("DELETE FROM catalogue_versions WHERE id = ?1", [id(0x31)])
+            .is_err()
+    );
+    assert!(
+        conn.execute("UPDATE account_offer_selections SET note = 'x'", [])
+            .is_err()
+    );
+    assert!(
+        conn.execute("DELETE FROM account_offer_selections", [])
+            .is_err()
+    );
 }
 
 fn conn_code(conn: &Connection) -> String {
-    conn.query_row("SELECT code FROM promotions WHERE id = ?1", [id(0x71)], |r| r.get::<_, Option<String>>(0)).unwrap().unwrap_or_default()
+    conn.query_row(
+        "SELECT code FROM promotions WHERE id = ?1",
+        [id(0x71)],
+        |r| r.get::<_, Option<String>>(0),
+    )
+    .unwrap()
+    .unwrap_or_default()
 }
 
 #[test]
 fn an_offer_must_match_the_accounts_selection_and_a_promotion_must_apply_and_be_valid() {
     let mut conn = catalogue_tests_seeded();
     let bare = accounts::create(&mut conn, account_input("No catalogue")).unwrap();
-    assert!(matches!(offers::select(&mut conn, selection(&bare.id, 0x61, None, "2026-10-20T12:00:00Z")), Err(AppError::Validation { .. })), "no version selected");
+    assert!(
+        matches!(
+            offers::select(
+                &mut conn,
+                selection(&bare.id, 0x61, None, "2026-10-20T12:00:00Z")
+            ),
+            Err(AppError::Validation { .. })
+        ),
+        "no version selected"
+    );
 
     let account = linked_account(&mut conn);
-    let rejects = |conn: &mut Connection, input: OfferSelectionInput| match offers::select(conn, input) {
-        Err(AppError::Validation { issues, .. }) => issues[0].field.clone(),
-        other => panic!("expected validation error, got {other:?}"),
-    };
-    assert_eq!(rejects(&mut conn, selection(&account, 0x63, None, "2026-10-20T12:00:00Z")), "commercialOfferId", "an offer of another version");
-    assert_eq!(rejects(&mut conn, selection(&account, 0x99, None, "2026-10-20T12:00:00Z")), "commercialOfferId");
-    assert_eq!(rejects(&mut conn, selection(&account, 0x62, Some(0x71), "2026-10-20T12:00:00Z")), "promotionId", "promotion not linked to this offer");
-    assert_eq!(rejects(&mut conn, selection(&account, 0x61, Some(0x99), "2026-10-20T12:00:00Z")), "promotionId");
-    assert_eq!(rejects(&mut conn, selection(&account, 0x61, Some(0x71), "2027-01-02T00:00:00Z")), "promotionId", "after the promotion ended");
-    assert_eq!(rejects(&mut conn, selection(&account, 0x61, None, "tomorrow")), "selectedAt");
-    assert!(offers::list(&conn, &account).unwrap().is_empty(), "nothing was recorded");
+    let rejects =
+        |conn: &mut Connection, input: OfferSelectionInput| match offers::select(conn, input) {
+            Err(AppError::Validation { issues, .. }) => issues[0].field.clone(),
+            other => panic!("expected validation error, got {other:?}"),
+        };
+    assert_eq!(
+        rejects(
+            &mut conn,
+            selection(&account, 0x63, None, "2026-10-20T12:00:00Z")
+        ),
+        "commercialOfferId",
+        "an offer of another version"
+    );
+    assert_eq!(
+        rejects(
+            &mut conn,
+            selection(&account, 0x99, None, "2026-10-20T12:00:00Z")
+        ),
+        "commercialOfferId"
+    );
+    assert_eq!(
+        rejects(
+            &mut conn,
+            selection(&account, 0x62, Some(0x71), "2026-10-20T12:00:00Z")
+        ),
+        "promotionId",
+        "promotion not linked to this offer"
+    );
+    assert_eq!(
+        rejects(
+            &mut conn,
+            selection(&account, 0x61, Some(0x99), "2026-10-20T12:00:00Z")
+        ),
+        "promotionId"
+    );
+    assert_eq!(
+        rejects(
+            &mut conn,
+            selection(&account, 0x61, Some(0x71), "2027-01-02T00:00:00Z")
+        ),
+        "promotionId",
+        "after the promotion ended"
+    );
+    assert_eq!(
+        rejects(&mut conn, selection(&account, 0x61, None, "tomorrow")),
+        "selectedAt"
+    );
+    assert!(
+        offers::list(&conn, &account).unwrap().is_empty(),
+        "nothing was recorded"
+    );
 
     // Archived accounts stay readable but not writable.
-    offers::select(&mut conn, selection(&account, 0x62, None, "2026-10-20T12:00:00Z")).unwrap();
+    offers::select(
+        &mut conn,
+        selection(&account, 0x62, None, "2026-10-20T12:00:00Z"),
+    )
+    .unwrap();
     accounts::archive(&mut conn, &account).unwrap();
     assert_eq!(offers::list(&conn, &account).unwrap().len(), 1);
-    assert!(matches!(offers::select(&mut conn, selection(&account, 0x61, None, "2026-10-20T12:00:00Z")), Err(AppError::NotFound { .. })));
+    assert!(matches!(
+        offers::select(
+            &mut conn,
+            selection(&account, 0x61, None, "2026-10-20T12:00:00Z")
+        ),
+        Err(AppError::NotFound { .. })
+    ));
 }
 
 #[test]
@@ -421,14 +741,27 @@ fn offer_dates_are_validated_not_dropped() {
     let mut backwards = draft(&id(0x22), &src.id);
     backwards.offers[0].effective_from = Some("2026-02-01T00:00:00Z".into());
     backwards.offers[0].effective_to = Some("2026-01-01T00:00:00Z".into());
-    assert_eq!(validation_fields(authoring::create_draft(&mut conn, backwards).unwrap_err()), ["offers[0].effectiveTo"]);
+    assert_eq!(
+        validation_fields(authoring::create_draft(&mut conn, backwards).unwrap_err()),
+        ["offers[0].effectiveTo"]
+    );
 
     let mut ok = draft(&id(0x22), &src.id);
     ok.offers[0].effective_from = Some("2026-01-01T09:00:00-05:00".into());
     let v = authoring::create_draft(&mut conn, ok).unwrap();
     let g = catalogue::load(&conn).unwrap().graph;
-    let offer = g.commercial_offers.iter().find(|o| o.catalogue_version_id == v.id).unwrap();
-    assert_eq!((offer.effective_from.as_deref(), offer.effective_to.as_deref()), (Some("2026-01-01T14:00:00.000Z"), None));
+    let offer = g
+        .commercial_offers
+        .iter()
+        .find(|o| o.catalogue_version_id == v.id)
+        .unwrap();
+    assert_eq!(
+        (
+            offer.effective_from.as_deref(),
+            offer.effective_to.as_deref()
+        ),
+        (Some("2026-01-01T14:00:00.000Z"), None)
+    );
 }
 
 #[test]
@@ -440,14 +773,25 @@ fn a_replaced_draft_keeps_its_promotion_links_and_cannot_supersede_itself() {
     let mut own = draft(&id(0x22), &src.id);
     own.supersedes_version_id = Some(v.id.clone());
     own.correction_reason = Some("typo".into());
-    assert_eq!(validation_fields(authoring::replace_draft(&mut conn, &v.id, own).unwrap_err()), ["supersedesVersionId"]);
+    assert_eq!(
+        validation_fields(authoring::replace_draft(&mut conn, &v.id, own).unwrap_err()),
+        ["supersedesVersionId"]
+    );
     let mut other_variant = draft(&id(0x22), &src.id);
     other_variant.supersedes_version_id = Some(id(0x31));
     other_variant.correction_reason = Some("typo".into());
-    assert_eq!(validation_fields(authoring::replace_draft(&mut conn, &v.id, other_variant).unwrap_err()), ["supersedesVersionId"]);
+    assert_eq!(
+        validation_fields(authoring::replace_draft(&mut conn, &v.id, other_variant).unwrap_err()),
+        ["supersedesVersionId"]
+    );
 
-    let offer: String =
-        conn.query_row("SELECT id FROM commercial_offers WHERE catalogue_version_id = ?1", [&v.id], |r| r.get(0)).unwrap();
+    let offer: String = conn
+        .query_row(
+            "SELECT id FROM commercial_offers WHERE catalogue_version_id = ?1",
+            [&v.id],
+            |r| r.get(0),
+        )
+        .unwrap();
     conn.execute(
         "INSERT INTO promotions (id, provider_id, provider_label, discount_kind, verification_status)
          SELECT 'promo-draft', provider_id, 'Launch', 'unknown', 'draft' FROM programme_variants WHERE id = ?1",
@@ -455,8 +799,20 @@ fn a_replaced_draft_keeps_its_promotion_links_and_cannot_supersede_itself() {
     )
     .unwrap();
     conn.execute("INSERT INTO promotion_offers (promotion_id, commercial_offer_id) VALUES ('promo-draft', ?1)", [&offer]).unwrap();
-    assert_eq!(validation_fields(authoring::replace_draft(&mut conn, &v.id, draft(&id(0x22), &src.id)).unwrap_err()), ["offers"]);
-    assert_eq!(count(&conn, "SELECT COUNT(*) FROM promotion_offers WHERE promotion_id = 'promo-draft'"), 1, "the link is kept");
+    assert_eq!(
+        validation_fields(
+            authoring::replace_draft(&mut conn, &v.id, draft(&id(0x22), &src.id)).unwrap_err()
+        ),
+        ["offers"]
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM promotion_offers WHERE promotion_id = 'promo-draft'"
+        ),
+        1,
+        "the link is kept"
+    );
 }
 
 #[test]
@@ -480,8 +836,13 @@ fn an_offer_is_selectable_only_while_it_is_in_effect() {
         },
     )
     .unwrap();
-    let offer: String =
-        conn.query_row("SELECT id FROM commercial_offers WHERE catalogue_version_id = ?1", [&v.id], |r| r.get(0)).unwrap();
+    let offer: String = conn
+        .query_row(
+            "SELECT id FROM commercial_offers WHERE catalogue_version_id = ?1",
+            [&v.id],
+            |r| r.get(0),
+        )
+        .unwrap();
     let at = |when: &str| OfferSelectionInput {
         account_id: a.id.clone(),
         commercial_offer_id: offer.clone(),
@@ -489,8 +850,16 @@ fn an_offer_is_selectable_only_while_it_is_in_effect() {
         selected_at: Some(when.into()),
         note: None,
     };
-    for outside in ["2024-12-31T23:59:59Z", "2025-02-01T00:00:00Z", "2026-10-20T12:00:00Z"] {
-        assert_eq!(validation_fields(offers::select(&mut conn, at(outside)).unwrap_err()), ["selectedAt"], "{outside}");
+    for outside in [
+        "2024-12-31T23:59:59Z",
+        "2025-02-01T00:00:00Z",
+        "2026-10-20T12:00:00Z",
+    ] {
+        assert_eq!(
+            validation_fields(offers::select(&mut conn, at(outside)).unwrap_err()),
+            ["selectedAt"],
+            "{outside}"
+        );
     }
     offers::select(&mut conn, at("2025-01-01T00:00:00Z")).unwrap();
     assert_eq!(offers::list(&conn, &a.id).unwrap().len(), 1);

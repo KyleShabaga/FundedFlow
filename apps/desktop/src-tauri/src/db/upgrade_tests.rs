@@ -35,7 +35,8 @@ impl Journal {
         Journal(path)
     }
     pub(super) fn backup(&self) -> PathBuf {
-        self.0.with_extension(format!("db.before-v{}.bak", latest_version()))
+        self.0
+            .with_extension(format!("db.before-v{}.bak", latest_version()))
     }
 }
 
@@ -50,7 +51,8 @@ pub(super) fn read_only(path: &Path) -> Connection {
 }
 
 pub(super) fn version(conn: &Connection) -> u32 {
-    conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap()
+    conn.pragma_query_value(None, "user_version", |r| r.get(0))
+        .unwrap()
 }
 
 /// Table → (columns, every row as sorted JSON text).
@@ -59,8 +61,13 @@ pub(super) type Dump = BTreeMap<String, (Vec<String>, Vec<String>)>;
 fn rows(conn: &Connection, table: &str, columns: &[String]) -> Vec<String> {
     let quoted: Vec<String> = columns.iter().map(|c| format!("\"{c}\"")).collect();
     let sql = format!("SELECT json_array({}) FROM \"{table}\"", quoted.join(", "));
-    let mut rows: Vec<String> =
-        conn.prepare(&sql).unwrap().query_map([], |r| r.get(0)).unwrap().collect::<rusqlite::Result<_>>().unwrap();
+    let mut rows: Vec<String> = conn
+        .prepare(&sql)
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
     rows.sort();
     rows
 }
@@ -107,8 +114,15 @@ pub(super) fn dump_like(conn: &Connection, like: &Dump) -> Dump {
     let renamed_already = version(conn) >= 9;
     like.iter()
         .map(|(table, (columns, _))| {
-            let source = if renamed_already { renamed(table) } else { table.as_str() };
-            (table.clone(), (columns.clone(), rows(conn, source, columns)))
+            let source = if renamed_already {
+                renamed(table)
+            } else {
+                table.as_str()
+            };
+            (
+                table.clone(),
+                (columns.clone(), rows(conn, source, columns)),
+            )
         })
         .collect()
 }
@@ -127,14 +141,23 @@ fn trading_days(conn: &Connection) -> BTreeMap<(String, String), String> {
 }
 
 fn assert_healthy(conn: &Connection) {
-    let ok: String = conn.query_row("PRAGMA integrity_check", [], |r| r.get(0)).unwrap();
+    let ok: String = conn
+        .query_row("PRAGMA integrity_check", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(ok, "ok");
-    let fk_problems: i64 = conn.query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| r.get(0)).unwrap();
+    let fk_problems: i64 = conn
+        .query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
     assert_eq!(fk_problems, 0);
 }
 
 fn account_id(conn: &Connection, name: &str) -> String {
-    conn.query_row("SELECT id FROM accounts WHERE name = ?1", [name], |r| r.get(0)).unwrap()
+    conn.query_row("SELECT id FROM accounts WHERE name = ?1", [name], |r| {
+        r.get(0)
+    })
+    .unwrap()
 }
 
 fn count(conn: &Connection, sql: &str) -> i64 {
@@ -146,34 +169,66 @@ fn count(conn: &Connection, sql: &str) -> i64 {
 /// its firm's provider, and nothing else was inferred.
 fn assert_catalogue_mapped(conn: &Connection, before: &Dump) {
     let rows_before = |table: &str| before[table].1.len() as i64;
-    assert_eq!(count(conn, "SELECT count(*) FROM providers"), rows_before("firms"));
-    assert_eq!(count(conn, "SELECT count(*) FROM programme_families"), rows_before("programmes"));
+    assert_eq!(
+        count(conn, "SELECT count(*) FROM providers"),
+        rows_before("firms")
+    );
+    assert_eq!(
+        count(conn, "SELECT count(*) FROM programme_families"),
+        rows_before("programmes")
+    );
     assert_eq!(
         count(conn, "SELECT count(*) FROM providers p JOIN firms f ON f.id = p.legacy_firm_id
                      WHERE p.display_name = f.name AND p.record_status = 'unknown' AND p.aliases = '[]'"),
         rows_before("firms")
     );
-    let slugs: Vec<String> =
-        conn.prepare("SELECT slug FROM providers ORDER BY slug").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+    let slugs: Vec<String> = conn
+        .prepare("SELECT slug FROM providers ORDER BY slug")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
     assert_eq!(slugs, ["apex"]);
     assert_eq!(
-        count(conn, "SELECT count(*) FROM accounts a WHERE a.provider_id IS NOT
-                     (SELECT p.id FROM providers p WHERE p.legacy_firm_id = a.firm_id)"),
+        count(
+            conn,
+            "SELECT count(*) FROM accounts a WHERE a.provider_id IS NOT
+                     (SELECT p.id FROM providers p WHERE p.legacy_firm_id = a.firm_id)"
+        ),
         0
     );
-    assert!(count(conn, "SELECT count(*) FROM accounts WHERE provider_id IS NOT NULL") > 0);
+    assert!(
+        count(
+            conn,
+            "SELECT count(*) FROM accounts WHERE provider_id IS NOT NULL"
+        ) > 0
+    );
     assert_eq!(
-        count(conn, "SELECT count(*) FROM accounts WHERE programme_variant_id IS NOT NULL
+        count(
+            conn,
+            "SELECT count(*) FROM accounts WHERE programme_variant_id IS NOT NULL
                      OR catalogue_version_id IS NOT NULL OR selected_phase_path_id IS NOT NULL
-                     OR size_source <> 'unknown'"),
+                     OR size_source <> 'unknown'"
+        ),
         0,
         "no catalogue match is guessed"
     );
     for table in [
-        "programme_variants", "catalogue_versions", "catalogue_sources", "programme_phases", "phase_paths",
-        "commercial_offers", "promotions", "account_phase_events",
+        "programme_variants",
+        "catalogue_versions",
+        "catalogue_sources",
+        "programme_phases",
+        "phase_paths",
+        "commercial_offers",
+        "promotions",
+        "account_phase_events",
     ] {
-        assert_eq!(count(conn, &format!("SELECT count(*) FROM {table}")), 0, "{table}");
+        assert_eq!(
+            count(conn, &format!("SELECT count(*) FROM {table}")),
+            0,
+            "{table}"
+        );
     }
 }
 
@@ -195,7 +250,14 @@ fn assert_store_works(conn: &mut Connection) {
         .unwrap(),
     )
     .unwrap();
-    assert_eq!((again.imported_count, again.duplicate_count, again.failed_count), (0, 4, 1));
+    assert_eq!(
+        (
+            again.imported_count,
+            again.duplicate_count,
+            again.failed_count
+        ),
+        (0, 4, 1)
+    );
     assert_eq!(csv_import::list_batches(conn, &ny).unwrap().len(), 2);
 
     let saturday = trades::create(
@@ -217,17 +279,30 @@ fn a_v3_journal_from_before_the_weekend_roll_upgrades_without_data_loss() {
     let (before, days_before) = {
         let conn = read_only(&db.0);
         assert_eq!(version(&conn), 3);
-        (dump(&conn, &[("trades", "trading_day")]), trading_days(&conn))
+        (
+            dump(&conn, &[("trades", "trading_day")]),
+            trading_days(&conn),
+        )
     };
 
     let mut conn = open_file(&db.0).unwrap();
     assert_eq!(version(&conn), latest_version());
     assert_healthy(&conn);
-    assert_eq!(version(&read_only(&db.backup())), 3, "the backup is the journal as it was");
+    assert_eq!(
+        version(&read_only(&db.backup())),
+        3,
+        "the backup is the journal as it was"
+    );
 
     // Nothing but trading_day changed, and 0004's archived_at is unset everywhere.
     assert_eq!(dump_like(&conn, &before), before);
-    let archived: i64 = conn.query_row("SELECT count(*) FROM accounts WHERE archived_at IS NOT NULL", [], |r| r.get(0)).unwrap();
+    let archived: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM accounts WHERE archived_at IS NOT NULL",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
     assert_eq!(archived, 0);
     assert_catalogue_mapped(&conn, &before);
 
@@ -242,12 +317,12 @@ fn a_v3_journal_from_before_the_weekend_roll_upgrades_without_data_loss() {
     assert_eq!(
         changed,
         BTreeMap::from([
-            ("legacy fri", sat_to_mon),               // Fri 07:00 NY after a legacy 06:00 reset
-            ("fri after reset", sat_to_mon),          // Fri 17:30 NY after the 17:00 reset
+            ("legacy fri", sat_to_mon),      // Fri 07:00 NY after a legacy 06:00 reset
+            ("fri after reset", sat_to_mon), // Fri 17:30 NY after the 17:00 reset
             ("2026-10-16T21:10:00.000Z", sat_to_mon), // imported, sold Fri 17:20 NY
-            ("deleted", sat_to_mon),                  // soft-deleted, Fri 18:05 NY
-            ("open sat", sat_to_mon),                 // open, entered Sat 10:00 NY
-            ("unknown sat", sat_to_mon),              // Sat 10:00 UTC, calendar days
+            ("deleted", sat_to_mon),         // soft-deleted, Fri 18:05 NY
+            ("open sat", sat_to_mon),        // open, entered Sat 10:00 NY
+            ("unknown sat", sat_to_mon),     // Sat 10:00 UTC, calendar days
         ])
     );
 
@@ -273,7 +348,10 @@ fn a_v4_journal_from_the_current_release_upgrades_without_changes() {
     assert_catalogue_mapped(&conn, &before);
     // The archived account and its trade are kept, hidden from the store.
     assert_eq!(accounts::list(&conn).unwrap().len(), 2);
-    assert_eq!(trading_days(&conn)[&("Archived".into(), "archived fri".into())], "2026-10-19");
+    assert_eq!(
+        trading_days(&conn)[&("Archived".into(), "archived fri".into())],
+        "2026-10-19"
+    );
 
     assert_store_works(&mut conn);
 }
@@ -289,9 +367,17 @@ fn reopening_an_upgraded_journal_is_a_no_op() {
     assert!(!db.backup().exists(), "no backup when nothing is pending");
     assert_eq!(dump(&conn, &[]), before);
     assert_eq!(migrate(&mut conn).unwrap(), latest_version());
-    assert_eq!(rederive_trading_days(&conn).unwrap(), 0, "the re-derive is idempotent");
+    assert_eq!(
+        rederive_trading_days(&conn).unwrap(),
+        0,
+        "the re-derive is idempotent"
+    );
     map_legacy_catalogue(&conn).unwrap();
-    assert_eq!(dump(&conn, &[]), before, "the catalogue mapping is idempotent");
+    assert_eq!(
+        dump(&conn, &[]),
+        before,
+        "the catalogue mapping is idempotent"
+    );
 }
 
 #[test]
@@ -302,7 +388,11 @@ fn restoring_the_pre_upgrade_backup_gives_back_the_old_journal_and_upgrades_agai
         let conn = open_file(&db.0).unwrap();
         dump(&conn, &[])
     };
-    let rows = |d: &Dump| d.iter().map(|(t, (_, r))| (t.clone(), r.len())).collect::<BTreeMap<_, _>>();
+    let rows = |d: &Dump| {
+        d.iter()
+            .map(|(t, (_, r))| (t.clone(), r.len()))
+            .collect::<BTreeMap<_, _>>()
+    };
 
     // Restore: the backup replaces the journal, as a user would copy it back.
     std::fs::copy(db.backup(), &db.0).unwrap();
@@ -311,7 +401,11 @@ fn restoring_the_pre_upgrade_backup_gives_back_the_old_journal_and_upgrades_agai
     }
     let restored = read_only(&db.0);
     assert_eq!(version(&restored), 3);
-    assert_eq!(dump(&restored, &[]), original, "the backup is the journal exactly as it was");
+    assert_eq!(
+        dump(&restored, &[]),
+        original,
+        "the backup is the journal exactly as it was"
+    );
     drop(restored);
 
     // Opening the restored journal upgrades it to the same result as the first
@@ -320,7 +414,10 @@ fn restoring_the_pre_upgrade_backup_gives_back_the_old_journal_and_upgrades_agai
     let conn = open_file(&db.0).unwrap();
     assert_eq!(version(&conn), latest_version());
     assert_healthy(&conn);
-    assert_eq!(dump_like(&conn, &original), dump_like_from(&upgraded, &original));
+    assert_eq!(
+        dump_like(&conn, &original),
+        dump_like_from(&upgraded, &original)
+    );
     assert_eq!(rows(&dump(&conn, &[])), rows(&upgraded));
 }
 
@@ -329,12 +426,16 @@ fn dump_like_from(from: &Dump, like: &Dump) -> Dump {
     like.iter()
         .map(|(table, (columns, _))| {
             let (all, rows) = &from[renamed(table)];
-            let idx: Vec<usize> = columns.iter().map(|c| all.iter().position(|a| a == c).unwrap()).collect();
+            let idx: Vec<usize> = columns
+                .iter()
+                .map(|c| all.iter().position(|a| a == c).unwrap())
+                .collect();
             let mut rows: Vec<String> = rows
                 .iter()
                 .map(|r| {
                     let v: Vec<serde_json::Value> = serde_json::from_str(r).unwrap();
-                    serde_json::to_string(&idx.iter().map(|&i| v[i].clone()).collect::<Vec<_>>()).unwrap()
+                    serde_json::to_string(&idx.iter().map(|&i| v[i].clone()).collect::<Vec<_>>())
+                        .unwrap()
                 })
                 .collect();
             rows.sort();
@@ -359,7 +460,16 @@ fn a_failure_during_the_rederive_leaves_the_journal_at_the_previous_version() {
     let before = dump(&read_only(&db.0), &[]);
 
     let err = open_file(&db.0).unwrap_err();
-    assert!(matches!(err, MigrateError::Migration { name: "rederive_trading_days", .. }), "{err}");
+    assert!(
+        matches!(
+            err,
+            MigrateError::Migration {
+                name: "rederive_trading_days",
+                ..
+            }
+        ),
+        "{err}"
+    );
     let conn = read_only(&db.0);
     assert_eq!(version(&conn), 4);
     assert_eq!(dump(&conn, &[]), before, "no trade was partly corrected");
@@ -370,11 +480,21 @@ fn retrying_a_partial_upgrade_preserves_the_original_pre_upgrade_backup() {
     let db = Journal::copy_of(V3);
     {
         let conn = Connection::open(&db.0).unwrap();
-        conn.execute_batch("CREATE TRIGGER boom BEFORE UPDATE OF trading_day ON trades
-            BEGIN SELECT RAISE(ABORT, 'simulated failure'); END;").unwrap();
+        conn.execute_batch(
+            "CREATE TRIGGER boom BEFORE UPDATE OF trading_day ON trades
+            BEGIN SELECT RAISE(ABORT, 'simulated failure'); END;",
+        )
+        .unwrap();
     }
     let original = dump(&read_only(&db.0), &[]);
-    assert!(matches!(open_file(&db.0), Err(MigrateError::Migration { from: 3, reached: 4, .. })));
+    assert!(matches!(
+        open_file(&db.0),
+        Err(MigrateError::Migration {
+            from: 3,
+            reached: 4,
+            ..
+        })
+    ));
     let backup_bytes = std::fs::read(db.backup()).unwrap();
     assert_eq!(version(&read_only(&db.backup())), 3);
     {
@@ -383,11 +503,26 @@ fn retrying_a_partial_upgrade_preserves_the_original_pre_upgrade_backup() {
     }
     let conn = open_file(&db.0).unwrap();
     assert_eq!(version(&conn), latest_version());
-    assert_eq!(version(&read_only(&db.backup())), 4, "latest retry backup still has a stable path");
-    let retained: Vec<_> = std::fs::read_dir(db.0.parent().unwrap()).unwrap()
+    assert_eq!(
+        version(&read_only(&db.backup())),
+        4,
+        "latest retry backup still has a stable path"
+    );
+    let retained: Vec<_> = std::fs::read_dir(db.0.parent().unwrap())
+        .unwrap()
         .map(|e| e.unwrap().path())
-        .filter(|p| p.file_name().unwrap().to_string_lossy().contains(".previous-")).collect();
-    assert_eq!(retained.len(), 1, "the original v3 recovery point must survive the retry");
+        .filter(|p| {
+            p.file_name()
+                .unwrap()
+                .to_string_lossy()
+                .contains(".previous-")
+        })
+        .collect();
+    assert_eq!(
+        retained.len(),
+        1,
+        "the original v3 recovery point must survive the retry"
+    );
     assert_eq!(std::fs::read(&retained[0]).unwrap(), backup_bytes);
     assert_eq!(dump(&read_only(&retained[0]), &[]), original);
     assert_healthy(&conn);
@@ -398,7 +533,10 @@ fn failure_to_preserve_an_existing_backup_prevents_any_migration() {
     let db = Journal::copy_of(V3);
     let before = dump(&read_only(&db.0), &[]);
     std::fs::create_dir(db.backup()).unwrap();
-    assert!(matches!(open_file(&db.0), Err(MigrateError::Backup { current: 3, .. })));
+    assert!(matches!(
+        open_file(&db.0),
+        Err(MigrateError::Backup { current: 3, .. })
+    ));
     let conn = read_only(&db.0);
     assert_eq!(version(&conn), 3);
     assert_eq!(dump(&conn, &[]), before);
@@ -419,15 +557,27 @@ fn the_rederive_skips_rows_it_cannot_parse() {
     )
     .unwrap();
     assert_eq!(rederive_trading_days(&conn).unwrap(), 1);
-    let day = |id: &str| -> String { conn.query_row("SELECT trading_day FROM trades WHERE id = ?1", [id], |r| r.get(0)).unwrap() };
-    assert_eq!((day("t1").as_str(), day("t2").as_str()), ("2026-10-19", "2026-10-17"));
+    let day = |id: &str| -> String {
+        conn.query_row("SELECT trading_day FROM trades WHERE id = ?1", [id], |r| {
+            r.get(0)
+        })
+        .unwrap()
+    };
+    assert_eq!(
+        (day("t1").as_str(), day("t2").as_str()),
+        ("2026-10-19", "2026-10-17")
+    );
 }
 
 /// Rows of `before` and `after` that do not pair up, counted as a multiset difference in both directions.
 fn mismatched(before: &[String], after: &[String]) -> usize {
     let mut counts: BTreeMap<&str, i64> = BTreeMap::new();
-    before.iter().for_each(|r| *counts.entry(r).or_default() += 1);
-    after.iter().for_each(|r| *counts.entry(r).or_default() -= 1);
+    before
+        .iter()
+        .for_each(|r| *counts.entry(r).or_default() += 1);
+    after
+        .iter()
+        .for_each(|r| *counts.entry(r).or_default() -= 1);
     counts.values().map(|n| n.unsigned_abs() as usize).sum()
 }
 
@@ -457,7 +607,12 @@ fn upgrade_copy(source: &Path, tamper: impl FnOnce(&Connection)) -> Result<Vec<S
             match std::fs::copy(&from, &to) {
                 Ok(_) => {}
                 Err(e) if !suffix.is_empty() && e.kind() == std::io::ErrorKind::NotFound => {}
-                Err(e) => return Err(format!("cannot copy fundedflow.db{suffix} ({:?})", e.kind())),
+                Err(e) => {
+                    return Err(format!(
+                        "cannot copy fundedflow.db{suffix} ({:?})",
+                        e.kind()
+                    ));
+                }
             }
         }
     }
@@ -471,14 +626,28 @@ fn upgrade_copy(source: &Path, tamper: impl FnOnce(&Connection)) -> Result<Vec<S
     };
     let (from, before, days_before) = {
         let copy = read_only(&db.0);
-        (version(&copy), dump(&copy, &[("trades", "trading_day")]), trading_days(&copy))
+        (
+            version(&copy),
+            dump(&copy, &[("trades", "trading_day")]),
+            trading_days(&copy),
+        )
     };
-    let conn = open_file(&db.0).map_err(|_| format!("migrating the v{from} copy failed (error text withheld)"))?;
+    let conn = open_file(&db.0)
+        .map_err(|_| format!("migrating the v{from} copy failed (error text withheld)"))?;
     tamper(&conn);
 
-    let integrity: Vec<String> =
-        conn.prepare("PRAGMA integrity_check").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
-    let fk_problems: i64 = conn.query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| r.get(0)).unwrap();
+    let integrity: Vec<String> = conn
+        .prepare("PRAGMA integrity_check")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    let fk_problems: i64 = conn
+        .query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
     let after = dump_like(&conn, &before);
     let mut problems = Vec::new();
     if integrity != ["ok"] {
@@ -491,19 +660,36 @@ fn upgrade_copy(source: &Path, tamper: impl FnOnce(&Connection)) -> Result<Vec<S
         let after_rows = &after[table].1;
         let n = mismatched(rows, after_rows);
         if n != 0 {
-            problems.push(format!("{table}: {} rows before, {} after, {n} mismatched", rows.len(), after_rows.len()));
+            problems.push(format!(
+                "{table}: {} rows before, {} after, {n} mismatched",
+                rows.len(),
+                after_rows.len()
+            ));
         }
     }
     if !problems.is_empty() {
-        return Err(format!("upgrade v{from} -> v{} changed the journal:\n  {}", version(&conn), problems.join("\n  ")));
+        return Err(format!(
+            "upgrade v{from} -> v{} changed the journal:\n  {}",
+            version(&conn),
+            problems.join("\n  ")
+        ));
     }
 
     let days_after = trading_days(&conn);
-    let corrected = days_before.iter().filter(|(id, day)| days_after.get(*id) != Some(*day)).count();
+    let corrected = days_before
+        .iter()
+        .filter(|(id, day)| days_after.get(*id) != Some(*day))
+        .count();
     let rows: usize = before.values().map(|(_, rows)| rows.len()).sum();
-    let per_table: Vec<String> = before.iter().map(|(table, (_, rows))| format!("{table} {}", rows.len())).collect();
+    let per_table: Vec<String> = before
+        .iter()
+        .map(|(table, (_, rows))| format!("{table} {}", rows.len()))
+        .collect();
     Ok(vec![
-        format!("v{from} -> v{}: {rows} rows kept, {corrected} trading days corrected", version(&conn)),
+        format!(
+            "v{from} -> v{}: {rows} rows kept, {corrected} trading days corrected",
+            version(&conn)
+        ),
         format!("  rows per table: {}", per_table.join(", ")),
     ])
 }
@@ -517,7 +703,8 @@ fn upgrade_copy(source: &Path, tamper: impl FnOnce(&Connection)) -> Result<Vec<S
 #[test]
 #[ignore]
 fn upgrade_copy_of_a_real_journal() {
-    let source = PathBuf::from(std::env::var("FUNDEDFLOW_UPGRADE_DB").expect("FUNDEDFLOW_UPGRADE_DB"));
+    let source =
+        PathBuf::from(std::env::var("FUNDEDFLOW_UPGRADE_DB").expect("FUNDEDFLOW_UPGRADE_DB"));
     match upgrade_copy(&source, |_| {}) {
         Ok(lines) => lines.iter().for_each(|l| println!("{l}")),
         Err(message) => panic!("{message}"),
@@ -532,8 +719,12 @@ fn synthetic_journal() -> (Journal, Connection) {
     let db = Journal::copy_of(&[]);
     std::fs::remove_file(&db.0).unwrap();
     let mut conn = open_file(&db.0).unwrap();
-    let account = accounts::create(&mut conn, crate::store::tests::account_input("Synthetic")).unwrap();
-    let input = trades::TradeInput { notes: Some(MARKER.into()), ..crate::store::tests::trade_input(&account.id) };
+    let account =
+        accounts::create(&mut conn, crate::store::tests::account_input("Synthetic")).unwrap();
+    let input = trades::TradeInput {
+        notes: Some(MARKER.into()),
+        ..crate::store::tests::trade_input(&account.id)
+    };
     trades::create(&mut conn, input).unwrap();
     (db, conn)
 }
@@ -549,9 +740,18 @@ fn ids(conn: &Connection) -> Vec<String> {
 }
 
 fn assert_redacted(text: &str, ids: &[String]) {
-    assert!(!text.contains(MARKER), "the gate's output contains row content");
-    assert!(ids.iter().all(|id| !text.contains(id.as_str())), "the gate's output contains an id");
-    assert!(!text.contains("2026-10-19"), "the gate's output contains a trade date");
+    assert!(
+        !text.contains(MARKER),
+        "the gate's output contains row content"
+    );
+    assert!(
+        ids.iter().all(|id| !text.contains(id.as_str())),
+        "the gate's output contains an id"
+    );
+    assert!(
+        !text.contains("2026-10-19"),
+        "the gate's output contains a trade date"
+    );
 }
 
 #[test]
@@ -561,29 +761,53 @@ fn upgrade_copy_refuses_a_journal_whose_lock_is_held() {
     let err = upgrade_copy(&db.0, |_| {}).expect_err("a held journal lock must refuse the copy");
     assert!(err.contains("fundedflow.lock is held"), "{err}");
     drop(lock);
-    assert!(upgrade_copy(&db.0, |_| {}).is_ok(), "a lock file nobody holds does not block the copy");
+    assert!(
+        upgrade_copy(&db.0, |_| {}).is_ok(),
+        "a lock file nobody holds does not block the copy"
+    );
 }
 
 #[test]
 fn upgrade_copy_reads_wal_content_leaves_the_source_alone_and_reports_counts_only() {
     let (db, conn) = synthetic_journal();
-    assert!(std::fs::metadata(db.0.with_extension("db-wal")).unwrap().len() > 0, "the writes are still in the WAL");
+    assert!(
+        std::fs::metadata(db.0.with_extension("db-wal"))
+            .unwrap()
+            .len()
+            > 0,
+        "the writes are still in the WAL"
+    );
     let folder = |dir: &Path| -> Vec<(String, Vec<u8>)> {
         let mut files: Vec<_> = std::fs::read_dir(dir)
             .unwrap()
             .map(|e| e.unwrap().path())
-            .map(|p| (p.file_name().unwrap().to_string_lossy().into_owned(), std::fs::read(&p).unwrap()))
+            .map(|p| {
+                (
+                    p.file_name().unwrap().to_string_lossy().into_owned(),
+                    std::fs::read(&p).unwrap(),
+                )
+            })
             .collect();
         files.sort();
         files
     };
     let source_before = folder(db.0.parent().unwrap());
     let lines = upgrade_copy(&db.0, |_| {}).unwrap();
-    assert_eq!(folder(db.0.parent().unwrap()), source_before, "the source folder is only read");
+    assert_eq!(
+        folder(db.0.parent().unwrap()),
+        source_before,
+        "the source folder is only read"
+    );
     // 1 account and 1 trade came through the copy, so the WAL content was copied with the database.
     let text = lines.join("\n");
-    assert!(text.contains(&format!("v{v} -> v{v}", v = latest_version())), "{text}");
-    assert!(text.contains("accounts 1, ") && text.contains("trades 1"), "{text}");
+    assert!(
+        text.contains(&format!("v{v} -> v{v}", v = latest_version())),
+        "{text}"
+    );
+    assert!(
+        text.contains("accounts 1, ") && text.contains("trades 1"),
+        "{text}"
+    );
     assert!(text.contains("0 trading days corrected"), "{text}");
     assert_redacted(&text, &ids(&conn));
 }
@@ -596,15 +820,22 @@ fn a_mismatch_after_the_upgrade_fails_with_counts_only() {
     // the gate's failure path and capture its panic message.
     let failed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let tamper = |copy: &Connection| {
-            copy.execute("UPDATE trades SET notes_md = notes_md || '-changed'", []).unwrap();
+            copy.execute("UPDATE trades SET notes_md = notes_md || '-changed'", [])
+                .unwrap();
         };
         if let Err(message) = upgrade_copy(&db.0, tamper) {
             panic!("{message}");
         }
     }));
     let payload = failed.expect_err("the forced mismatch fails the gate");
-    let message =
-        payload.downcast_ref::<String>().cloned().or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string())).unwrap();
-    assert!(message.contains("trades: 1 rows before, 1 after, 2 mismatched"), "{message}");
+    let message = payload
+        .downcast_ref::<String>()
+        .cloned()
+        .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
+        .unwrap();
+    assert!(
+        message.contains("trades: 1 rows before, 1 after, 2 mismatched"),
+        "{message}"
+    );
     assert_redacted(&message, &ids);
 }

@@ -39,7 +39,10 @@ pub struct AccountFreshnessInputs {
 pub fn trading_day_start(day: NaiveDate, tz: Tz, reset: NaiveTime) -> DateTime<Utc> {
     let previous = previous_trading_day(day);
     let local = if reset == NaiveTime::MIN {
-        previous.succ_opt().unwrap_or(previous).and_time(NaiveTime::MIN)
+        previous
+            .succ_opt()
+            .unwrap_or(previous)
+            .and_time(NaiveTime::MIN)
     } else {
         previous.and_time(reset)
     };
@@ -73,7 +76,8 @@ fn next_trading_day(day: NaiveDate) -> NaiveDate {
 
 /// Every account (archived ones included, so a caller can show history), at `as_of`.
 pub fn list_at(conn: &Connection, as_of: &str) -> AppResult<Vec<AccountFreshnessInputs>> {
-    let at = parse_instant(as_of).ok_or_else(|| AppError::invalid("asOf", "Use an ISO 8601 instant with an offset"))?;
+    let at = parse_instant(as_of)
+        .ok_or_else(|| AppError::invalid("asOf", "Use an ISO 8601 instant with an offset"))?;
     let mut stmt = conn.prepare(
         "SELECT a.id, a.timezone, a.trading_day_reset_time,
            (SELECT MAX(completed_at) FROM import_batches b WHERE b.account_id = a.id AND b.status = 'committed'),
@@ -100,7 +104,9 @@ pub fn list_at(conn: &Connection, as_of: &str) -> AppResult<Vec<AccountFreshness
     let mut out = Vec::new();
     for row in rows {
         let (id, tz, reset, committed, failed, manual, checkpoint) = row?;
-        let corrupt = || AppError::Database { message: format!("account '{id}' has invalid session settings") };
+        let corrupt = || AppError::Database {
+            message: format!("account '{id}' has invalid session settings"),
+        };
         let tz = parse_tz(&tz).ok_or_else(corrupt)?;
         let reset = parse_reset_time(&reset).ok_or_else(corrupt)?;
         let today = trading_day(at, tz, reset);
@@ -116,7 +122,11 @@ pub fn list_at(conn: &Connection, as_of: &str) -> AppResult<Vec<AccountFreshness
             account_id: id,
             current_trading_day: today.format("%Y-%m-%d").to_string(),
             trading_day_starts: starts,
-            next_trading_day_start: format_instant(trading_day_start(next_trading_day(today), tz, reset)),
+            next_trading_day_start: format_instant(trading_day_start(
+                next_trading_day(today),
+                tz,
+                reset,
+            )),
             last_committed_import_at: canon(committed),
             last_failed_import_at: canon(failed),
             last_manual_trade_at: canon(manual),
@@ -147,11 +157,23 @@ mod tests {
     #[test]
     fn a_trading_day_starts_at_the_previous_trading_days_reset() {
         // Wednesday 2026-10-21 with a 17:00 New York reset starts Tuesday 17:00 EDT; Monday starts Friday 17:00.
-        assert_eq!(format_instant(trading_day_start(date("2026-10-21"), ny(), at(17, 0))), "2026-10-20T21:00:00.000Z");
-        assert_eq!(format_instant(trading_day_start(date("2026-10-19"), ny(), at(17, 0))), "2026-10-16T21:00:00.000Z");
+        assert_eq!(
+            format_instant(trading_day_start(date("2026-10-21"), ny(), at(17, 0))),
+            "2026-10-20T21:00:00.000Z"
+        );
+        assert_eq!(
+            format_instant(trading_day_start(date("2026-10-19"), ny(), at(17, 0))),
+            "2026-10-16T21:00:00.000Z"
+        );
         // A 00:00 reset: plain calendar days, and Monday includes the weekend.
-        assert_eq!(format_instant(trading_day_start(date("2026-10-21"), ny(), NaiveTime::MIN)), "2026-10-21T04:00:00.000Z");
-        assert_eq!(format_instant(trading_day_start(date("2026-10-19"), ny(), NaiveTime::MIN)), "2026-10-17T04:00:00.000Z");
+        assert_eq!(
+            format_instant(trading_day_start(date("2026-10-21"), ny(), NaiveTime::MIN)),
+            "2026-10-21T04:00:00.000Z"
+        );
+        assert_eq!(
+            format_instant(trading_day_start(date("2026-10-19"), ny(), NaiveTime::MIN)),
+            "2026-10-17T04:00:00.000Z"
+        );
     }
 
     #[test]
@@ -159,21 +181,43 @@ mod tests {
         let tz = ny();
         for reset in [at(17, 0), NaiveTime::MIN, at(18, 30)] {
             // Weeks around the March and November 2026 changes.
-            for day in ["2026-03-06", "2026-03-09", "2026-03-10", "2026-10-30", "2026-11-02", "2026-11-03"] {
+            for day in [
+                "2026-03-06",
+                "2026-03-09",
+                "2026-03-10",
+                "2026-10-30",
+                "2026-11-02",
+                "2026-11-03",
+            ] {
                 let d = date(day);
                 let start = trading_day_start(d, tz, reset);
                 assert_eq!(trading_day(start, tz, reset), d, "{day} {reset}");
-                assert_eq!(trading_day(start - Duration::seconds(1), tz, reset), previous_trading_day(d), "{day} {reset}");
+                assert_eq!(
+                    trading_day(start - Duration::seconds(1), tz, reset),
+                    previous_trading_day(d),
+                    "{day} {reset}"
+                );
             }
         }
         // Cairo moves its clocks at midnight on a Friday in late April: with a 00:00 reset that Friday's local
         // midnight doesn't exist, and the start is the first minute that does.
         let cairo = parse_tz("Africa/Cairo").unwrap();
-        for day in ["2026-04-23", "2026-04-24", "2026-04-27", "2026-10-29", "2026-10-30", "2026-11-02"] {
+        for day in [
+            "2026-04-23",
+            "2026-04-24",
+            "2026-04-27",
+            "2026-10-29",
+            "2026-10-30",
+            "2026-11-02",
+        ] {
             let d = date(day);
             let start = trading_day_start(d, cairo, NaiveTime::MIN);
             assert_eq!(trading_day(start, cairo, NaiveTime::MIN), d, "Cairo {day}");
-            assert_eq!(trading_day(start - Duration::seconds(1), cairo, NaiveTime::MIN), previous_trading_day(d), "Cairo {day}");
+            assert_eq!(
+                trading_day(start - Duration::seconds(1), cairo, NaiveTime::MIN),
+                previous_trading_day(d),
+                "Cairo {day}"
+            );
         }
     }
 
@@ -182,18 +226,48 @@ mod tests {
         let mut conn = db();
         let a = accounts::create(&mut conn, account_input("Eval A")).unwrap();
         let b = accounts::create(&mut conn, account_input("Eval B")).unwrap();
-        trades::create(&mut conn, TradeInput {
-            account_id: a.id.clone(), symbol: "ES".into(), side: "long".into(), quantity: "1".into(),
-            entry_at: "2026-10-20T14:00:00Z".into(), entry_price: "5000".into(), exit_at: Some("2026-10-20T15:00:00Z".into()),
-            exit_price: Some("5001".into()), fees: None, realized_pnl: None, notes: None,
-        }).unwrap();
+        trades::create(
+            &mut conn,
+            TradeInput {
+                account_id: a.id.clone(),
+                symbol: "ES".into(),
+                side: "long".into(),
+                quantity: "1".into(),
+                entry_at: "2026-10-20T14:00:00Z".into(),
+                entry_price: "5000".into(),
+                exit_at: Some("2026-10-20T15:00:00Z".into()),
+                exit_price: Some("5001".into()),
+                fees: None,
+                realized_pnl: None,
+                notes: None,
+            },
+        )
+        .unwrap();
         let checkpoint = |value: &str, observed: &str, confirmation: &str| ObservationInput {
-            account_id: a.id.clone(), kind: "balance".into(), value: Some(value.into()), currency: "USD".into(), basis: "balance".into(),
-            observed_at: observed.into(), source_category: "firm_dashboard".into(), source_reference: "Dashboard".into(),
-            confirmation: confirmation.into(), confidence: "user_reported".into(), valid_until: None, actor: "local_user".into(), note: None,
+            account_id: a.id.clone(),
+            kind: "balance".into(),
+            value: Some(value.into()),
+            currency: "USD".into(),
+            basis: "balance".into(),
+            observed_at: observed.into(),
+            source_category: "firm_dashboard".into(),
+            source_reference: "Dashboard".into(),
+            confirmation: confirmation.into(),
+            confidence: "user_reported".into(),
+            valid_until: None,
+            actor: "local_user".into(),
+            note: None,
         };
-        evidence::create(&mut conn, checkpoint("50000", "2026-10-19T20:00:00Z", "user_confirmed")).unwrap();
-        evidence::create(&mut conn, checkpoint("50100", "2026-10-20T20:00:00Z", "unconfirmed")).unwrap();
+        evidence::create(
+            &mut conn,
+            checkpoint("50000", "2026-10-19T20:00:00Z", "user_confirmed"),
+        )
+        .unwrap();
+        evidence::create(
+            &mut conn,
+            checkpoint("50100", "2026-10-20T20:00:00Z", "unconfirmed"),
+        )
+        .unwrap();
         conn.execute(
             "INSERT INTO import_batches (id, account_id, file_name, file_sha256, file_size, mapping_snapshot_json, source_timezone, status,
                row_count, imported_count, skipped_count, duplicate_count, failed_count, error_summary, created_at, completed_at)
@@ -206,24 +280,59 @@ mod tests {
         let ra = rows.iter().find(|r| r.account_id == a.id).unwrap();
         assert_eq!(ra.current_trading_day, "2026-10-21");
         assert_eq!(ra.trading_day_starts.len(), TRADING_DAY_STARTS);
-        assert_eq!(&ra.trading_day_starts[..3], ["2026-10-20T21:00:00.000Z", "2026-10-19T21:00:00.000Z", "2026-10-16T21:00:00.000Z"]);
+        assert_eq!(
+            &ra.trading_day_starts[..3],
+            [
+                "2026-10-20T21:00:00.000Z",
+                "2026-10-19T21:00:00.000Z",
+                "2026-10-16T21:00:00.000Z"
+            ]
+        );
         assert_eq!(ra.next_trading_day_start, "2026-10-21T21:00:00.000Z");
         assert!(ra.last_manual_trade_at.is_some());
         assert_eq!(ra.last_committed_import_at, None);
         // Only the confirmed checkpoint counts; the newer unconfirmed one doesn't.
-        assert_eq!(ra.last_confirmed_checkpoint_at.as_deref(), Some("2026-10-19T20:00:00.000Z"));
+        assert_eq!(
+            ra.last_confirmed_checkpoint_at.as_deref(),
+            Some("2026-10-19T20:00:00.000Z")
+        );
         let rb = rows.iter().find(|r| r.account_id == b.id).unwrap();
-        assert_eq!(rb.last_failed_import_at.as_deref(), Some("2026-10-21T12:00:01.000Z"));
-        assert_eq!((rb.last_committed_import_at.as_deref(), rb.last_manual_trade_at.as_deref(), rb.last_confirmed_checkpoint_at.as_deref()), (None, None, None));
+        assert_eq!(
+            rb.last_failed_import_at.as_deref(),
+            Some("2026-10-21T12:00:01.000Z")
+        );
+        assert_eq!(
+            (
+                rb.last_committed_import_at.as_deref(),
+                rb.last_manual_trade_at.as_deref(),
+                rb.last_confirmed_checkpoint_at.as_deref()
+            ),
+            (None, None, None)
+        );
 
         // A deleted manual trade no longer counts.
-        conn.execute("UPDATE trades SET deleted_at = '2026-10-21T13:00:00.000Z' WHERE account_id = ?1", [&a.id]).unwrap();
-        assert_eq!(list_at(&conn, "2026-10-21T18:00:00Z").unwrap().iter().find(|r| r.account_id == a.id).unwrap().last_manual_trade_at, None);
+        conn.execute(
+            "UPDATE trades SET deleted_at = '2026-10-21T13:00:00.000Z' WHERE account_id = ?1",
+            [&a.id],
+        )
+        .unwrap();
+        assert_eq!(
+            list_at(&conn, "2026-10-21T18:00:00Z")
+                .unwrap()
+                .iter()
+                .find(|r| r.account_id == a.id)
+                .unwrap()
+                .last_manual_trade_at,
+            None
+        );
     }
 
     #[test]
     fn rejects_an_instant_without_an_offset() {
         let conn = db();
-        assert!(matches!(list_at(&conn, "2026-10-21T18:00:00"), Err(AppError::Validation { .. })));
+        assert!(matches!(
+            list_at(&conn, "2026-10-21T18:00:00"),
+            Err(AppError::Validation { .. })
+        ));
     }
 }

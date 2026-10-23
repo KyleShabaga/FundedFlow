@@ -4,7 +4,7 @@
 use rusqlite::Connection;
 
 use super::accounts::{self, AccountInput, StatusChangeInput};
-use super::attempts::{self, RulebookDecision, ResetInput};
+use super::attempts::{self, ResetInput, RulebookDecision};
 use super::tests::{account_input, db};
 use super::trades::{self, TradeInput};
 use crate::csv_import::{self, CsvImportRequest, DateFormatChoice, FormatChoice};
@@ -13,7 +13,10 @@ use crate::error::AppError;
 const PERFORMANCE: &str = include_str!("../../../../../test_csvimport/Performance.csv");
 
 fn with_ref(name: &str, number: &str) -> AccountInput {
-    AccountInput { external_ref: Some(number.into()), ..account_input(name) }
+    AccountInput {
+        external_ref: Some(number.into()),
+        ..account_input(name)
+    }
 }
 
 fn trade(account_id: &str) -> TradeInput {
@@ -56,7 +59,12 @@ fn fail(conn: &mut Connection, id: &str) {
     accounts::change_status(
         conn,
         id,
-        StatusChangeInput { status: "failed".into(), effective_at: None, cause: None, note: None },
+        StatusChangeInput {
+            status: "failed".into(),
+            effective_at: None,
+            cause: None,
+            note: None,
+        },
     )
     .unwrap();
 }
@@ -92,12 +100,23 @@ fn a_failed_account_keeps_everything_and_is_not_archived() {
     .unwrap();
     assert_eq!(failed.status, "failed");
     assert_eq!(failed.archived_at, None, "failing never archives");
-    assert_eq!(trades::list(&conn, &a.id).unwrap().len(), 1, "trades are kept and readable");
-    assert!(accounts::list(&conn).unwrap().iter().any(|x| x.id == a.id), "still listed for history");
+    assert_eq!(
+        trades::list(&conn, &a.id).unwrap().len(),
+        1,
+        "trades are kept and readable"
+    );
+    assert!(
+        accounts::list(&conn).unwrap().iter().any(|x| x.id == a.id),
+        "still listed for history"
+    );
 
     let h = accounts::history(&conn, &a.id).unwrap();
     // History is ordered by effective time, which the user chose, so find the event by status.
-    let last = h.status_events.iter().find(|e| e.status == "failed").unwrap();
+    let last = h
+        .status_events
+        .iter()
+        .find(|e| e.status == "failed")
+        .unwrap();
     assert_eq!(last.effective_at, "2026-10-19T20:00:00.000Z");
     assert_eq!(last.cause.as_deref(), Some("Daily loss limit"));
     assert_eq!(last.note.as_deref(), Some("see provider email"));
@@ -106,7 +125,12 @@ fn a_failed_account_keeps_everything_and_is_not_archived() {
     let again = accounts::change_status(
         &mut conn,
         &a.id,
-        StatusChangeInput { status: "failed".into(), effective_at: None, cause: None, note: None },
+        StatusChangeInput {
+            status: "failed".into(),
+            effective_at: None,
+            cause: None,
+            note: None,
+        },
     );
     assert!(matches!(again, Err(AppError::Validation { .. })));
 }
@@ -118,33 +142,84 @@ fn a_reset_creates_a_new_linked_account_and_preserves_the_old_one() {
     let old_trade = trades::create(&mut conn, trade(&first.id)).unwrap();
     snapshot(&conn, &first.id);
     // The user, not the app, decides the outcome: the account is still 'active' here.
-    let r = attempts::reset(&mut conn, ResetInput { external_ref: Some("ABC-123".into()), ..reset_input(&first.id, "Attempt 2") })
-        .unwrap();
+    let r = attempts::reset(
+        &mut conn,
+        ResetInput {
+            external_ref: Some("ABC-123".into()),
+            ..reset_input(&first.id, "Attempt 2")
+        },
+    )
+    .unwrap();
 
     assert_ne!(r.successor.id, first.id, "a new internal id");
-    assert_eq!(r.successor.predecessor_account_id.as_deref(), Some(first.id.as_str()));
-    assert_eq!(r.predecessor.successor_account_id.as_deref(), Some(r.successor.id.as_str()));
-    assert_eq!((r.predecessor.status.as_str(), r.successor.status.as_str()), ("failed", "active"));
+    assert_eq!(
+        r.successor.predecessor_account_id.as_deref(),
+        Some(first.id.as_str())
+    );
+    assert_eq!(
+        r.predecessor.successor_account_id.as_deref(),
+        Some(r.successor.id.as_str())
+    );
+    assert_eq!(
+        (r.predecessor.status.as_str(), r.successor.status.as_str()),
+        ("failed", "active")
+    );
     assert_eq!(r.link.prior_outcome, "failed");
     assert_eq!(r.link.effective_at, "2026-10-20T19:00:00.000Z");
-    assert_eq!((r.link.source.as_str(), r.link.rulebook_decision.as_str()), ("provider_email", "deferred"));
-    assert_eq!(r.successor.external_ref.as_deref(), Some("ABC-123"), "the provider's number may be reused");
+    assert_eq!(
+        (r.link.source.as_str(), r.link.rulebook_decision.as_str()),
+        ("provider_email", "deferred")
+    );
+    assert_eq!(
+        r.successor.external_ref.as_deref(),
+        Some("ABC-123"),
+        "the provider's number may be reused"
+    );
     assert_eq!(r.successor.starting_balance, "50000");
-    assert_eq!((r.successor.broker.as_deref(), r.successor.currency.as_str()), (Some("Tradovate"), "USD"));
+    assert_eq!(
+        (r.successor.broker.as_deref(), r.successor.currency.as_str()),
+        (Some("Tradovate"), "USD")
+    );
 
     // Nothing moved or was created for the new attempt.
     assert_eq!(trades::list(&conn, &first.id).unwrap().len(), 1);
     assert_eq!(trades::list(&conn, &first.id).unwrap()[0].id, old_trade.id);
     assert!(trades::list(&conn, &r.successor.id).unwrap().is_empty());
-    for table in ["trades", "journal_entries", "import_batches", "account_snapshots", "account_ledger_entries", "account_rulebook_assignments"] {
-        let n = count(&conn, &format!("SELECT COUNT(*) FROM {table} WHERE account_id = '{}'", r.successor.id));
+    for table in [
+        "trades",
+        "journal_entries",
+        "import_batches",
+        "account_snapshots",
+        "account_ledger_entries",
+        "account_rulebook_assignments",
+    ] {
+        let n = count(
+            &conn,
+            &format!(
+                "SELECT COUNT(*) FROM {table} WHERE account_id = '{}'",
+                r.successor.id
+            ),
+        );
         assert_eq!(n, 0, "{table} starts empty");
     }
-    assert_eq!(count(&conn, &format!("SELECT COUNT(*) FROM account_snapshots WHERE account_id = '{}'", first.id)), 1);
+    assert_eq!(
+        count(
+            &conn,
+            &format!(
+                "SELECT COUNT(*) FROM account_snapshots WHERE account_id = '{}'",
+                first.id
+            )
+        ),
+        1
+    );
 
     // History of the old attempt shows the confirmed outcome.
     let h = accounts::history(&conn, &first.id).unwrap();
-    let last = h.status_events.iter().find(|e| e.status == "failed").unwrap();
+    let last = h
+        .status_events
+        .iter()
+        .find(|e| e.status == "failed")
+        .unwrap();
     assert_eq!(last.cause.as_deref(), Some("Hit the trailing drawdown"));
 }
 
@@ -152,11 +227,28 @@ fn a_reset_creates_a_new_linked_account_and_preserves_the_old_one() {
 fn the_prior_outcome_is_the_users_not_assumed_failed() {
     let mut conn = db();
     let a = accounts::create(&mut conn, account_input("Eval")).unwrap();
-    let bad = ResetInput { prior_outcome: "active".into(), ..reset_input(&a.id, "Next") };
-    assert!(matches!(attempts::reset(&mut conn, bad), Err(AppError::Validation { .. })));
-    assert_eq!(accounts::get(&conn, &a.id).unwrap().status, "active", "unconfirmed reset changes nothing");
+    let bad = ResetInput {
+        prior_outcome: "active".into(),
+        ..reset_input(&a.id, "Next")
+    };
+    assert!(matches!(
+        attempts::reset(&mut conn, bad),
+        Err(AppError::Validation { .. })
+    ));
+    assert_eq!(
+        accounts::get(&conn, &a.id).unwrap().status,
+        "active",
+        "unconfirmed reset changes nothing"
+    );
 
-    let r = attempts::reset(&mut conn, ResetInput { prior_outcome: "closed".into(), ..reset_input(&a.id, "Next") }).unwrap();
+    let r = attempts::reset(
+        &mut conn,
+        ResetInput {
+            prior_outcome: "closed".into(),
+            ..reset_input(&a.id, "Next")
+        },
+    )
+    .unwrap();
     assert_eq!(r.predecessor.status, "closed");
     assert_eq!(r.link.prior_outcome, "closed");
 }
@@ -166,21 +258,52 @@ fn the_same_broker_number_is_safe_across_attempts_but_not_for_two_live_accounts(
     let mut conn = db();
     let a = accounts::create(&mut conn, with_ref("A1", "999")).unwrap();
     // Two live accounts may not share a number.
-    assert!(matches!(accounts::create(&mut conn, with_ref("Other", "999")), Err(AppError::Conflict { .. })));
+    assert!(matches!(
+        accounts::create(&mut conn, with_ref("Other", "999")),
+        Err(AppError::Conflict { .. })
+    ));
 
-    let r1 = attempts::reset(&mut conn, ResetInput { external_ref: Some("999".into()), ..reset_input(&a.id, "A2") }).unwrap();
-    let r2 = attempts::reset(&mut conn, ResetInput { external_ref: Some("999".into()), ..reset_input(&r1.successor.id, "A3") }).unwrap();
-    assert_eq!(count(&conn, "SELECT COUNT(*) FROM accounts WHERE external_ref = '999'"), 3);
+    let r1 = attempts::reset(
+        &mut conn,
+        ResetInput {
+            external_ref: Some("999".into()),
+            ..reset_input(&a.id, "A2")
+        },
+    )
+    .unwrap();
+    let r2 = attempts::reset(
+        &mut conn,
+        ResetInput {
+            external_ref: Some("999".into()),
+            ..reset_input(&r1.successor.id, "A3")
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM accounts WHERE external_ref = '999'"
+        ),
+        3
+    );
 
     // A failed attempt cannot silently go back to active beside the live one.
     let back = accounts::change_status(
         &mut conn,
         &a.id,
-        StatusChangeInput { status: "active".into(), effective_at: None, cause: None, note: None },
+        StatusChangeInput {
+            status: "active".into(),
+            effective_at: None,
+            cause: None,
+            note: None,
+        },
     );
     assert!(matches!(back, Err(AppError::Conflict { .. })), "{back:?}");
     assert_eq!(accounts::get(&conn, &a.id).unwrap().status, "failed");
-    assert_eq!(accounts::get(&conn, &r2.successor.id).unwrap().status, "active");
+    assert_eq!(
+        accounts::get(&conn, &r2.successor.id).unwrap().status,
+        "active"
+    );
 }
 
 #[test]
@@ -195,7 +318,13 @@ fn a_reset_that_fails_changes_nothing() {
     );
 
     // The number belongs to another live account: conflict, and the predecessor keeps its status.
-    let r = attempts::reset(&mut conn, ResetInput { external_ref: Some("222".into()), ..reset_input(&a.id, "A2") });
+    let r = attempts::reset(
+        &mut conn,
+        ResetInput {
+            external_ref: Some("222".into()),
+            ..reset_input(&a.id, "A2")
+        },
+    );
     assert!(matches!(r, Err(AppError::Conflict { .. })), "{r:?}");
     // A bad rulebook decision fails after the account insert: still nothing remains.
     let r = attempts::reset(
@@ -215,7 +344,10 @@ fn a_reset_that_fails_changes_nothing() {
     let r = attempts::reset(
         &mut conn,
         ResetInput {
-            catalogue: Some(attempts::CatalogueSelection { catalogue_version_id: Some("nope".into()), ..Default::default() }),
+            catalogue: Some(attempts::CatalogueSelection {
+                catalogue_version_id: Some("nope".into()),
+                ..Default::default()
+            }),
             ..reset_input(&a.id, "A2")
         },
     );
@@ -235,38 +367,74 @@ fn an_attempt_resets_once_and_an_archived_one_must_be_restored_first() {
     let mut conn = db();
     let a = accounts::create(&mut conn, account_input("A1")).unwrap();
     attempts::reset(&mut conn, reset_input(&a.id, "A2")).unwrap();
-    assert!(matches!(attempts::reset(&mut conn, reset_input(&a.id, "A2 again")), Err(AppError::Conflict { .. })));
+    assert!(matches!(
+        attempts::reset(&mut conn, reset_input(&a.id, "A2 again")),
+        Err(AppError::Conflict { .. })
+    ));
 
     let b = accounts::create(&mut conn, account_input("B1")).unwrap();
     accounts::archive(&mut conn, &b.id).unwrap();
-    assert!(matches!(attempts::reset(&mut conn, reset_input(&b.id, "B2")), Err(AppError::Validation { .. })));
-    assert!(matches!(attempts::reset(&mut conn, reset_input("nope", "X")), Err(AppError::NotFound { .. })));
+    assert!(matches!(
+        attempts::reset(&mut conn, reset_input(&b.id, "B2")),
+        Err(AppError::Validation { .. })
+    ));
+    assert!(matches!(
+        attempts::reset(&mut conn, reset_input("nope", "X")),
+        Err(AppError::NotFound { .. })
+    ));
 }
 
 #[test]
 fn same_day_resets_across_the_dst_overlap_keep_distinct_instants_and_attempts() {
     let mut conn = db();
     let a = accounts::create(&mut conn, with_ref("Before", "dst-number")).unwrap();
-    let first = attempts::reset(&mut conn, ResetInput {
-        effective_at: "2026-11-01T01:30:00-04:00".into(), external_ref: Some("dst-number".into()),
-        ..reset_input(&a.id, "First 01:30")
-    }).unwrap();
-    let second = attempts::reset(&mut conn, ResetInput {
-        effective_at: "2026-11-01T01:30:00-05:00".into(), external_ref: Some("dst-number".into()),
-        ..reset_input(&first.successor.id, "Second 01:30")
-    }).unwrap();
+    let first = attempts::reset(
+        &mut conn,
+        ResetInput {
+            effective_at: "2026-11-01T01:30:00-04:00".into(),
+            external_ref: Some("dst-number".into()),
+            ..reset_input(&a.id, "First 01:30")
+        },
+    )
+    .unwrap();
+    let second = attempts::reset(
+        &mut conn,
+        ResetInput {
+            effective_at: "2026-11-01T01:30:00-05:00".into(),
+            external_ref: Some("dst-number".into()),
+            ..reset_input(&first.successor.id, "Second 01:30")
+        },
+    )
+    .unwrap();
     assert_eq!(first.link.effective_at, "2026-11-01T05:30:00.000Z");
     assert_eq!(second.link.effective_at, "2026-11-01T06:30:00.000Z");
     let chain = attempts::lineage(&conn, &second.successor.id).unwrap();
     assert_eq!(chain.len(), 3);
-    assert!(chain.iter().all(|a| a.trade_count == 0 && a.net_pnl.is_none()));
+    assert!(
+        chain
+            .iter()
+            .all(|a| a.trade_count == 0 && a.net_pnl.is_none())
+    );
     assert_ne!(first.successor.id, second.successor.id);
     let before = count(&conn, "SELECT COUNT(*) FROM account_status_events");
-    assert!(attempts::reset(&mut conn, ResetInput {
-        effective_at: "2026-11-01T01:30:00".into(), ..reset_input(&second.successor.id, "Missing offset")
-    }).is_err());
-    assert_eq!(count(&conn, "SELECT COUNT(*) FROM account_status_events"), before);
-    assert_eq!(accounts::get(&conn, &second.successor.id).unwrap().status, "active");
+    assert!(
+        attempts::reset(
+            &mut conn,
+            ResetInput {
+                effective_at: "2026-11-01T01:30:00".into(),
+                ..reset_input(&second.successor.id, "Missing offset")
+            }
+        )
+        .is_err()
+    );
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM account_status_events"),
+        before
+    );
+    assert_eq!(
+        accounts::get(&conn, &second.successor.id).unwrap().status,
+        "active"
+    );
     assert_eq!(attempts::lineage(&conn, &a.id).unwrap().len(), 3);
 }
 
@@ -278,18 +446,58 @@ fn lineage_lists_attempts_in_order_from_any_member_with_per_attempt_figures() {
     let r2 = attempts::reset(&mut conn, reset_input(&a1.id, "A2")).unwrap();
     trades::create(&mut conn, trade(&r2.successor.id)).unwrap();
     // An open trade has no result: it is counted as unknown, not as zero.
-    trades::create(&mut conn, TradeInput { exit_at: None, exit_price: None, entry_at: "2026-10-21T13:30:00Z".into(), ..trade(&r2.successor.id) }).unwrap();
-    let r3 = attempts::reset(&mut conn, ResetInput { prior_outcome: "passed".into(), ..reset_input(&r2.successor.id, "A3") }).unwrap();
+    trades::create(
+        &mut conn,
+        TradeInput {
+            exit_at: None,
+            exit_price: None,
+            entry_at: "2026-10-21T13:30:00Z".into(),
+            ..trade(&r2.successor.id)
+        },
+    )
+    .unwrap();
+    let r3 = attempts::reset(
+        &mut conn,
+        ResetInput {
+            prior_outcome: "passed".into(),
+            ..reset_input(&r2.successor.id, "A3")
+        },
+    )
+    .unwrap();
 
     for from in [&a1.id, &r2.successor.id, &r3.successor.id] {
         let l = attempts::lineage(&conn, from).unwrap();
-        assert_eq!(l.iter().map(|a| a.name.as_str()).collect::<Vec<_>>(), ["A1", "A2", "A3"]);
-        assert_eq!(l.iter().map(|a| a.attempt_number).collect::<Vec<_>>(), [1, 2, 3]);
+        assert_eq!(
+            l.iter().map(|a| a.name.as_str()).collect::<Vec<_>>(),
+            ["A1", "A2", "A3"]
+        );
+        assert_eq!(
+            l.iter().map(|a| a.attempt_number).collect::<Vec<_>>(),
+            [1, 2, 3]
+        );
     }
     let l = attempts::lineage(&conn, &a1.id).unwrap();
-    assert_eq!((l[0].trade_count, l[0].net_pnl.as_deref(), l[0].trades_with_unknown_pnl), (1, Some("208.38"), 0));
-    assert_eq!((l[1].trade_count, l[1].net_pnl.as_deref(), l[1].trades_with_unknown_pnl), (2, Some("208.38"), 1));
-    assert_eq!((l[2].trade_count, l[2].net_pnl.clone()), (0, None), "no trades is unknown, not 0");
+    assert_eq!(
+        (
+            l[0].trade_count,
+            l[0].net_pnl.as_deref(),
+            l[0].trades_with_unknown_pnl
+        ),
+        (1, Some("208.38"), 0)
+    );
+    assert_eq!(
+        (
+            l[1].trade_count,
+            l[1].net_pnl.as_deref(),
+            l[1].trades_with_unknown_pnl
+        ),
+        (2, Some("208.38"), 1)
+    );
+    assert_eq!(
+        (l[2].trade_count, l[2].net_pnl.clone()),
+        (0, None),
+        "no trades is unknown, not 0"
+    );
     assert_eq!(l[1].reset_to_next.as_ref().unwrap().prior_outcome, "passed");
     assert_eq!(l[1].status, "passed");
     assert!(l[2].reset_to_next.is_none());
@@ -310,19 +518,52 @@ fn csv_duplicate_detection_is_scoped_to_the_attempt() {
         target_acknowledgement: None,
     };
     csv_import::commit_reviewed(&mut conn, &req(&a1.id)).unwrap();
-    let imported = count(&conn, &format!("SELECT COUNT(*) FROM trades WHERE account_id = '{}'", a1.id));
+    let imported = count(
+        &conn,
+        &format!("SELECT COUNT(*) FROM trades WHERE account_id = '{}'", a1.id),
+    );
     assert!(imported > 0);
 
-    let r = attempts::reset(&mut conn, ResetInput { external_ref: Some("77".into()), ..reset_input(&a1.id, "A2") }).unwrap();
+    let r = attempts::reset(
+        &mut conn,
+        ResetInput {
+            external_ref: Some("77".into()),
+            ..reset_input(&a1.id, "A2")
+        },
+    )
+    .unwrap();
     // The same file into the new attempt is entirely new, not a duplicate of attempt 1.
     let p = csv_import::preview(&conn, &req(&r.successor.id)).unwrap();
     assert_eq!(p.duplicate_count, 0);
-    assert!(p.target_assessment.blocked.is_some(), "same broker number cannot make pre-reset trades belong to the successor");
+    assert!(
+        p.target_assessment.blocked.is_some(),
+        "same broker number cannot make pre-reset trades belong to the successor"
+    );
     assert!(csv_import::commit_reviewed(&mut conn, &req(&r.successor.id)).is_err());
-    assert_eq!(count(&conn, &format!("SELECT COUNT(*) FROM trades WHERE account_id = '{}'", r.successor.id)), 0);
-    assert_eq!(count(&conn, &format!("SELECT COUNT(*) FROM trades WHERE account_id = '{}'", a1.id)), imported);
+    assert_eq!(
+        count(
+            &conn,
+            &format!(
+                "SELECT COUNT(*) FROM trades WHERE account_id = '{}'",
+                r.successor.id
+            )
+        ),
+        0
+    );
+    assert_eq!(
+        count(
+            &conn,
+            &format!("SELECT COUNT(*) FROM trades WHERE account_id = '{}'", a1.id)
+        ),
+        imported
+    );
     // The predecessor remains the sole owner; successor dedup still sees no saved rows.
-    assert_eq!(csv_import::preview(&conn, &req(&r.successor.id)).unwrap().duplicate_count, 0);
+    assert_eq!(
+        csv_import::preview(&conn, &req(&r.successor.id))
+            .unwrap()
+            .duplicate_count,
+        0
+    );
 }
 
 #[test]
@@ -338,22 +579,45 @@ fn archived_accounts_are_browsable_read_only_and_restorable() {
     assert_eq!(all.len(), 1);
     assert!(all[0].archived_at.is_some());
     assert_eq!(accounts::get_any(&conn, &a.id).unwrap().status, "failed");
-    assert_eq!(trades::list(&conn, &a.id).unwrap().len(), 1, "read-only browsing");
+    assert_eq!(
+        trades::list(&conn, &a.id).unwrap().len(),
+        1,
+        "read-only browsing"
+    );
     assert!(csv_import::list_batches(&conn, &a.id).is_ok());
     // Writes are refused.
-    assert!(matches!(trades::create(&mut conn, trade(&a.id)), Err(AppError::NotFound { .. })));
+    assert!(matches!(
+        trades::create(&mut conn, trade(&a.id)),
+        Err(AppError::NotFound { .. })
+    ));
     let status = accounts::change_status(
         &mut conn,
         &a.id,
-        StatusChangeInput { status: "closed".into(), effective_at: None, cause: None, note: None },
+        StatusChangeInput {
+            status: "closed".into(),
+            effective_at: None,
+            cause: None,
+            note: None,
+        },
     );
     assert!(matches!(status, Err(AppError::Validation { .. })));
 
     let restored = accounts::restore(&mut conn, &a.id).unwrap();
     assert_eq!(restored.archived_at, None);
-    assert_eq!(restored.status, "failed", "restoring never reactivates a failed account");
-    assert!(matches!(accounts::restore(&mut conn, &a.id), Err(AppError::Validation { .. })));
-    let actions: Vec<String> = accounts::history(&conn, &a.id).unwrap().archive_events.into_iter().map(|e| e.action).collect();
+    assert_eq!(
+        restored.status, "failed",
+        "restoring never reactivates a failed account"
+    );
+    assert!(matches!(
+        accounts::restore(&mut conn, &a.id),
+        Err(AppError::Validation { .. })
+    ));
+    let actions: Vec<String> = accounts::history(&conn, &a.id)
+        .unwrap()
+        .archive_events
+        .into_iter()
+        .map(|e| e.action)
+        .collect();
     assert_eq!(actions, ["archived", "restored"]);
 }
 
@@ -365,15 +629,26 @@ fn archived_account_edits_leave_identity_status_and_history_unchanged() {
     accounts::archive(&mut conn, &a.id).unwrap();
     let before = accounts::get_any(&conn, &a.id).unwrap();
     let history = accounts::history(&conn, &a.id).unwrap();
-    let result = accounts::update(&mut conn, &a.id, AccountInput {
-        status: "closed".into(), prop_firm: Some("Must not be created".into()),
-        ..account_input("Edited")
-    });
+    let result = accounts::update(
+        &mut conn,
+        &a.id,
+        AccountInput {
+            status: "closed".into(),
+            prop_firm: Some("Must not be created".into()),
+            ..account_input("Edited")
+        },
+    );
     assert!(result.is_err());
     assert_eq!(accounts::get_any(&conn, &a.id).unwrap(), before);
     assert_eq!(accounts::history(&conn, &a.id).unwrap(), history);
     assert_eq!(trades::get(&conn, &t.id).unwrap(), t);
-    assert_eq!(count(&conn, "SELECT COUNT(*) FROM firms WHERE name = 'Must not be created'"), 0);
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM firms WHERE name = 'Must not be created'"
+        ),
+        0
+    );
 }
 
 #[test]
@@ -381,16 +656,27 @@ fn archived_trade_deletion_preserves_the_trade_journal_link_and_correction_histo
     let mut conn = db();
     let a = accounts::create(&mut conn, account_input("Archived")).unwrap();
     let t = trades::create(&mut conn, trade(&a.id)).unwrap();
-    let entry = super::journal::create(&mut conn, super::journal::JournalEntryInput {
-        account_id: a.id.clone(), trade_id: Some(t.id.clone()), entry_at: t.entry_at.clone(),
-        title: "History".into(), body: "Keep this".into(), tags: vec!["original".into()],
-    }).unwrap();
+    let entry = super::journal::create(
+        &mut conn,
+        super::journal::JournalEntryInput {
+            account_id: a.id.clone(),
+            trade_id: Some(t.id.clone()),
+            entry_at: t.entry_at.clone(),
+            title: "History".into(),
+            body: "Keep this".into(),
+            tags: vec!["original".into()],
+        },
+    )
+    .unwrap();
     accounts::archive(&mut conn, &a.id).unwrap();
     let corrections = trades::corrections(&conn, &t.id).unwrap();
     assert!(trades::delete(&mut conn, &t.id).is_err());
     assert_eq!(trades::get(&conn, &t.id).unwrap(), t);
     assert_eq!(super::journal::get(&conn, &entry.id).unwrap(), entry);
-    assert_eq!(trades::corrections(&conn, &t.id).unwrap().len(), corrections.len());
+    assert_eq!(
+        trades::corrections(&conn, &t.id).unwrap().len(),
+        corrections.len()
+    );
     accounts::restore(&mut conn, &a.id).unwrap();
     trades::delete(&mut conn, &t.id).unwrap();
 }
@@ -399,10 +685,18 @@ fn archived_trade_deletion_preserves_the_trade_journal_link_and_correction_histo
 fn archived_journal_deletion_preserves_the_entry_and_tags_until_restore() {
     let mut conn = db();
     let a = accounts::create(&mut conn, account_input("Archived")).unwrap();
-    let entry = super::journal::create(&mut conn, super::journal::JournalEntryInput {
-        account_id: a.id.clone(), trade_id: None, entry_at: "2026-10-19T13:30:00Z".into(),
-        title: "History".into(), body: "Keep this".into(), tags: vec!["original".into()],
-    }).unwrap();
+    let entry = super::journal::create(
+        &mut conn,
+        super::journal::JournalEntryInput {
+            account_id: a.id.clone(),
+            trade_id: None,
+            entry_at: "2026-10-19T13:30:00Z".into(),
+            title: "History".into(),
+            body: "Keep this".into(),
+            tags: vec!["original".into()],
+        },
+    )
+    .unwrap();
     accounts::archive(&mut conn, &a.id).unwrap();
     assert!(super::journal::delete(&conn, &entry.id).is_err());
     assert_eq!(super::journal::get(&conn, &entry.id).unwrap(), entry);
@@ -419,14 +713,23 @@ fn restore_checks_the_broker_number_for_accounts_that_could_trade() {
     accounts::create(&mut conn, with_ref("New live", "555")).unwrap();
     let r = accounts::restore(&mut conn, &a.id);
     assert!(matches!(r, Err(AppError::Conflict { .. })), "{r:?}");
-    assert!(accounts::get_any(&conn, &a.id).unwrap().archived_at.is_some(), "still archived");
+    assert!(
+        accounts::get_any(&conn, &a.id)
+            .unwrap()
+            .archived_at
+            .is_some(),
+        "still archived"
+    );
 
     // The same number on a failed archived account restores fine: it cannot trade.
     let b = accounts::create(&mut conn, with_ref("Old failed", "556")).unwrap();
     fail(&mut conn, &b.id);
     accounts::archive(&mut conn, &b.id).unwrap();
     accounts::create(&mut conn, with_ref("Live 556", "556")).unwrap();
-    assert_eq!(accounts::restore(&mut conn, &b.id).unwrap().status, "failed");
+    assert_eq!(
+        accounts::restore(&mut conn, &b.id).unwrap().status,
+        "failed"
+    );
 }
 
 #[test]
@@ -439,8 +742,16 @@ fn only_active_accounts_qualify_for_risk_views() {
     accounts::archive(&mut conn, &archived.id).unwrap();
     let r = attempts::reset(&mut conn, reset_input(&live.id, "Live 2")).unwrap();
 
-    let ids: Vec<String> = accounts::list_active(&conn).unwrap().into_iter().map(|a| a.id).collect();
-    assert_eq!(ids, [r.successor.id], "the reset predecessor, failed and archived accounts are excluded");
+    let ids: Vec<String> = accounts::list_active(&conn)
+        .unwrap()
+        .into_iter()
+        .map(|a| a.id)
+        .collect();
+    assert_eq!(
+        ids,
+        [r.successor.id],
+        "the reset predecessor, failed and archived accounts are excluded"
+    );
 }
 
 #[test]
@@ -472,18 +783,38 @@ fn the_deletion_preview_lists_contents_and_never_offers_chain_deletion() {
     let mut conn = db();
     let a = accounts::create(&mut conn, account_input("A1")).unwrap();
     trades::create(&mut conn, trade(&a.id)).unwrap();
-    let t2 = trades::create(&mut conn, TradeInput { entry_at: "2026-10-20T13:30:00Z".into(), exit_at: Some("2026-10-20T14:00:00Z".into()), ..trade(&a.id) }).unwrap();
+    let t2 = trades::create(
+        &mut conn,
+        TradeInput {
+            entry_at: "2026-10-20T13:30:00Z".into(),
+            exit_at: Some("2026-10-20T14:00:00Z".into()),
+            ..trade(&a.id)
+        },
+    )
+    .unwrap();
     trades::delete(&mut conn, &t2.id).unwrap();
     let solo = attempts::deletion_preview(&conn, &a.id).unwrap();
-    assert_eq!((solo.trades, solo.deleted_trades, solo.status_events), (1, 1, 1));
+    assert_eq!(
+        (solo.trades, solo.deleted_trades, solo.status_events),
+        (1, 1, 1)
+    );
     assert!(solo.linked_attempts.is_empty());
-    assert!(solo.blockers.iter().any(|b| b.contains("Build 24")), "no delete command exists yet");
+    assert!(
+        solo.blockers.iter().any(|b| b.contains("Build 24")),
+        "no delete command exists yet"
+    );
 
     let r = attempts::reset(&mut conn, reset_input(&a.id, "A2")).unwrap();
     let linked = attempts::deletion_preview(&conn, &a.id).unwrap();
-    assert_eq!(linked.linked_attempts, std::slice::from_ref(&r.successor.id));
+    assert_eq!(
+        linked.linked_attempts,
+        std::slice::from_ref(&r.successor.id)
+    );
     assert!(linked.blockers.iter().any(|b| b.contains("reset chain")));
-    assert!(matches!(attempts::deletion_preview(&conn, "nope"), Err(AppError::NotFound { .. })));
+    assert!(matches!(
+        attempts::deletion_preview(&conn, "nope"),
+        Err(AppError::NotFound { .. })
+    ));
 }
 
 #[test]
@@ -491,16 +822,37 @@ fn lineage_survives_a_backup_copy() {
     let mut conn = db();
     let a = accounts::create(&mut conn, with_ref("A1", "42")).unwrap();
     trades::create(&mut conn, trade(&a.id)).unwrap();
-    let r = attempts::reset(&mut conn, ResetInput { external_ref: Some("42".into()), ..reset_input(&a.id, "A2") }).unwrap();
+    let r = attempts::reset(
+        &mut conn,
+        ResetInput {
+            external_ref: Some("42".into()),
+            ..reset_input(&a.id, "A2")
+        },
+    )
+    .unwrap();
 
-    let copy = std::env::temp_dir().join(format!("fundedflow-lineage-{}.db", crate::domain::new_id()));
-    conn.execute("VACUUM INTO ?1", [copy.to_string_lossy()]).unwrap();
+    let copy =
+        std::env::temp_dir().join(format!("fundedflow-lineage-{}.db", crate::domain::new_id()));
+    conn.execute("VACUUM INTO ?1", [copy.to_string_lossy()])
+        .unwrap();
     let restored = Connection::open(&copy).unwrap();
     let l = attempts::lineage(&restored, &r.successor.id).unwrap();
-    assert_eq!(l.iter().map(|x| x.account_id.as_str()).collect::<Vec<_>>(), [a.id.as_str(), r.successor.id.as_str()]);
+    assert_eq!(
+        l.iter().map(|x| x.account_id.as_str()).collect::<Vec<_>>(),
+        [a.id.as_str(), r.successor.id.as_str()]
+    );
     assert_eq!(l[0].trade_count, 1);
-    assert_eq!(l[0].reset_to_next.as_ref().unwrap().reason.as_deref(), Some("Hit the trailing drawdown"));
-    assert!(accounts::history(&restored, &a.id).unwrap().status_events.iter().any(|e| e.status == "failed"));
+    assert_eq!(
+        l[0].reset_to_next.as_ref().unwrap().reason.as_deref(),
+        Some("Hit the trailing drawdown")
+    );
+    assert!(
+        accounts::history(&restored, &a.id)
+            .unwrap()
+            .status_events
+            .iter()
+            .any(|e| e.status == "failed")
+    );
     drop(restored);
     let _ = std::fs::remove_file(copy);
 }

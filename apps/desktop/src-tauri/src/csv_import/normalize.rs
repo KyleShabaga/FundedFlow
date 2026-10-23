@@ -7,14 +7,14 @@ use rust_decimal::Decimal;
 
 use super::detect::{Columns, Format};
 use super::parse::RawRow;
-use super::values::{parse_duration, parse_money, parse_number, parse_timestamp, DateFormat};
+use super::values::{DateFormat, parse_duration, parse_money, parse_number, parse_timestamp};
 use crate::domain::{
-    canonical, format_instant, micros_to_string, parse_payload_time, to_micros, validate_trade, Instrument, Side,
-    TradeDraft, TradeFields,
+    Instrument, Side, TradeDraft, TradeFields, canonical, format_instant, micros_to_string,
+    parse_payload_time, to_micros, validate_trade,
 };
 use crate::error::FieldIssue;
-use crate::store::trades::{self, Derived};
 use crate::store::AccountCtx;
+use crate::store::trades::{self, Derived};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EntryBasis {
@@ -55,7 +55,10 @@ pub struct RoundTrip {
 /// What makes a row the same trade as another (see `dedup`).
 #[derive(Debug, Clone, PartialEq)]
 pub enum Identity {
-    FillPair { buy: String, sell: String },
+    FillPair {
+        buy: String,
+        sell: String,
+    },
     TradeId(String),
     /// Normalized round-trip fields joined with `|`.
     Composite(String),
@@ -71,8 +74,14 @@ pub struct NormalizedTrade {
 
 pub enum Outcome {
     Blank,
-    Invalid { errors: Vec<FieldIssue>, warnings: Vec<FieldIssue> },
-    Valid { trade: Box<NormalizedTrade>, warnings: Vec<FieldIssue> },
+    Invalid {
+        errors: Vec<FieldIssue>,
+        warnings: Vec<FieldIssue>,
+    },
+    Valid {
+        trade: Box<NormalizedTrade>,
+        warnings: Vec<FieldIssue>,
+    },
 }
 
 pub struct Ctx<'a> {
@@ -116,7 +125,10 @@ impl<'a> Row<'a> {
     /// Trimmed cell text; `None` when the field is unmapped or the cell blank.
     fn text(&self, field: &str) -> Option<&'a str> {
         let i = self.ctx.columns.get(field)?;
-        self.cells.get(i).map(|c| c.trim()).filter(|c| !c.is_empty())
+        self.cells
+            .get(i)
+            .map(|c| c.trim())
+            .filter(|c| !c.is_empty())
     }
 
     fn required(&mut self, field: &str) -> Option<&'a str> {
@@ -140,16 +152,29 @@ impl<'a> Row<'a> {
 const SYMBOL_EXTRA: &str = " ._/:-+=^#&";
 
 fn check_symbol(row: &mut Row, field: &str, s: &str) {
-    if s.chars().count() > 32 || !s.chars().all(|c| c.is_ascii_alphanumeric() || SYMBOL_EXTRA.contains(c)) {
-        row.error(field, format!("'{s}' is not a valid symbol (letters, digits and {SYMBOL_EXTRA:?}, up to 32)"));
+    if s.chars().count() > 32
+        || !s
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || SYMBOL_EXTRA.contains(c))
+    {
+        row.error(
+            field,
+            format!("'{s}' is not a valid symbol (letters, digits and {SYMBOL_EXTRA:?}, up to 32)"),
+        );
     }
 }
 
 fn check_id(row: &mut Row, field: &str, s: &str) -> Option<String> {
-    if s.len() <= 64 && s.chars().all(|c| c.is_ascii_alphanumeric() || "-_.:".contains(c)) {
+    if s.len() <= 64
+        && s.chars()
+            .all(|c| c.is_ascii_alphanumeric() || "-_.:".contains(c))
+    {
         Some(s.to_string())
     } else {
-        row.error(field, format!("'{s}' is not a valid ID (letters, digits, - _ . :, up to 64)"));
+        row.error(
+            field,
+            format!("'{s}' is not a valid ID (letters, digits, - _ . :, up to 64)"),
+        );
         None
     }
 }
@@ -157,14 +182,20 @@ fn check_id(row: &mut Row, field: &str, s: &str) -> Option<String> {
 fn money_text(micros: i64) -> String {
     // i64::MIN has no positive i64 counterpart. Format before moving the sign.
     let s = micros_to_string(micros);
-    if micros < 0 { format!("-${}", s.trim_start_matches('-')) } else { format!("${s}") }
+    if micros < 0 {
+        format!("-${}", s.trim_start_matches('-'))
+    } else {
+        format!("${s}")
+    }
 }
 
 /// Compare the exported P&L with the calculated one, when both exist.
 fn pnl_check(row: &mut Row, fields: &TradeFields, derived: &Derived) {
-    if let (Some(reported), "calculated", Some(gross)) =
-        (fields.reported_pnl_micros, derived.pnl.status, derived.pnl.gross_micros)
-        && reported != gross
+    if let (Some(reported), "calculated", Some(gross)) = (
+        fields.reported_pnl_micros,
+        derived.pnl.status,
+        derived.pnl.gross_micros,
+    ) && reported != gross
     {
         row.warn(
             "realizedPnl",
@@ -182,15 +213,27 @@ pub fn normalize(raw: &RawRow, ctx: &Ctx) -> Outcome {
     if raw.is_blank() {
         return Outcome::Blank;
     }
-    let mut row = Row { cells: &raw.cells, ctx, errors: Vec::new(), warnings: Vec::new() };
+    let mut row = Row {
+        cells: &raw.cells,
+        ctx,
+        errors: Vec::new(),
+        warnings: Vec::new(),
+    };
     if let Some(e) = &raw.read_error {
         row.errors.push(FieldIssue::new("row", e.clone()));
-        return Outcome::Invalid { errors: row.errors, warnings: row.warnings };
+        return Outcome::Invalid {
+            errors: row.errors,
+            warnings: row.warnings,
+        };
     }
     if raw.cells.len() != ctx.headers.len() {
         row.errors.push(FieldIssue::new(
             "row",
-            format!("has {} fields but the header has {}", raw.cells.len(), ctx.headers.len()),
+            format!(
+                "has {} fields but the header has {}",
+                raw.cells.len(),
+                ctx.headers.len()
+            ),
         ));
     }
     let trade = match ctx.format {
@@ -198,8 +241,14 @@ pub fn normalize(raw: &RawRow, ctx: &Ctx) -> Outcome {
         Format::Generic => generic(&mut row),
     };
     match trade {
-        Some(trade) if row.errors.is_empty() => Outcome::Valid { trade: Box::new(trade), warnings: row.warnings },
-        _ => Outcome::Invalid { errors: row.errors, warnings: row.warnings },
+        Some(trade) if row.errors.is_empty() => Outcome::Valid {
+            trade: Box::new(trade),
+            warnings: row.warnings,
+        },
+        _ => Outcome::Invalid {
+            errors: row.errors,
+            warnings: row.warnings,
+        },
     }
 }
 
@@ -221,7 +270,13 @@ fn finish(
         }
     };
     pnl_check(row, &fields, &derived);
-    Some(NormalizedTrade { fields, derived, round_trip, broker_trade_id, identity })
+    Some(NormalizedTrade {
+        fields,
+        derived,
+        round_trip,
+        broker_trade_id,
+        identity,
+    })
 }
 
 /// One buy fill paired with one sell fill. The fill that happened first is
@@ -231,45 +286,75 @@ fn performance(row: &mut Row) -> Option<NormalizedTrade> {
     if let Some(s) = &symbol {
         check_symbol(row, "symbol", s);
     }
-    let quantity = row.required("quantity").and_then(|s| row.with("quantity", parse_number(s)));
+    let quantity = row
+        .required("quantity")
+        .and_then(|s| row.with("quantity", parse_number(s)));
     if quantity.is_some_and(|q| q <= Decimal::ZERO) {
         row.error("quantity", "must be greater than zero");
     }
-    let buy_price = row.required("buyPrice").and_then(|s| row.with("buyPrice", parse_number(s)));
-    let sell_price = row.required("sellPrice").and_then(|s| row.with("sellPrice", parse_number(s)));
+    let buy_price = row
+        .required("buyPrice")
+        .and_then(|s| row.with("buyPrice", parse_number(s)));
+    let sell_price = row
+        .required("sellPrice")
+        .and_then(|s| row.with("sellPrice", parse_number(s)));
     let bought_src = row.required("boughtTimestamp");
     let sold_src = row.required("soldTimestamp");
     let bought_at = bought_src.and_then(|s| row.time("boughtTimestamp", s));
     let sold_at = sold_src.and_then(|s| row.time("soldTimestamp", s));
 
     let reported = match row.text("realizedPnl") {
-        Some(s) => row.with("realizedPnl", parse_money(s).and_then(|d| to_micros(d).ok_or("is too large".into()))),
+        Some(s) => row.with(
+            "realizedPnl",
+            parse_money(s).and_then(|d| to_micros(d).ok_or("is too large".into())),
+        ),
         None => {
             if row.ctx.columns.get("realizedPnl").is_some() {
-                row.warn("realizedPnl", "is empty; P&L will be calculated from prices");
+                row.warn(
+                    "realizedPnl",
+                    "is empty; P&L will be calculated from prices",
+                );
             }
             None
         }
     };
     let duration_source = row.text("duration").map(str::to_string);
     let duration_seconds = duration_source.as_deref().and_then(|s| {
-        row.with("duration", parse_duration(s).and_then(|seconds| {
-            // SQLite's duration_seconds is a signed INTEGER. Never wrap on persistence.
-            i64::try_from(seconds).map(|_| seconds).map_err(|_| "is too large to store".into())
-        }))
+        row.with(
+            "duration",
+            parse_duration(s).and_then(|seconds| {
+                // SQLite's duration_seconds is a signed INTEGER. Never wrap on persistence.
+                i64::try_from(seconds)
+                    .map(|_| seconds)
+                    .map_err(|_| "is too large to store".into())
+            }),
+        )
     });
 
-    let buy_fill_id = row.text("buyFillId").and_then(|s| check_id(row, "buyFillId", s));
-    let sell_fill_id = row.text("sellFillId").and_then(|s| check_id(row, "sellFillId", s));
+    let buy_fill_id = row
+        .text("buyFillId")
+        .and_then(|s| check_id(row, "buyFillId", s));
+    let sell_fill_id = row
+        .text("sellFillId")
+        .and_then(|s| check_id(row, "sellFillId", s));
     let tick_size = row.text("tickSize").map(str::to_string);
     if let Some(t) = &tick_size
         && !parse_number(t).is_ok_and(|d| d > Decimal::ZERO)
     {
-        row.warn("tickSize", format!("'{t}' is not a positive tick size; kept as text"));
+        row.warn(
+            "tickSize",
+            format!("'{t}' is not a positive tick size; kept as text"),
+        );
     }
 
-    let (Some(symbol), Some(quantity), Some(buy_price), Some(sell_price), Some(bought_at), Some(sold_at)) =
-        (symbol, quantity, buy_price, sell_price, bought_at, sold_at)
+    let (
+        Some(symbol),
+        Some(quantity),
+        Some(buy_price),
+        Some(sell_price),
+        Some(bought_at),
+        Some(sold_at),
+    ) = (symbol, quantity, buy_price, sell_price, bought_at, sold_at)
     else {
         return None;
     };
@@ -300,13 +385,20 @@ fn performance(row: &mut Row) -> Option<NormalizedTrade> {
         if between.abs_diff(d) > 1 {
             row.warn(
                 "duration",
-                format!("{} does not match the {between}s between the fills", duration_source.as_deref().unwrap_or("")),
+                format!(
+                    "{} does not match the {between}s between the fills",
+                    duration_source.as_deref().unwrap_or("")
+                ),
             );
         }
     }
     match (&buy_fill_id, &sell_fill_id) {
         (Some(_), None) | (None, Some(_)) => row.warn(
-            if buy_fill_id.is_some() { "sellFillId" } else { "buyFillId" },
+            if buy_fill_id.is_some() {
+                "sellFillId"
+            } else {
+                "buyFillId"
+            },
             "is missing, so duplicates are detected by the trade's values instead of the fill pair",
         ),
         _ => {}
@@ -329,7 +421,10 @@ fn performance(row: &mut Row) -> Option<NormalizedTrade> {
         notes: None,
     };
     let identity = match (&buy_fill_id, &sell_fill_id) {
-        (Some(b), Some(s)) => Identity::FillPair { buy: b.clone(), sell: s.clone() },
+        (Some(b), Some(s)) => Identity::FillPair {
+            buy: b.clone(),
+            sell: s.clone(),
+        },
         _ => Identity::Composite(format!(
             "performance|{symbol}|{}|{}|{}|{}|{}|{}",
             canonical(quantity),
@@ -366,18 +461,32 @@ fn generic(row: &mut Row) -> Option<NormalizedTrade> {
         check_symbol(row, "symbol", symbol);
     }
     let side = row.required("side").unwrap_or_default();
-    let quantity = row.required("quantity").and_then(|s| row.with("quantity", parse_number(s)));
-    let entry_price = row.required("entryPrice").and_then(|s| row.with("entryPrice", parse_number(s)));
-    let entry_at = row.required("entryTime").and_then(|s| row.time("entryTime", s));
-    let exit_price = row.text("exitPrice").and_then(|s| row.with("exitPrice", parse_number(s)));
+    let quantity = row
+        .required("quantity")
+        .and_then(|s| row.with("quantity", parse_number(s)));
+    let entry_price = row
+        .required("entryPrice")
+        .and_then(|s| row.with("entryPrice", parse_number(s)));
+    let entry_at = row
+        .required("entryTime")
+        .and_then(|s| row.time("entryTime", s));
+    let exit_price = row
+        .text("exitPrice")
+        .and_then(|s| row.with("exitPrice", parse_number(s)));
     let exit_at = row.text("exitTime").and_then(|s| row.time("exitTime", s));
-    let fees = row.text("fees").and_then(|s| row.with("fees", parse_money(s)));
+    let fees = row
+        .text("fees")
+        .and_then(|s| row.with("fees", parse_money(s)));
     if fees.is_some_and(|f| f < Decimal::ZERO) {
         row.warn("fees", "is negative; taken as a cost of the same amount");
     }
-    let pnl = row.text("realizedPnl").and_then(|s| row.with("realizedPnl", parse_money(s)));
+    let pnl = row
+        .text("realizedPnl")
+        .and_then(|s| row.with("realizedPnl", parse_money(s)));
     let notes = row.text("notes");
-    let broker_trade_id = row.text("brokerTradeId").and_then(|s| check_id(row, "brokerTradeId", s));
+    let broker_trade_id = row
+        .text("brokerTradeId")
+        .and_then(|s| check_id(row, "brokerTradeId", s));
 
     // Shared rules (side, exit pairing and order, limits) via the same
     // validator as manual entry, fed canonical values.
@@ -389,7 +498,10 @@ fn generic(row: &mut Row) -> Option<NormalizedTrade> {
         fees.map(|f| canonical(f.abs())),
         pnl.map(canonical),
     );
-    let (ea, xa) = (entry_at.map(format_instant).unwrap_or_default(), exit_at.map(format_instant));
+    let (ea, xa) = (
+        entry_at.map(format_instant).unwrap_or_default(),
+        exit_at.map(format_instant),
+    );
     let has_exit_time = row.text("exitTime").is_some();
     let has_exit_price = row.text("exitPrice").is_some();
     let draft = TradeDraft {
@@ -426,7 +538,10 @@ fn generic(row: &mut Row) -> Option<NormalizedTrade> {
             canonical(fields.entry_price),
             fields.exit_at.map(format_instant).unwrap_or_default(),
             fields.exit_price.map(canonical).unwrap_or_default(),
-            fields.reported_pnl_micros.map(|r| r.to_string()).unwrap_or_default()
+            fields
+                .reported_pnl_micros
+                .map(|r| r.to_string())
+                .unwrap_or_default()
         )),
     };
     finish(row, fields, None, broker_trade_id, identity)

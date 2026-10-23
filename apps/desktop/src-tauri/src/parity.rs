@@ -14,7 +14,7 @@
 
 use std::path::PathBuf;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::domain::{canonical, micros_to_string, parse_decimal, to_micros};
 use crate::store::accounts::{self, AccountInput};
@@ -27,7 +27,9 @@ const TRADE_ID: &str = "<trade-id>";
 const TIMESTAMP: &str = "2026-01-01T00:00:00.000Z";
 
 fn fixture_path(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../packages/domain/test/fixtures").join(name)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../packages/domain/test/fixtures")
+        .join(name)
 }
 
 fn updating() -> bool {
@@ -38,7 +40,8 @@ fn updating() -> bool {
 /// (update mode) or fails listing every case whose stored outputs differ.
 fn check(name: &str, compute: impl Fn(&str, &mut Value)) {
     let path = fixture_path(name);
-    let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    let text =
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     let original: Value = serde_json::from_str(&text).unwrap();
     let mut fixture = original.clone();
     let groups = fixture.as_object_mut().unwrap();
@@ -50,7 +53,11 @@ fn check(name: &str, compute: impl Fn(&str, &mut Value)) {
         }
     }
     if updating() {
-        std::fs::write(&path, serde_json::to_string_pretty(&fixture).unwrap() + "\n").unwrap();
+        std::fs::write(
+            &path,
+            serde_json::to_string_pretty(&fixture).unwrap() + "\n",
+        )
+        .unwrap();
         return;
     }
     let stale: Vec<String> = original
@@ -60,7 +67,11 @@ fn check(name: &str, compute: impl Fn(&str, &mut Value)) {
         .filter_map(|(group, cases)| Some((group, cases.as_array()?)))
         .flat_map(|(group, cases)| {
             let fresh = fixture[group].as_array().unwrap();
-            cases.iter().zip(fresh).filter(|(a, b)| a != b).map(move |(_, b)| format!("{group}: {b}"))
+            cases
+                .iter()
+                .zip(fresh)
+                .filter(|(a, b)| a != b)
+                .map(move |(_, b)| format!("{group}: {b}"))
         })
         .collect();
     assert!(
@@ -134,7 +145,8 @@ pub(crate) struct CatalogueFixture {
 
 pub(crate) fn catalogue_fixture() -> (Value, CatalogueFixture) {
     let path = fixture_path("catalogue.json");
-    let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    let text =
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     let original: Value = serde_json::from_str(&text).unwrap();
     let parsed = serde_json::from_value(original.clone()).unwrap();
     (original, parsed)
@@ -189,11 +201,20 @@ fn every_command_is_registered_and_every_adapter_call_exists() {
         .collect();
     assert!(defined.len() > 50, "found {} commands", defined.len());
     for name in &defined {
-        assert!(lib.contains(&format!("commands::{name},")), "{name} is not registered in lib.rs");
+        assert!(
+            lib.contains(&format!("commands::{name},")),
+            "{name} is not registered in lib.rs"
+        );
     }
-    let registered: Vec<&str> = lib.lines().filter_map(|l| l.trim().strip_prefix("commands::")?.strip_suffix(',')).collect();
+    let registered: Vec<&str> = lib
+        .lines()
+        .filter_map(|l| l.trim().strip_prefix("commands::")?.strip_suffix(','))
+        .collect();
     for name in &registered {
-        assert!(defined.contains(name), "lib.rs registers {name}, which commands.rs does not define");
+        assert!(
+            defined.contains(name),
+            "lib.rs registers {name}, which commands.rs does not define"
+        );
     }
 
     let called: std::collections::BTreeSet<&str> = adapter
@@ -204,7 +225,10 @@ fn every_command_is_registered_and_every_adapter_call_exists() {
         .collect();
     assert!(called.len() > 50, "found {} adapter calls", called.len());
     for name in called {
-        assert!(defined.contains(&name), "the adapter calls {name}, which is not a command");
+        assert!(
+            defined.contains(&name),
+            "the adapter calls {name}, which is not a command"
+        );
     }
 }
 
@@ -215,7 +239,8 @@ fn insights_metrics_fixture_matches_rust() {
         if group != "cases" {
             return;
         }
-        let trades: Vec<crate::insights::MetricTrade> = serde_json::from_value(case["trades"].clone()).unwrap();
+        let trades: Vec<crate::insights::MetricTrade> =
+            serde_json::from_value(case["trades"].clone()).unwrap();
         case["summary"] = crate::insights::summarize(&trades);
     });
 }

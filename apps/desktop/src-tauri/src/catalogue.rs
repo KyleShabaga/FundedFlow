@@ -39,17 +39,70 @@ wire_enum!(
     /// Record status of a catalogue entry. Says nothing about a provider's legitimacy.
     RecordStatus { Active, Inactive, Archived, Unknown }
 );
-wire_enum!(ProgrammeCategory { EvaluationToFunded, InstantFunding, Other, Unknown });
-wire_enum!(VerificationStatus { Draft, NeedsReview, Verified, Stale, Superseded, Rejected });
-wire_enum!(ClaimOrigin { Observed, ProviderStated, UserEntered, ExtractedCandidate, VerifiedCatalogue, Unknown });
-wire_enum!(SourceType { Official, Secondary, UserManual, Unknown });
+wire_enum!(ProgrammeCategory {
+    EvaluationToFunded,
+    InstantFunding,
+    Other,
+    Unknown
+});
+wire_enum!(VerificationStatus {
+    Draft,
+    NeedsReview,
+    Verified,
+    Stale,
+    Superseded,
+    Rejected
+});
+wire_enum!(ClaimOrigin {
+    Observed,
+    ProviderStated,
+    UserEntered,
+    ExtractedCandidate,
+    VerifiedCatalogue,
+    Unknown
+});
+wire_enum!(SourceType {
+    Official,
+    Secondary,
+    UserManual,
+    Unknown
+});
 wire_enum!(VersionCreator { Manual, Importer });
-wire_enum!(PhaseKey { Evaluation, SimulatedFunded, LiveFunded, Other, Unknown });
-wire_enum!(PathStatus { Active, Inactive, Archived });
-wire_enum!(BillingModel { OneTime, Recurring, Unknown });
-wire_enum!(AccountFieldSource { UserEntered, Imported, CatalogueDerived, Unknown });
-wire_enum!(PhaseEventSource { UserEntered, Imported, CatalogueDerived, System, Unknown });
-wire_enum!(PhaseEventActor { User, System, Importer });
+wire_enum!(PhaseKey {
+    Evaluation,
+    SimulatedFunded,
+    LiveFunded,
+    Other,
+    Unknown
+});
+wire_enum!(PathStatus {
+    Active,
+    Inactive,
+    Archived
+});
+wire_enum!(BillingModel {
+    OneTime,
+    Recurring,
+    Unknown
+});
+wire_enum!(AccountFieldSource {
+    UserEntered,
+    Imported,
+    CatalogueDerived,
+    Unknown
+});
+wire_enum!(PhaseEventSource {
+    UserEntered,
+    Imported,
+    CatalogueDerived,
+    System,
+    Unknown
+});
+wire_enum!(PhaseEventActor {
+    User,
+    System,
+    Importer
+});
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

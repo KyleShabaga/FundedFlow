@@ -67,9 +67,24 @@ mod tests {
 
     #[test]
     fn same_seed_same_sequence_and_streams_are_independent() {
-        let a: Vec<u64> = (0..5).map({ let mut r = Rng::stream(7, "x"); move |_| r.next_u64() }).collect();
-        let b: Vec<u64> = (0..5).map({ let mut r = Rng::stream(7, "x"); move |_| r.next_u64() }).collect();
-        let c: Vec<u64> = (0..5).map({ let mut r = Rng::stream(7, "y"); move |_| r.next_u64() }).collect();
+        let a: Vec<u64> = (0..5)
+            .map({
+                let mut r = Rng::stream(7, "x");
+                move |_| r.next_u64()
+            })
+            .collect();
+        let b: Vec<u64> = (0..5)
+            .map({
+                let mut r = Rng::stream(7, "x");
+                move |_| r.next_u64()
+            })
+            .collect();
+        let c: Vec<u64> = (0..5)
+            .map({
+                let mut r = Rng::stream(7, "y");
+                move |_| r.next_u64()
+            })
+            .collect();
         assert_eq!(a, b);
         assert_ne!(a, c);
         let mut r = Rng::new(1);

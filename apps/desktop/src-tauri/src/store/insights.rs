@@ -14,10 +14,10 @@
 
 use std::collections::{BTreeSet, HashMap};
 
-use rusqlite::{params_from_iter, Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, params_from_iter};
 use serde::{Deserialize, Serialize};
 
-use super::reviews::{r_multiple, risk_from_plan, ReviewTag};
+use super::reviews::{ReviewTag, r_multiple, risk_from_plan};
 use super::{accounts, load_instruments, require_account};
 use crate::domain::{micros_to_string, now, parse_decimal, resolve_instrument};
 use crate::error::{AppError, AppResult};
@@ -118,29 +118,48 @@ pub fn dataset(conn: &Connection, query: InsightsQuery) -> AppResult<InsightsDat
 }
 
 /// As `dataset`, with "now" given (tests and the wire fixture).
-pub fn dataset_at(conn: &Connection, query: InsightsQuery, generated_at: &str) -> AppResult<InsightsDataset> {
+pub fn dataset_at(
+    conn: &Connection,
+    query: InsightsQuery,
+    generated_at: &str,
+) -> AppResult<InsightsDataset> {
     let mut ids: Vec<String> = Vec::new();
     let mut seen = BTreeSet::new();
     for id in query.account_ids.iter().map(|s| s.trim()) {
         if id.is_empty() {
-            return Err(AppError::invalid("accountIds", "must not contain a blank id"));
+            return Err(AppError::invalid(
+                "accountIds",
+                "must not contain a blank id",
+            ));
         }
         if seen.insert(id.to_string()) {
             ids.push(id.to_string());
         }
     }
     if ids.is_empty() {
-        return Err(AppError::invalid("accountIds", "choose at least one account"));
+        return Err(AppError::invalid(
+            "accountIds",
+            "choose at least one account",
+        ));
     }
     if ids.len() > MAX_ACCOUNTS {
-        return Err(AppError::invalid("accountIds", format!("at most {MAX_ACCOUNTS} accounts at a time")));
+        return Err(AppError::invalid(
+            "accountIds",
+            format!("at most {MAX_ACCOUNTS} accounts at a time"),
+        ));
     }
     for id in &ids {
         require_account(conn, id)?;
     }
 
-    let accounts = ids.iter().map(|id| account(conn, id)).collect::<AppResult<Vec<_>>>()?;
-    let currency: HashMap<&str, &str> = accounts.iter().map(|a| (a.id.as_str(), a.currency.as_str())).collect();
+    let accounts = ids
+        .iter()
+        .map(|id| account(conn, id))
+        .collect::<AppResult<Vec<_>>>()?;
+    let currency: HashMap<&str, &str> = accounts
+        .iter()
+        .map(|a| (a.id.as_str(), a.currency.as_str()))
+        .collect();
     let instruments = load_instruments(conn)?;
 
     let placeholders = vec!["?"; ids.len()].join(", ");
@@ -215,10 +234,17 @@ pub fn dataset_at(conn: &Connection, query: InsightsQuery, generated_at: &str) -
                 let (risk, source) = match row.entered_risk {
                     Some(r) => (Some(r), Some("entered")),
                     None => {
-                        let derived = match (row.entry.as_deref().and_then(parse_decimal), row.stop.as_deref().and_then(parse_decimal)) {
-                            (Some(entry), Some(stop)) => {
-                                risk_from_plan(entry, stop, &trade.quantity, instrument, currency[trade.account_id.as_str()])
-                            }
+                        let derived = match (
+                            row.entry.as_deref().and_then(parse_decimal),
+                            row.stop.as_deref().and_then(parse_decimal),
+                        ) {
+                            (Some(entry), Some(stop)) => risk_from_plan(
+                                entry,
+                                stop,
+                                &trade.quantity,
+                                instrument,
+                                currency[trade.account_id.as_str()],
+                            ),
                             _ => None,
                         };
                         (derived, derived.map(|_| "derived"))
@@ -238,11 +264,19 @@ pub fn dataset_at(conn: &Connection, query: InsightsQuery, generated_at: &str) -
         })
         .collect();
 
-    Ok(InsightsDataset { contract_version: CONTRACT_VERSION, generated_at: generated_at.to_string(), accounts, trades })
+    Ok(InsightsDataset {
+        contract_version: CONTRACT_VERSION,
+        generated_at: generated_at.to_string(),
+        accounts,
+        trades,
+    })
 }
 
 /// Tags of every active review of the accounts, by review id, with their recorded labels and kinds.
-fn review_tags(conn: &Connection, account_ids: &[String]) -> AppResult<HashMap<String, Vec<ReviewTag>>> {
+fn review_tags(
+    conn: &Connection,
+    account_ids: &[String],
+) -> AppResult<HashMap<String, Vec<ReviewTag>>> {
     let placeholders = vec!["?"; account_ids.len()].join(", ");
     let mut stmt = conn.prepare(&format!(
         "SELECT rt.trade_review_id, rt.tag_id, coalesce(rt.label_snapshot, t.name), coalesce(rt.kind_snapshot, t.kind), t.name,
@@ -257,7 +291,13 @@ fn review_tags(conn: &Connection, account_ids: &[String]) -> AppResult<HashMap<S
         let current: String = r.get(4)?;
         Ok((
             r.get::<_, String>(0)?,
-            ReviewTag { tag_id: r.get(1)?, current_label: (current != label).then_some(current), label, kind: r.get(3)?, archived: r.get(5)? },
+            ReviewTag {
+                tag_id: r.get(1)?,
+                current_label: (current != label).then_some(current),
+                label,
+                kind: r.get(3)?,
+                archived: r.get(5)?,
+            },
         ))
     })?;
     for row in rows {
@@ -269,12 +309,17 @@ fn review_tags(conn: &Connection, account_ids: &[String]) -> AppResult<HashMap<S
 
 fn account(conn: &Connection, id: &str) -> AppResult<InsightsAccount> {
     let a = accounts::get_any(conn, id)?;
-    let neighbour = |sql: &str, id: &str| -> AppResult<Option<String>> { Ok(conn.query_row(sql, [id], |r| r.get(0)).optional()?) };
+    let neighbour = |sql: &str, id: &str| -> AppResult<Option<String>> {
+        Ok(conn.query_row(sql, [id], |r| r.get(0)).optional()?)
+    };
     // Walk back to the first attempt; links form a path, the walk is bounded rather than trusting the data.
     let mut root = id.to_string();
     let mut attempt_number = 1u32;
     for _ in 0..10_000 {
-        match neighbour("SELECT predecessor_account_id FROM account_attempt_links WHERE successor_account_id = ?1", &root)? {
+        match neighbour(
+            "SELECT predecessor_account_id FROM account_attempt_links WHERE successor_account_id = ?1",
+            &root,
+        )? {
             Some(prev) => {
                 root = prev;
                 attempt_number += 1;
@@ -290,8 +335,11 @@ fn account(conn: &Connection, id: &str) -> AppResult<InsightsAccount> {
             |r| Ok(InsightsStatusEvent { status: r.get(0)?, effective_at: r.get(1)?, cause: r.get(2)?, note: r.get(3)? }),
         )
         .optional()?;
-    let deleted_trade_count: i64 =
-        conn.query_row("SELECT COUNT(*) FROM trades WHERE account_id = ?1 AND deleted_at IS NOT NULL", [id], |r| r.get(0))?;
+    let deleted_trade_count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM trades WHERE account_id = ?1 AND deleted_at IS NOT NULL",
+        [id],
+        |r| r.get(0),
+    )?;
     let (committed, failed, last): (i64, i64, Option<String>) = conn.query_row(
         "SELECT COUNT(*) FILTER (WHERE status = 'committed'), COUNT(*) FILTER (WHERE status = 'failed'), MAX(completed_at)
          FROM import_batches WHERE account_id = ?1",

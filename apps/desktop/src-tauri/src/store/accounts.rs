@@ -1,14 +1,21 @@
-use rusqlite::{params, Connection, OptionalExtension, Row, Transaction};
+use rusqlite::{Connection, OptionalExtension, Row, Transaction, params};
 use serde::{Deserialize, Serialize};
 
 use super::{opt_text, trades};
 use crate::domain::{
-    format_instant, format_reset_time, parse_payload_time, is_allowed_reset_time, micros_to_string, new_id, now, parse_decimal, parse_reset_time,
-    parse_tz, to_micros, MAX_NOTES_CHARS,
+    MAX_NOTES_CHARS, format_instant, format_reset_time, is_allowed_reset_time, micros_to_string,
+    new_id, now, parse_decimal, parse_payload_time, parse_reset_time, parse_tz, to_micros,
 };
 use crate::error::{AppError, AppResult, Issues};
 
-pub const ACCOUNT_TYPES: &[&str] = &["evaluation", "sim_funded", "live_funded", "personal", "demo", "other"];
+pub const ACCOUNT_TYPES: &[&str] = &[
+    "evaluation",
+    "sim_funded",
+    "live_funded",
+    "personal",
+    "demo",
+    "other",
+];
 pub const ACCOUNT_STATUSES: &[&str] = &["active", "paused", "passed", "failed", "closed"];
 
 #[derive(Debug, Clone, Deserialize)]
@@ -90,10 +97,16 @@ fn validate(input: AccountInput) -> AppResult<Valid> {
         issues.add("name", "must be 1–100 characters");
     }
     if !ACCOUNT_TYPES.contains(&input.account_type.as_str()) {
-        issues.add("accountType", format!("must be one of {}", ACCOUNT_TYPES.join(", ")));
+        issues.add(
+            "accountType",
+            format!("must be one of {}", ACCOUNT_TYPES.join(", ")),
+        );
     }
     if !ACCOUNT_STATUSES.contains(&input.status.as_str()) {
-        issues.add("status", format!("must be one of {}", ACCOUNT_STATUSES.join(", ")));
+        issues.add(
+            "status",
+            format!("must be one of {}", ACCOUNT_STATUSES.join(", ")),
+        );
     }
     let currency = input.currency.trim().to_ascii_uppercase();
     if currency.len() != 3 || !currency.chars().all(|c| c.is_ascii_uppercase()) {
@@ -115,11 +128,18 @@ fn validate(input: AccountInput) -> AppResult<Valid> {
     };
     let timezone = parse_tz(&input.timezone);
     if timezone.is_none() {
-        issues.add("timezone", "must be an IANA time zone such as America/New_York");
+        issues.add(
+            "timezone",
+            "must be an IANA time zone such as America/New_York",
+        );
     }
-    let reset = parse_reset_time(&input.trading_day_reset_time).filter(|t| is_allowed_reset_time(*t));
+    let reset =
+        parse_reset_time(&input.trading_day_reset_time).filter(|t| is_allowed_reset_time(*t));
     if reset.is_none() {
-        issues.add("tradingDayResetTime", "must be 00:00 or a time from 12:00 to 23:59 (HH:MM, 24-hour)");
+        issues.add(
+            "tradingDayResetTime",
+            "must be 00:00 or a time from 12:00 to 23:59 (HH:MM, 24-hour)",
+        );
     }
     issues.into_result()?;
 
@@ -178,7 +198,10 @@ pub fn list(conn: &Connection) -> AppResult<Vec<Account>> {
 /// views (Today) read. Paused, passed, failed, closed and archived accounts
 /// are history, and a reset's predecessor is already failed/passed/closed.
 pub fn list_active(conn: &Connection) -> AppResult<Vec<Account>> {
-    Ok(list(conn)?.into_iter().filter(|a| a.status == "active").collect())
+    Ok(list(conn)?
+        .into_iter()
+        .filter(|a| a.status == "active")
+        .collect())
 }
 
 /// As `list`, optionally with archived accounts, for history and restore.
@@ -191,9 +214,13 @@ pub fn list_with(conn: &Connection, include_archived: bool) -> AppResult<Vec<Acc
 }
 
 pub fn get(conn: &Connection, id: &str) -> AppResult<Account> {
-    conn.query_row(&format!("{SELECT} WHERE a.id = ?1 AND a.archived_at IS NULL"), [id], from_row)
-        .optional()?
-        .ok_or_else(|| AppError::not_found("account", id))
+    conn.query_row(
+        &format!("{SELECT} WHERE a.id = ?1 AND a.archived_at IS NULL"),
+        [id],
+        from_row,
+    )
+    .optional()?
+    .ok_or_else(|| AppError::not_found("account", id))
 }
 
 /// Read one account whether or not it is archived (read-only browsing).
@@ -258,9 +285,13 @@ pub(crate) fn record_status_event(
 
 pub(crate) fn friendly(e: rusqlite::Error) -> AppError {
     match AppError::from(e) {
-        AppError::Conflict { message } if message.contains("accounts.broker") => AppError::Conflict {
-            message: "another active or paused account already uses this broker and account number".into(),
-        },
+        AppError::Conflict { message } if message.contains("accounts.broker") => {
+            AppError::Conflict {
+                message:
+                    "another active or paused account already uses this broker and account number"
+                        .into(),
+            }
+        }
         other => other,
     }
 }
@@ -356,13 +387,16 @@ pub fn restore(conn: &mut Connection, id: &str) -> AppResult<Account> {
             |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
         )
         .optional()?;
-    let (broker, external_ref, status, archived) = row.ok_or_else(|| AppError::not_found("account", id))?;
+    let (broker, external_ref, status, archived) =
+        row.ok_or_else(|| AppError::not_found("account", id))?;
     if !archived {
         return Err(AppError::invalid("id", "The account is not archived"));
     }
-    if let (Some(broker), Some(external_ref), true) =
-        (&broker, &external_ref, matches!(status.as_str(), "active" | "paused"))
-    {
+    if let (Some(broker), Some(external_ref), true) = (
+        &broker,
+        &external_ref,
+        matches!(status.as_str(), "active" | "paused"),
+    ) {
         let holder: Option<String> = tx
             .query_row(
                 "SELECT name FROM accounts
@@ -380,14 +414,22 @@ pub fn restore(conn: &mut Connection, id: &str) -> AppResult<Account> {
             });
         }
     }
-    tx.execute("UPDATE accounts SET archived_at = NULL, updated_at = ?2 WHERE id = ?1", params![id, at])
-        .map_err(friendly)?;
+    tx.execute(
+        "UPDATE accounts SET archived_at = NULL, updated_at = ?2 WHERE id = ?1",
+        params![id, at],
+    )
+    .map_err(friendly)?;
     record_archive_event(&tx, id, "restored", &at)?;
     tx.commit()?;
     get(conn, id)
 }
 
-fn record_archive_event(tx: &Connection, account_id: &str, action: &str, at: &str) -> AppResult<()> {
+fn record_archive_event(
+    tx: &Connection,
+    account_id: &str,
+    action: &str,
+    at: &str,
+) -> AppResult<()> {
     tx.execute(
         "INSERT INTO account_archive_events (id, account_id, action, occurred_at, created_at) VALUES (?1, ?2, ?3, ?4, ?4)",
         params![new_id(), account_id, action, at],
@@ -410,18 +452,31 @@ pub struct StatusChangeInput {
 /// Change an account's status (for example mark it failed) with the user's
 /// effective time, cause and notes. It changes nothing else: the account is
 /// not archived, deleted or reset, and no rule breach is inferred.
-pub fn change_status(conn: &mut Connection, id: &str, input: StatusChangeInput) -> AppResult<Account> {
+pub fn change_status(
+    conn: &mut Connection,
+    id: &str,
+    input: StatusChangeInput,
+) -> AppResult<Account> {
     let mut issues = Issues::default();
     if !ACCOUNT_STATUSES.contains(&input.status.as_str()) {
-        issues.add("status", format!("must be one of {}", ACCOUNT_STATUSES.join(", ")));
+        issues.add(
+            "status",
+            format!("must be one of {}", ACCOUNT_STATUSES.join(", ")),
+        );
     }
     let cause = opt_text(input.cause);
     let note = opt_text(input.note);
     if cause.as_ref().is_some_and(|c| c.chars().count() > 500) {
         issues.add("cause", "must be at most 500 characters");
     }
-    if note.as_ref().is_some_and(|n| n.chars().count() > MAX_NOTES_CHARS) {
-        issues.add("note", format!("must be at most {MAX_NOTES_CHARS} characters"));
+    if note
+        .as_ref()
+        .is_some_and(|n| n.chars().count() > MAX_NOTES_CHARS)
+    {
+        issues.add(
+            "note",
+            format!("must be at most {MAX_NOTES_CHARS} characters"),
+        );
     }
     let effective_at = match input.effective_at.as_deref() {
         None => now(),
@@ -437,23 +492,38 @@ pub fn change_status(conn: &mut Connection, id: &str, input: StatusChangeInput) 
 
     let tx = conn.transaction()?;
     let (old, archived): (String, bool) = tx
-        .query_row("SELECT status, archived_at IS NOT NULL FROM accounts WHERE id = ?1", [id], |r| {
-            Ok((r.get(0)?, r.get(1)?))
-        })
+        .query_row(
+            "SELECT status, archived_at IS NOT NULL FROM accounts WHERE id = ?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
         .optional()?
         .ok_or_else(|| AppError::not_found("account", id))?;
     if archived {
-        return Err(AppError::invalid("id", "Restore the account before changing its status"));
+        return Err(AppError::invalid(
+            "id",
+            "Restore the account before changing its status",
+        ));
     }
     if old == input.status {
-        return Err(AppError::invalid("status", format!("The account is already {old}")));
+        return Err(AppError::invalid(
+            "status",
+            format!("The account is already {old}"),
+        ));
     }
     tx.execute(
         "UPDATE accounts SET status = ?2, updated_at = ?3 WHERE id = ?1",
         params![id, input.status, now()],
     )
     .map_err(friendly)?;
-    record_status_event(&tx, id, &input.status, &effective_at, cause.as_deref(), note.as_deref())?;
+    record_status_event(
+        &tx,
+        id,
+        &input.status,
+        &effective_at,
+        cause.as_deref(),
+        note.as_deref(),
+    )?;
     tx.commit()?;
     get(conn, id)
 }
@@ -492,14 +562,28 @@ pub fn history(conn: &Connection, id: &str) -> AppResult<AccountHistory> {
     )?;
     let status_events = stmt
         .query_map([id], |r| {
-            Ok(StatusEvent { status: r.get(0)?, effective_at: r.get(1)?, cause: r.get(2)?, note: r.get(3)?, recorded_at: r.get(4)? })
+            Ok(StatusEvent {
+                status: r.get(0)?,
+                effective_at: r.get(1)?,
+                cause: r.get(2)?,
+                note: r.get(3)?,
+                recorded_at: r.get(4)?,
+            })
         })?
         .collect::<rusqlite::Result<_>>()?;
     let mut stmt = conn.prepare(
         "SELECT action, occurred_at FROM account_archive_events WHERE account_id = ?1 ORDER BY occurred_at, id",
     )?;
     let archive_events = stmt
-        .query_map([id], |r| Ok(ArchiveEvent { action: r.get(0)?, occurred_at: r.get(1)? }))?
+        .query_map([id], |r| {
+            Ok(ArchiveEvent {
+                action: r.get(0)?,
+                occurred_at: r.get(1)?,
+            })
+        })?
         .collect::<rusqlite::Result<_>>()?;
-    Ok(AccountHistory { status_events, archive_events })
+    Ok(AccountHistory {
+        status_events,
+        archive_events,
+    })
 }

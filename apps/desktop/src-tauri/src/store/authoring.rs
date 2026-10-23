@@ -11,13 +11,13 @@
 //! Sources are append-only: a source is created here and never edited, so a claim's
 //! provenance cannot change after the fact.
 
-use rusqlite::{params, Connection, OptionalExtension, Transaction};
+use rusqlite::{Connection, OptionalExtension, Transaction, params};
 use serde::Deserialize;
 
 use super::catalogue;
+use crate::catalogue::sql_text;
 use crate::catalogue::{BillingModel, CatalogueVersion, PathStatus, PhaseKey, SourceType};
 use crate::domain::{format_instant, new_id, now, parse_decimal, parse_payload_time, to_micros};
-use crate::catalogue::sql_text;
 use crate::error::{AppError, AppResult, Issues};
 
 #[derive(Debug, Clone, Deserialize)]
@@ -125,25 +125,38 @@ fn instant(issues: &mut Issues, field: &str, v: &Option<String>) -> Option<Strin
 }
 
 fn money(issues: &mut Issues, field: &str, v: &Option<String>) -> Option<i64> {
-    v.as_deref().and_then(|s| match parse_decimal(s).and_then(to_micros) {
-        Some(m) if m >= 0 => Some(m),
-        _ => {
-            issues.add(field, "must be zero or a positive number; leave it empty when unknown");
-            None
-        }
-    })
+    v.as_deref()
+        .and_then(|s| match parse_decimal(s).and_then(to_micros) {
+            Some(m) if m >= 0 => Some(m),
+            _ => {
+                issues.add(
+                    field,
+                    "must be zero or a positive number; leave it empty when unknown",
+                );
+                None
+            }
+        })
 }
 
 fn text(v: &Option<String>) -> Option<String> {
-    v.as_deref().map(str::trim).filter(|s| !s.is_empty()).map(str::to_string)
+    v.as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
 }
 
 /// Create a source. Sources are never edited afterwards.
-pub fn create_source(conn: &mut Connection, input: SourceInput) -> AppResult<crate::catalogue::SourceReference> {
+pub fn create_source(
+    conn: &mut Connection,
+    input: SourceInput,
+) -> AppResult<crate::catalogue::SourceReference> {
     let mut issues = Issues::default();
     let url = text(&input.url);
     let descriptor = text(&input.descriptor);
-    if url.as_ref().is_some_and(|u| !(u.starts_with("http://") || u.starts_with("https://")) || u.len() < 9) {
+    if url
+        .as_ref()
+        .is_some_and(|u| !(u.starts_with("http://") || u.starts_with("https://")) || u.len() < 9)
+    {
         issues.add("url", "must start with http:// or https://");
     }
     if url.is_none() && descriptor.is_none() {
@@ -156,8 +169,15 @@ pub fn create_source(conn: &mut Connection, input: SourceInput) -> AppResult<cra
         issues.add("effectiveTo", "must be after effectiveFrom");
     }
     let hash = text(&input.content_hash);
-    if hash.as_ref().is_some_and(|h| h.len() != 71 || !h.starts_with("sha256:") || !h[7..].chars().all(|c| matches!(c, '0'..='9' | 'a'..='f'))) {
-        issues.add("contentHash", "must be sha256: followed by 64 lower-case hex digits");
+    if hash.as_ref().is_some_and(|h| {
+        h.len() != 71
+            || !h.starts_with("sha256:")
+            || !h[7..].chars().all(|c| matches!(c, '0'..='9' | 'a'..='f'))
+    }) {
+        issues.add(
+            "contentHash",
+            "must be sha256: followed by 64 lower-case hex digits",
+        );
     }
     issues.into_result()?;
     let id = new_id();
@@ -186,7 +206,8 @@ struct Checked {
 
 fn check(input: &DraftInput) -> AppResult<Checked> {
     let mut issues = Issues::default();
-    let captured_at = instant(&mut issues, "capturedAt", &Some(input.captured_at.clone())).unwrap_or_default();
+    let captured_at =
+        instant(&mut issues, "capturedAt", &Some(input.captured_at.clone())).unwrap_or_default();
     let effective_from = instant(&mut issues, "effectiveFrom", &input.effective_from);
     let effective_to = instant(&mut issues, "effectiveTo", &input.effective_to);
     if matches!((&effective_from, &effective_to), (Some(f), Some(t)) if t <= f) {
@@ -194,10 +215,16 @@ fn check(input: &DraftInput) -> AppResult<Checked> {
     }
     let correction_reason = text(&input.correction_reason);
     if input.supersedes_version_id.is_some() && correction_reason.is_none() {
-        issues.add("correctionReason", "say why this version corrects the earlier one");
+        issues.add(
+            "correctionReason",
+            "say why this version corrects the earlier one",
+        );
     }
     if input.supersedes_version_id.is_none() && correction_reason.is_some() {
-        issues.add("supersedesVersionId", "a correction reason needs the version it corrects");
+        issues.add(
+            "supersedesVersionId",
+            "a correction reason needs the version it corrects",
+        );
     }
     for (i, c) in input.claims.iter().enumerate() {
         if c.field.trim().is_empty() {
@@ -213,21 +240,46 @@ fn check(input: &DraftInput) -> AppResult<Checked> {
         }
     }
     for (i, o) in input.offers.iter().enumerate() {
-        let mut m = |f: &str, v: &Option<String>| money(&mut issues, &format!("offers[{i}].{f}"), v);
-        for (f, v) in [("listPrice", &o.list_price), ("salePrice", &o.sale_price), ("resetFee", &o.reset_fee), ("activationFee", &o.activation_fee)] {
+        let mut m =
+            |f: &str, v: &Option<String>| money(&mut issues, &format!("offers[{i}].{f}"), v);
+        for (f, v) in [
+            ("listPrice", &o.list_price),
+            ("salePrice", &o.sale_price),
+            ("resetFee", &o.reset_fee),
+            ("activationFee", &o.activation_fee),
+        ] {
             m(f, v);
         }
-        let any_price = o.list_price.is_some() || o.sale_price.is_some() || o.reset_fee.is_some() || o.activation_fee.is_some();
-        let from = instant(&mut issues, &format!("offers[{i}].effectiveFrom"), &o.effective_from);
-        let to = instant(&mut issues, &format!("offers[{i}].effectiveTo"), &o.effective_to);
+        let any_price = o.list_price.is_some()
+            || o.sale_price.is_some()
+            || o.reset_fee.is_some()
+            || o.activation_fee.is_some();
+        let from = instant(
+            &mut issues,
+            &format!("offers[{i}].effectiveFrom"),
+            &o.effective_from,
+        );
+        let to = instant(
+            &mut issues,
+            &format!("offers[{i}].effectiveTo"),
+            &o.effective_to,
+        );
         if matches!((&from, &to), (Some(f), Some(t)) if t <= f) {
-            issues.add(&format!("offers[{i}].effectiveTo"), "must be after effectiveFrom");
+            issues.add(
+                &format!("offers[{i}].effectiveTo"),
+                "must be after effectiveFrom",
+            );
         }
         if any_price && text(&o.currency).is_none() {
             issues.add(&format!("offers[{i}].currency"), "prices need a currency");
         }
-        if text(&o.currency).is_some_and(|c| c.len() != 3 || !c.chars().all(|ch| ch.is_ascii_uppercase())) {
-            issues.add(&format!("offers[{i}].currency"), "must be a 3-letter code such as USD");
+        if text(&o.currency)
+            .is_some_and(|c| c.len() != 3 || !c.chars().all(|ch| ch.is_ascii_uppercase()))
+        {
+            issues.add(
+                &format!("offers[{i}].currency"),
+                "must be a 3-letter code such as USD",
+            );
         }
     }
     issues.into_result()?;
@@ -278,7 +330,12 @@ fn write_children(tx: &Transaction, version_id: &str, input: &DraftInput) -> App
                         |row| row.get(0),
                     )
                     .optional()?;
-                let phase = phase.ok_or_else(|| AppError::invalid(&format!("offers[{i}].phase"), "names a phase that this version does not have"))?;
+                let phase = phase.ok_or_else(|| {
+                    AppError::invalid(
+                        &format!("offers[{i}].phase"),
+                        "names a phase that this version does not have",
+                    )
+                })?;
                 let path = match &r.path_key {
                     None => None,
                     Some(k) => Some(
@@ -292,7 +349,10 @@ fn write_children(tx: &Transaction, version_id: &str, input: &DraftInput) -> App
         };
         let offer_id = new_id();
         // Prices and dates were already validated by `check`.
-        let micros = |_: &str, v: &Option<String>| v.as_deref().and_then(|s| parse_decimal(s).and_then(to_micros));
+        let micros = |_: &str, v: &Option<String>| {
+            v.as_deref()
+                .and_then(|s| parse_decimal(s).and_then(to_micros))
+        };
         tx.execute(
             "INSERT INTO commercial_offers (id, catalogue_version_id, programme_phase_id, phase_path_id, billing_model, currency,
                     list_price_micros, sale_price_micros, reset_fee_micros, activation_fee_micros, effective_from, effective_to)
@@ -321,15 +381,24 @@ fn write_children(tx: &Transaction, version_id: &str, input: &DraftInput) -> App
 }
 
 /// A correction supersedes another version of the same programme variant, never itself.
-fn check_supersedes(tx: &Transaction, version_id: Option<&str>, input: &DraftInput) -> AppResult<()> {
-    let Some(old) = &input.supersedes_version_id else { return Ok(()) };
+fn check_supersedes(
+    tx: &Transaction,
+    version_id: Option<&str>,
+    input: &DraftInput,
+) -> AppResult<()> {
+    let Some(old) = &input.supersedes_version_id else {
+        return Ok(());
+    };
     let same: bool = tx.query_row(
         "SELECT EXISTS (SELECT 1 FROM catalogue_versions WHERE id = ?1 AND programme_variant_id = ?2)",
         params![old, input.programme_variant_id],
         |r| r.get(0),
     )?;
     if !same || version_id == Some(old.as_str()) {
-        return Err(AppError::invalid("supersedesVersionId", "a correction supersedes another version of the same programme variant"));
+        return Err(AppError::invalid(
+            "supersedesVersionId",
+            "a correction supersedes another version of the same programme variant",
+        ));
     }
     Ok(())
 }
@@ -349,9 +418,16 @@ pub fn create_draft(conn: &mut Connection, input: DraftInput) -> AppResult<Catal
     let c = check(&input)?;
     let id = new_id();
     let tx = conn.transaction()?;
-    let exists: bool = tx.query_row("SELECT EXISTS (SELECT 1 FROM programme_variants WHERE id = ?1)", [&input.programme_variant_id], |r| r.get(0))?;
+    let exists: bool = tx.query_row(
+        "SELECT EXISTS (SELECT 1 FROM programme_variants WHERE id = ?1)",
+        [&input.programme_variant_id],
+        |r| r.get(0),
+    )?;
     if !exists {
-        return Err(AppError::invalid("programmeVariantId", "unknown programme variant"));
+        return Err(AppError::invalid(
+            "programmeVariantId",
+            "unknown programme variant",
+        ));
     }
     check_supersedes(&tx, None, &input)?;
     let number: i64 = tx.query_row(
@@ -374,7 +450,11 @@ pub fn create_draft(conn: &mut Connection, input: DraftInput) -> AppResult<Catal
 /// corrected by a new superseding version. Phases and paths are recreated, so a draft whose phase or path is
 /// already referenced (an applicability row, an account, a phase event), or whose offers a promotion names,
 /// cannot be replaced, and nothing changes.
-pub fn replace_draft(conn: &mut Connection, version_id: &str, input: DraftInput) -> AppResult<CatalogueVersion> {
+pub fn replace_draft(
+    conn: &mut Connection,
+    version_id: &str,
+    input: DraftInput,
+) -> AppResult<CatalogueVersion> {
     let c = check(&input)?;
     let tx = conn.transaction()?;
     let (status, variant): (String, String) = tx
@@ -384,11 +464,16 @@ pub fn replace_draft(conn: &mut Connection, version_id: &str, input: DraftInput)
     if status != "draft" {
         return Err(AppError::invalid(
             "id",
-            format!("a {status} version cannot be edited; create a superseding version to correct it"),
+            format!(
+                "a {status} version cannot be edited; create a superseding version to correct it"
+            ),
         ));
     }
     if variant != input.programme_variant_id {
-        return Err(AppError::invalid("programmeVariantId", "a version cannot move to another programme variant"));
+        return Err(AppError::invalid(
+            "programmeVariantId",
+            "a version cannot move to another programme variant",
+        ));
     }
     check_supersedes(&tx, Some(version_id), &input)?;
     // Recreating the offers would cascade-delete their promotion links, so a draft whose offers a
@@ -405,10 +490,22 @@ pub fn replace_draft(conn: &mut Connection, version_id: &str, input: DraftInput)
             "a promotion is linked to this draft's offers; replacing them would remove those links",
         ));
     }
-    tx.execute("DELETE FROM commercial_offers WHERE catalogue_version_id = ?1", [version_id])?;
-    tx.execute("DELETE FROM programme_phases WHERE catalogue_version_id = ?1", [version_id])?;
-    tx.execute("DELETE FROM catalogue_field_claims WHERE catalogue_version_id = ?1", [version_id])?;
-    tx.execute("DELETE FROM catalogue_version_sources WHERE catalogue_version_id = ?1", [version_id])?;
+    tx.execute(
+        "DELETE FROM commercial_offers WHERE catalogue_version_id = ?1",
+        [version_id],
+    )?;
+    tx.execute(
+        "DELETE FROM programme_phases WHERE catalogue_version_id = ?1",
+        [version_id],
+    )?;
+    tx.execute(
+        "DELETE FROM catalogue_field_claims WHERE catalogue_version_id = ?1",
+        [version_id],
+    )?;
+    tx.execute(
+        "DELETE FROM catalogue_version_sources WHERE catalogue_version_id = ?1",
+        [version_id],
+    )?;
     tx.execute(
         "UPDATE catalogue_versions SET revision_label = ?2, captured_at = ?3, effective_from = ?4, effective_to = ?5,
                 supersedes_version_id = ?6, correction_reason = ?7 WHERE id = ?1",

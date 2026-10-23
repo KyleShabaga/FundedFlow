@@ -7,7 +7,7 @@
 //! End-of-day rows are idempotent: saving the same (account, day, engine
 //! version, inputs hash) again returns the stored row. These are calculated outputs; raw EOD evidence comes from financial_observations.
 
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -266,12 +266,38 @@ pub(super) fn prepare(input: &SnapshotInput) -> AppResult<Prepared> {
     }
     validate_engine_payload(input, &mut issues);
     issues.into_result()?;
-    Ok(Prepared { data_as_of, balance, realized, unrealized, limit, remaining, hwm, floor, headroom, target })
+    Ok(Prepared {
+        data_as_of,
+        balance,
+        realized,
+        unrealized,
+        limit,
+        remaining,
+        hwm,
+        floor,
+        headroom,
+        target,
+    })
 }
 
 /// Writes a prepared snapshot inside the caller's transaction (or returns the identical end-of-day row).
-pub(super) fn insert_prepared(tx: &Connection, input: &SnapshotInput, p: Prepared) -> AppResult<Snapshot> {
-    let Prepared { data_as_of, balance, realized, unrealized, limit, remaining, hwm, floor, headroom, target } = p;
+pub(super) fn insert_prepared(
+    tx: &Connection,
+    input: &SnapshotInput,
+    p: Prepared,
+) -> AppResult<Snapshot> {
+    let Prepared {
+        data_as_of,
+        balance,
+        realized,
+        unrealized,
+        limit,
+        remaining,
+        hwm,
+        floor,
+        headroom,
+        target,
+    } = p;
     account_ctx(tx, &input.account_id)?;
     if let Some(version) = &input.rulebook_version_id {
         let owner: Option<Option<String>> = tx.query_row(
@@ -279,9 +305,17 @@ pub(super) fn insert_prepared(tx: &Connection, input: &SnapshotInput, p: Prepare
             [version], |r| r.get(0),
         ).optional()?;
         match owner {
-            None => return Err(AppError::invalid("rulebookVersionId", "Unknown rulebook version")),
+            None => {
+                return Err(AppError::invalid(
+                    "rulebookVersionId",
+                    "Unknown rulebook version",
+                ));
+            }
             Some(Some(owner)) if owner != input.account_id => {
-                return Err(AppError::invalid("rulebookVersionId", "This rulebook belongs to another account"));
+                return Err(AppError::invalid(
+                    "rulebookVersionId",
+                    "This rulebook belongs to another account",
+                ));
             }
             _ => {}
         }
@@ -436,13 +470,55 @@ fn validate_engine_payload(input: &SnapshotInput, issues: &mut Issues) {
         frozen.is_object(),
     ];
     let projected = |field: &str| {
-        let values: Vec<_> = e["rules"].as_array().into_iter().flatten()
-            .filter(|r| matches!(r["state"].as_str(),Some("satisfied"|"breached"|"caution")))
-            .filter_map(|r| r["metrics"].get(field)).filter(|v| !v.is_null()).cloned().collect();
-        if values.len()==1 { values[0].clone() } else { serde_json::Value::Null }
+        let values: Vec<_> = e["rules"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|r| {
+                matches!(
+                    r["state"].as_str(),
+                    Some("satisfied" | "breached" | "caution")
+                )
+            })
+            .filter_map(|r| r["metrics"].get(field))
+            .filter(|v| !v.is_null())
+            .cloned()
+            .collect();
+        if values.len() == 1 {
+            values[0].clone()
+        } else {
+            serde_json::Value::Null
+        }
     };
-    let metric_checks=[("dailyLossLimit",serde_json::json!(input.daily_loss_limit)),("dailyLossRemaining",serde_json::json!(input.daily_loss_remaining)),("highWaterMark",serde_json::json!(input.high_water_mark)),("drawdownFloor",serde_json::json!(input.drawdown_floor)),("drawdownHeadroom",serde_json::json!(input.drawdown_headroom)),("drawdownLocked",serde_json::json!(input.drawdown_locked)),("profitTarget",serde_json::json!(input.profit_target)),("tradingDaysRequired",serde_json::json!(input.trading_days_required))];
-    if e["tradingDaysCompleted"]!=serde_json::json!(input.trading_days_completed)||metric_checks.into_iter().any(|(field,value)| projected(field)!=value) { issues.add("explanation","stored metric projection must match engine output"); }
+    let metric_checks = [
+        ("dailyLossLimit", serde_json::json!(input.daily_loss_limit)),
+        (
+            "dailyLossRemaining",
+            serde_json::json!(input.daily_loss_remaining),
+        ),
+        ("highWaterMark", serde_json::json!(input.high_water_mark)),
+        ("drawdownFloor", serde_json::json!(input.drawdown_floor)),
+        (
+            "drawdownHeadroom",
+            serde_json::json!(input.drawdown_headroom),
+        ),
+        ("drawdownLocked", serde_json::json!(input.drawdown_locked)),
+        ("profitTarget", serde_json::json!(input.profit_target)),
+        (
+            "tradingDaysRequired",
+            serde_json::json!(input.trading_days_required),
+        ),
+    ];
+    if e["tradingDaysCompleted"] != serde_json::json!(input.trading_days_completed)
+        || metric_checks
+            .into_iter()
+            .any(|(field, value)| projected(field) != value)
+    {
+        issues.add(
+            "explanation",
+            "stored metric projection must match engine output",
+        );
+    }
     if checks.iter().any(|ok| !ok) {
         issues.add(
             "explanation",

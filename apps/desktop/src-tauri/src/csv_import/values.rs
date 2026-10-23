@@ -71,7 +71,8 @@ pub fn parse_money(s: &str) -> Result<Decimal, String> {
     if t.is_empty() {
         return Err("is empty".into());
     }
-    let invalid = || format!("'{t}' is not a money amount (examples: 26.00, $26.00, -$26.00, $(36.00))");
+    let invalid =
+        || format!("'{t}' is not a money amount (examples: 26.00, $26.00, -$26.00, $(36.00))");
     let (mut rest, mut dollar, mut sign, mut paren, mut negative) = (t, false, false, false, false);
     loop {
         match rest.as_bytes().first() {
@@ -99,23 +100,34 @@ pub fn parse_money(s: &str) -> Result<Decimal, String> {
 /// Returns whole seconds.
 pub fn parse_duration(s: &str) -> Result<u64, String> {
     let t = s.trim();
-    let invalid = || format!("'{t}' is not a supported duration (examples: 32sec, 1min 17sec, 1hr 2min, 1:02:03)");
+    let invalid = || {
+        format!(
+            "'{t}' is not a supported duration (examples: 32sec, 1min 17sec, 1hr 2min, 1:02:03)"
+        )
+    };
     if t.is_empty() {
         return Err("is empty".into());
     }
     if t.contains(':') {
         let parts: Vec<&str> = t.split(':').collect();
         if !(2..=3).contains(&parts.len())
-            || parts.iter().any(|p| p.is_empty() || !p.bytes().all(|b| b.is_ascii_digit()))
+            || parts
+                .iter()
+                .any(|p| p.is_empty() || !p.bytes().all(|b| b.is_ascii_digit()))
         {
             return Err(invalid());
         }
-        let nums: Vec<u64> = parts.iter().map(|p| p.parse().map_err(|_| invalid())).collect::<Result<_, _>>()?;
+        let nums: Vec<u64> = parts
+            .iter()
+            .map(|p| p.parse().map_err(|_| invalid()))
+            .collect::<Result<_, _>>()?;
         if nums[1..].iter().any(|n| *n >= 60) || parts[1..].iter().any(|p| p.len() != 2) {
             return Err(invalid());
         }
         return nums.iter().try_fold(0u64, |acc, n| {
-            acc.checked_mul(60).and_then(|v| v.checked_add(*n)).ok_or_else(invalid)
+            acc.checked_mul(60)
+                .and_then(|v| v.checked_add(*n))
+                .ok_or_else(invalid)
         });
     }
 
@@ -143,7 +155,10 @@ pub fn parse_duration(s: &str) -> Result<u64, String> {
             return Err(invalid());
         }
         last_rank = rank;
-        total = n.checked_mul(secs).and_then(|v| total.checked_add(v)).ok_or_else(invalid)?;
+        total = n
+            .checked_mul(secs)
+            .and_then(|v| total.checked_add(v))
+            .ok_or_else(invalid)?;
     }
     Ok(total)
 }
@@ -172,7 +187,8 @@ impl DateFormat {
 }
 
 fn number_part(s: &str, min: usize, max: usize) -> Option<u32> {
-    ((min..=max).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_digit())).then(|| s.parse().ok())?
+    ((min..=max).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_digit()))
+        .then(|| s.parse().ok())?
 }
 
 fn parse_date(s: &str, fmt: DateFormat) -> Option<NaiveDate> {
@@ -187,7 +203,11 @@ fn parse_date(s: &str, fmt: DateFormat) -> Option<NaiveDate> {
     }
     let [yi, mi, di] = order;
     let year = number_part(parts[yi], 4, 4)?;
-    NaiveDate::from_ymd_opt(year as i32, number_part(parts[mi], 1, 2)?, number_part(parts[di], 1, 2)?)
+    NaiveDate::from_ymd_opt(
+        year as i32,
+        number_part(parts[mi], 1, 2)?,
+        number_part(parts[di], 1, 2)?,
+    )
 }
 
 /// `H:MM`, `H:MM:SS` or `H:MM:SS.fff`, with optional ` AM`/` PM`.
@@ -242,7 +262,9 @@ pub enum Stamp {
 pub fn parse_stamp(s: &str, fmt: DateFormat) -> Option<Stamp> {
     let t = s.trim();
     if fmt == DateFormat::Ymd
-        && (t.ends_with('Z') || t.ends_with('z') || t.get(19..).is_some_and(|tail| tail.contains(['+', '-'])))
+        && (t.ends_with('Z')
+            || t.ends_with('z')
+            || t.get(19..).is_some_and(|tail| tail.contains(['+', '-'])))
     {
         return parse_instant(t).map(Stamp::Instant);
     }
@@ -266,10 +288,12 @@ pub fn parse_timestamp(s: &str, fmt: DateFormat, tz: Tz) -> Result<DateTime<Utc>
         Some(Stamp::Instant(i)) => Ok(i),
         Some(Stamp::Local(naive)) => match tz.from_local_datetime(&naive) {
             LocalResult::Single(dt) => Ok(dt.with_timezone(&Utc)),
-            LocalResult::Ambiguous(..) => {
-                Err(format!("'{t}' occurs twice in {tz} (daylight-saving change); export with a UTC offset"))
-            }
-            LocalResult::None => Err(format!("'{t}' does not exist in {tz} (daylight-saving gap)")),
+            LocalResult::Ambiguous(..) => Err(format!(
+                "'{t}' occurs twice in {tz} (daylight-saving change); export with a UTC offset"
+            )),
+            LocalResult::None => Err(format!(
+                "'{t}' does not exist in {tz} (daylight-saving gap)"
+            )),
         },
     }
 }
@@ -281,9 +305,18 @@ pub fn detect_date_format(samples: &[&str]) -> Result<(DateFormat, String), Stri
     if samples.is_empty() {
         return Ok((DateFormat::Ymd, "no timestamps to inspect".into()));
     }
-    let fits = |fmt| samples.iter().filter(|s| parse_stamp(s, fmt).is_some()).count();
+    let fits = |fmt| {
+        samples
+            .iter()
+            .filter(|s| parse_stamp(s, fmt).is_some())
+            .count()
+    };
     let counts = [DateFormat::Ymd, DateFormat::Mdy, DateFormat::Dmy].map(|f| (f, fits(f)));
-    let full: Vec<DateFormat> = counts.iter().filter(|(_, n)| *n == samples.len()).map(|(f, _)| *f).collect();
+    let full: Vec<DateFormat> = counts
+        .iter()
+        .filter(|(_, n)| *n == samples.len())
+        .map(|(f, _)| *f)
+        .collect();
     match full.as_slice() {
         [one] => Ok((*one, format!("every timestamp fits {}", one.label()))),
         [DateFormat::Mdy, DateFormat::Dmy] => Err(format!(
@@ -299,7 +332,14 @@ pub fn detect_date_format(samples: &[&str]) -> Result<(DateFormat, String), Stri
                     samples[0].trim()
                 ))
             } else {
-                Ok((best, format!("{n} of {} timestamps fit {}; the rest are reported per row", samples.len(), best.label())))
+                Ok((
+                    best,
+                    format!(
+                        "{n} of {} timestamps fit {}; the rest are reported per row",
+                        samples.len(),
+                        best.label()
+                    ),
+                ))
             }
         }
     }
@@ -329,7 +369,10 @@ mod tests {
         ] {
             assert_eq!(parse_money(input).unwrap(), d(want), "{input}");
         }
-        for bad in ["", "$", "$$5", "5$", "1,23.4", "1e5", "NaN", "$(36.00", "--5", "(-5)", "5.", "12,3456", "$26.00x"] {
+        for bad in [
+            "", "$", "$$5", "5$", "1,23.4", "1e5", "NaN", "$(36.00", "--5", "(-5)", "5.",
+            "12,3456", "$26.00x",
+        ] {
             assert!(parse_money(bad).is_err(), "{bad:?} should be rejected");
         }
     }
@@ -359,7 +402,18 @@ mod tests {
         ] {
             assert_eq!(parse_duration(input).unwrap(), secs, "{input}");
         }
-        for bad in ["", "32", "sec", "17sec 1min", "1min 1min", "5 parsecs", "1:2", "1:60", "-5sec", "1.5min"] {
+        for bad in [
+            "",
+            "32",
+            "sec",
+            "17sec 1min",
+            "1min 1min",
+            "5 parsecs",
+            "1:2",
+            "1:60",
+            "-5sec",
+            "1.5min",
+        ] {
             assert!(parse_duration(bad).is_err(), "{bad:?}");
         }
     }
@@ -368,19 +422,51 @@ mod tests {
     fn timestamps_are_parsed_in_exactly_the_chosen_format() {
         let ny: Tz = "America/New_York".parse().unwrap();
         let utc = |s: &str, f| parse_timestamp(s, f, ny).map(crate::domain::format_instant);
-        assert_eq!(utc("10/19/2026 07:47:48", DateFormat::Mdy).unwrap(), "2026-10-19T11:47:48.000Z");
-        assert_eq!(utc("1/5/2026 7:05 PM", DateFormat::Mdy).unwrap(), "2026-01-06T00:05:00.000Z");
-        assert_eq!(utc("19/10/2026 07:47:48", DateFormat::Dmy).unwrap(), "2026-10-19T11:47:48.000Z");
-        assert_eq!(utc("2026-10-19T07:47:48.25", DateFormat::Ymd).unwrap(), "2026-10-19T11:47:48.250Z");
-        assert_eq!(utc("2026-10-19T07:47:48-05:00", DateFormat::Ymd).unwrap(), "2026-10-19T12:47:48.000Z");
+        assert_eq!(
+            utc("10/19/2026 07:47:48", DateFormat::Mdy).unwrap(),
+            "2026-10-19T11:47:48.000Z"
+        );
+        assert_eq!(
+            utc("1/5/2026 7:05 PM", DateFormat::Mdy).unwrap(),
+            "2026-01-06T00:05:00.000Z"
+        );
+        assert_eq!(
+            utc("19/10/2026 07:47:48", DateFormat::Dmy).unwrap(),
+            "2026-10-19T11:47:48.000Z"
+        );
+        assert_eq!(
+            utc("2026-10-19T07:47:48.25", DateFormat::Ymd).unwrap(),
+            "2026-10-19T11:47:48.250Z"
+        );
+        assert_eq!(
+            utc("2026-10-19T07:47:48-05:00", DateFormat::Ymd).unwrap(),
+            "2026-10-19T12:47:48.000Z"
+        );
         // The same text is not silently re-read in another format.
         assert!(utc("19/10/2026 07:47:48", DateFormat::Mdy).is_err());
-        assert!(utc("10/19/26 07:47:48", DateFormat::Mdy).is_err(), "two-digit years are rejected");
-        assert!(utc("2/30/2026 07:00:00", DateFormat::Mdy).is_err(), "impossible dates are rejected");
-        assert!(utc("10/19/2026", DateFormat::Mdy).is_err(), "a time is required");
+        assert!(
+            utc("10/19/26 07:47:48", DateFormat::Mdy).is_err(),
+            "two-digit years are rejected"
+        );
+        assert!(
+            utc("2/30/2026 07:00:00", DateFormat::Mdy).is_err(),
+            "impossible dates are rejected"
+        );
+        assert!(
+            utc("10/19/2026", DateFormat::Mdy).is_err(),
+            "a time is required"
+        );
         assert!(utc("10/19/2026 13:00 PM", DateFormat::Mdy).is_err());
-        assert!(utc("11/1/2026 1:30:00", DateFormat::Mdy).unwrap_err().contains("occurs twice"));
-        assert!(utc("3/8/2026 2:30:00", DateFormat::Mdy).unwrap_err().contains("does not exist"));
+        assert!(
+            utc("11/1/2026 1:30:00", DateFormat::Mdy)
+                .unwrap_err()
+                .contains("occurs twice")
+        );
+        assert!(
+            utc("3/8/2026 2:30:00", DateFormat::Mdy)
+                .unwrap_err()
+                .contains("does not exist")
+        );
     }
 
     #[test]

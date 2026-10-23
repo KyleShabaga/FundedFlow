@@ -5,15 +5,16 @@
 //!
 //! Mirrored by `RulebookRepository` in packages/domain/src/ports.
 
-use rusqlite::{params, Connection, OptionalExtension, Row};
+use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::domain::{new_id, now, parse_instant};
 use crate::error::{AppError, AppResult, FieldIssue, Issues};
 use crate::rulebook::{
-    check_rule_definitions, AccountRulebookAssignment, ApplicabilityInput, ApplicableRulebook, ApplicableRulebookQuery,
-    AssignmentGuard, AssignmentInput, ChangeContext, RuleApplicability, RuleClaim, RuleDefinition, RuleDefinitionInput,
-    Rulebook, RulebookDraftInput, RulebookDraftUpdate, RulebookEvent, RulebookEventQuery, RulebookVersion,
-    RulebookVersionDetail, SourceConflictInput, RULE_PARAMETER_SCHEMA_VERSION,
+    AccountRulebookAssignment, ApplicabilityInput, ApplicableRulebook, ApplicableRulebookQuery,
+    AssignmentGuard, AssignmentInput, ChangeContext, RULE_PARAMETER_SCHEMA_VERSION,
+    RuleApplicability, RuleClaim, RuleDefinition, RuleDefinitionInput, Rulebook,
+    RulebookDraftInput, RulebookDraftUpdate, RulebookEvent, RulebookEventQuery, RulebookVersion,
+    RulebookVersionDetail, SourceConflictInput, check_rule_definitions,
 };
 use crate::store::opt_text;
 
@@ -21,7 +22,8 @@ use crate::store::opt_text;
 // Reads
 // ---------------------------------------------------------------------------
 
-const RULEBOOK: &str = "SELECT id, provider_id, owner_account_id, slug, display_name, description, record_status,
+const RULEBOOK: &str =
+    "SELECT id, provider_id, owner_account_id, slug, display_name, description, record_status,
                                created_at, updated_at FROM rulebooks";
 
 fn rulebook_row(r: &Row) -> rusqlite::Result<Rulebook> {
@@ -83,15 +85,25 @@ fn assignment_row(r: &Row) -> rusqlite::Result<AccountRulebookAssignment> {
     })
 }
 
-fn all<T>(conn: &Connection, sql: &str, p: impl rusqlite::Params, map: fn(&Row) -> rusqlite::Result<T>) -> AppResult<Vec<T>> {
-    Ok(conn.prepare(sql)?.query_map(p, map)?.collect::<rusqlite::Result<_>>()?)
+fn all<T>(
+    conn: &Connection,
+    sql: &str,
+    p: impl rusqlite::Params,
+    map: fn(&Row) -> rusqlite::Result<T>,
+) -> AppResult<Vec<T>> {
+    Ok(conn
+        .prepare(sql)?
+        .query_map(p, map)?
+        .collect::<rusqlite::Result<_>>()?)
 }
 
 /// Catalogue rulebooks, plus the account's private ones when `account_id` is given.
 pub fn list(conn: &Connection, account_id: Option<&str>) -> AppResult<Vec<Rulebook>> {
     all(
         conn,
-        &format!("{RULEBOOK} WHERE owner_account_id IS NULL OR owner_account_id = ?1 ORDER BY display_name, id"),
+        &format!(
+            "{RULEBOOK} WHERE owner_account_id IS NULL OR owner_account_id = ?1 ORDER BY display_name, id"
+        ),
         [account_id],
         rulebook_row,
     )
@@ -102,7 +114,11 @@ pub fn get_version(conn: &Connection, id: &str) -> AppResult<RulebookVersionDeta
         .query_row(&format!("{VERSION} WHERE id = ?1"), [id], version_row)
         .optional()?
         .ok_or_else(|| AppError::not_found("rulebook version", id))?;
-    let rulebook = conn.query_row(&format!("{RULEBOOK} WHERE id = ?1"), [&version.rulebook_id], rulebook_row)?;
+    let rulebook = conn.query_row(
+        &format!("{RULEBOOK} WHERE id = ?1"),
+        [&version.rulebook_id],
+        rulebook_row,
+    )?;
     let rules = all(
         conn,
         "SELECT id, rulebook_version_id, rule_key, rule_type, parameter_schema_version, provider_label, display_label,
@@ -167,20 +183,39 @@ pub fn get_version(conn: &Connection, id: &str) -> AppResult<RulebookVersionDeta
             })
         },
     )?;
-    Ok(RulebookVersionDetail { rulebook, version, rules, applicability, claims })
+    Ok(RulebookVersionDetail {
+        rulebook,
+        version,
+        rules,
+        applicability,
+        claims,
+    })
 }
 
 /// Every version of a rulebook, newest first.
-pub fn list_versions(conn: &Connection, rulebook_id: &str) -> AppResult<Vec<RulebookVersionDetail>> {
+pub fn list_versions(
+    conn: &Connection,
+    rulebook_id: &str,
+) -> AppResult<Vec<RulebookVersionDetail>> {
     let ids: Vec<String> = conn
-        .prepare("SELECT id FROM rulebook_versions WHERE rulebook_id = ?1 ORDER BY version_number DESC")?
+        .prepare(
+            "SELECT id FROM rulebook_versions WHERE rulebook_id = ?1 ORDER BY version_number DESC",
+        )?
         .query_map([rulebook_id], |r| r.get(0))?
         .collect::<rusqlite::Result<_>>()?;
     ids.iter().map(|id| get_version(conn, id)).collect()
 }
 
-pub fn list_assignments(conn: &Connection, account_id: &str) -> AppResult<Vec<AccountRulebookAssignment>> {
-    all(conn, &format!("{ASSIGNMENT} WHERE account_id = ?1 ORDER BY effective_from"), [account_id], assignment_row)
+pub fn list_assignments(
+    conn: &Connection,
+    account_id: &str,
+) -> AppResult<Vec<AccountRulebookAssignment>> {
+    all(
+        conn,
+        &format!("{ASSIGNMENT} WHERE account_id = ?1 ORDER BY effective_from"),
+        [account_id],
+        assignment_row,
+    )
 }
 
 /// The verified catalogue version that governs a phase, or a path of it. An
@@ -189,12 +224,16 @@ pub fn list_assignments(conn: &Connection, account_id: &str) -> AppResult<Vec<Ac
 /// from names, and never another phase's or path's rules.
 pub fn applicable(conn: &Connection, q: &ApplicableRulebookQuery) -> AppResult<ApplicableRulebook> {
     let phase: Option<(Option<String>, String)> = conn
-        .query_row("SELECT ph.default_rulebook_version_id, pv.provider_id FROM programme_phases ph
+        .query_row(
+            "SELECT ph.default_rulebook_version_id, pv.provider_id FROM programme_phases ph
             JOIN catalogue_versions cv ON cv.id = ph.catalogue_version_id
             JOIN programme_variants pv ON pv.id = cv.programme_variant_id WHERE ph.id = ?1",
-            [&q.programme_phase_id], |r| Ok((r.get(0)?, r.get(1)?)))
+            [&q.programme_phase_id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
         .optional()?;
-    let (phase_default, provider) = phase.ok_or_else(|| AppError::not_found("programme phase", &q.programme_phase_id))?;
+    let (phase_default, provider) =
+        phase.ok_or_else(|| AppError::not_found("programme phase", &q.programme_phase_id))?;
     let path_override = match &q.phase_path_id {
         None => None,
         Some(path) => conn
@@ -208,16 +247,26 @@ pub fn applicable(conn: &Connection, q: &ApplicableRulebookQuery) -> AppResult<A
     };
     let verified = |id: &str| -> AppResult<bool> {
         Ok(conn
-            .query_row("SELECT v.verification_status = 'verified' AND v.record_status = 'active'
+            .query_row(
+                "SELECT v.verification_status = 'verified' AND v.record_status = 'active'
                 AND b.record_status = 'active' AND b.owner_account_id IS NULL AND b.provider_id = ?2
                 FROM rulebook_versions v JOIN rulebooks b ON b.id = v.rulebook_id WHERE v.id = ?1",
-                [id, &provider], |r| r.get(0))
+                [id, &provider],
+                |r| r.get(0),
+            )
             .optional()?
             .unwrap_or(false))
     };
     if let Some(bound) = path_override.or(phase_default) {
-        let status = if verified(&bound)? { "resolved" } else { "unverified" };
-        return Ok(ApplicableRulebook { status, rulebook_version_ids: vec![bound] });
+        let status = if verified(&bound)? {
+            "resolved"
+        } else {
+            "unverified"
+        };
+        return Ok(ApplicableRulebook {
+            status,
+            rulebook_version_ids: vec![bound],
+        });
     }
     let ids: Vec<String> = conn
         .prepare(
@@ -235,7 +284,10 @@ pub fn applicable(conn: &Connection, q: &ApplicableRulebookQuery) -> AppResult<A
         1 => "resolved",
         _ => "ambiguous",
     };
-    Ok(ApplicableRulebook { status, rulebook_version_ids: ids })
+    Ok(ApplicableRulebook {
+        status,
+        rulebook_version_ids: ids,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -256,7 +308,9 @@ fn check_instant(issues: &mut Issues, field: &str, value: Option<&str>) {
 }
 
 fn stored(value: &str) -> String {
-    parse_instant(value).map(crate::domain::format_instant).unwrap_or_else(|| value.to_string())
+    parse_instant(value)
+        .map(crate::domain::format_instant)
+        .unwrap_or_else(|| value.to_string())
 }
 
 /// Create a draft version: of an existing rulebook, or of a new one. A
@@ -264,7 +318,10 @@ fn stored(value: &str) -> String {
 ///
 /// Test convenience: the same with the default `local_user` audit context.
 #[cfg(test)]
-pub fn create_draft(conn: &mut Connection, input: RulebookDraftInput) -> AppResult<RulebookVersionDetail> {
+pub fn create_draft(
+    conn: &mut Connection,
+    input: RulebookDraftInput,
+) -> AppResult<RulebookVersionDetail> {
     create_draft_with(conn, input, ChangeContext::local())
 }
 
@@ -279,7 +336,10 @@ fn check_draft_content(
     check_instant(issues, "capturedAt", Some(captured_at));
     check_instant(issues, "effectiveFrom", effective_from);
     check_instant(issues, "effectiveTo", effective_to);
-    let window = (effective_from.and_then(parse_instant), effective_to.and_then(parse_instant));
+    let window = (
+        effective_from.and_then(parse_instant),
+        effective_to.and_then(parse_instant),
+    );
     if let (Some(from), Some(to)) = window
         && to <= from
     {
@@ -291,9 +351,16 @@ fn check_draft_content(
 fn check_context(context: &ChangeContext) -> AppResult<()> {
     let actor = context.actor.trim();
     if actor.is_empty() || actor.chars().count() > 200 {
-        return Err(AppError::invalid("actor", "Name who is making the change (at most 200 characters)"));
+        return Err(AppError::invalid(
+            "actor",
+            "Name who is making the change (at most 200 characters)",
+        ));
     }
-    if context.reason.as_ref().is_some_and(|r| r.chars().count() > 2_000) {
+    if context
+        .reason
+        .as_ref()
+        .is_some_and(|r| r.chars().count() > 2_000)
+    {
         return Err(AppError::invalid("reason", "Use at most 2,000 characters"));
     }
     Ok(())
@@ -373,7 +440,10 @@ pub fn create_draft_with(
 ) -> AppResult<RulebookVersionDetail> {
     let mut issues = Issues::default();
     if input.rulebook_id.is_some() == input.new_rulebook.is_some() {
-        issues.add("rulebookId", "Give either an existing rulebook or a new one");
+        issues.add(
+            "rulebookId",
+            "Give either an existing rulebook or a new one",
+        );
     }
     check_draft_content(
         &mut issues,
@@ -389,17 +459,27 @@ pub fn create_draft_with(
     let tx = conn.transaction()?;
     let rulebook_id = match (&input.rulebook_id, &input.new_rulebook) {
         (Some(id), _) => {
-            let status: Option<String> =
-                tx.query_row("SELECT record_status FROM rulebooks WHERE id = ?1", [id], |r| r.get(0)).optional()?;
+            let status: Option<String> = tx
+                .query_row(
+                    "SELECT record_status FROM rulebooks WHERE id = ?1",
+                    [id],
+                    |r| r.get(0),
+                )
+                .optional()?;
             match status.as_deref() {
                 None => return Err(AppError::not_found("rulebook", id)),
-                Some("archived") => return Err(AppError::invalid("rulebookId", "The rulebook is archived")),
+                Some("archived") => {
+                    return Err(AppError::invalid("rulebookId", "The rulebook is archived"));
+                }
                 _ => id.clone(),
             }
         }
         (None, Some(new)) => {
             if new.owner_account_id.is_none() && new.provider_id.is_none() {
-                return Err(AppError::invalid("newRulebook.providerId", "A catalogue rulebook belongs to a provider"));
+                return Err(AppError::invalid(
+                    "newRulebook.providerId",
+                    "A catalogue rulebook belongs to a provider",
+                ));
             }
             let id = new_id();
             tx.execute(
@@ -413,24 +493,44 @@ pub fn create_draft_with(
         }
         (None, None) => unreachable!("checked above"),
     };
-    let private: bool =
-        tx.query_row("SELECT owner_account_id IS NOT NULL FROM rulebooks WHERE id = ?1", [&rulebook_id], |r| r.get(0))?;
-    let owner: Option<String> = tx.query_row("SELECT owner_account_id FROM rulebooks WHERE id = ?1", [&rulebook_id], |r| r.get(0))?;
+    let private: bool = tx.query_row(
+        "SELECT owner_account_id IS NOT NULL FROM rulebooks WHERE id = ?1",
+        [&rulebook_id],
+        |r| r.get(0),
+    )?;
+    let owner: Option<String> = tx.query_row(
+        "SELECT owner_account_id FROM rulebooks WHERE id = ?1",
+        [&rulebook_id],
+        |r| r.get(0),
+    )?;
     if let Some(owner) = owner {
         super::account_ctx(&tx, &owner)?;
     }
     if private && !input.applicability.is_empty() {
-        return Err(AppError::invalid("applicability", "An account-private rulebook does not apply to catalogue phases"));
+        return Err(AppError::invalid(
+            "applicability",
+            "An account-private rulebook does not apply to catalogue phases",
+        ));
     }
     if let Some(prev) = &input.supersedes_version_id {
         let same: Option<bool> = tx
-            .query_row("SELECT rulebook_id = ?2 FROM rulebook_versions WHERE id = ?1", [prev, &rulebook_id], |r| r.get(0))
+            .query_row(
+                "SELECT rulebook_id = ?2 FROM rulebook_versions WHERE id = ?1",
+                [prev, &rulebook_id],
+                |r| r.get(0),
+            )
             .optional()?;
         if same != Some(true) {
-            return Err(AppError::invalid("supersedesVersionId", "Supersede a version of the same rulebook"));
+            return Err(AppError::invalid(
+                "supersedesVersionId",
+                "Supersede a version of the same rulebook",
+            ));
         }
         if opt_text(input.change_reason.clone()).is_none() {
-            return Err(AppError::invalid("changeReason", "A superseding version needs a reason"));
+            return Err(AppError::invalid(
+                "changeReason",
+                "A superseding version needs a reason",
+            ));
         }
     }
     let number: i64 = tx.query_row(
@@ -459,7 +559,16 @@ pub fn create_draft_with(
         ],
     )?;
     insert_content(&tx, &id, &input.rules, &input.applicability, &at)?;
-    record_event(&tx, &id, "draft_created", &ChangeContext { reason: context.reason.clone().or(input.change_reason.clone()), ..context }, None)?;
+    record_event(
+        &tx,
+        &id,
+        "draft_created",
+        &ChangeContext {
+            reason: context.reason.clone().or(input.change_reason.clone()),
+            ..context
+        },
+        None,
+    )?;
     tx.commit()?;
     get_version(conn, &id)
 }
@@ -469,7 +578,10 @@ pub fn create_draft_with(
 /// one is needed.
 pub fn validate(conn: &Connection, id: &str) -> AppResult<Vec<FieldIssue>> {
     let detail = get_version(conn, id)?;
-    Ok(publish_issues(&detail, None).into_iter().filter(|i| i.field != "reviewer").collect())
+    Ok(publish_issues(&detail, None)
+        .into_iter()
+        .filter(|i| i.field != "reviewer")
+        .collect())
 }
 
 fn publish_issues(d: &RulebookVersionDetail, reviewer: Option<&str>) -> Vec<FieldIssue> {
@@ -483,10 +595,16 @@ fn publish_issues(d: &RulebookVersionDetail, reviewer: Option<&str>) -> Vec<Fiel
     match d.version.verification_status.as_str() {
         "draft" => {
             if reviewer.is_some() {
-                issues.push(FieldIssue::new("reviewer", "Publish the draft first, then verify it"));
+                issues.push(FieldIssue::new(
+                    "reviewer",
+                    "Publish the draft first, then verify it",
+                ));
             }
             if private && !d.applicability.is_empty() {
-                issues.push(FieldIssue::new("applicability", "An account-private rulebook does not apply to catalogue phases"));
+                issues.push(FieldIssue::new(
+                    "applicability",
+                    "An account-private rulebook does not apply to catalogue phases",
+                ));
             }
         }
         "needs_review" if !private => {
@@ -494,13 +612,22 @@ fn publish_issues(d: &RulebookVersionDetail, reviewer: Option<&str>) -> Vec<Fiel
                 issues.push(FieldIssue::new("reviewer", "Verifying needs a reviewer"));
             }
             if d.applicability.is_empty() {
-                issues.push(FieldIssue::new("applicability", "Say which phase or path the version applies to"));
+                issues.push(FieldIssue::new(
+                    "applicability",
+                    "Say which phase or path the version applies to",
+                ));
             }
             if d.claims.iter().any(|c| c.claim_status == "conflicting") {
-                issues.push(FieldIssue::new("claims", "Resolve the conflicting source claims first"));
+                issues.push(FieldIssue::new(
+                    "claims",
+                    "Resolve the conflicting source claims first",
+                ));
             }
         }
-        other => issues.push(FieldIssue::new("verificationStatus", format!("A {other} version cannot be published"))),
+        other => issues.push(FieldIssue::new(
+            "verificationStatus",
+            format!("A {other} version cannot be published"),
+        )),
     }
     issues
 }
@@ -511,20 +638,29 @@ fn publish_issues(d: &RulebookVersionDetail, reviewer: Option<&str>) -> Vec<Fiel
 ///
 /// Test convenience: the same with the default `local_user` audit context.
 #[cfg(test)]
-pub fn publish(conn: &mut Connection, id: &str, reviewer: Option<String>) -> AppResult<RulebookVersionDetail> {
+pub fn publish(
+    conn: &mut Connection,
+    id: &str,
+    reviewer: Option<String>,
+) -> AppResult<RulebookVersionDetail> {
     publish_with(conn, id, reviewer, None, ChangeContext::local())
 }
 
 /// The version as last read by the caller. A different `updated_at` means
 /// someone else changed it since: a conflict, never a silent overwrite.
-fn check_revision(detail: &RulebookVersionDetail, expected_updated_at: Option<&str>) -> AppResult<()> {
+fn check_revision(
+    detail: &RulebookVersionDetail,
+    expected_updated_at: Option<&str>,
+) -> AppResult<()> {
     match expected_updated_at {
-        Some(expected) if parse_instant(expected) != parse_instant(&detail.version.updated_at) => Err(AppError::Conflict {
-            message: format!(
-                "rulebook version {} changed since it was opened; reload it before saving",
-                detail.version.version_number
-            ),
-        }),
+        Some(expected) if parse_instant(expected) != parse_instant(&detail.version.updated_at) => {
+            Err(AppError::Conflict {
+                message: format!(
+                    "rulebook version {} changed since it was opened; reload it before saving",
+                    detail.version.version_number
+                ),
+            })
+        }
         _ => Ok(()),
     }
 }
@@ -532,7 +668,9 @@ fn check_revision(detail: &RulebookVersionDetail, expected_updated_at: Option<&s
 /// A draft that supersedes `S` is stale once another version newer than `S`
 /// has been published: publishing it would hide those terms.
 fn check_base_current(conn: &Connection, detail: &RulebookVersionDetail) -> AppResult<()> {
-    let Some(base) = &detail.version.supersedes_version_id else { return Ok(()) };
+    let Some(base) = &detail.version.supersedes_version_id else {
+        return Ok(());
+    };
     let newer: Option<i64> = conn
         .query_row(
             "SELECT v.version_number FROM rulebook_versions v JOIN rulebook_versions b ON b.id = ?2
@@ -545,7 +683,9 @@ fn check_base_current(conn: &Connection, detail: &RulebookVersionDetail) -> AppR
         .optional()?;
     match newer {
         Some(n) => Err(AppError::Conflict {
-            message: format!("version {n} was published after this draft was started; start a new draft from it"),
+            message: format!(
+                "version {n} was published after this draft was started; start a new draft from it"
+            ),
         }),
         None => Ok(()),
     }
@@ -556,7 +696,9 @@ fn check_base_current(conn: &Connection, detail: &RulebookVersionDetail) -> AppR
 fn next_revision(previous: &str) -> String {
     let at = chrono::Utc::now();
     match parse_instant(previous) {
-        Some(prev) if prev >= at => crate::domain::format_instant(prev + chrono::Duration::milliseconds(1)),
+        Some(prev) if prev >= at => {
+            crate::domain::format_instant(prev + chrono::Duration::milliseconds(1))
+        }
         _ => crate::domain::format_instant(at),
     }
 }
@@ -644,18 +786,32 @@ pub fn update_draft(
     }
     check_revision(&detail, Some(expected_updated_at))?;
     if detail.rulebook.owner_account_id.is_some() && !input.applicability.is_empty() {
-        return Err(AppError::invalid("applicability", "An account-private rulebook does not apply to catalogue phases"));
+        return Err(AppError::invalid(
+            "applicability",
+            "An account-private rulebook does not apply to catalogue phases",
+        ));
     }
-    if detail.version.supersedes_version_id.is_some() && opt_text(input.change_reason.clone()).is_none() {
-        return Err(AppError::invalid("changeReason", "A superseding version needs a reason"));
+    if detail.version.supersedes_version_id.is_some()
+        && opt_text(input.change_reason.clone()).is_none()
+    {
+        return Err(AppError::invalid(
+            "changeReason",
+            "A superseding version needs a reason",
+        ));
     }
     let at = next_revision(&detail.version.updated_at);
     tx.execute(
         "DELETE FROM rule_claims WHERE rule_definition_id IN (SELECT id FROM rule_definitions WHERE rulebook_version_id = ?1)",
         [id],
     )?;
-    tx.execute("DELETE FROM rule_definitions WHERE rulebook_version_id = ?1", [id])?;
-    tx.execute("DELETE FROM rule_applicability WHERE rulebook_version_id = ?1", [id])?;
+    tx.execute(
+        "DELETE FROM rule_definitions WHERE rulebook_version_id = ?1",
+        [id],
+    )?;
+    tx.execute(
+        "DELETE FROM rule_applicability WHERE rulebook_version_id = ?1",
+        [id],
+    )?;
     tx.execute(
         "UPDATE rulebook_versions SET captured_at = ?2, effective_from = ?3, effective_to = ?4, change_reason = ?5,
                                       updated_at = ?6
@@ -685,7 +841,10 @@ pub fn discard_draft(
 ) -> AppResult<RulebookVersionDetail> {
     check_context(&context)?;
     if opt_text(context.reason.clone()).is_none() {
-        return Err(AppError::invalid("reason", "Say why the draft is discarded"));
+        return Err(AppError::invalid(
+            "reason",
+            "Say why the draft is discarded",
+        ));
     }
     let tx = conn.transaction()?;
     let detail = get_version(&tx, id)?;
@@ -757,7 +916,11 @@ pub fn flag_conflict(conn: &mut Connection, input: SourceConflictInput) -> AppRe
         return Err(AppError::invalid("note", "Say what conflicts"));
     }
     let version_id: String = conn
-        .query_row("SELECT rulebook_version_id FROM rule_definitions WHERE id = ?1", [&input.rule_definition_id], |r| r.get(0))
+        .query_row(
+            "SELECT rulebook_version_id FROM rule_definitions WHERE id = ?1",
+            [&input.rule_definition_id],
+            |r| r.get(0),
+        )
         .optional()?
         .ok_or_else(|| AppError::not_found("rule", &input.rule_definition_id))?;
     let at = now();
@@ -775,18 +938,26 @@ pub fn flag_conflict(conn: &mut Connection, input: SourceConflictInput) -> AppRe
          WHERE id = ?1 AND verification_status = 'verified'",
         params![version_id, at],
     )?;
-    let context = ChangeContext { actor: "local_user".into(), reason: Some(input.note.trim().to_string()) };
+    let context = ChangeContext {
+        actor: "local_user".into(),
+        reason: Some(input.note.trim().to_string()),
+    };
     record_event(&tx, &version_id, "conflict_flagged", &context, None)?;
     tx.commit()?;
     let detail = get_version(conn, &version_id)?;
-    Ok(detail.claims.into_iter().find(|c| c.id == id).expect("claim just written"))
+    Ok(detail
+        .claims
+        .into_iter()
+        .find(|c| c.id == id)
+        .expect("claim just written"))
 }
 
 /// A `YYYY-MM-DD` date that falls Monday to Friday.
 fn is_trading_day(s: &str) -> bool {
     use chrono::Datelike;
-    chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
-        .is_ok_and(|d| d.format("%Y-%m-%d").to_string() == s && d.weekday().number_from_monday() <= 5)
+    chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").is_ok_and(|d| {
+        d.format("%Y-%m-%d").to_string() == s && d.weekday().number_from_monday() <= 5
+    })
 }
 
 /// Assign a version to an account from a trading day. The account's current
@@ -795,7 +966,10 @@ fn is_trading_day(s: &str) -> bool {
 ///
 /// Test convenience: the same with the default `local_user` audit context.
 #[cfg(test)]
-pub fn assign(conn: &mut Connection, input: AssignmentInput) -> AppResult<AccountRulebookAssignment> {
+pub fn assign(
+    conn: &mut Connection,
+    input: AssignmentInput,
+) -> AppResult<AccountRulebookAssignment> {
     assign_with(conn, input, None)
 }
 
@@ -807,7 +981,10 @@ pub fn assign_with(
     guard: Option<AssignmentGuard>,
 ) -> AppResult<AccountRulebookAssignment> {
     let context = match &guard {
-        Some(g) => ChangeContext { actor: g.actor.clone(), reason: g.reason.clone() },
+        Some(g) => ChangeContext {
+            actor: g.actor.clone(),
+            reason: g.reason.clone(),
+        },
         None => ChangeContext::local(),
     };
     check_context(&context)?;
@@ -827,22 +1004,38 @@ pub fn assign_with(
         }
     }
     let assignment = assign_in(&tx, input)?;
-    record_event(&tx, &assignment.rulebook_version_id, "assigned", &context, Some((&assignment.account_id, Some(&assignment.id))))?;
+    record_event(
+        &tx,
+        &assignment.rulebook_version_id,
+        "assigned",
+        &context,
+        Some((&assignment.account_id, Some(&assignment.id))),
+    )?;
     tx.commit()?;
     Ok(assignment)
 }
 
 /// `assign` inside the caller's transaction, so a larger operation (an
 /// evaluation reset) can make the assignment part of its own atomic unit.
-pub(crate) fn assign_in(conn: &Connection, input: AssignmentInput) -> AppResult<AccountRulebookAssignment> {
+pub(crate) fn assign_in(
+    conn: &Connection,
+    input: AssignmentInput,
+) -> AppResult<AccountRulebookAssignment> {
     if !is_trading_day(&input.effective_from) {
-        return Err(AppError::invalid("effectiveFrom", "Use a Monday-to-Friday trading day as YYYY-MM-DD"));
+        return Err(AppError::invalid(
+            "effectiveFrom",
+            "Use a Monday-to-Friday trading day as YYYY-MM-DD",
+        ));
     }
     if input.phase_path_id.is_some() && input.programme_phase_id.is_none() {
         return Err(AppError::invalid("phasePathId", "A path needs its phase"));
     }
     let archived: Option<bool> = conn
-        .query_row("SELECT archived_at IS NOT NULL FROM accounts WHERE id = ?1", [&input.account_id], |r| r.get(0))
+        .query_row(
+            "SELECT archived_at IS NOT NULL FROM accounts WHERE id = ?1",
+            [&input.account_id],
+            |r| r.get(0),
+        )
         .optional()?;
     match archived {
         None => return Err(AppError::not_found("account", &input.account_id)),
@@ -860,18 +1053,36 @@ pub(crate) fn assign_in(conn: &Connection, input: AssignmentInput) -> AppResult<
         return Err(AppError::invalid(
             "rulebookVersionId",
             match &detail.rulebook.owner_account_id {
-                Some(owner) if owner != &input.account_id => "This rulebook belongs to another account".to_string(),
+                Some(owner) if owner != &input.account_id => {
+                    "This rulebook belongs to another account".to_string()
+                }
                 Some(_) => "Publish the version before assigning it".to_string(),
-                None => format!("A {} catalogue version cannot be assigned; it must be verified", v.verification_status),
+                None => format!(
+                    "A {} catalogue version cannot be assigned; it must be verified",
+                    v.verification_status
+                ),
             },
         ));
     }
     if let Some(phase) = &input.programme_phase_id {
-        let resolved = applicable(conn, &ApplicableRulebookQuery { programme_phase_id: phase.clone(), phase_path_id: input.phase_path_id.clone() })?;
-        let applies = detail.applicability.iter().any(|a| &a.programme_phase_id == phase && a.phase_path_id == input.phase_path_id)
-            || (matches!(resolved.status, "resolved" | "ambiguous") && resolved.rulebook_version_ids.contains(&v.id));
+        let resolved = applicable(
+            conn,
+            &ApplicableRulebookQuery {
+                programme_phase_id: phase.clone(),
+                phase_path_id: input.phase_path_id.clone(),
+            },
+        )?;
+        let applies = detail
+            .applicability
+            .iter()
+            .any(|a| &a.programme_phase_id == phase && a.phase_path_id == input.phase_path_id)
+            || (matches!(resolved.status, "resolved" | "ambiguous")
+                && resolved.rulebook_version_ids.contains(&v.id));
         if !applies {
-            return Err(AppError::invalid("programmePhaseId", "The version does not apply to this phase or path"));
+            return Err(AppError::invalid(
+                "programmePhaseId",
+                "The version does not apply to this phase or path",
+            ));
         }
     }
 
@@ -883,7 +1094,10 @@ pub(crate) fn assign_in(conn: &Connection, input: AssignmentInput) -> AppResult<
     )?;
     if later {
         return Err(AppError::Conflict {
-            message: format!("the account already has a rulebook assignment from {} or later", input.effective_from),
+            message: format!(
+                "the account already has a rulebook assignment from {} or later",
+                input.effective_from
+            ),
         });
     }
     tx.execute(
@@ -907,5 +1121,9 @@ pub(crate) fn assign_in(conn: &Connection, input: AssignmentInput) -> AppResult<
             if input.programme_phase_id.is_some() { "catalogue_selection" } else { "user" }
         ],
     )?;
-    Ok(conn.query_row(&format!("{ASSIGNMENT} WHERE id = ?1"), [&id], assignment_row)?)
+    Ok(conn.query_row(
+        &format!("{ASSIGNMENT} WHERE id = ?1"),
+        [&id],
+        assignment_row,
+    )?)
 }

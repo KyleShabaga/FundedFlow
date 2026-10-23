@@ -4,7 +4,9 @@
 
 use std::str::FromStr;
 
-use chrono::{DateTime, Datelike, Days, NaiveDate, NaiveTime, SecondsFormat, Timelike, Utc, Weekday};
+use chrono::{
+    DateTime, Datelike, Days, NaiveDate, NaiveTime, SecondsFormat, Timelike, Utc, Weekday,
+};
 use chrono_tz::Tz;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::{Decimal, RoundingStrategy};
@@ -86,7 +88,9 @@ pub fn now() -> String {
 
 /// Parse an RFC 3339 / ISO 8601 instant that carries an offset or `Z`.
 pub fn parse_instant(s: &str) -> Option<DateTime<Utc>> {
-    DateTime::parse_from_rfc3339(s.trim()).ok().map(|d| d.with_timezone(&Utc))
+    DateTime::parse_from_rfc3339(s.trim())
+        .ok()
+        .map(|d| d.with_timezone(&Utc))
 }
 
 pub fn parse_tz(s: &str) -> Option<Tz> {
@@ -126,7 +130,8 @@ pub fn trading_day(at: DateTime<Utc>, tz: Tz, reset: NaiveTime) -> NaiveDate {
         Weekday::Sun => 1,
         _ => 0,
     };
-    date.checked_add_days(Days::new(weekend_days)).unwrap_or(date)
+    date.checked_add_days(Days::new(weekend_days))
+        .unwrap_or(date)
 }
 
 // ---------------------------------------------------------------------------
@@ -137,7 +142,8 @@ pub fn trading_day(at: DateTime<Utc>, tz: Tz, reset: NaiveTime) -> NaiveDate {
 pub fn parse_decimal(s: &str) -> Option<Decimal> {
     let s = s.trim();
     let plain = !s.is_empty()
-        && s.chars().all(|c| c.is_ascii_digit() || matches!(c, '.' | '-' | '+'))
+        && s.chars()
+            .all(|c| c.is_ascii_digit() || matches!(c, '.' | '-' | '+'))
         && s.chars().any(|c| c.is_ascii_digit());
     if !plain {
         return None;
@@ -178,7 +184,9 @@ const MONTH_CODES: &str = "FGHJKMNQUVXZ";
 /// True when `symbol` is `root` itself, `root` + futures month code + year
 /// (`MNQZ6`, `MNQZ26`, `MNQZ2026`) or `root` + a separator (`NQ 12-26`).
 fn symbol_matches_root(symbol: &str, root: &str) -> bool {
-    let Some(rest) = symbol.strip_prefix(root) else { return false };
+    let Some(rest) = symbol.strip_prefix(root) else {
+        return false;
+    };
     let mut chars = rest.chars();
     match chars.next() {
         None => true,
@@ -193,7 +201,10 @@ fn symbol_matches_root(symbol: &str, root: &str) -> bool {
 
 /// The instrument whose root is the longest match for `symbol` (so `MESZ6`
 /// resolves to MES, not ES). A leading `/` (thinkorswim style) is ignored.
-pub fn resolve_instrument<'a>(symbol: &str, instruments: &'a [Instrument]) -> Option<&'a Instrument> {
+pub fn resolve_instrument<'a>(
+    symbol: &str,
+    instruments: &'a [Instrument],
+) -> Option<&'a Instrument> {
     let s = symbol.trim().trim_start_matches('/').to_ascii_uppercase();
     instruments
         .iter()
@@ -269,10 +280,15 @@ pub type TimeParser<'a> = dyn Fn(&str) -> Result<DateTime<Utc>, String> + 'a;
 
 /// Parser for command payloads: RFC 3339 with an offset.
 pub fn parse_payload_time(s: &str) -> Result<DateTime<Utc>, String> {
-    parse_instant(s).ok_or_else(|| "must be an ISO 8601 date-time with offset, e.g. 2026-10-19T14:30:00Z".into())
+    parse_instant(s).ok_or_else(|| {
+        "must be an ISO 8601 date-time with offset, e.g. 2026-10-19T14:30:00Z".into()
+    })
 }
 
-pub fn validate_trade(d: &TradeDraft, parse_time: &TimeParser) -> Result<TradeFields, Vec<FieldIssue>> {
+pub fn validate_trade(
+    d: &TradeDraft,
+    parse_time: &TimeParser,
+) -> Result<TradeFields, Vec<FieldIssue>> {
     let mut issues = Vec::new();
     let mut issue = |field: &str, msg: &str| issues.push(FieldIssue::new(field, msg));
 
@@ -335,7 +351,10 @@ pub fn validate_trade(d: &TradeDraft, parse_time: &TimeParser) -> Result<TradeFi
                 None
             }
             Some(f) if f < Decimal::ZERO => {
-                issue("fees", "must be zero or positive (total commissions and fees)");
+                issue(
+                    "fees",
+                    "must be zero or positive (total commissions and fees)",
+                );
                 None
             }
             Some(f) => to_micros(f).or_else(|| {
@@ -361,7 +380,10 @@ pub fn validate_trade(d: &TradeDraft, parse_time: &TimeParser) -> Result<TradeFi
     };
 
     let notes = present(d.notes).map(str::to_string);
-    if notes.as_ref().is_some_and(|n| n.chars().count() > MAX_NOTES_CHARS) {
+    if notes
+        .as_ref()
+        .is_some_and(|n| n.chars().count() > MAX_NOTES_CHARS)
+    {
         issue("notes", "is too long");
     }
 
@@ -400,14 +422,25 @@ pub struct Pnl {
 /// * Otherwise none (`missing_instrument` / `currency_mismatch`). No FX conversion.
 ///
 /// Net = gross − fees.
-pub fn realized_pnl(t: &TradeFields, instrument: Option<&Instrument>, account_currency: &str) -> Result<Pnl, String> {
+pub fn realized_pnl(
+    t: &TradeFields,
+    instrument: Option<&Instrument>,
+    account_currency: &str,
+) -> Result<Pnl, String> {
     let Some(exit) = t.exit_price else {
-        return Ok(Pnl { gross_micros: None, net_micros: None, status: "open" });
+        return Ok(Pnl {
+            gross_micros: None,
+            net_micros: None,
+            status: "open",
+        });
     };
     let too_large = || "P&L is too large to store".to_string();
     let (gross, status) = match instrument {
         Some(i) if i.currency == account_currency => {
-            let per_unit = exit.checked_sub(t.entry_price).and_then(|m| m.checked_mul(t.quantity)).ok_or_else(too_large)?;
+            let per_unit = exit
+                .checked_sub(t.entry_price)
+                .and_then(|m| m.checked_mul(t.quantity))
+                .ok_or_else(too_large)?;
             let mut gross = per_unit.checked_mul(i.point_value).ok_or_else(too_large)?;
             if t.side == Side::Short {
                 gross = -gross;
@@ -424,7 +457,11 @@ pub fn realized_pnl(t: &TradeFields, instrument: Option<&Instrument>, account_cu
         Some(g) => Some(g.checked_sub(t.fees_micros).ok_or_else(too_large)?),
         None => None,
     };
-    Ok(Pnl { gross_micros: gross, net_micros: net, status })
+    Ok(Pnl {
+        gross_micros: gross,
+        net_micros: net,
+        status,
+    })
 }
 
 #[cfg(test)]
@@ -432,15 +469,21 @@ mod tests {
     use super::*;
 
     fn instruments() -> Vec<Instrument> {
-        [("ES", "50"), ("MES", "5"), ("MNQ", "2"), ("M6E", "12500"), ("6E", "125000")]
-            .iter()
-            .map(|(root, pv)| Instrument {
-                id: format!("builtin:instrument:{root}"),
-                root: root.to_string(),
-                currency: "USD".into(),
-                point_value: Decimal::from_str(pv).unwrap(),
-            })
-            .collect()
+        [
+            ("ES", "50"),
+            ("MES", "5"),
+            ("MNQ", "2"),
+            ("M6E", "12500"),
+            ("6E", "125000"),
+        ]
+        .iter()
+        .map(|(root, pv)| Instrument {
+            id: format!("builtin:instrument:{root}"),
+            root: root.to_string(),
+            currency: "USD".into(),
+            point_value: Decimal::from_str(pv).unwrap(),
+        })
+        .collect()
     }
 
     #[test]
@@ -465,10 +508,19 @@ mod tests {
         let reset = parse_reset_time("17:00").unwrap();
         let at = |s: &str| parse_instant(s).unwrap();
         // 16:59 and 17:00 New York time on 19 Oct 2026 (UTC-4).
-        assert_eq!(trading_day(at("2026-10-19T20:59:00Z"), ny, reset).to_string(), "2026-10-19");
-        assert_eq!(trading_day(at("2026-10-19T21:00:00Z"), ny, reset).to_string(), "2026-10-20");
+        assert_eq!(
+            trading_day(at("2026-10-19T20:59:00Z"), ny, reset).to_string(),
+            "2026-10-19"
+        );
+        assert_eq!(
+            trading_day(at("2026-10-19T21:00:00Z"), ny, reset).to_string(),
+            "2026-10-20"
+        );
         let midnight = parse_reset_time("00:00").unwrap();
-        assert_eq!(trading_day(at("2026-10-19T23:30:00Z"), ny, midnight).to_string(), "2026-10-19");
+        assert_eq!(
+            trading_day(at("2026-10-19T23:30:00Z"), ny, midnight).to_string(),
+            "2026-10-19"
+        );
     }
 
     #[test]
@@ -528,7 +580,10 @@ mod tests {
         assert_eq!(p.net_micros, Some(35_020_000));
         assert_eq!(p.status, "calculated");
 
-        let short = TradeFields { side: Side::Short, ..t };
+        let short = TradeFields {
+            side: Side::Short,
+            ..t
+        };
         let p = realized_pnl(&short, resolve_instrument("MES", &ins), "USD").unwrap();
         assert_eq!(p.gross_micros, Some(-37_500_000));
         assert_eq!(p.net_micros, Some(-39_980_000));
@@ -537,19 +592,39 @@ mod tests {
     #[test]
     fn falls_back_to_reported_pnl_and_flags_unknowns() {
         let t = validate_trade(
-            &TradeDraft { symbol: "AAPL", realized_pnl: Some("-12.5"), ..draft() },
+            &TradeDraft {
+                symbol: "AAPL",
+                realized_pnl: Some("-12.5"),
+                ..draft()
+            },
             &parse_payload_time,
         )
         .unwrap();
         let p = realized_pnl(&t, None, "USD").unwrap();
-        assert_eq!((p.gross_micros, p.net_micros, p.status), (Some(-12_500_000), Some(-14_980_000), "reported"));
+        assert_eq!(
+            (p.gross_micros, p.net_micros, p.status),
+            (Some(-12_500_000), Some(-14_980_000), "reported")
+        );
 
-        let unknown = TradeFields { reported_pnl_micros: None, ..t.clone() };
-        assert_eq!(realized_pnl(&unknown, None, "USD").unwrap().status, "missing_instrument");
+        let unknown = TradeFields {
+            reported_pnl_micros: None,
+            ..t.clone()
+        };
+        assert_eq!(
+            realized_pnl(&unknown, None, "USD").unwrap().status,
+            "missing_instrument"
+        );
         let ins = instruments();
-        assert_eq!(realized_pnl(&unknown, ins.first(), "EUR").unwrap().status, "currency_mismatch");
+        assert_eq!(
+            realized_pnl(&unknown, ins.first(), "EUR").unwrap().status,
+            "currency_mismatch"
+        );
 
-        let open = TradeFields { exit_at: None, exit_price: None, ..unknown };
+        let open = TradeFields {
+            exit_at: None,
+            exit_price: None,
+            ..unknown
+        };
         assert_eq!(realized_pnl(&open, None, "USD").unwrap().status, "open");
     }
 
@@ -569,16 +644,33 @@ mod tests {
         };
         let issues = validate_trade(&bad, &parse_payload_time).unwrap_err();
         let fields: Vec<_> = issues.iter().map(|i| i.field.as_str()).collect();
-        assert_eq!(fields, ["symbol", "side", "quantity", "entryAt", "entryPrice", "exitPrice", "fees"]);
+        assert_eq!(
+            fields,
+            [
+                "symbol",
+                "side",
+                "quantity",
+                "entryAt",
+                "entryPrice",
+                "exitPrice",
+                "fees"
+            ]
+        );
 
-        let backwards = TradeDraft { exit_at: Some("2026-10-19T14:00:00Z"), ..draft() };
+        let backwards = TradeDraft {
+            exit_at: Some("2026-10-19T14:00:00Z"),
+            ..draft()
+        };
         let issues = validate_trade(&backwards, &parse_payload_time).unwrap_err();
         assert_eq!(issues[0].field, "exitAt");
     }
 
     #[test]
     fn money_round_trips_through_micros() {
-        assert_eq!(to_micros(Decimal::from_str("0.625").unwrap()), Some(625_000));
+        assert_eq!(
+            to_micros(Decimal::from_str("0.625").unwrap()),
+            Some(625_000)
+        );
         assert_eq!(to_micros(Decimal::from_str("0.0000005").unwrap()), Some(1));
         assert_eq!(micros_to_string(50_000_000_000), "50000");
         assert_eq!(micros_to_string(-1_250_000), "-1.25");
@@ -603,7 +695,11 @@ mod tests {
     }
 
     fn es() -> Instrument {
-        Instrument { id: "builtin:instrument:ES".into(), root: "ES".into(), ..unit("50") }
+        Instrument {
+            id: "builtin:instrument:ES".into(),
+            root: "ES".into(),
+            ..unit("50")
+        }
     }
 
     fn closed(side: Side, qty: &str, entry: &str, exit: &str, fees_micros: i64) -> TradeFields {
@@ -622,7 +718,10 @@ mod tests {
     }
 
     /// (gross, net, status) for a trade against `instrument` in a USD account.
-    fn pnl(t: &TradeFields, instrument: Option<&Instrument>) -> (Option<i64>, Option<i64>, &'static str) {
+    fn pnl(
+        t: &TradeFields,
+        instrument: Option<&Instrument>,
+    ) -> (Option<i64>, Option<i64>, &'static str) {
         let p = realized_pnl(t, instrument, "USD").unwrap();
         (p.gross_micros, p.net_micros, p.status)
     }
@@ -631,13 +730,25 @@ mod tests {
     fn b01_the_four_direction_cases_with_unit_point_value() {
         let i = unit("1");
         // Long 100 â†’ 110: (110 âˆ’ 100) Ã— 1 Ã— 1 = +10.
-        assert_eq!(pnl(&closed(Side::Long, "1", "100", "110", 0), Some(&i)), (Some(10_000_000), Some(10_000_000), "calculated"));
+        assert_eq!(
+            pnl(&closed(Side::Long, "1", "100", "110", 0), Some(&i)),
+            (Some(10_000_000), Some(10_000_000), "calculated")
+        );
         // Long 100 â†’ 90: (90 âˆ’ 100) Ã— 1 Ã— 1 = âˆ’10.
-        assert_eq!(pnl(&closed(Side::Long, "1", "100", "90", 0), Some(&i)), (Some(-10_000_000), Some(-10_000_000), "calculated"));
+        assert_eq!(
+            pnl(&closed(Side::Long, "1", "100", "90", 0), Some(&i)),
+            (Some(-10_000_000), Some(-10_000_000), "calculated")
+        );
         // Short 100 â†’ 90: (90 âˆ’ 100) Ã— 1 Ã— 1 = âˆ’10, negated for short = +10.
-        assert_eq!(pnl(&closed(Side::Short, "1", "100", "90", 0), Some(&i)), (Some(10_000_000), Some(10_000_000), "calculated"));
+        assert_eq!(
+            pnl(&closed(Side::Short, "1", "100", "90", 0), Some(&i)),
+            (Some(10_000_000), Some(10_000_000), "calculated")
+        );
         // Short 100 â†’ 110: (110 âˆ’ 100) Ã— 1 Ã— 1 = +10, negated for short = âˆ’10.
-        assert_eq!(pnl(&closed(Side::Short, "1", "100", "110", 0), Some(&i)), (Some(-10_000_000), Some(-10_000_000), "calculated"));
+        assert_eq!(
+            pnl(&closed(Side::Short, "1", "100", "110", 0), Some(&i)),
+            (Some(-10_000_000), Some(-10_000_000), "calculated")
+        );
     }
 
     #[test]
@@ -645,29 +756,73 @@ mod tests {
         let i = unit("1");
         for side in [Side::Long, Side::Short] {
             // (100 âˆ’ 100) Ã— 1 Ã— 1 = 0 either way; no fees â‡’ net 0.
-            assert_eq!(pnl(&closed(side, "1", "100", "100", 0), Some(&i)), (Some(0), Some(0), "calculated"), "{side:?}");
+            assert_eq!(
+                pnl(&closed(side, "1", "100", "100", 0), Some(&i)),
+                (Some(0), Some(0), "calculated"),
+                "{side:?}"
+            );
             // Fees 1.25: net = 0 âˆ’ 1.25 = âˆ’1.25.
-            assert_eq!(pnl(&closed(side, "1", "100", "100", 1_250_000), Some(&i)), (Some(0), Some(-1_250_000), "calculated"), "{side:?}");
+            assert_eq!(
+                pnl(&closed(side, "1", "100", "100", 1_250_000), Some(&i)),
+                (Some(0), Some(-1_250_000), "calculated"),
+                "{side:?}"
+            );
         }
         // ES flat, qty 3, fees 4.50: (5000.25 âˆ’ 5000.25) Ã— 3 Ã— 50 = 0; net = 0 âˆ’ 4.50 = âˆ’4.50.
-        assert_eq!(pnl(&closed(Side::Long, "3", "5000.25", "5000.25", 4_500_000), Some(&es())), (Some(0), Some(-4_500_000), "calculated"));
+        assert_eq!(
+            pnl(
+                &closed(Side::Long, "3", "5000.25", "5000.25", 4_500_000),
+                Some(&es())
+            ),
+            (Some(0), Some(-4_500_000), "calculated")
+        );
     }
 
     #[test]
     fn b01_quantity_and_point_value_multiply_for_both_directions() {
         let es = es();
         // Long 3 ES 5000.25 â†’ 5002.75: 2.5 Ã— 3 Ã— 50 = +375; fees 4.50 â‡’ net 370.50.
-        assert_eq!(pnl(&closed(Side::Long, "3", "5000.25", "5002.75", 4_500_000), Some(&es)), (Some(375_000_000), Some(370_500_000), "calculated"));
+        assert_eq!(
+            pnl(
+                &closed(Side::Long, "3", "5000.25", "5002.75", 4_500_000),
+                Some(&es)
+            ),
+            (Some(375_000_000), Some(370_500_000), "calculated")
+        );
         // Short 3 ES 5000.25 â†’ 5002.75: 2.5 Ã— 3 Ã— 50 = 375, negated = âˆ’375; fees 4.50 â‡’ net âˆ’379.50.
-        assert_eq!(pnl(&closed(Side::Short, "3", "5000.25", "5002.75", 4_500_000), Some(&es)), (Some(-375_000_000), Some(-379_500_000), "calculated"));
+        assert_eq!(
+            pnl(
+                &closed(Side::Short, "3", "5000.25", "5002.75", 4_500_000),
+                Some(&es)
+            ),
+            (Some(-375_000_000), Some(-379_500_000), "calculated")
+        );
         // Long 3 ES 5002.75 â†’ 5000.25 (loss): âˆ’2.5 Ã— 3 Ã— 50 = âˆ’375; fees 4.50 â‡’ net âˆ’379.50.
-        assert_eq!(pnl(&closed(Side::Long, "3", "5002.75", "5000.25", 4_500_000), Some(&es)), (Some(-375_000_000), Some(-379_500_000), "calculated"));
+        assert_eq!(
+            pnl(
+                &closed(Side::Long, "3", "5002.75", "5000.25", 4_500_000),
+                Some(&es)
+            ),
+            (Some(-375_000_000), Some(-379_500_000), "calculated")
+        );
         // Short 2 ES 5010.50 â†’ 5004.25 (win): (5004.25 âˆ’ 5010.50) = âˆ’6.25 Ã— 2 Ã— 50 = âˆ’625, negated = +625;
         // fees 2.80 â‡’ net 622.20.
-        assert_eq!(pnl(&closed(Side::Short, "2", "5010.50", "5004.25", 2_800_000), Some(&es)), (Some(625_000_000), Some(622_200_000), "calculated"));
+        assert_eq!(
+            pnl(
+                &closed(Side::Short, "2", "5010.50", "5004.25", 2_800_000),
+                Some(&es)
+            ),
+            (Some(625_000_000), Some(622_200_000), "calculated")
+        );
         // MNQ (pv 2) short 3 21000 â†’ 21012.50 (loss): 12.5 Ã— 3 Ã— 2 = 75, negated = âˆ’75; fees 1.11 â‡’ net âˆ’76.11.
         let mnq = unit("2");
-        assert_eq!(pnl(&closed(Side::Short, "3", "21000", "21012.50", 1_110_000), Some(&mnq)), (Some(-75_000_000), Some(-76_110_000), "calculated"));
+        assert_eq!(
+            pnl(
+                &closed(Side::Short, "3", "21000", "21012.50", 1_110_000),
+                Some(&mnq)
+            ),
+            (Some(-75_000_000), Some(-76_110_000), "calculated")
+        );
     }
 
     #[test]
@@ -675,28 +830,65 @@ mod tests {
         // Unknown instrument, source P&L 40.00, fees 3.10: gross = 40.00 (reported, assumed BEFORE fees),
         // net = 40.00 âˆ’ 3.10 = 36.90. A source that already reports NET P&L would therefore be charged its
         // fees a second time; that is the documented "before fees" assumption (docs/data-model.md).
-        let t = TradeFields { reported_pnl_micros: Some(40_000_000), ..closed(Side::Long, "1", "100", "101", 3_100_000) };
-        assert_eq!(pnl(&t, None), (Some(40_000_000), Some(36_900_000), "reported"));
+        let t = TradeFields {
+            reported_pnl_micros: Some(40_000_000),
+            ..closed(Side::Long, "1", "100", "101", 3_100_000)
+        };
+        assert_eq!(
+            pnl(&t, None),
+            (Some(40_000_000), Some(36_900_000), "reported")
+        );
         // Short with a reported loss âˆ’15.50 and fees 0.50: gross âˆ’15.50, net âˆ’15.50 âˆ’ 0.50 = âˆ’16.00.
         // The side does not flip a reported value: the source's sign is kept as is.
-        let t = TradeFields { reported_pnl_micros: Some(-15_500_000), ..closed(Side::Short, "1", "100", "103.10", 500_000) };
-        assert_eq!(pnl(&t, None), (Some(-15_500_000), Some(-16_000_000), "reported"));
+        let t = TradeFields {
+            reported_pnl_micros: Some(-15_500_000),
+            ..closed(Side::Short, "1", "100", "103.10", 500_000)
+        };
+        assert_eq!(
+            pnl(&t, None),
+            (Some(-15_500_000), Some(-16_000_000), "reported")
+        );
         // Instrument quoted in another currency + a reported value: the reported value is used, not FX-converted.
-        let eur = Instrument { currency: "EUR".into(), ..unit("1") };
-        let t = TradeFields { reported_pnl_micros: Some(7_000_000), ..closed(Side::Long, "1", "100", "110", 1_000_000) };
-        assert_eq!(pnl(&t, Some(&eur)), (Some(7_000_000), Some(6_000_000), "reported"));
+        let eur = Instrument {
+            currency: "EUR".into(),
+            ..unit("1")
+        };
+        let t = TradeFields {
+            reported_pnl_micros: Some(7_000_000),
+            ..closed(Side::Long, "1", "100", "110", 1_000_000)
+        };
+        assert_eq!(
+            pnl(&t, Some(&eur)),
+            (Some(7_000_000), Some(6_000_000), "reported")
+        );
     }
 
     #[test]
     fn b01_unknown_pnl_stays_unknown_never_zero() {
         // No instrument, no reported value: gross and net unknown, even with fees.
-        assert_eq!(pnl(&closed(Side::Long, "1", "100", "110", 2_000_000), None), (None, None, "missing_instrument"));
-        assert_eq!(pnl(&closed(Side::Short, "1", "100", "90", 0), None), (None, None, "missing_instrument"));
+        assert_eq!(
+            pnl(&closed(Side::Long, "1", "100", "110", 2_000_000), None),
+            (None, None, "missing_instrument")
+        );
+        assert_eq!(
+            pnl(&closed(Side::Short, "1", "100", "90", 0), None),
+            (None, None, "missing_instrument")
+        );
         // Instrument in EUR, account in USD, no reported value: no FX conversion â‡’ unknown.
-        let eur = Instrument { currency: "EUR".into(), ..unit("1") };
-        assert_eq!(pnl(&closed(Side::Long, "1", "100", "110", 0), Some(&eur)), (None, None, "currency_mismatch"));
+        let eur = Instrument {
+            currency: "EUR".into(),
+            ..unit("1")
+        };
+        assert_eq!(
+            pnl(&closed(Side::Long, "1", "100", "110", 0), Some(&eur)),
+            (None, None, "currency_mismatch")
+        );
         // Open (no exit): no P&L even with a known instrument and fees.
-        let open = TradeFields { exit_at: None, exit_price: None, ..closed(Side::Short, "1", "100", "90", 1_000_000) };
+        let open = TradeFields {
+            exit_at: None,
+            exit_price: None,
+            ..closed(Side::Short, "1", "100", "90", 1_000_000)
+        };
         assert_eq!(pnl(&open, Some(&unit("1"))), (None, None, "open"));
     }
 
@@ -704,21 +896,55 @@ mod tests {
     fn b01_micro_rounding_is_half_away_from_zero_on_both_signs() {
         let i = unit("1");
         // Long 100 â†’ 100.0000005: 0.0000005 Ã— 1 Ã— 1 = 0.5 micro â‡’ rounds away from zero to +1 micro.
-        assert_eq!(pnl(&closed(Side::Long, "1", "100", "100.0000005", 0), Some(&i)).0, Some(1));
+        assert_eq!(
+            pnl(&closed(Side::Long, "1", "100", "100.0000005", 0), Some(&i)).0,
+            Some(1)
+        );
         // Short 100 â†’ 100.0000005: 0.5 micro negated = âˆ’0.5 micro â‡’ âˆ’1 micro (not 0).
-        assert_eq!(pnl(&closed(Side::Short, "1", "100", "100.0000005", 0), Some(&i)).0, Some(-1));
+        assert_eq!(
+            pnl(&closed(Side::Short, "1", "100", "100.0000005", 0), Some(&i)).0,
+            Some(-1)
+        );
         // Long 100 â†’ 99.9999995: âˆ’0.5 micro â‡’ âˆ’1 micro.
-        assert_eq!(pnl(&closed(Side::Long, "1", "100", "99.9999995", 0), Some(&i)).0, Some(-1));
+        assert_eq!(
+            pnl(&closed(Side::Long, "1", "100", "99.9999995", 0), Some(&i)).0,
+            Some(-1)
+        );
         // Below the midpoint: 0.0000004 â‡’ 0.4 micro â‡’ 0; above: 0.0000006 â‡’ 0.6 micro â‡’ 1.
-        assert_eq!(pnl(&closed(Side::Long, "1", "100", "100.0000004", 0), Some(&i)).0, Some(0));
-        assert_eq!(pnl(&closed(Side::Long, "1", "100", "100.0000006", 0), Some(&i)).0, Some(1));
+        assert_eq!(
+            pnl(&closed(Side::Long, "1", "100", "100.0000004", 0), Some(&i)).0,
+            Some(0)
+        );
+        assert_eq!(
+            pnl(&closed(Side::Long, "1", "100", "100.0000006", 0), Some(&i)).0,
+            Some(1)
+        );
         // Quantity 3, point value 0.5, move 0.000001: 0.000001 Ã— 3 Ã— 0.5 = 0.0000015 = 1.5 micros â‡’ 2;
         // short â‡’ âˆ’1.5 micros â‡’ âˆ’2. Fees 1 micro â‡’ nets 1 and âˆ’3.
         let half = unit("0.5");
-        assert_eq!(pnl(&closed(Side::Long, "3", "100", "100.000001", 1), Some(&half)), (Some(2), Some(1), "calculated"));
-        assert_eq!(pnl(&closed(Side::Short, "3", "100", "100.000001", 1), Some(&half)), (Some(-2), Some(-3), "calculated"));
+        assert_eq!(
+            pnl(
+                &closed(Side::Long, "3", "100", "100.000001", 1),
+                Some(&half)
+            ),
+            (Some(2), Some(1), "calculated")
+        );
+        assert_eq!(
+            pnl(
+                &closed(Side::Short, "3", "100", "100.000001", 1),
+                Some(&half)
+            ),
+            (Some(-2), Some(-3), "calculated")
+        );
         // Point value 12.5, move 0.01, qty 1: 0.125 exactly = 125 000 micros, no rounding needed.
-        assert_eq!(pnl(&closed(Side::Short, "1", "1.10", "1.09", 0), Some(&unit("12.5"))).0, Some(125_000));
+        assert_eq!(
+            pnl(
+                &closed(Side::Short, "1", "1.10", "1.09", 0),
+                Some(&unit("12.5"))
+            )
+            .0,
+            Some(125_000)
+        );
     }
 
     #[test]
@@ -726,7 +952,11 @@ mod tests {
         // −1 − 79228162514264337593543950335 (Decimal::MAX) does not fit a Decimal.
         for side in [Side::Long, Side::Short] {
             let t = closed(side, "1", "79228162514264337593543950335", "-1", 0);
-            assert_eq!(realized_pnl(&t, Some(&unit("1")), "USD").unwrap_err(), "P&L is too large to store", "{side:?}");
+            assert_eq!(
+                realized_pnl(&t, Some(&unit("1")), "USD").unwrap_err(),
+                "P&L is too large to store",
+                "{side:?}"
+            );
         }
     }
 }

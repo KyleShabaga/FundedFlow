@@ -1,13 +1,14 @@
 use std::str::FromStr;
 
-use rusqlite::{params, Connection, OptionalExtension, Row};
+use rusqlite::{Connection, OptionalExtension, Row, params};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use super::{account_ctx, load_instruments, AccountCtx};
+use super::{AccountCtx, account_ctx, load_instruments};
 use crate::domain::{
-    canonical, format_instant, micros_to_string, new_id, now, parse_instant, parse_payload_time, realized_pnl,
-    resolve_instrument, trading_day, validate_trade, Instrument, Pnl, Side, TradeDraft, TradeFields,
+    Instrument, Pnl, Side, TradeDraft, TradeFields, canonical, format_instant, micros_to_string,
+    new_id, now, parse_instant, parse_payload_time, realized_pnl, resolve_instrument, trading_day,
+    validate_trade,
 };
 use crate::error::{AppError, AppResult};
 
@@ -106,9 +107,14 @@ pub(crate) struct Derived {
     pub pnl: Pnl,
 }
 
-pub(crate) fn derive(f: &TradeFields, ctx: &AccountCtx, instruments: &[Instrument]) -> AppResult<Derived> {
+pub(crate) fn derive(
+    f: &TradeFields,
+    ctx: &AccountCtx,
+    instruments: &[Instrument],
+) -> AppResult<Derived> {
     let instrument = resolve_instrument(&f.symbol, instruments);
-    let pnl = realized_pnl(f, instrument, &ctx.currency).map_err(|m| AppError::invalid("exitPrice", m))?;
+    let pnl = realized_pnl(f, instrument, &ctx.currency)
+        .map_err(|m| AppError::invalid("exitPrice", m))?;
     Ok(Derived {
         trading_day: trading_day(f.exit_at.unwrap_or(f.entry_at), ctx.tz, ctx.reset).to_string(),
         instrument_id: instrument.map(|i| i.id.clone()),
@@ -249,9 +255,13 @@ pub fn list(conn: &Connection, account_id: &str) -> AppResult<Vec<Trade>> {
 }
 
 pub fn get(conn: &Connection, id: &str) -> AppResult<Trade> {
-    conn.query_row(&format!("{SELECT} WHERE t.id = ?1 AND t.deleted_at IS NULL"), [id], from_row)
-        .optional()?
-        .ok_or_else(|| AppError::not_found("trade", id))
+    conn.query_row(
+        &format!("{SELECT} WHERE t.id = ?1 AND t.deleted_at IS NULL"),
+        [id],
+        from_row,
+    )
+    .optional()?
+    .ok_or_else(|| AppError::not_found("trade", id))
 }
 
 fn validate(input: &TradeInput) -> AppResult<TradeFields> {
@@ -306,8 +316,14 @@ const MAX_REASON_CHARS: usize = 2000;
 
 fn reason(text: Option<String>) -> AppResult<Option<String>> {
     let text = super::opt_text(text);
-    if text.as_ref().is_some_and(|r| r.chars().count() > MAX_REASON_CHARS) {
-        return Err(AppError::invalid("reason", format!("must be at most {MAX_REASON_CHARS} characters")));
+    if text
+        .as_ref()
+        .is_some_and(|r| r.chars().count() > MAX_REASON_CHARS)
+    {
+        return Err(AppError::invalid(
+            "reason",
+            format!("must be at most {MAX_REASON_CHARS} characters"),
+        ));
     }
     Ok(text)
 }
@@ -347,7 +363,9 @@ fn record(conn: &Connection, trade_id: &str, account_id: &str, c: Change) -> App
 pub(crate) fn later_than(previous: &str) -> String {
     let current = now();
     match parse_instant(previous) {
-        Some(p) if current.as_str() <= previous => format_instant(p + chrono::Duration::milliseconds(1)),
+        Some(p) if current.as_str() <= previous => {
+            format_instant(p + chrono::Duration::milliseconds(1))
+        }
         _ => current,
     }
 }
@@ -363,12 +381,20 @@ pub fn update(conn: &mut Connection, id: &str, input: TradeInput) -> AppResult<T
 /// `update` with an optional revision guard and reason. Every change is
 /// recorded in `trade_corrections` with the old and new stored values, in the
 /// same transaction; an edit that changes nothing writes nothing.
-pub fn update_with(conn: &mut Connection, id: &str, input: TradeInput, options: TradeChangeOptions) -> AppResult<Trade> {
+pub fn update_with(
+    conn: &mut Connection,
+    id: &str,
+    input: TradeInput,
+    options: TradeChangeOptions,
+) -> AppResult<Trade> {
     let reason = reason(options.reason)?;
     let tx = conn.transaction()?;
     let before = get(&tx, id)?;
     if before.account_id != input.account_id {
-        return Err(AppError::invalid("accountId", "a trade cannot be moved to another account"));
+        return Err(AppError::invalid(
+            "accountId",
+            "a trade cannot be moved to another account",
+        ));
     }
     if let Some(expected) = &options.expected_updated_at
         && *expected != before.updated_at
@@ -411,7 +437,12 @@ pub fn update_with(conn: &mut Connection, id: &str, input: TradeInput, options: 
     let (old, new) = (values(&before), values(&after));
     let changed: Vec<String> = new
         .as_object()
-        .map(|m| m.keys().filter(|k| old.get(*k) != new.get(*k)).cloned().collect())
+        .map(|m| {
+            m.keys()
+                .filter(|k| old.get(*k) != new.get(*k))
+                .cloned()
+                .collect()
+        })
         .unwrap_or_default();
     if changed.is_empty() {
         // Nothing changed: the transaction rolls back, keeping the stored revision and writing no history.
@@ -446,10 +477,23 @@ pub fn delete_with(conn: &mut Connection, id: &str, why: Option<String>) -> AppR
     let before = get(&tx, id)?;
     account_ctx(&tx, &before.account_id)?;
     let at = later_than(&before.updated_at);
-    tx.execute("UPDATE trades SET deleted_at = ?2, updated_at = ?2 WHERE id = ?1 AND deleted_at IS NULL", params![id, at])?;
-    tx.execute("UPDATE journal_entries SET trade_id = NULL, updated_at = ?2 WHERE trade_id = ?1", params![id, at])?;
-    let change =
-        Change { kind: "delete", actor: ACTOR, reason: why.as_deref(), changed: &[], before: Some(&before), after: None, at: &at };
+    tx.execute(
+        "UPDATE trades SET deleted_at = ?2, updated_at = ?2 WHERE id = ?1 AND deleted_at IS NULL",
+        params![id, at],
+    )?;
+    tx.execute(
+        "UPDATE journal_entries SET trade_id = NULL, updated_at = ?2 WHERE trade_id = ?1",
+        params![id, at],
+    )?;
+    let change = Change {
+        kind: "delete",
+        actor: ACTOR,
+        reason: why.as_deref(),
+        changed: &[],
+        before: Some(&before),
+        after: None,
+        at: &at,
+    };
     record(&tx, id, &before.account_id, change)?;
     tx.commit()?;
     Ok(())
@@ -461,27 +505,61 @@ pub(crate) fn restore(conn: &Connection, id: &str) -> AppResult<()> {
     restore_as(conn, id, "import_restore", "csv_import", None).map(|_| ())
 }
 
-fn restore_as(conn: &Connection, id: &str, kind: &str, actor: &str, why: Option<&str>) -> AppResult<Trade> {
+fn restore_as(
+    conn: &Connection,
+    id: &str,
+    kind: &str,
+    actor: &str,
+    why: Option<&str>,
+) -> AppResult<Trade> {
     let previous: Option<(String, String)> = conn
-        .query_row("SELECT account_id, updated_at FROM trades WHERE id = ?1 AND deleted_at IS NOT NULL", [id], |r| {
-            Ok((r.get(0)?, r.get(1)?))
-        })
+        .query_row(
+            "SELECT account_id, updated_at FROM trades WHERE id = ?1 AND deleted_at IS NOT NULL",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
         .optional()?;
-    let (account_id, updated_at) = previous.ok_or_else(|| AppError::not_found("deleted trade", id))?;
+    let (account_id, updated_at) =
+        previous.ok_or_else(|| AppError::not_found("deleted trade", id))?;
     let at = later_than(&updated_at);
-    conn.execute("UPDATE trades SET deleted_at = NULL, updated_at = ?2 WHERE id = ?1", params![id, at])?;
+    conn.execute(
+        "UPDATE trades SET deleted_at = NULL, updated_at = ?2 WHERE id = ?1",
+        params![id, at],
+    )?;
     let after = get(conn, id)?;
-    record(conn, id, &account_id, Change { kind, actor, reason: why, changed: &[], before: None, after: Some(&after), at: &at })?;
+    record(
+        conn,
+        id,
+        &account_id,
+        Change {
+            kind,
+            actor,
+            reason: why,
+            changed: &[],
+            before: None,
+            after: Some(&after),
+            at: &at,
+        },
+    )?;
     Ok(after)
 }
 
 /// The trader undoes a delete: the trade comes back exactly as stored, with its
 /// review and screenshots. Archived accounts are read-only.
-pub fn restore_deleted(conn: &mut Connection, account_id: &str, id: &str, why: Option<String>) -> AppResult<Trade> {
+pub fn restore_deleted(
+    conn: &mut Connection,
+    account_id: &str,
+    id: &str,
+    why: Option<String>,
+) -> AppResult<Trade> {
     let why = reason(why)?;
     let tx = conn.transaction()?;
     account_ctx(&tx, account_id)?;
-    let owner: Option<String> = tx.query_row("SELECT account_id FROM trades WHERE id = ?1", [id], |r| r.get(0)).optional()?;
+    let owner: Option<String> = tx
+        .query_row("SELECT account_id FROM trades WHERE id = ?1", [id], |r| {
+            r.get(0)
+        })
+        .optional()?;
     if owner.as_deref() != Some(account_id) {
         return Err(AppError::not_found("deleted trade", id));
     }
@@ -504,7 +582,12 @@ pub fn list_deleted(conn: &Connection, account_id: &str) -> AppResult<Vec<Delete
     let mut stmt = conn.prepare(&format!(
         "{SELECT_DELETED} WHERE t.account_id = ?1 AND t.deleted_at IS NOT NULL ORDER BY t.deleted_at DESC, t.id"
     ))?;
-    let rows = stmt.query_map([account_id], |r| Ok(DeletedTrade { trade: from_row(r)?, deleted_at: r.get(36)? }))?;
+    let rows = stmt.query_map([account_id], |r| {
+        Ok(DeletedTrade {
+            trade: from_row(r)?,
+            deleted_at: r.get(36)?,
+        })
+    })?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
@@ -600,7 +683,9 @@ pub fn detail(conn: &Connection, account_id: &str, id: &str) -> AppResult<TradeD
         )
         .optional()?;
     let neighbour = |sql: &str| -> AppResult<Option<String>> {
-        Ok(conn.query_row(sql, params![account_id, trade.entry_at, id], |r| r.get(0)).optional()?)
+        Ok(conn
+            .query_row(sql, params![account_id, trade.entry_at, id], |r| r.get(0))
+            .optional()?)
     };
     let previous_trade_id = neighbour(
         "SELECT id FROM trades WHERE account_id = ?1 AND deleted_at IS NULL
@@ -617,7 +702,15 @@ pub fn detail(conn: &Connection, account_id: &str, id: &str) -> AppResult<TradeD
         params![account_id, trade.entry_at, id],
         |r| Ok((r.get(0)?, r.get(1)?)),
     )?;
-    Ok(TradeDetail { corrections: corrections(conn, id)?, trade, import_source, previous_trade_id, next_trade_id, position, total })
+    Ok(TradeDetail {
+        corrections: corrections(conn, id)?,
+        trade,
+        import_source,
+        previous_trade_id,
+        next_trade_id,
+        position,
+        total,
+    })
 }
 
 // Recompute trading day, instrument and P&L for every trade of an account
@@ -634,15 +727,29 @@ pub(crate) fn rederive_account(conn: &Connection, account_id: &str) -> AppResult
         .query_map([account_id], |r| {
             Ok((
                 r.get::<_, String>(0)?,
-                [r.get::<_, String>(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?],
+                [
+                    r.get::<_, String>(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                ],
                 [r.get::<_, Option<String>>(6)?, r.get(7)?],
                 r.get::<_, i64>(8)?,
                 r.get::<_, Option<i64>>(9)?,
             ))
         })?
         .map(|row| {
-            let (id, [symbol, side, qty, entry_at, entry_price], [exit_at, exit_price], fees, reported) = row?;
-            let corrupt = || AppError::Database { message: format!("stored trade '{id}' is invalid") };
+            let (
+                id,
+                [symbol, side, qty, entry_at, entry_price],
+                [exit_at, exit_price],
+                fees,
+                reported,
+            ) = row?;
+            let corrupt = || AppError::Database {
+                message: format!("stored trade '{id}' is invalid"),
+            };
             let dec = |s: &str| Decimal::from_str(s).ok();
             let fields = TradeFields {
                 symbol,
@@ -650,8 +757,12 @@ pub(crate) fn rederive_account(conn: &Connection, account_id: &str) -> AppResult
                 quantity: dec(&qty).ok_or_else(corrupt)?,
                 entry_at: parse_instant(&entry_at).ok_or_else(corrupt)?,
                 entry_price: dec(&entry_price).ok_or_else(corrupt)?,
-                exit_at: exit_at.map(|s| parse_instant(&s).ok_or_else(corrupt)).transpose()?,
-                exit_price: exit_price.map(|s| dec(&s).ok_or_else(corrupt)).transpose()?,
+                exit_at: exit_at
+                    .map(|s| parse_instant(&s).ok_or_else(corrupt))
+                    .transpose()?,
+                exit_price: exit_price
+                    .map(|s| dec(&s).ok_or_else(corrupt))
+                    .transpose()?,
                 fees_micros: fees,
                 reported_pnl_micros: reported,
                 notes: None,
@@ -665,7 +776,14 @@ pub(crate) fn rederive_account(conn: &Connection, account_id: &str) -> AppResult
             "UPDATE trades SET trading_day = ?2, instrument_id = ?3, gross_pnl_micros = ?4,
                     net_pnl_micros = ?5, pnl_status = ?6
              WHERE id = ?1",
-            params![id, d.trading_day, d.instrument_id, d.pnl.gross_micros, d.pnl.net_micros, d.pnl.status],
+            params![
+                id,
+                d.trading_day,
+                d.instrument_id,
+                d.pnl.gross_micros,
+                d.pnl.net_micros,
+                d.pnl.status
+            ],
         )?;
     }
     Ok(())

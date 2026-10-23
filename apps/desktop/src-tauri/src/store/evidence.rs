@@ -5,7 +5,7 @@ use crate::domain::{
     trading_day,
 };
 use crate::error::{AppError, AppResult};
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
 fn json_error(e: serde_json::Error) -> AppError {
@@ -224,10 +224,7 @@ pub struct RiskInputsQuery {
 }
 /// Current normalized records for an explicit cutoff. This is not time travel;
 /// callers freeze this payload when computing historical results.
-pub fn risk_inputs(
-    conn: &mut Connection,
-    query: RiskInputsQuery,
-) -> AppResult<serde_json::Value> {
+pub fn risk_inputs(conn: &mut Connection, query: RiskInputsQuery) -> AppResult<serde_json::Value> {
     let tx = conn.transaction()?;
     let out = risk_inputs_in(&tx, query)?;
     tx.commit()?;
@@ -235,7 +232,10 @@ pub fn risk_inputs(
 }
 
 /// `risk_inputs` inside the caller's transaction, so several reads share one database state.
-pub(crate) fn risk_inputs_in(tx: &Connection, mut query: RiskInputsQuery) -> AppResult<serde_json::Value> {
+pub(crate) fn risk_inputs_in(
+    tx: &Connection,
+    mut query: RiskInputsQuery,
+) -> AppResult<serde_json::Value> {
     let account = super::accounts::get_any(tx, &query.account_id)?;
     let at = parse_payload_time(&query.as_of).map_err(|e| AppError::invalid("asOf", e))?;
     let tz = crate::domain::parse_tz(&account.timezone)

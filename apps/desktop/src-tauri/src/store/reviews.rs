@@ -13,13 +13,16 @@
 use std::path::Path;
 use std::str::FromStr;
 
-use rusqlite::{params, Connection, OptionalExtension, Transaction};
+use rusqlite::{Connection, OptionalExtension, Transaction, params};
 use rust_decimal::{Decimal, RoundingStrategy};
 use serde::{Deserialize, Serialize};
 
 use super::attachments::{self, AttachmentMeta};
 use super::{account_ctx, load_instruments, opt_text};
-use crate::domain::{canonical, micros_to_string, new_id, now, parse_decimal, resolve_instrument, to_micros, Instrument};
+use crate::domain::{
+    Instrument, canonical, micros_to_string, new_id, now, parse_decimal, resolve_instrument,
+    to_micros,
+};
 use crate::error::{AppError, AppResult, Issues};
 
 const MAX_NOTES_CHARS: usize = 20_000;
@@ -194,9 +197,17 @@ fn stored(conn: &Connection, trade_id: &str) -> AppResult<Option<Stored>> {
 /// The trade must be an active trade of `account_id`; another account's trade is "not found".
 fn require_trade(conn: &Connection, account_id: &str, trade_id: &str) -> AppResult<()> {
     let owner: Option<String> = conn
-        .query_row("SELECT account_id FROM trades WHERE id = ?1 AND deleted_at IS NULL", [trade_id], |r| r.get(0))
+        .query_row(
+            "SELECT account_id FROM trades WHERE id = ?1 AND deleted_at IS NULL",
+            [trade_id],
+            |r| r.get(0),
+        )
         .optional()?;
-    if owner.as_deref() == Some(account_id) { Ok(()) } else { Err(AppError::not_found("trade", trade_id)) }
+    if owner.as_deref() == Some(account_id) {
+        Ok(())
+    } else {
+        Err(AppError::not_found("trade", trade_id))
+    }
 }
 
 /// Insert an empty review so a screenshot has something to belong to. Its
@@ -214,10 +225,17 @@ pub(crate) fn ensure(tx: &Transaction, account_id: &str, trade_id: &str) -> AppR
     Ok(id)
 }
 
-fn label_ref(id: Option<String>, snapshot: Option<String>, current: Option<(String, bool)>) -> Option<LabelRef> {
+fn label_ref(
+    id: Option<String>,
+    snapshot: Option<String>,
+    current: Option<(String, bool)>,
+) -> Option<LabelRef> {
     let label = snapshot.or_else(|| current.as_ref().map(|c| c.0.clone()))?;
     Some(LabelRef {
-        current_label: current.as_ref().filter(|c| c.0 != label).map(|c| c.0.clone()),
+        current_label: current
+            .as_ref()
+            .filter(|c| c.0 != label)
+            .map(|c| c.0.clone()),
         archived: current.as_ref().is_some_and(|c| c.1),
         id,
         label,
@@ -237,24 +255,41 @@ fn decimal_text(issues: &mut Issues, field: &str, value: Option<String>) -> Opti
 
 fn notes(issues: &mut Issues, field: &str, value: Option<String>) -> Option<String> {
     let value = value.filter(|v| !v.trim().is_empty());
-    if value.as_ref().is_some_and(|v| v.chars().count() > MAX_NOTES_CHARS) {
-        issues.add(field, format!("must be at most {MAX_NOTES_CHARS} characters"));
+    if value
+        .as_ref()
+        .is_some_and(|v| v.chars().count() > MAX_NOTES_CHARS)
+    {
+        issues.add(
+            field,
+            format!("must be at most {MAX_NOTES_CHARS} characters"),
+        );
     }
     value
 }
 
 /// Save the review of a trade (create or replace), in one transaction.
-pub fn save(conn: &mut Connection, root: Option<&Path>, input: ReviewInput) -> AppResult<TradeReview> {
+pub fn save(
+    conn: &mut Connection,
+    root: Option<&Path>,
+    input: ReviewInput,
+) -> AppResult<TradeReview> {
     let mut issues = Issues::default();
     let planned_entry = decimal_text(&mut issues, "plannedEntryPrice", input.planned_entry_price);
     let planned_stop = decimal_text(&mut issues, "plannedStopPrice", input.planned_stop_price);
-    let planned_target = decimal_text(&mut issues, "plannedTargetPrice", input.planned_target_price);
+    let planned_target = decimal_text(
+        &mut issues,
+        "plannedTargetPrice",
+        input.planned_target_price,
+    );
     let planned_risk = match opt_text(input.planned_risk) {
         None => None,
         Some(text) => match parse_decimal(&text).and_then(to_micros) {
             Some(m) if m > 0 => Some(m),
             Some(_) => {
-                issues.add("plannedRisk", "must be greater than zero (leave it empty when unknown)");
+                issues.add(
+                    "plannedRisk",
+                    "must be greater than zero (leave it empty when unknown)",
+                );
                 None
             }
             None => {
@@ -263,7 +298,10 @@ pub fn save(conn: &mut Connection, root: Option<&Path>, input: ReviewInput) -> A
             }
         },
     };
-    if input.execution_rating.is_some_and(|r| !(1..=5).contains(&r)) {
+    if input
+        .execution_rating
+        .is_some_and(|r| !(1..=5).contains(&r))
+    {
         issues.add("executionRating", "must be from 1 to 5");
     }
     let thesis = notes(&mut issues, "thesis", input.thesis);
@@ -281,14 +319,23 @@ pub fn save(conn: &mut Connection, root: Option<&Path>, input: ReviewInput) -> A
     let checklist_id = opt_text(input.checklist_id);
     for (i, a) in input.checklist_results.iter().enumerate() {
         if !RESULTS.contains(&a.result.as_str()) {
-            issues.add(&format!("checklistResults.{i}.result"), "must be followed, missed or not_applicable");
+            issues.add(
+                &format!("checklistResults.{i}.result"),
+                "must be followed, missed or not_applicable",
+            );
         }
-        if input.checklist_results[..i].iter().any(|b| b.item_id == a.item_id) {
+        if input.checklist_results[..i]
+            .iter()
+            .any(|b| b.item_id == a.item_id)
+        {
             issues.add(&format!("checklistResults.{i}.itemId"), "answered twice");
         }
     }
     if checklist_id.is_none() && !input.checklist_results.is_empty() {
-        issues.add("checklistId", "choose the checklist these answers belong to");
+        issues.add(
+            "checklistId",
+            "choose the checklist these answers belong to",
+        );
     }
     issues.into_result()?;
 
@@ -308,7 +355,9 @@ pub fn save(conn: &mut Connection, root: Option<&Path>, input: ReviewInput) -> A
             });
         }
         (None, Some(_)) => {
-            return Err(AppError::Conflict { message: "this review no longer exists; reload the trade".into() });
+            return Err(AppError::Conflict {
+                message: "this review no longer exists; reload the trade".into(),
+            });
         }
         _ => {}
     }
@@ -319,11 +368,15 @@ pub fn save(conn: &mut Connection, root: Option<&Path>, input: ReviewInput) -> A
         None => None,
         Some(id) => {
             let row: Option<(String, i64)> = tx
-                .query_row("SELECT name, is_archived FROM strategies WHERE id = ?1 AND deleted_at IS NULL", [id], |r| {
-                    Ok((r.get(0)?, r.get(1)?))
-                })
+                .query_row(
+                    "SELECT name, is_archived FROM strategies WHERE id = ?1 AND deleted_at IS NULL",
+                    [id],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )
                 .optional()?;
-            let kept = existing.as_ref().filter(|s| s.strategy_id.as_ref() == Some(id));
+            let kept = existing
+                .as_ref()
+                .filter(|s| s.strategy_id.as_ref() == Some(id));
             match (row, kept) {
                 (_, Some(s)) => s.strategy_snapshot.clone(),
                 (Some((name, 0)), None) => Some(name),
@@ -348,10 +401,15 @@ pub fn save(conn: &mut Connection, root: Option<&Path>, input: ReviewInput) -> A
                     |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
                 )
                 .optional()?;
-            let kept = existing.as_ref().filter(|s| s.checklist_id.as_ref() == Some(id));
+            let kept = existing
+                .as_ref()
+                .filter(|s| s.checklist_id.as_ref() == Some(id));
             match (row, kept) {
                 (Some((_, scope, _)), _) if scope != "trade" => {
-                    issues.add("checklistId", "a daily checklist is reviewed with the day, not a trade");
+                    issues.add(
+                        "checklistId",
+                        "a daily checklist is reviewed with the day, not a trade",
+                    );
                     None
                 }
                 (_, Some(s)) => s.checklist_snapshot.clone(),
@@ -381,13 +439,24 @@ pub fn save(conn: &mut Connection, root: Option<&Path>, input: ReviewInput) -> A
             id
         }
     };
-    let reviewed_at = if input.reviewed { existing.as_ref().and_then(|s| s.reviewed_at.clone()).or(Some(now.clone())) } else { None };
+    let reviewed_at = if input.reviewed {
+        existing
+            .as_ref()
+            .and_then(|s| s.reviewed_at.clone())
+            .or(Some(now.clone()))
+    } else {
+        None
+    };
     let revision = existing.as_ref().map_or(1, |s| s.revision + 1);
     let updated_at = existing
         .as_ref()
         .map(|_| {
             let prev: String = tx
-                .query_row("SELECT updated_at FROM trade_reviews WHERE id = ?1", [&review_id], |r| r.get(0))
+                .query_row(
+                    "SELECT updated_at FROM trade_reviews WHERE id = ?1",
+                    [&review_id],
+                    |r| r.get(0),
+                )
                 .unwrap_or_default();
             super::trades::later_than(&prev)
         })
@@ -420,8 +489,10 @@ pub fn save(conn: &mut Connection, root: Option<&Path>, input: ReviewInput) -> A
     // Tags: keep the label of tags already on the review; new ones take their current label.
     let mut issues = Issues::default();
     let linked: Vec<String> = {
-        let mut stmt = tx.prepare("SELECT tag_id FROM trade_review_tags WHERE trade_review_id = ?1")?;
-        stmt.query_map([&review_id], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?
+        let mut stmt =
+            tx.prepare("SELECT tag_id FROM trade_review_tags WHERE trade_review_id = ?1")?;
+        stmt.query_map([&review_id], |r| r.get(0))?
+            .collect::<rusqlite::Result<_>>()?
     };
     for (i, tag_id) in tag_ids.iter().enumerate() {
         if linked.contains(tag_id) {
@@ -445,7 +516,10 @@ pub fn save(conn: &mut Connection, root: Option<&Path>, input: ReviewInput) -> A
         }
     }
     for tag_id in linked.iter().filter(|t| !tag_ids.contains(t)) {
-        tx.execute("DELETE FROM trade_review_tags WHERE trade_review_id = ?1 AND tag_id = ?2", params![review_id, tag_id])?;
+        tx.execute(
+            "DELETE FROM trade_review_tags WHERE trade_review_id = ?1 AND tag_id = ?2",
+            params![review_id, tag_id],
+        )?;
     }
 
     // Checklist answers: an item answered before keeps the label it was answered under.
@@ -453,7 +527,8 @@ pub fn save(conn: &mut Connection, root: Option<&Path>, input: ReviewInput) -> A
         let mut stmt = tx.prepare(
             "SELECT id, checklist_item_id FROM checklist_results WHERE trade_review_id = ?1 AND deleted_at IS NULL",
         )?;
-        stmt.query_map([&review_id], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<rusqlite::Result<_>>()?
+        stmt.query_map([&review_id], |r| Ok((r.get(0)?, r.get(1)?)))?
+            .collect::<rusqlite::Result<_>>()?
     };
     for (i, answer) in input.checklist_results.iter().enumerate() {
         let item: Option<(String, String, bool)> = tx
@@ -465,14 +540,20 @@ pub fn save(conn: &mut Connection, root: Option<&Path>, input: ReviewInput) -> A
             .optional()?;
         let note = opt_text(answer.note.clone());
         if note.as_ref().is_some_and(|n| n.chars().count() > 2000) {
-            issues.add(&format!("checklistResults.{i}.note"), "must be at most 2000 characters");
+            issues.add(
+                &format!("checklistResults.{i}.note"),
+                "must be at most 2000 characters",
+            );
             continue;
         }
-        let answered = current.iter().find(|(_, item_id)| *item_id == answer.item_id);
+        let answered = current
+            .iter()
+            .find(|(_, item_id)| *item_id == answer.item_id);
         match (item, answered) {
-            (Some((owner, _, _)), _) if Some(&owner) != checklist_id.as_ref() => {
-                issues.add(&format!("checklistResults.{i}.itemId"), "item is not on the chosen checklist")
-            }
+            (Some((owner, _, _)), _) if Some(&owner) != checklist_id.as_ref() => issues.add(
+                &format!("checklistResults.{i}.itemId"),
+                "item is not on the chosen checklist",
+            ),
             (Some(_), Some((result_id, _))) => {
                 tx.execute(
                     "UPDATE checklist_results SET result = ?2, note = ?3,
@@ -489,13 +570,20 @@ pub fn save(conn: &mut Connection, root: Option<&Path>, input: ReviewInput) -> A
                     params![new_id(), answer.item_id, label, review_id, answer.result, note, now],
                 )?;
             }
-            (Some(_), None) => issues.add(&format!("checklistResults.{i}.itemId"), "this item is archived"),
+            (Some(_), None) => issues.add(
+                &format!("checklistResults.{i}.itemId"),
+                "this item is archived",
+            ),
             (None, _) => issues.add(&format!("checklistResults.{i}.itemId"), "item not found"),
         }
     }
     // Answers no longer given (or of another checklist) are set aside, never hard-deleted.
     for (result_id, item_id) in &current {
-        if !input.checklist_results.iter().any(|a| &a.item_id == item_id) {
+        if !input
+            .checklist_results
+            .iter()
+            .any(|a| &a.item_id == item_id)
+        {
             tx.execute(
                 "UPDATE checklist_results SET deleted_at = ?2, updated_at = ?2 WHERE id = ?1",
                 params![result_id, now],
@@ -504,37 +592,69 @@ pub fn save(conn: &mut Connection, root: Option<&Path>, input: ReviewInput) -> A
     }
     issues.into_result()?;
     tx.commit()?;
-    get(conn, root, &input.account_id, &input.trade_id)?.ok_or_else(|| AppError::not_found("review", &review_id))
+    get(conn, root, &input.account_id, &input.trade_id)?
+        .ok_or_else(|| AppError::not_found("review", &review_id))
 }
 
 /// 1R from the planned entry and stop when no risk was entered: |entry − stop| × quantity × point value,
 /// only for an instrument quoted in the account currency.
-fn derived_risk(conn: &Connection, trade_id: &str, entry: &Option<String>, stop: &Option<String>) -> AppResult<Option<i64>> {
-    let (Some(entry), Some(stop)) = (entry.as_deref().and_then(parse_decimal), stop.as_deref().and_then(parse_decimal)) else {
+fn derived_risk(
+    conn: &Connection,
+    trade_id: &str,
+    entry: &Option<String>,
+    stop: &Option<String>,
+) -> AppResult<Option<i64>> {
+    let (Some(entry), Some(stop)) = (
+        entry.as_deref().and_then(parse_decimal),
+        stop.as_deref().and_then(parse_decimal),
+    ) else {
         return Ok(None);
     };
-    let (symbol, quantity, account_id): (String, String, String) =
-        conn.query_row("SELECT symbol, quantity, account_id FROM trades WHERE id = ?1", [trade_id], |r| {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?))
-        })?;
-    let currency: String = conn.query_row("SELECT currency FROM accounts WHERE id = ?1", [&account_id], |r| r.get(0))?;
+    let (symbol, quantity, account_id): (String, String, String) = conn.query_row(
+        "SELECT symbol, quantity, account_id FROM trades WHERE id = ?1",
+        [trade_id],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+    )?;
+    let currency: String = conn.query_row(
+        "SELECT currency FROM accounts WHERE id = ?1",
+        [&account_id],
+        |r| r.get(0),
+    )?;
     let instruments = load_instruments(conn)?;
-    Ok(risk_from_plan(entry, stop, &quantity, resolve_instrument(&symbol, &instruments), &currency))
+    Ok(risk_from_plan(
+        entry,
+        stop,
+        &quantity,
+        resolve_instrument(&symbol, &instruments),
+        &currency,
+    ))
 }
 
 /// |entry − stop| × quantity × point value in micro-units, for an instrument quoted in the account currency; None
 /// otherwise. Shared with the Insights read (Build 23) so both derive 1R the same way.
-pub(crate) fn risk_from_plan(entry: Decimal, stop: Decimal, quantity: &str, instrument: Option<&Instrument>, currency: &str) -> Option<i64> {
+pub(crate) fn risk_from_plan(
+    entry: Decimal,
+    stop: Decimal,
+    quantity: &str,
+    instrument: Option<&Instrument>,
+    currency: &str,
+) -> Option<i64> {
     let instrument = instrument.filter(|i| i.currency == currency)?;
     let quantity = Decimal::from_str(quantity).ok()?;
-    let risk = entry.checked_sub(stop).and_then(|d| d.abs().checked_mul(quantity)).and_then(|r| r.checked_mul(instrument.point_value));
+    let risk = entry
+        .checked_sub(stop)
+        .and_then(|d| d.abs().checked_mul(quantity))
+        .and_then(|r| r.checked_mul(instrument.point_value));
     risk.and_then(to_micros).filter(|m| *m > 0)
 }
 
 pub(crate) fn r_multiple(net_micros: Option<i64>, risk_micros: Option<i64>) -> Option<String> {
     let (net, risk) = (net_micros?, risk_micros?);
     let r = Decimal::new(net, 0).checked_div(Decimal::new(risk, 0))?;
-    Some(canonical(r.round_dp_with_strategy(2, RoundingStrategy::MidpointAwayFromZero)))
+    Some(canonical(r.round_dp_with_strategy(
+        2,
+        RoundingStrategy::MidpointAwayFromZero,
+    )))
 }
 
 struct ReviewRow {
@@ -557,7 +677,12 @@ struct ReviewRow {
 }
 
 /// The review of an active trade of `account_id`, or None when it has none.
-pub fn get(conn: &Connection, root: Option<&Path>, account_id: &str, trade_id: &str) -> AppResult<Option<TradeReview>> {
+pub fn get(
+    conn: &Connection,
+    root: Option<&Path>,
+    account_id: &str,
+    trade_id: &str,
+) -> AppResult<Option<TradeReview>> {
     super::require_account(conn, account_id)?;
     require_trade(conn, account_id, trade_id)?;
     let row = conn
@@ -612,17 +737,21 @@ pub fn get(conn: &Connection, root: Option<&Path>, account_id: &str, trade_id: &
     };
     let current_strategy: Option<(String, bool)> = match &strategy_id {
         Some(s) => conn
-            .query_row("SELECT name, is_archived = 1 FROM strategies WHERE id = ?1 AND deleted_at IS NULL", [s], |r| {
-                Ok((r.get(0)?, r.get(1)?))
-            })
+            .query_row(
+                "SELECT name, is_archived = 1 FROM strategies WHERE id = ?1 AND deleted_at IS NULL",
+                [s],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
             .optional()?,
         None => None,
     };
     let current_checklist: Option<(String, bool)> = match &checklist_id {
         Some(c) => conn
-            .query_row("SELECT name, is_archived = 1 FROM checklists WHERE id = ?1 AND deleted_at IS NULL", [c], |r| {
-                Ok((r.get(0)?, r.get(1)?))
-            })
+            .query_row(
+                "SELECT name, is_archived = 1 FROM checklists WHERE id = ?1 AND deleted_at IS NULL",
+                [c],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
             .optional()?,
         None => None,
     };
@@ -635,7 +764,11 @@ pub fn get(conn: &Connection, root: Option<&Path>, account_id: &str, trade_id: &
             None => (None, None),
         },
     };
-    let net: Option<i64> = conn.query_row("SELECT net_pnl_micros FROM trades WHERE id = ?1", [trade_id], |r| r.get(0))?;
+    let net: Option<i64> = conn.query_row(
+        "SELECT net_pnl_micros FROM trades WHERE id = ?1",
+        [trade_id],
+        |r| r.get(0),
+    )?;
     Ok(Some(TradeReview {
         adherence: adherence(&checklist_results),
         attachments: attachments::for_review(conn, root, &id)?,
@@ -706,7 +839,11 @@ fn answers(conn: &Connection, review_id: &str) -> AppResult<Vec<ChecklistAnswer>
 
 fn adherence(results: &[ChecklistAnswer]) -> Adherence {
     let count = |k: &str| results.iter().filter(|a| a.result == k).count() as i64;
-    Adherence { followed: count("followed"), missed: count("missed"), not_applicable: count("not_applicable") }
+    Adherence {
+        followed: count("followed"),
+        missed: count("missed"),
+        not_applicable: count("not_applicable"),
+    }
 }
 
 /// One summary per active trade of the account that has a review.
@@ -736,19 +873,21 @@ pub fn summaries(conn: &Connection, account_id: &str) -> AppResult<Vec<ReviewSum
         .collect::<rusqlite::Result<Vec<_>>>()?;
     heads
         .into_iter()
-        .map(|(id, trade_id, reviewed, strategy_id, strategy_name, rating, notes, screenshots)| {
-            Ok(ReviewSummary {
-                adherence: adherence(&answers(conn, &id)?),
-                tags: review_tags(conn, &id)?,
-                trade_id,
-                reviewed,
-                strategy_id,
-                strategy_name,
-                execution_rating: rating,
-                screenshot_count: screenshots,
-                notes: notes.trim().to_string(),
-            })
-        })
+        .map(
+            |(id, trade_id, reviewed, strategy_id, strategy_name, rating, notes, screenshots)| {
+                Ok(ReviewSummary {
+                    adherence: adherence(&answers(conn, &id)?),
+                    tags: review_tags(conn, &id)?,
+                    trade_id,
+                    reviewed,
+                    strategy_id,
+                    strategy_name,
+                    execution_rating: rating,
+                    screenshot_count: screenshots,
+                    notes: notes.trim().to_string(),
+                })
+            },
+        )
         .collect()
 }
 
@@ -758,10 +897,23 @@ mod r_multiple_tests {
 
     #[test]
     fn r_multiple_is_exact_and_needs_both_values() {
-        assert_eq!(r_multiple(Some(250_000_000), Some(100_000_000)).as_deref(), Some("2.5"));
-        assert_eq!(r_multiple(Some(-50_000_000), Some(150_000_000)).as_deref(), Some("-0.33"));
-        assert_eq!(r_multiple(Some(5_000_000), Some(1_000_000_000)).as_deref(), Some("0.01"));
+        assert_eq!(
+            r_multiple(Some(250_000_000), Some(100_000_000)).as_deref(),
+            Some("2.5")
+        );
+        assert_eq!(
+            r_multiple(Some(-50_000_000), Some(150_000_000)).as_deref(),
+            Some("-0.33")
+        );
+        assert_eq!(
+            r_multiple(Some(5_000_000), Some(1_000_000_000)).as_deref(),
+            Some("0.01")
+        );
         assert_eq!(r_multiple(None, Some(1)), None);
-        assert_eq!(r_multiple(Some(1), None), None, "unknown risk is never treated as zero");
+        assert_eq!(
+            r_multiple(Some(1), None),
+            None,
+            "unknown risk is never treated as zero"
+        );
     }
 }

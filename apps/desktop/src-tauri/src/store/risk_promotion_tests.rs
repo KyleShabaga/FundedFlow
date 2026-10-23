@@ -1331,7 +1331,9 @@ fn permanently_deleting_an_account_removes_its_results_and_leaves_others_current
     let mut c = db();
     let ctx = seeded(&mut c);
     // An account with no shared rulebook history, so deletion is not blocked.
-    let doomed = accounts::create(&mut c, account_input("Eval C")).unwrap().id;
+    let doomed = accounts::create(&mut c, account_input("Eval C"))
+        .unwrap()
+        .id;
     trades::create(&mut c, trade_input(&doomed)).unwrap();
     let gone = promoted_and_current(&mut c, &doomed);
     let pending = capture(&mut c, &doomed, CUTOFF);
@@ -1388,19 +1390,61 @@ fn erasing_the_whole_journal_removes_every_result_and_a_new_journal_promotes() {
 
 /// Commands that write nothing a calculation could read: queries, previews, inspections and exports.
 const READ_COMMANDS: &[&str] = &[
-    "list_accounts", "list_active_accounts", "get_account", "get_account_history", "get_account_lineage",
-    "preview_account_deletion", "list_trades", "list_deleted_trades", "get_trade_detail", "get_trade_review",
-    "list_trade_review_summaries", "read_trade_screenshot", "get_review_library", "list_journal_entries",
-    "preview_csv_import", "list_csv_imports", "list_csv_import_problem_rows", "list_rulebooks", "list_rulebook_versions",
-    "get_rulebook_version", "get_applicable_rulebook", "list_rulebook_events", "validate_rulebook_draft",
-    "list_account_rulebook_assignments", "get_catalogue", "list_account_offer_selections", "get_account_catalogue_link",
-    "list_account_phase_events", "list_ledger_entries", "get_ledger_balance_adjustment", "get_setting", "list_settings",
-    "list_account_snapshots", "get_latest_account_snapshot", "capture_account_risk", "get_current_account_risk",
-    "get_account_snapshot_freshness", "runtime_status", "get_account_risk_inputs", "get_financial_observation",
-    "list_financial_observations", "get_ledger_history", "list_financial_reconciliations",
-    "list_reconciliation_resolutions", "export_journal_archive", "export_trade_csv", "inspect_journal_archive",
-    "preview_permanent_deletion", "get_daily_review", "list_daily_reviews", "get_insights_dataset", "dev_tools_status",
-    "dev_reset_preview", "get_legal_acceptance", "list_account_freshness",
+    "list_accounts",
+    "list_active_accounts",
+    "get_account",
+    "get_account_history",
+    "get_account_lineage",
+    "preview_account_deletion",
+    "list_trades",
+    "list_deleted_trades",
+    "get_trade_detail",
+    "get_trade_review",
+    "list_trade_review_summaries",
+    "read_trade_screenshot",
+    "get_review_library",
+    "list_journal_entries",
+    "preview_csv_import",
+    "list_csv_imports",
+    "list_csv_import_problem_rows",
+    "list_rulebooks",
+    "list_rulebook_versions",
+    "get_rulebook_version",
+    "get_applicable_rulebook",
+    "list_rulebook_events",
+    "validate_rulebook_draft",
+    "list_account_rulebook_assignments",
+    "get_catalogue",
+    "list_account_offer_selections",
+    "get_account_catalogue_link",
+    "list_account_phase_events",
+    "list_ledger_entries",
+    "get_ledger_balance_adjustment",
+    "get_setting",
+    "list_settings",
+    "list_account_snapshots",
+    "get_latest_account_snapshot",
+    "capture_account_risk",
+    "get_current_account_risk",
+    "get_account_snapshot_freshness",
+    "runtime_status",
+    "get_account_risk_inputs",
+    "get_financial_observation",
+    "list_financial_observations",
+    "get_ledger_history",
+    "list_financial_reconciliations",
+    "list_reconciliation_resolutions",
+    "export_journal_archive",
+    "export_trade_csv",
+    "inspect_journal_archive",
+    "preview_permanent_deletion",
+    "get_daily_review",
+    "list_daily_reviews",
+    "get_insights_dataset",
+    "dev_tools_status",
+    "dev_reset_preview",
+    "get_legal_acceptance",
+    "list_account_freshness",
 ];
 
 /// Every `#[tauri::command]` is either a listed read or a write the §3 command table classifies (a matrix row, or
@@ -1438,7 +1482,10 @@ fn every_write_command_is_classified_for_risk_promotion() {
         );
     }
     for name in READ_COMMANDS.iter().chain(&classified) {
-        assert!(defined.contains(name), "{name} is classified but is not a command");
+        assert!(
+            defined.contains(name),
+            "{name} is classified but is not a command"
+        );
     }
     // Each table entry names a matrix row (or rows) that exists, or says why it is not a source.
     let rows: Vec<&str> = section

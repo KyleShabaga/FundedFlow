@@ -6,37 +6,46 @@
 
 use tauri::{AppHandle, Manager, State};
 
+use crate::catalogue::SourceReference;
+use crate::catalogue::{AccountCatalogueLink, AccountPhaseEvent, CatalogueVersion};
 use crate::csv_import::{self, CsvImportRequest, CsvPreview, ImportBatch, ImportRowRecord};
+use crate::error::AppError;
 use crate::error::AppResult;
-use crate::store::accounts::{self, Account, AccountHistory, AccountInput, StatusChangeInput};
-use crate::store::attempts::{self, AttemptSummary, DeletionPreview, ResetInput, ResetResult};
 use crate::error::FieldIssue;
 use crate::rulebook::{
-    AccountRulebookAssignment, ApplicableRulebook, ApplicableRulebookQuery, AssignmentGuard, AssignmentInput,
-    ChangeContext, RuleClaim, Rulebook, RulebookDraftInput, RulebookDraftUpdate, RulebookEvent, RulebookEventQuery,
-    RulebookVersionDetail, SourceConflictInput,
+    AccountRulebookAssignment, ApplicableRulebook, ApplicableRulebookQuery, AssignmentGuard,
+    AssignmentInput, ChangeContext, RuleClaim, Rulebook, RulebookDraftInput, RulebookDraftUpdate,
+    RulebookEvent, RulebookEventQuery, RulebookVersionDetail, SourceConflictInput,
 };
-use crate::catalogue::{AccountCatalogueLink, AccountPhaseEvent, CatalogueVersion};
-use crate::store::catalogue::{self as catalogue_store, AccountLinkInput, CatalogueSnapshot, PhaseEventInput};
-use crate::catalogue::SourceReference;
-use crate::store::authoring::{self, DraftInput, SourceInput};
-use crate::store::offers::{self, OfferSelection, OfferSelectionInput};
-use crate::store::ledger::{self, LedgerEntry, LedgerEntryInput};
-use crate::store::settings::{self, Setting};
-use crate::store::freshness;
-use crate::store::risk_promotion;
-use crate::store::snapshots::{self, Snapshot, SnapshotInput};
-use crate::store::journal::{self, JournalEntry, JournalEntryInput};
-use crate::store::rulebooks;
-use crate::store::trades::{self, DeletedTrade, Trade, TradeChangeOptions, TradeDetail, TradeInput};
-use crate::store::attachments::{self, AttachmentMeta, ScreenshotData, ScreenshotInput};
-use crate::store::library::{self, ArchiveInput, Checklist, ChecklistInput, Library, Strategy, StrategyInput, Tag, TagInput};
-use crate::store::reviews::{self, ReviewInput, ReviewSummary, TradeReview};
-use crate::error::AppError;
 use crate::runtime::{Runtime, RuntimeStatus};
+use crate::store::accounts::{self, Account, AccountHistory, AccountInput, StatusChangeInput};
+use crate::store::attachments::{self, AttachmentMeta, ScreenshotData, ScreenshotInput};
+use crate::store::attempts::{self, AttemptSummary, DeletionPreview, ResetInput, ResetResult};
+use crate::store::authoring::{self, DraftInput, SourceInput};
+use crate::store::catalogue::{
+    self as catalogue_store, AccountLinkInput, CatalogueSnapshot, PhaseEventInput,
+};
+use crate::store::freshness;
+use crate::store::journal::{self, JournalEntry, JournalEntryInput};
+use crate::store::ledger::{self, LedgerEntry, LedgerEntryInput};
+use crate::store::library::{
+    self, ArchiveInput, Checklist, ChecklistInput, Library, Strategy, StrategyInput, Tag, TagInput,
+};
+use crate::store::offers::{self, OfferSelection, OfferSelectionInput};
+use crate::store::reviews::{self, ReviewInput, ReviewSummary, TradeReview};
+use crate::store::risk_promotion;
+use crate::store::rulebooks;
+use crate::store::settings::{self, Setting};
+use crate::store::snapshots::{self, Snapshot, SnapshotInput};
+use crate::store::trades::{
+    self, DeletedTrade, Trade, TradeChangeOptions, TradeDetail, TradeInput,
+};
 
 #[tauri::command]
-pub async fn list_accounts(db: State<'_, Runtime>, include_archived: Option<bool>) -> AppResult<Vec<Account>> {
+pub async fn list_accounts(
+    db: State<'_, Runtime>,
+    include_archived: Option<bool>,
+) -> AppResult<Vec<Account>> {
     db.with(|c| accounts::list_with(c, include_archived.unwrap_or(false)))
 }
 
@@ -57,7 +66,11 @@ pub async fn create_account(db: State<'_, Runtime>, input: AccountInput) -> AppR
 }
 
 #[tauri::command]
-pub async fn update_account(db: State<'_, Runtime>, id: String, input: AccountInput) -> AppResult<Account> {
+pub async fn update_account(
+    db: State<'_, Runtime>,
+    id: String,
+    input: AccountInput,
+) -> AppResult<Account> {
     db.with(|c| accounts::update(c, &id, input))
 }
 
@@ -72,7 +85,11 @@ pub async fn restore_account(db: State<'_, Runtime>, id: String) -> AppResult<Ac
 }
 
 #[tauri::command]
-pub async fn change_account_status(db: State<'_, Runtime>, id: String, input: StatusChangeInput) -> AppResult<Account> {
+pub async fn change_account_status(
+    db: State<'_, Runtime>,
+    id: String,
+    input: StatusChangeInput,
+) -> AppResult<Account> {
     db.with(|c| accounts::change_status(c, &id, input))
 }
 
@@ -82,17 +99,26 @@ pub async fn get_account_history(db: State<'_, Runtime>, id: String) -> AppResul
 }
 
 #[tauri::command]
-pub async fn reset_account_attempt(db: State<'_, Runtime>, input: ResetInput) -> AppResult<ResetResult> {
+pub async fn reset_account_attempt(
+    db: State<'_, Runtime>,
+    input: ResetInput,
+) -> AppResult<ResetResult> {
     db.with(|c| attempts::reset(c, input))
 }
 
 #[tauri::command]
-pub async fn get_account_lineage(db: State<'_, Runtime>, id: String) -> AppResult<Vec<AttemptSummary>> {
+pub async fn get_account_lineage(
+    db: State<'_, Runtime>,
+    id: String,
+) -> AppResult<Vec<AttemptSummary>> {
     db.with(|c| attempts::lineage(c, &id))
 }
 
 #[tauri::command]
-pub async fn preview_account_deletion(db: State<'_, Runtime>, id: String) -> AppResult<DeletionPreview> {
+pub async fn preview_account_deletion(
+    db: State<'_, Runtime>,
+    id: String,
+) -> AppResult<DeletionPreview> {
     db.with(|c| attempts::deletion_preview(c, &id))
 }
 
@@ -119,60 +145,99 @@ pub async fn update_trade(
 }
 
 #[tauri::command]
-pub async fn delete_trade(db: State<'_, Runtime>, id: String, reason: Option<String>) -> AppResult<()> {
+pub async fn delete_trade(
+    db: State<'_, Runtime>,
+    id: String,
+    reason: Option<String>,
+) -> AppResult<()> {
     db.with(|c| trades::delete_with(c, &id, reason))
 }
 
 #[tauri::command]
-pub async fn restore_trade(db: State<'_, Runtime>, account_id: String, id: String, reason: Option<String>) -> AppResult<Trade> {
+pub async fn restore_trade(
+    db: State<'_, Runtime>,
+    account_id: String,
+    id: String,
+    reason: Option<String>,
+) -> AppResult<Trade> {
     db.with(|c| trades::restore_deleted(c, &account_id, &id, reason))
 }
 
 #[tauri::command]
-pub async fn list_deleted_trades(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<DeletedTrade>> {
+pub async fn list_deleted_trades(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<Vec<DeletedTrade>> {
     db.with(|c| trades::list_deleted(c, &account_id))
 }
 
 #[tauri::command]
-pub async fn get_trade_detail(db: State<'_, Runtime>, account_id: String, id: String) -> AppResult<TradeDetail> {
+pub async fn get_trade_detail(
+    db: State<'_, Runtime>,
+    account_id: String,
+    id: String,
+) -> AppResult<TradeDetail> {
     db.with(|c| trades::detail(c, &account_id, &id))
 }
 
 #[tauri::command]
-pub async fn get_trade_review(db: State<'_, Runtime>, account_id: String, trade_id: String) -> AppResult<Option<TradeReview>> {
+pub async fn get_trade_review(
+    db: State<'_, Runtime>,
+    account_id: String,
+    trade_id: String,
+) -> AppResult<Option<TradeReview>> {
     let root = db.data_dir();
     db.with(|c| reviews::get(c, root.as_deref(), &account_id, &trade_id))
 }
 
 #[tauri::command]
-pub async fn save_trade_review(db: State<'_, Runtime>, input: ReviewInput) -> AppResult<TradeReview> {
+pub async fn save_trade_review(
+    db: State<'_, Runtime>,
+    input: ReviewInput,
+) -> AppResult<TradeReview> {
     let root = db.data_dir();
     db.with(|c| reviews::save(c, root.as_deref(), input))
 }
 
 #[tauri::command]
-pub async fn list_trade_review_summaries(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<ReviewSummary>> {
+pub async fn list_trade_review_summaries(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<Vec<ReviewSummary>> {
     db.with(|c| reviews::summaries(c, &account_id))
 }
 
 fn attachment_root(db: &Runtime) -> AppResult<std::path::PathBuf> {
-    db.data_dir().ok_or_else(|| AppError::Unavailable { message: "the data folder is not available".into() })
+    db.data_dir().ok_or_else(|| AppError::Unavailable {
+        message: "the data folder is not available".into(),
+    })
 }
 
 #[tauri::command]
-pub async fn add_trade_screenshot(db: State<'_, Runtime>, input: ScreenshotInput) -> AppResult<AttachmentMeta> {
+pub async fn add_trade_screenshot(
+    db: State<'_, Runtime>,
+    input: ScreenshotInput,
+) -> AppResult<AttachmentMeta> {
     let root = attachment_root(&db)?;
     db.with(|c| attachments::add(c, &root, input))
 }
 
 #[tauri::command]
-pub async fn read_trade_screenshot(db: State<'_, Runtime>, account_id: String, id: String) -> AppResult<ScreenshotData> {
+pub async fn read_trade_screenshot(
+    db: State<'_, Runtime>,
+    account_id: String,
+    id: String,
+) -> AppResult<ScreenshotData> {
     let root = attachment_root(&db)?;
     db.with(|c| attachments::read(c, &root, &account_id, &id))
 }
 
 #[tauri::command]
-pub async fn remove_trade_screenshot(db: State<'_, Runtime>, account_id: String, id: String) -> AppResult<()> {
+pub async fn remove_trade_screenshot(
+    db: State<'_, Runtime>,
+    account_id: String,
+    id: String,
+) -> AppResult<()> {
     db.with(|c| attachments::remove(c, &account_id, &id))
 }
 
@@ -182,17 +247,29 @@ pub async fn get_review_library(db: State<'_, Runtime>) -> AppResult<Library> {
 }
 
 #[tauri::command]
-pub async fn save_strategy(db: State<'_, Runtime>, id: Option<String>, input: StrategyInput) -> AppResult<Strategy> {
+pub async fn save_strategy(
+    db: State<'_, Runtime>,
+    id: Option<String>,
+    input: StrategyInput,
+) -> AppResult<Strategy> {
     db.with(|c| library::save_strategy(c, id.as_deref(), input))
 }
 
 #[tauri::command]
-pub async fn save_tag(db: State<'_, Runtime>, id: Option<String>, input: TagInput) -> AppResult<Tag> {
+pub async fn save_tag(
+    db: State<'_, Runtime>,
+    id: Option<String>,
+    input: TagInput,
+) -> AppResult<Tag> {
     db.with(|c| library::save_tag(c, id.as_deref(), input))
 }
 
 #[tauri::command]
-pub async fn save_checklist(db: State<'_, Runtime>, id: Option<String>, input: ChecklistInput) -> AppResult<Checklist> {
+pub async fn save_checklist(
+    db: State<'_, Runtime>,
+    id: Option<String>,
+    input: ChecklistInput,
+) -> AppResult<Checklist> {
     db.with(|c| library::save_checklist(c, id.as_deref(), input))
 }
 
@@ -202,17 +279,27 @@ pub async fn set_library_archived(db: State<'_, Runtime>, input: ArchiveInput) -
 }
 
 #[tauri::command]
-pub async fn list_journal_entries(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<JournalEntry>> {
+pub async fn list_journal_entries(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<Vec<JournalEntry>> {
     db.with(|c| journal::list(c, &account_id))
 }
 
 #[tauri::command]
-pub async fn create_journal_entry(db: State<'_, Runtime>, input: JournalEntryInput) -> AppResult<JournalEntry> {
+pub async fn create_journal_entry(
+    db: State<'_, Runtime>,
+    input: JournalEntryInput,
+) -> AppResult<JournalEntry> {
     db.with(|c| journal::create(c, input))
 }
 
 #[tauri::command]
-pub async fn update_journal_entry(db: State<'_, Runtime>, id: String, input: JournalEntryInput) -> AppResult<JournalEntry> {
+pub async fn update_journal_entry(
+    db: State<'_, Runtime>,
+    id: String,
+    input: JournalEntryInput,
+) -> AppResult<JournalEntry> {
     db.with(|c| journal::update(c, &id, input))
 }
 
@@ -222,42 +309,66 @@ pub async fn delete_journal_entry(db: State<'_, Runtime>, id: String) -> AppResu
 }
 
 #[tauri::command]
-pub async fn preview_csv_import(db: State<'_, Runtime>, request: CsvImportRequest) -> AppResult<CsvPreview> {
+pub async fn preview_csv_import(
+    db: State<'_, Runtime>,
+    request: CsvImportRequest,
+) -> AppResult<CsvPreview> {
     db.with(|c| csv_import::preview(c, &request))
 }
 
 #[tauri::command]
-pub async fn commit_csv_import(db: State<'_, Runtime>, request: CsvImportRequest) -> AppResult<ImportBatch> {
+pub async fn commit_csv_import(
+    db: State<'_, Runtime>,
+    request: CsvImportRequest,
+) -> AppResult<ImportBatch> {
     db.with(|c| csv_import::commit(c, &request))
 }
 
 #[tauri::command]
-pub async fn list_csv_imports(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<ImportBatch>> {
+pub async fn list_csv_imports(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<Vec<ImportBatch>> {
     db.with(|c| csv_import::list_batches(c, &account_id))
 }
 
 #[tauri::command]
-pub async fn list_csv_import_problem_rows(db: State<'_, Runtime>, batch_id: String) -> AppResult<Vec<ImportRowRecord>> {
+pub async fn list_csv_import_problem_rows(
+    db: State<'_, Runtime>,
+    batch_id: String,
+) -> AppResult<Vec<ImportRowRecord>> {
     db.with(|c| csv_import::list_problem_rows(c, &batch_id))
 }
 
 #[tauri::command]
-pub async fn list_rulebooks(db: State<'_, Runtime>, account_id: Option<String>) -> AppResult<Vec<Rulebook>> {
+pub async fn list_rulebooks(
+    db: State<'_, Runtime>,
+    account_id: Option<String>,
+) -> AppResult<Vec<Rulebook>> {
     db.with(|c| rulebooks::list(c, account_id.as_deref()))
 }
 
 #[tauri::command]
-pub async fn list_rulebook_versions(db: State<'_, Runtime>, rulebook_id: String) -> AppResult<Vec<RulebookVersionDetail>> {
+pub async fn list_rulebook_versions(
+    db: State<'_, Runtime>,
+    rulebook_id: String,
+) -> AppResult<Vec<RulebookVersionDetail>> {
     db.with(|c| rulebooks::list_versions(c, &rulebook_id))
 }
 
 #[tauri::command]
-pub async fn get_rulebook_version(db: State<'_, Runtime>, id: String) -> AppResult<RulebookVersionDetail> {
+pub async fn get_rulebook_version(
+    db: State<'_, Runtime>,
+    id: String,
+) -> AppResult<RulebookVersionDetail> {
     db.with(|c| rulebooks::get_version(c, &id))
 }
 
 #[tauri::command]
-pub async fn get_applicable_rulebook(db: State<'_, Runtime>, query: ApplicableRulebookQuery) -> AppResult<ApplicableRulebook> {
+pub async fn get_applicable_rulebook(
+    db: State<'_, Runtime>,
+    query: ApplicableRulebookQuery,
+) -> AppResult<ApplicableRulebook> {
     db.with(|c| rulebooks::applicable(c, &query))
 }
 
@@ -267,7 +378,9 @@ pub async fn create_rulebook_draft(
     input: RulebookDraftInput,
     context: Option<ChangeContext>,
 ) -> AppResult<RulebookVersionDetail> {
-    db.with(|c| rulebooks::create_draft_with(c, input, context.unwrap_or_else(ChangeContext::local)))
+    db.with(|c| {
+        rulebooks::create_draft_with(c, input, context.unwrap_or_else(ChangeContext::local))
+    })
 }
 
 /// Build 19: save a draft's content; a stale `expected_updated_at` is a conflict.
@@ -294,12 +407,18 @@ pub async fn discard_rulebook_draft(
 }
 
 #[tauri::command]
-pub async fn list_rulebook_events(db: State<'_, Runtime>, query: RulebookEventQuery) -> AppResult<Vec<RulebookEvent>> {
+pub async fn list_rulebook_events(
+    db: State<'_, Runtime>,
+    query: RulebookEventQuery,
+) -> AppResult<Vec<RulebookEvent>> {
     db.with(|c| rulebooks::list_events(c, &query))
 }
 
 #[tauri::command]
-pub async fn validate_rulebook_draft(db: State<'_, Runtime>, id: String) -> AppResult<Vec<FieldIssue>> {
+pub async fn validate_rulebook_draft(
+    db: State<'_, Runtime>,
+    id: String,
+) -> AppResult<Vec<FieldIssue>> {
     db.with(|c| rulebooks::validate(c, &id))
 }
 
@@ -312,7 +431,13 @@ pub async fn publish_rulebook_version(
     context: Option<ChangeContext>,
 ) -> AppResult<RulebookVersionDetail> {
     db.with(|c| {
-        rulebooks::publish_with(c, &id, reviewer, expected_updated_at.as_deref(), context.unwrap_or_else(ChangeContext::local))
+        rulebooks::publish_with(
+            c,
+            &id,
+            reviewer,
+            expected_updated_at.as_deref(),
+            context.unwrap_or_else(ChangeContext::local),
+        )
     })
 }
 
@@ -334,7 +459,10 @@ pub async fn list_account_rulebook_assignments(
 }
 
 #[tauri::command]
-pub async fn flag_rulebook_source_conflict(db: State<'_, Runtime>, input: SourceConflictInput) -> AppResult<RuleClaim> {
+pub async fn flag_rulebook_source_conflict(
+    db: State<'_, Runtime>,
+    input: SourceConflictInput,
+) -> AppResult<RuleClaim> {
     db.with(|c| rulebooks::flag_conflict(c, input))
 }
 
@@ -354,62 +482,100 @@ pub async fn transition_catalogue_version(
 }
 
 #[tauri::command]
-pub async fn create_catalogue_source(db: State<'_, Runtime>, input: SourceInput) -> AppResult<SourceReference> {
+pub async fn create_catalogue_source(
+    db: State<'_, Runtime>,
+    input: SourceInput,
+) -> AppResult<SourceReference> {
     db.with(|c| authoring::create_source(c, input))
 }
 
 #[tauri::command]
-pub async fn create_catalogue_draft(db: State<'_, Runtime>, input: DraftInput) -> AppResult<CatalogueVersion> {
+pub async fn create_catalogue_draft(
+    db: State<'_, Runtime>,
+    input: DraftInput,
+) -> AppResult<CatalogueVersion> {
     db.with(|c| authoring::create_draft(c, input))
 }
 
 #[tauri::command]
-pub async fn replace_catalogue_draft(db: State<'_, Runtime>, id: String, input: DraftInput) -> AppResult<CatalogueVersion> {
+pub async fn replace_catalogue_draft(
+    db: State<'_, Runtime>,
+    id: String,
+    input: DraftInput,
+) -> AppResult<CatalogueVersion> {
     db.with(|c| authoring::replace_draft(c, &id, input))
 }
 
 #[tauri::command]
-pub async fn select_account_offer(db: State<'_, Runtime>, input: OfferSelectionInput) -> AppResult<OfferSelection> {
+pub async fn select_account_offer(
+    db: State<'_, Runtime>,
+    input: OfferSelectionInput,
+) -> AppResult<OfferSelection> {
     db.with(|c| offers::select(c, input))
 }
 
 #[tauri::command]
-pub async fn list_account_offer_selections(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<OfferSelection>> {
+pub async fn list_account_offer_selections(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<Vec<OfferSelection>> {
     db.with(|c| offers::list(c, &account_id))
 }
 
 #[tauri::command]
-pub async fn get_account_catalogue_link(db: State<'_, Runtime>, account_id: String) -> AppResult<AccountCatalogueLink> {
+pub async fn get_account_catalogue_link(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<AccountCatalogueLink> {
     db.with(|c| catalogue_store::get_link(c, &account_id))
 }
 
 #[tauri::command]
-pub async fn set_account_catalogue_link(db: State<'_, Runtime>, input: AccountLinkInput) -> AppResult<AccountCatalogueLink> {
+pub async fn set_account_catalogue_link(
+    db: State<'_, Runtime>,
+    input: AccountLinkInput,
+) -> AppResult<AccountCatalogueLink> {
     db.with(|c| catalogue_store::set_link(c, input))
 }
 
 #[tauri::command]
-pub async fn list_account_phase_events(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<AccountPhaseEvent>> {
+pub async fn list_account_phase_events(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<Vec<AccountPhaseEvent>> {
     db.with(|c| catalogue_store::list_phase_events(c, &account_id))
 }
 
 #[tauri::command]
-pub async fn record_account_phase_event(db: State<'_, Runtime>, input: PhaseEventInput) -> AppResult<AccountPhaseEvent> {
+pub async fn record_account_phase_event(
+    db: State<'_, Runtime>,
+    input: PhaseEventInput,
+) -> AppResult<AccountPhaseEvent> {
     db.with(|c| catalogue_store::record_phase_event(c, input))
 }
 
 #[tauri::command]
-pub async fn list_ledger_entries(db: State<'_, Runtime>, account_id: String) -> AppResult<Vec<LedgerEntry>> {
+pub async fn list_ledger_entries(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<Vec<LedgerEntry>> {
     db.with(|c| ledger::list(c, &account_id))
 }
 
 #[tauri::command]
-pub async fn create_ledger_entry(db: State<'_, Runtime>, input: LedgerEntryInput) -> AppResult<LedgerEntry> {
+pub async fn create_ledger_entry(
+    db: State<'_, Runtime>,
+    input: LedgerEntryInput,
+) -> AppResult<LedgerEntry> {
     db.with(|c| ledger::create(c, input))
 }
 
 #[tauri::command]
-pub async fn update_ledger_entry(db: State<'_, Runtime>, id: String, input: LedgerEntryInput) -> AppResult<LedgerEntry> {
+pub async fn update_ledger_entry(
+    db: State<'_, Runtime>,
+    id: String,
+    input: LedgerEntryInput,
+) -> AppResult<LedgerEntry> {
     db.with(|c| ledger::update(c, &id, input))
 }
 
@@ -419,7 +585,10 @@ pub async fn delete_ledger_entry(db: State<'_, Runtime>, id: String) -> AppResul
 }
 
 #[tauri::command]
-pub async fn get_ledger_balance_adjustment(db: State<'_, Runtime>, account_id: String) -> AppResult<String> {
+pub async fn get_ledger_balance_adjustment(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<String> {
     db.with(|c| ledger::balance_adjustment(c, &account_id))
 }
 
@@ -434,7 +603,11 @@ pub async fn list_settings(db: State<'_, Runtime>) -> AppResult<Vec<Setting>> {
 }
 
 #[tauri::command]
-pub async fn set_setting(db: State<'_, Runtime>, key: String, value: serde_json::Value) -> AppResult<Setting> {
+pub async fn set_setting(
+    db: State<'_, Runtime>,
+    key: String,
+    value: serde_json::Value,
+) -> AppResult<Setting> {
     db.with(|c| settings::set(c, &key, &value))
 }
 
@@ -444,7 +617,10 @@ pub async fn remove_setting(db: State<'_, Runtime>, key: String) -> AppResult<()
 }
 
 #[tauri::command]
-pub async fn save_account_snapshot(db: State<'_, Runtime>, input: SnapshotInput) -> AppResult<Snapshot> {
+pub async fn save_account_snapshot(
+    db: State<'_, Runtime>,
+    input: SnapshotInput,
+) -> AppResult<Snapshot> {
     db.with(|c| snapshots::save(c, input))
 }
 
@@ -456,35 +632,58 @@ pub async fn list_account_snapshots(
     to: Option<String>,
     end_of_day_only: Option<bool>,
 ) -> AppResult<Vec<Snapshot>> {
-    db.with(|c| snapshots::list(c, &account_id, from.as_deref(), to.as_deref(), end_of_day_only.unwrap_or(false)))
+    db.with(|c| {
+        snapshots::list(
+            c,
+            &account_id,
+            from.as_deref(),
+            to.as_deref(),
+            end_of_day_only.unwrap_or(false),
+        )
+    })
 }
 
 #[tauri::command]
-pub async fn get_latest_account_snapshot(db: State<'_, Runtime>, account_id: String) -> AppResult<Option<Snapshot>> {
+pub async fn get_latest_account_snapshot(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<Option<Snapshot>> {
     db.with(|c| snapshots::latest(c, &account_id))
 }
 
 /// P0-02: every source of one calculation, read from one database state.
 #[tauri::command]
-pub async fn capture_account_risk(db: State<'_, Runtime>, query: evidence::RiskInputsQuery) -> AppResult<risk_promotion::RiskCapture> {
+pub async fn capture_account_risk(
+    db: State<'_, Runtime>,
+    query: evidence::RiskInputsQuery,
+) -> AppResult<risk_promotion::RiskCapture> {
     db.with(|c| risk_promotion::capture(c, query))
 }
 
 /// P0-02: store an engine calculation and make it current, only if its sources are unchanged at commit.
 #[tauri::command]
-pub async fn promote_account_risk(db: State<'_, Runtime>, input: SnapshotInput) -> AppResult<Snapshot> {
+pub async fn promote_account_risk(
+    db: State<'_, Runtime>,
+    input: SnapshotInput,
+) -> AppResult<Snapshot> {
     db.with(|c| risk_promotion::promote(c, input))
 }
 
 /// P0-02: the account's current (newest promoted) calculation and whether its sources are unchanged now.
 #[tauri::command]
-pub async fn get_current_account_risk(db: State<'_, Runtime>, account_id: String) -> AppResult<risk_promotion::CurrentRisk> {
+pub async fn get_current_account_risk(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<risk_promotion::CurrentRisk> {
     db.with(|c| risk_promotion::current(c, &account_id))
 }
 
 /// P0-02: whether one stored calculation's sources are unchanged for its own cutoff.
 #[tauri::command]
-pub async fn get_account_snapshot_freshness(db: State<'_, Runtime>, snapshot_id: String) -> AppResult<risk_promotion::SnapshotFreshness> {
+pub async fn get_account_snapshot_freshness(
+    db: State<'_, Runtime>,
+    snapshot_id: String,
+) -> AppResult<risk_promotion::SnapshotFreshness> {
     db.with(|c| risk_promotion::freshness(c, &snapshot_id))
 }
 
@@ -616,27 +815,45 @@ pub async fn list_reconciliation_resolutions(
 }
 
 #[tauri::command]
-pub async fn export_journal_archive(db: State<'_, Runtime>, request: crate::data_controls::ExportRequest) -> crate::data_controls::Result<crate::data_controls::ExportResult> {
+pub async fn export_journal_archive(
+    db: State<'_, Runtime>,
+    request: crate::data_controls::ExportRequest,
+) -> crate::data_controls::Result<crate::data_controls::ExportResult> {
     db.with_controls(|c, root| crate::data_controls::export_journal(c, root, request))
 }
 #[tauri::command]
-pub async fn export_trade_csv(db: State<'_, Runtime>, request: crate::data_controls::CsvExportRequest) -> crate::data_controls::Result<crate::data_controls::ExportResult> {
+pub async fn export_trade_csv(
+    db: State<'_, Runtime>,
+    request: crate::data_controls::CsvExportRequest,
+) -> crate::data_controls::Result<crate::data_controls::ExportResult> {
     db.with_controls(|c, _| crate::data_controls::export_trades(c, request))
 }
 #[tauri::command]
-pub async fn inspect_journal_archive(db: State<'_, Runtime>, request: crate::data_controls::InspectRequest) -> crate::data_controls::Result<crate::data_controls::RestorePreview> {
+pub async fn inspect_journal_archive(
+    db: State<'_, Runtime>,
+    request: crate::data_controls::InspectRequest,
+) -> crate::data_controls::Result<crate::data_controls::RestorePreview> {
     db.with_controls(|c, root| crate::data_controls::inspect_restore(c, root, request))
 }
 #[tauri::command]
-pub async fn restore_journal_archive(db: State<'_, Runtime>, request: crate::data_controls::RestoreRequest) -> crate::data_controls::Result<crate::data_controls::RestoreResult> {
+pub async fn restore_journal_archive(
+    db: State<'_, Runtime>,
+    request: crate::data_controls::RestoreRequest,
+) -> crate::data_controls::Result<crate::data_controls::RestoreResult> {
     db.prepare_restore(request)
 }
 #[tauri::command]
-pub async fn preview_permanent_deletion(db: State<'_, Runtime>, request: crate::data_controls::PreviewRequest) -> crate::data_controls::Result<crate::data_controls::DeletionPreview> {
+pub async fn preview_permanent_deletion(
+    db: State<'_, Runtime>,
+    request: crate::data_controls::PreviewRequest,
+) -> crate::data_controls::Result<crate::data_controls::DeletionPreview> {
     db.with_controls(|c, root| crate::data_controls::preview_deletion(c, root, request))
 }
 #[tauri::command]
-pub async fn permanently_delete_data(db: State<'_, Runtime>, request: crate::data_controls::DeleteRequest) -> crate::data_controls::Result<crate::data_controls::DeleteResult> {
+pub async fn permanently_delete_data(
+    db: State<'_, Runtime>,
+    request: crate::data_controls::DeleteRequest,
+) -> crate::data_controls::Result<crate::data_controls::DeleteResult> {
     db.delete_data(request)
 }
 #[tauri::command]
@@ -644,32 +861,50 @@ pub async fn retry_data_cleanup(db: State<'_, Runtime>) -> crate::data_controls:
     db.retry_cleanup()
 }
 
-use crate::store::daily_reviews::{self, DailyReviewDay, DailyReviewIndex, DailyReviewInput, DailyReviewRef};
+use crate::store::daily_reviews::{
+    self, DailyReviewDay, DailyReviewIndex, DailyReviewInput, DailyReviewRef,
+};
 
 /// Build 22: one trading day of an account with its daily review (if any), its trades and their link status.
 #[tauri::command]
-pub async fn get_daily_review(db: State<'_, Runtime>, account_id: String, trading_day: String) -> AppResult<DailyReviewDay> {
+pub async fn get_daily_review(
+    db: State<'_, Runtime>,
+    account_id: String,
+    trading_day: String,
+) -> AppResult<DailyReviewDay> {
     db.with(|c| daily_reviews::get_day(c, &account_id, &trading_day))
 }
 
 /// Build 22: an account's daily reviews, its current trading day and legacy day notes.
 #[tauri::command]
-pub async fn list_daily_reviews(db: State<'_, Runtime>, account_id: String) -> AppResult<DailyReviewIndex> {
+pub async fn list_daily_reviews(
+    db: State<'_, Runtime>,
+    account_id: String,
+) -> AppResult<DailyReviewIndex> {
     db.with(|c| daily_reviews::list(c, &account_id))
 }
 
 #[tauri::command]
-pub async fn save_daily_review(db: State<'_, Runtime>, input: DailyReviewInput) -> AppResult<DailyReviewDay> {
+pub async fn save_daily_review(
+    db: State<'_, Runtime>,
+    input: DailyReviewInput,
+) -> AppResult<DailyReviewDay> {
     db.with(|c| daily_reviews::save(c, input))
 }
 
 #[tauri::command]
-pub async fn reopen_daily_review(db: State<'_, Runtime>, input: DailyReviewRef) -> AppResult<DailyReviewDay> {
+pub async fn reopen_daily_review(
+    db: State<'_, Runtime>,
+    input: DailyReviewRef,
+) -> AppResult<DailyReviewDay> {
     db.with(|c| daily_reviews::reopen(c, input))
 }
 
 #[tauri::command]
-pub async fn relink_daily_review_trades(db: State<'_, Runtime>, input: DailyReviewRef) -> AppResult<DailyReviewDay> {
+pub async fn relink_daily_review_trades(
+    db: State<'_, Runtime>,
+    input: DailyReviewRef,
+) -> AppResult<DailyReviewDay> {
     db.with(|c| daily_reviews::relink_trades(c, input))
 }
 
@@ -678,13 +913,19 @@ use crate::store::insights::{self, InsightsDataset, InsightsQuery};
 /// P0-D06: the account freshness indicator's inputs (newest import, failed import, manual entry, confirmed
 /// checkpoint, trading-day starts) for every account, in one read. Read-only; computes no verdict.
 #[tauri::command]
-pub async fn list_account_freshness(db: State<'_, Runtime>, as_of: String) -> AppResult<Vec<freshness::AccountFreshnessInputs>> {
+pub async fn list_account_freshness(
+    db: State<'_, Runtime>,
+    as_of: String,
+) -> AppResult<Vec<freshness::AccountFreshnessInputs>> {
     db.with(|c| freshness::list_at(c, &as_of))
 }
 
 /// Build 23: read-only Insights snapshot of exactly the requested attempts (archived included), with their active
 /// trades and review facts. Aggregation happens in the shared domain package.
 #[tauri::command]
-pub async fn get_insights_dataset(db: State<'_, Runtime>, query: InsightsQuery) -> AppResult<InsightsDataset> {
+pub async fn get_insights_dataset(
+    db: State<'_, Runtime>,
+    query: InsightsQuery,
+) -> AppResult<InsightsDataset> {
     db.with(|c| insights::dataset(c, query))
 }

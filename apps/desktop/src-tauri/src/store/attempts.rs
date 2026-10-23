@@ -6,18 +6,26 @@
 //! the account's session-day boundary.
 
 use chrono::{DateTime, Utc};
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
-use super::accounts::{self, friendly, Account};
+use super::accounts::{self, Account, friendly};
 use super::opt_text;
 use super::rulebooks;
-use crate::domain::{format_instant, micros_to_string, new_id, now, parse_decimal, parse_payload_time, to_micros, trading_day};
+use crate::domain::{
+    format_instant, micros_to_string, new_id, now, parse_decimal, parse_payload_time, to_micros,
+    trading_day,
+};
 use crate::error::{AppError, AppResult, Issues};
 use crate::rulebook::{AccountRulebookAssignment, AssignmentInput};
 
 pub const PRIOR_OUTCOMES: &[&str] = &["passed", "failed", "closed"];
-pub const RESET_SOURCES: &[&str] = &["user_entered", "provider_email", "provider_dashboard", "other"];
+pub const RESET_SOURCES: &[&str] = &[
+    "user_entered",
+    "provider_email",
+    "provider_dashboard",
+    "other",
+];
 
 /// The successor's programme, version and path, when the user selects them.
 /// Absent fields stay unknown; nothing is copied from the predecessor.
@@ -122,10 +130,19 @@ struct Valid {
 fn validate(input: &ResetInput) -> AppResult<Valid> {
     let mut issues = Issues::default();
     if !PRIOR_OUTCOMES.contains(&input.prior_outcome.as_str()) {
-        issues.add("priorOutcome", format!("confirm the previous attempt's outcome: {}", PRIOR_OUTCOMES.join(", ")));
+        issues.add(
+            "priorOutcome",
+            format!(
+                "confirm the previous attempt's outcome: {}",
+                PRIOR_OUTCOMES.join(", ")
+            ),
+        );
     }
     if !RESET_SOURCES.contains(&input.source.as_str()) {
-        issues.add("source", format!("must be one of {}", RESET_SOURCES.join(", ")));
+        issues.add(
+            "source",
+            format!("must be one of {}", RESET_SOURCES.join(", ")),
+        );
     }
     let (effective_at, effective_instant) = match parse_payload_time(&input.effective_at) {
         Ok(t) => (format_instant(t), t),
@@ -143,11 +160,17 @@ fn validate(input: &ResetInput) -> AppResult<Valid> {
         issues.add("name", "must be 1–100 characters");
     }
     let external_ref = opt_text(input.external_ref.clone());
-    if external_ref.as_ref().is_some_and(|r| r.chars().count() > 100) {
+    if external_ref
+        .as_ref()
+        .is_some_and(|r| r.chars().count() > 100)
+    {
         issues.add("externalRef", "must be at most 100 characters");
     }
     let notes = opt_text(input.notes.clone());
-    if notes.as_ref().is_some_and(|n| n.chars().count() > crate::domain::MAX_NOTES_CHARS) {
+    if notes
+        .as_ref()
+        .is_some_and(|n| n.chars().count() > crate::domain::MAX_NOTES_CHARS)
+    {
         issues.add("notes", "is too long");
     }
     let starting_balance_micros = match parse_decimal(&input.starting_balance) {
@@ -202,7 +225,10 @@ pub fn reset(conn: &mut Connection, input: ResetInput) -> AppResult<ResetResult>
         .optional()?
         .ok_or_else(|| AppError::not_found("account", &input.predecessor_account_id))?;
     if archived {
-        return Err(AppError::invalid("predecessorAccountId", "Restore the archived account before resetting it"));
+        return Err(AppError::invalid(
+            "predecessorAccountId",
+            "Restore the archived account before resetting it",
+        ));
     }
     let existing: Option<String> = tx
         .query_row(
@@ -213,7 +239,9 @@ pub fn reset(conn: &mut Connection, input: ResetInput) -> AppResult<ResetResult>
         .optional()?;
     if let Some(next) = existing {
         return Err(AppError::Conflict {
-            message: format!("this attempt was already reset; its next attempt is account '{next}'"),
+            message: format!(
+                "this attempt was already reset; its next attempt is account '{next}'"
+            ),
         });
     }
 
@@ -259,15 +287,30 @@ pub fn reset(conn: &mut Connection, input: ResetInput) -> AppResult<ResetResult>
         ],
     )
     .map_err(friendly)?;
-    accounts::record_status_event(&tx, &successor_id, "active", &v.effective_at, v.reason.as_deref(), None)?;
+    accounts::record_status_event(
+        &tx,
+        &successor_id,
+        "active",
+        &v.effective_at,
+        v.reason.as_deref(),
+        None,
+    )?;
 
     let (assignment, decision) = match &input.rulebook {
-        RulebookDecision::Assign { rulebook_version_id, effective_from, programme_phase_id, phase_path_id } => {
+        RulebookDecision::Assign {
+            rulebook_version_id,
+            effective_from,
+            programme_phase_id,
+            phase_path_id,
+        } => {
             // The rulebook applies from the trading day the reset took effect, in the new attempt's session.
             let ctx = super::account_ctx(&tx, &successor_id)?;
             let day = trading_day(v.effective_instant, ctx.tz, ctx.reset).to_string();
             if *effective_from != day {
-                return Err(AppError::invalid("effectiveFrom", format!("Use the trading day the reset took effect, {day}")));
+                return Err(AppError::invalid(
+                    "effectiveFrom",
+                    format!("Use the trading day the reset took effect, {day}"),
+                ));
             }
             let assignment = rulebooks::assign_in(
                 &tx,
@@ -280,8 +323,17 @@ pub fn reset(conn: &mut Connection, input: ResetInput) -> AppResult<ResetResult>
                     account_phase_event_id: None,
                 },
             )?;
-            let context = crate::rulebook::ChangeContext { actor: "local_user".into(), reason: Some("New attempt".into()) };
-            rulebooks::record_event(&tx, &assignment.rulebook_version_id, "assigned", &context, Some((&successor_id, Some(&assignment.id))))?;
+            let context = crate::rulebook::ChangeContext {
+                actor: "local_user".into(),
+                reason: Some("New attempt".into()),
+            };
+            rulebooks::record_event(
+                &tx,
+                &assignment.rulebook_version_id,
+                "assigned",
+                &context,
+                Some((&successor_id, Some(&assignment.id))),
+            )?;
             (Some(assignment), "assigned")
         }
         RulebookDecision::DecideLater => (None, "deferred"),
@@ -309,7 +361,11 @@ pub fn reset(conn: &mut Connection, input: ResetInput) -> AppResult<ResetResult>
     Ok(ResetResult {
         predecessor: accounts::get_any(conn, &input.predecessor_account_id)?,
         successor: accounts::get_any(conn, &successor_id)?,
-        link: conn.query_row(&format!("{LINK} WHERE successor_account_id = ?1"), [&successor_id], link_row)?,
+        link: conn.query_row(
+            &format!("{LINK} WHERE successor_account_id = ?1"),
+            [&successor_id],
+            link_row,
+        )?,
         rulebook_assignment: assignment,
     })
 }
@@ -344,13 +400,18 @@ pub struct AttemptSummary {
 /// Readable for archived accounts.
 pub fn lineage(conn: &Connection, account_id: &str) -> AppResult<Vec<AttemptSummary>> {
     accounts::get_any(conn, account_id)?;
-    let neighbour = |sql: &str, id: &str| -> AppResult<Option<String>> { Ok(conn.query_row(sql, [id], |r| r.get(0)).optional()?) };
+    let neighbour = |sql: &str, id: &str| -> AppResult<Option<String>> {
+        Ok(conn.query_row(sql, [id], |r| r.get(0)).optional()?)
+    };
 
     // The links form a path (each account has at most one predecessor and one
     // successor), but the walks are bounded rather than trusting the data.
     let mut root = account_id.to_string();
     for _ in 0..10_000 {
-        match neighbour("SELECT predecessor_account_id FROM account_attempt_links WHERE successor_account_id = ?1", &root)? {
+        match neighbour(
+            "SELECT predecessor_account_id FROM account_attempt_links WHERE successor_account_id = ?1",
+            &root,
+        )? {
             Some(prev) => root = prev,
             None => break,
         }
@@ -358,7 +419,10 @@ pub fn lineage(conn: &Connection, account_id: &str) -> AppResult<Vec<AttemptSumm
     let mut ids = vec![root.clone()];
     let mut at = root;
     for _ in 0..10_000 {
-        match neighbour("SELECT successor_account_id FROM account_attempt_links WHERE predecessor_account_id = ?1", &at)? {
+        match neighbour(
+            "SELECT successor_account_id FROM account_attempt_links WHERE predecessor_account_id = ?1",
+            &at,
+        )? {
             Some(next) => {
                 ids.push(next.clone());
                 at = next;
@@ -433,7 +497,8 @@ pub struct DeletionPreview {
 
 pub fn deletion_preview(conn: &Connection, account_id: &str) -> AppResult<DeletionPreview> {
     let account = accounts::get_any(conn, account_id)?;
-    let count = |sql: &str| -> AppResult<i64> { Ok(conn.query_row(sql, [account_id], |r| r.get(0))?) };
+    let count =
+        |sql: &str| -> AppResult<i64> { Ok(conn.query_row(sql, [account_id], |r| r.get(0))?) };
     let linked_attempts: Vec<String> = lineage(conn, account_id)?
         .into_iter()
         .filter(|a| a.account_id != account_id)
@@ -458,11 +523,15 @@ pub fn deletion_preview(conn: &Connection, account_id: &str) -> AppResult<Deleti
         account_id: account.id,
         account_name: account.name,
         trades: count("SELECT COUNT(*) FROM trades WHERE account_id = ?1 AND deleted_at IS NULL")?,
-        deleted_trades: count("SELECT COUNT(*) FROM trades WHERE account_id = ?1 AND deleted_at IS NOT NULL")?,
+        deleted_trades: count(
+            "SELECT COUNT(*) FROM trades WHERE account_id = ?1 AND deleted_at IS NOT NULL",
+        )?,
         journal_entries: count("SELECT COUNT(*) FROM journal_entries WHERE account_id = ?1")?,
         import_batches: count("SELECT COUNT(*) FROM import_batches WHERE account_id = ?1")?,
         status_events: count("SELECT COUNT(*) FROM account_status_events WHERE account_id = ?1")?,
-        rulebook_assignments: count("SELECT COUNT(*) FROM account_rulebook_assignments WHERE account_id = ?1")?,
+        rulebook_assignments: count(
+            "SELECT COUNT(*) FROM account_rulebook_assignments WHERE account_id = ?1",
+        )?,
         private_rulebooks: count("SELECT COUNT(*) FROM rulebooks WHERE owner_account_id = ?1")?,
         snapshots: count("SELECT COUNT(*) FROM account_snapshots WHERE account_id = ?1")?,
         ledger_entries: count("SELECT COUNT(*) FROM account_ledger_entries WHERE account_id = ?1")?,

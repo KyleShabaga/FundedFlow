@@ -90,7 +90,11 @@ pub(super) fn marker_files(cleanup: &Cleanup) -> Result<Vec<Vec<u8>>> {
             operation_id: cleanup.operation_id.clone(),
             whole_journal: cleanup.whole_journal,
             attachments: attachments.to_vec(),
-            recovery_copies: if first { cleanup.recovery_copies.clone() } else { vec![] },
+            recovery_copies: if first {
+                cleanup.recovery_copies.clone()
+            } else {
+                vec![]
+            },
         })
     };
     let mut files = Vec::new();
@@ -108,7 +112,12 @@ pub(super) fn marker_files(cleanup: &Cleanup) -> Result<Vec<Vec<u8>>> {
     }
     files.push(part(&cleanup.attachments[start..], files.is_empty())?);
     if let Some(len) = files.iter().map(Vec::len).find(|len| *len > MARKER_LIMIT) {
-        return Err(over_limit("cleanup marker", len as u64, MARKER_LIMIT as u64, "bytes"));
+        return Err(over_limit(
+            "cleanup marker",
+            len as u64,
+            MARKER_LIMIT as u64,
+            "bytes",
+        ));
     }
     Ok(files)
 }
@@ -279,8 +288,9 @@ pub fn preview(c: &Connection, root: &Path, request: PreviewRequest) -> Result<D
                             .iter()
                             .map(|v| v.to_string())
                             .collect();
-                        if let Some(column) =
-                            columns.iter().find(|v| *v == "account_id" || *v == "owner_account_id")
+                        if let Some(column) = columns
+                            .iter()
+                            .find(|v| *v == "account_id" || *v == "owner_account_id")
                         {
                             // Text values equal to the id, byte for byte, as before.
                             let column = archive::quote(column);
@@ -490,7 +500,10 @@ pub(super) fn read_marker(file: &Path) -> Marker {
 fn quarantine_entry(root: &Path, entry: &Path) -> Result<()> {
     let held = root.join(QUARANTINE);
     private_dir(&held)?;
-    let name = entry.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let name = entry
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
     let target = held.join(format!("{}-{name}", crate::domain::new_id()));
     if fs::symlink_metadata(&target).is_ok() {
         return Err(fail(Code::Io));

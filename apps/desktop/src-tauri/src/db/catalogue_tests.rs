@@ -2,13 +2,13 @@
 //! round-trips through the tables, and each constraint and trigger rejects
 //! what `checkCatalogueGraph` / `checkAccountCatalogueLink` would report.
 
-use rusqlite::{params, Connection, Row};
+use rusqlite::{Connection, Row, params};
 use serde::de::DeserializeOwned;
 
 use super::*;
 use crate::catalogue::*;
 use crate::domain::{parse_decimal, to_micros};
-use crate::parity::{catalogue_fixture, CatalogueFixture};
+use crate::parity::{CatalogueFixture, catalogue_fixture};
 use crate::store::accounts;
 use crate::store::tests::account_input;
 
@@ -21,7 +21,11 @@ fn db() -> Connection {
 }
 
 fn micros(amount: &Option<String>) -> Option<i64> {
-    amount.as_deref().map(|a| parse_decimal(a).and_then(to_micros).expect("canonical amount"))
+    amount.as_deref().map(|a| {
+        parse_decimal(a)
+            .and_then(to_micros)
+            .expect("canonical amount")
+    })
 }
 
 fn wire<T: DeserializeOwned>(text: String) -> T {
@@ -34,8 +38,11 @@ fn json_text<T: serde::Serialize>(value: &T) -> String {
 
 fn link_sources(conn: &Connection, table: &str, owner: &str, id: &str, sources: &[String]) {
     for source in sources {
-        conn.execute(&format!("INSERT INTO {table} ({owner}, source_id) VALUES (?1, ?2)"), params![id, source])
-            .unwrap();
+        conn.execute(
+            &format!("INSERT INTO {table} ({owner}, source_id) VALUES (?1, ?2)"),
+            params![id, source],
+        )
+        .unwrap();
     }
 }
 
@@ -43,12 +50,16 @@ fn link_sources(conn: &Connection, table: &str, owner: &str, id: &str, sources: 
 /// reference (packages/domain/test/fixtures/rulebook.json), as drafts. Before
 /// migration 9 the references are unchecked, so nothing is needed.
 fn seed_rulebook_versions(conn: &Connection) {
-    let version: u32 = conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
+    let version: u32 = conn
+        .pragma_query_value(None, "user_version", |r| r.get(0))
+        .unwrap();
     if version < 9 {
         return;
     }
-    let fixture: serde_json::Value =
-        serde_json::from_str(include_str!("../../../../../packages/domain/test/fixtures/rulebook.json")).unwrap();
+    let fixture: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../packages/domain/test/fixtures/rulebook.json"
+    ))
+    .unwrap();
     for b in fixture["rulebooks"].as_array().unwrap() {
         conn.execute(
             "INSERT INTO rulebooks (id, provider_id, slug, display_name, description, record_status, created_at, updated_at)
@@ -134,7 +145,13 @@ fn save(conn: &Connection, f: &CatalogueFixture) {
                     v.supersedes_version_id, v.correction_reason, v.content_hash],
         )
         .unwrap();
-        link_sources(conn, "catalogue_version_sources", "catalogue_version_id", &v.id, &v.source_ids);
+        link_sources(
+            conn,
+            "catalogue_version_sources",
+            "catalogue_version_id",
+            &v.id,
+            &v.source_ids,
+        );
         for (i, c) in v.claims.iter().enumerate() {
             conn.execute(
                 "INSERT INTO catalogue_field_claims (catalogue_version_id, position, field, origin, source_id, provider_text)
@@ -176,14 +193,25 @@ fn save(conn: &Connection, f: &CatalogueFixture) {
                     micros(&o.activation_fee), o.effective_from, o.effective_to],
         )
         .unwrap();
-        link_sources(conn, "commercial_offer_sources", "commercial_offer_id", &o.id, &o.source_ids);
+        link_sources(
+            conn,
+            "commercial_offer_sources",
+            "commercial_offer_id",
+            &o.id,
+            &o.source_ids,
+        );
     }
     for p in &g.promotions {
         let (kind, amount, currency, percent) = match &p.discount {
-            PromotionDiscount::Amount { amount, currency } => {
-                ("amount", micros(&Some(amount.clone())), Some(currency.clone()), None)
+            PromotionDiscount::Amount { amount, currency } => (
+                "amount",
+                micros(&Some(amount.clone())),
+                Some(currency.clone()),
+                None,
+            ),
+            PromotionDiscount::Percent { percent } => {
+                ("percent", None, None, micros(&Some(percent.clone())))
             }
-            PromotionDiscount::Percent { percent } => ("percent", None, None, micros(&Some(percent.clone()))),
             PromotionDiscount::Unknown => ("unknown", None, None, None),
         };
         conn.execute(
@@ -195,13 +223,24 @@ fn save(conn: &Connection, f: &CatalogueFixture) {
                     p.valid_to, sql_text(&p.verification_status)],
         )
         .unwrap();
-        link_sources(conn, "promotion_sources", "promotion_id", &p.id, &p.source_ids);
+        link_sources(
+            conn,
+            "promotion_sources",
+            "promotion_id",
+            &p.id,
+            &p.source_ids,
+        );
     }
     for l in &g.promotion_offers {
         conn.execute(
             "INSERT INTO promotion_offers (promotion_id, commercial_offer_id, valid_from, valid_to)
              VALUES (?1, ?2, ?3, ?4)",
-            params![l.promotion_id, l.commercial_offer_id, l.valid_from, l.valid_to],
+            params![
+                l.promotion_id,
+                l.commercial_offer_id,
+                l.valid_from,
+                l.valid_to
+            ],
         )
         .unwrap();
     }
@@ -238,7 +277,12 @@ fn save(conn: &Connection, f: &CatalogueFixture) {
 }
 
 fn all<T>(conn: &Connection, sql: &str, map: impl Fn(&Row) -> rusqlite::Result<T>) -> Vec<T> {
-    conn.prepare(sql).unwrap().query_map([], |r| map(r)).unwrap().collect::<rusqlite::Result<_>>().unwrap()
+    conn.prepare(sql)
+        .unwrap()
+        .query_map([], |r| map(r))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap()
 }
 
 /// Reads every record back into the DTOs through the production loader
@@ -256,24 +300,28 @@ fn load(conn: &Connection, description: String) -> CatalogueFixture {
             size_source: wire(r.get("size_source")?),
         })
     });
-    let phase_events = all(conn, "SELECT * FROM account_phase_events ORDER BY id", |r| {
-        Ok(AccountPhaseEvent {
-            id: r.get("id")?,
-            account_id: r.get("account_id")?,
-            from_phase: r.get::<_, Option<String>>("from_phase")?.map(wire),
-            to_phase: wire(r.get("to_phase")?),
-            provider_label: r.get("provider_label")?,
-            occurred_at: r.get("occurred_at")?,
-            recorded_at: r.get("recorded_at")?,
-            source: wire(r.get("source")?),
-            actor: wire(r.get("actor")?),
-            note: r.get("note")?,
-            correction_of_event_id: r.get("correction_of_event_id")?,
-            catalogue_version_id: r.get("catalogue_version_id")?,
-            programme_phase_id: r.get("programme_phase_id")?,
-            phase_path_id: r.get("phase_path_id")?,
-        })
-    });
+    let phase_events = all(
+        conn,
+        "SELECT * FROM account_phase_events ORDER BY id",
+        |r| {
+            Ok(AccountPhaseEvent {
+                id: r.get("id")?,
+                account_id: r.get("account_id")?,
+                from_phase: r.get::<_, Option<String>>("from_phase")?.map(wire),
+                to_phase: wire(r.get("to_phase")?),
+                provider_label: r.get("provider_label")?,
+                occurred_at: r.get("occurred_at")?,
+                recorded_at: r.get("recorded_at")?,
+                source: wire(r.get("source")?),
+                actor: wire(r.get("actor")?),
+                note: r.get("note")?,
+                correction_of_event_id: r.get("correction_of_event_id")?,
+                catalogue_version_id: r.get("catalogue_version_id")?,
+                programme_phase_id: r.get("programme_phase_id")?,
+                phase_path_id: r.get("phase_path_id")?,
+            })
+        },
+    );
     CatalogueFixture {
         description,
         graph: snapshot.graph,
@@ -299,7 +347,10 @@ pub(super) fn id(n: u32) -> String {
 #[track_caller]
 pub(super) fn rejects(conn: &Connection, sql: &str, expected: &str) {
     let err = conn.execute_batch(sql).expect_err(sql).to_string();
-    assert!(err.contains(expected), "{sql}\n  failed with {err:?}, expected {expected:?}");
+    assert!(
+        err.contains(expected),
+        "{sql}\n  failed with {err:?}, expected {expected:?}"
+    );
 }
 
 #[test]
@@ -308,7 +359,11 @@ fn the_catalogue_fixture_round_trips_through_the_database() {
     let (original, fixture) = catalogue_fixture();
     let loaded = load(&conn, fixture.description.clone());
     assert_eq!(serde_json::to_value(&loaded).unwrap(), original);
-    let fk_problems: i64 = conn.query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| r.get(0)).unwrap();
+    let fk_problems: i64 = conn
+        .query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
     assert_eq!(fk_problems, 0);
 }
 
@@ -317,8 +372,10 @@ fn slugs_are_unique_per_scope_and_well_formed() {
     let conn = seeded();
     rejects(
         &conn,
-        &format!("INSERT INTO providers (id, slug, display_name, record_status, created_at, updated_at)
-                  VALUES ('p3', 'example-provider', 'Dup', 'unknown', '{T}', '{T}')"),
+        &format!(
+            "INSERT INTO providers (id, slug, display_name, record_status, created_at, updated_at)
+                  VALUES ('p3', 'example-provider', 'Dup', 'unknown', '{T}', '{T}')"
+        ),
         "UNIQUE constraint failed: providers.slug",
     );
     for bad in ["Upper", "-lead", "trail-", "two--hyphens", "sp ace", ""] {
@@ -338,8 +395,10 @@ fn slugs_are_unique_per_scope_and_well_formed() {
     );
     rejects(
         &conn,
-        &format!("INSERT INTO providers (id, slug, display_name, record_status, created_at, updated_at)
-                  VALUES ('p3', 'p3', 'Late', 'unknown', '2026-10-19 18:00:00', '{T}')"),
+        &format!(
+            "INSERT INTO providers (id, slug, display_name, record_status, created_at, updated_at)
+                  VALUES ('p3', 'p3', 'Late', 'unknown', '2026-10-19 18:00:00', '{T}')"
+        ),
         "CHECK constraint failed",
     );
 }
@@ -364,7 +423,10 @@ fn a_variant_must_belong_to_its_familys_provider() {
     );
     rejects(
         &conn,
-        &format!("UPDATE programme_variants SET metadata = '[]' WHERE id = '{}'", id(0x21)),
+        &format!(
+            "UPDATE programme_variants SET metadata = '[]' WHERE id = '{}'",
+            id(0x21)
+        ),
         "CHECK constraint failed",
     );
 }
@@ -372,7 +434,11 @@ fn a_variant_must_belong_to_its_familys_provider() {
 #[test]
 fn catalogue_version_rules() {
     let conn = seeded();
-    let insert = |number: u32, status: &str, created_by: &str, extra_cols: &str, extra_vals: &str| {
+    let insert = |number: u32,
+                  status: &str,
+                  created_by: &str,
+                  extra_cols: &str,
+                  extra_vals: &str| {
         format!(
             "INSERT INTO catalogue_versions (id, programme_variant_id, version_number, verification_status,
                                              captured_at, created_by{extra_cols})
@@ -380,22 +446,44 @@ fn catalogue_version_rules() {
             id(0x21)
         )
     };
-    let draft = |extra_cols: &str, extra_vals: &str| insert(2, "draft", "manual", extra_cols, extra_vals);
+    let draft =
+        |extra_cols: &str, extra_vals: &str| insert(2, "draft", "manual", extra_cols, extra_vals);
     let check = "CHECK constraint failed";
     rejects(&conn, &insert(2, "verified", "manual", "", ""), check);
     rejects(&conn, &draft(", verified_by", ", 'kyle'"), check);
-    rejects(&conn, &draft(", effective_from, effective_to", ", '2026-11-01T00:00:00.000Z', '2026-11-01T00:00:00.000Z'"), check);
+    rejects(
+        &conn,
+        &draft(
+            ", effective_from, effective_to",
+            ", '2026-11-01T00:00:00.000Z', '2026-11-01T00:00:00.000Z'",
+        ),
+        check,
+    );
     rejects(&conn, &insert(2, "draft", "importer", "", ""), check);
-    rejects(&conn, &draft(", supersedes_version_id", &format!(", '{}'", id(0x31))), check);
+    rejects(
+        &conn,
+        &draft(", supersedes_version_id", &format!(", '{}'", id(0x31))),
+        check,
+    );
     // Version 0x32 belongs to the 100K variant.
     rejects(
         &conn,
-        &draft(", supersedes_version_id, correction_reason", &format!(", '{}', 'price fix'", id(0x32))),
+        &draft(
+            ", supersedes_version_id, correction_reason",
+            &format!(", '{}', 'price fix'", id(0x32)),
+        ),
         "FOREIGN KEY constraint failed",
     );
-    rejects(&conn, &insert(1, "draft", "manual", "", ""), "UNIQUE constraint failed");
-    conn.execute_batch(&draft(", supersedes_version_id, correction_reason", &format!(", '{}', 'price fix'", id(0x31))))
-        .unwrap();
+    rejects(
+        &conn,
+        &insert(1, "draft", "manual", "", ""),
+        "UNIQUE constraint failed",
+    );
+    conn.execute_batch(&draft(
+        ", supersedes_version_id, correction_reason",
+        &format!(", '{}', 'price fix'", id(0x31)),
+    ))
+    .unwrap();
 }
 
 #[test]
@@ -403,7 +491,11 @@ fn reviewed_catalogue_versions_are_frozen_with_their_contents() {
     let conn = seeded();
     let v = id(0x31);
     // Invalid transitions are rejected before review too.
-    rejects(&conn, &format!("UPDATE catalogue_versions SET verification_status = 'stale' WHERE id = '{v}'"), "invalid");
+    rejects(
+        &conn,
+        &format!("UPDATE catalogue_versions SET verification_status = 'stale' WHERE id = '{v}'"),
+        "invalid",
+    );
     conn.execute_batch(&format!(
         "UPDATE catalogue_versions SET verification_status = 'verified', verified_by = 'kyle', verified_at = '{T}'
          WHERE id = '{v}'"
@@ -411,32 +503,104 @@ fn reviewed_catalogue_versions_are_frozen_with_their_contents() {
     .unwrap();
 
     let frozen = "catalogue version is frozen";
-    rejects(&conn, &format!("UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{v}'"), frozen);
-    rejects(&conn, &format!("UPDATE catalogue_versions SET verified_by = 'someone' WHERE id = '{v}'"), frozen);
-    rejects(&conn, &format!("DELETE FROM catalogue_versions WHERE id = '{v}'"), frozen);
+    rejects(
+        &conn,
+        &format!("UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{v}'"),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!("UPDATE catalogue_versions SET verified_by = 'someone' WHERE id = '{v}'"),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!("DELETE FROM catalogue_versions WHERE id = '{v}'"),
+        frozen,
+    );
     rejects(
         &conn,
         &format!("INSERT INTO programme_phases (id, catalogue_version_id, phase_key, provider_label, display_order)
                   VALUES ('ph', '{v}', 'live_funded', 'Live', 2)"),
         frozen,
     );
-    rejects(&conn, &format!("UPDATE programme_phases SET display_order = 5 WHERE id = '{}'", id(0x41)), frozen);
-    rejects(&conn, &format!("UPDATE phase_paths SET provider_label = 'Daily+' WHERE id = '{}'", id(0x51)), frozen);
-    rejects(&conn, &format!("DELETE FROM phase_paths WHERE id = '{}'", id(0x52)), frozen);
-    rejects(&conn, &format!("UPDATE commercial_offers SET sale_price_micros = 1 WHERE id = '{}'", id(0x61)), frozen);
-    rejects(&conn, &format!("DELETE FROM commercial_offer_sources WHERE commercial_offer_id = '{}'", id(0x61)), frozen);
-    rejects(&conn, &format!("DELETE FROM catalogue_version_sources WHERE catalogue_version_id = '{v}'"), frozen);
-    rejects(&conn, &format!("UPDATE catalogue_field_claims SET provider_text = '$1' WHERE catalogue_version_id = '{v}'"), frozen);
+    rejects(
+        &conn,
+        &format!(
+            "UPDATE programme_phases SET display_order = 5 WHERE id = '{}'",
+            id(0x41)
+        ),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!(
+            "UPDATE phase_paths SET provider_label = 'Daily+' WHERE id = '{}'",
+            id(0x51)
+        ),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!("DELETE FROM phase_paths WHERE id = '{}'", id(0x52)),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!(
+            "UPDATE commercial_offers SET sale_price_micros = 1 WHERE id = '{}'",
+            id(0x61)
+        ),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!(
+            "DELETE FROM commercial_offer_sources WHERE commercial_offer_id = '{}'",
+            id(0x61)
+        ),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!("DELETE FROM catalogue_version_sources WHERE catalogue_version_id = '{v}'"),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!(
+            "UPDATE catalogue_field_claims SET provider_text = '$1' WHERE catalogue_version_id = '{v}'"
+        ),
+        frozen,
+    );
     // Moving a phase into the frozen version is an insert into it.
-    rejects(&conn, &format!("UPDATE programme_phases SET catalogue_version_id = '{v}' WHERE id = '{}'", id(0x43)), frozen);
+    rejects(
+        &conn,
+        &format!(
+            "UPDATE programme_phases SET catalogue_version_id = '{v}' WHERE id = '{}'",
+            id(0x43)
+        ),
+        frozen,
+    );
 
     // Status moves along canTransitionVerification; superseded is final.
-    rejects(&conn, &format!("UPDATE catalogue_versions SET verification_status = 'draft' WHERE id = '{v}'"), "invalid");
+    rejects(
+        &conn,
+        &format!("UPDATE catalogue_versions SET verification_status = 'draft' WHERE id = '{v}'"),
+        "invalid",
+    );
     for status in ["stale", "verified", "superseded"] {
-        conn.execute("UPDATE catalogue_versions SET verification_status = ?2 WHERE id = ?1", params![v, status])
-            .unwrap();
+        conn.execute(
+            "UPDATE catalogue_versions SET verification_status = ?2 WHERE id = ?1",
+            params![v, status],
+        )
+        .unwrap();
     }
-    rejects(&conn, &format!("UPDATE catalogue_versions SET verification_status = 'stale' WHERE id = '{v}'"), "invalid");
+    rejects(
+        &conn,
+        &format!("UPDATE catalogue_versions SET verification_status = 'stale' WHERE id = '{v}'"),
+        "invalid",
+    );
 
     // A draft version stays editable, and deleting it removes its contents.
     let draft = id(0x32);
@@ -448,7 +612,11 @@ fn reviewed_catalogue_versions_are_frozen_with_their_contents() {
     ))
     .unwrap();
     let left: i64 = conn
-        .query_row("SELECT count(*) FROM programme_phases WHERE catalogue_version_id = ?1", [&draft], |r| r.get(0))
+        .query_row(
+            "SELECT count(*) FROM programme_phases WHERE catalogue_version_id = ?1",
+            [&draft],
+            |r| r.get(0),
+        )
         .unwrap();
     assert_eq!(left, 0);
 }
@@ -458,20 +626,26 @@ fn sources_and_claims_need_provenance() {
     let conn = seeded();
     rejects(
         &conn,
-        &format!("INSERT INTO catalogue_sources (id, source_type, captured_at, verification_status)
-                  VALUES ('s', 'official', '{T}', 'draft')"),
+        &format!(
+            "INSERT INTO catalogue_sources (id, source_type, captured_at, verification_status)
+                  VALUES ('s', 'official', '{T}', 'draft')"
+        ),
         "CHECK constraint failed",
     );
     rejects(
         &conn,
-        &format!("INSERT INTO catalogue_sources (id, source_type, url, captured_at, verification_status)
-                  VALUES ('s', 'official', 'ftp://x', '{T}', 'draft')"),
+        &format!(
+            "INSERT INTO catalogue_sources (id, source_type, url, captured_at, verification_status)
+                  VALUES ('s', 'official', 'ftp://x', '{T}', 'draft')"
+        ),
         "CHECK constraint failed",
     );
     rejects(
         &conn,
-        &format!("INSERT INTO catalogue_sources (id, source_type, url, captured_at, verification_status)
-                  VALUES ('s', 'official', 'https://x.example/', '{T}', 'verified')"),
+        &format!(
+            "INSERT INTO catalogue_sources (id, source_type, url, captured_at, verification_status)
+                  VALUES ('s', 'official', 'https://x.example/', '{T}', 'verified')"
+        ),
         "CHECK constraint failed",
     );
     rejects(
@@ -482,8 +656,11 @@ fn sources_and_claims_need_provenance() {
     );
     rejects(
         &conn,
-        &format!("INSERT INTO catalogue_field_claims (catalogue_version_id, position, field, origin)
-                  VALUES ('{}', 9, 'salePrice', 'provider_stated')", id(0x31)),
+        &format!(
+            "INSERT INTO catalogue_field_claims (catalogue_version_id, position, field, origin)
+                  VALUES ('{}', 9, 'salePrice', 'provider_stated')",
+            id(0x31)
+        ),
         "CHECK constraint failed",
     );
     rejects(
@@ -519,12 +696,33 @@ fn phases_paths_and_offers_stay_inside_their_version() {
     };
     let q = |n: u32| format!("'{}'", id(n));
     // Phase 0x43 is in the 100K version; path 0x51 is under phase 0x42, not 0x41.
-    rejects(&conn, &offer(&q(0x43), "NULL", "'USD'", "1"), "FOREIGN KEY constraint failed");
-    rejects(&conn, &offer(&q(0x41), &q(0x51), "'USD'", "1"), "FOREIGN KEY constraint failed");
-    rejects(&conn, &offer("NULL", &q(0x51), "'USD'", "1"), "CHECK constraint failed");
-    rejects(&conn, &offer(&q(0x41), "NULL", "NULL", "1"), "CHECK constraint failed");
-    rejects(&conn, &offer(&q(0x41), "NULL", "'USD'", "-1"), "CHECK constraint failed");
-    conn.execute_batch(&offer(&q(0x42), &q(0x51), "'USD'", "0")).unwrap();
+    rejects(
+        &conn,
+        &offer(&q(0x43), "NULL", "'USD'", "1"),
+        "FOREIGN KEY constraint failed",
+    );
+    rejects(
+        &conn,
+        &offer(&q(0x41), &q(0x51), "'USD'", "1"),
+        "FOREIGN KEY constraint failed",
+    );
+    rejects(
+        &conn,
+        &offer("NULL", &q(0x51), "'USD'", "1"),
+        "CHECK constraint failed",
+    );
+    rejects(
+        &conn,
+        &offer(&q(0x41), "NULL", "NULL", "1"),
+        "CHECK constraint failed",
+    );
+    rejects(
+        &conn,
+        &offer(&q(0x41), "NULL", "'USD'", "-1"),
+        "CHECK constraint failed",
+    );
+    conn.execute_batch(&offer(&q(0x42), &q(0x51), "'USD'", "0"))
+        .unwrap();
 }
 
 #[test]
@@ -538,35 +736,70 @@ fn promotions_follow_their_discount_kind_and_provider() {
             id(2)
         )
     };
-    rejects(&conn, &promo("amount", "50000000", "NULL", "NULL"), "CHECK constraint failed");
-    rejects(&conn, &promo("percent", "NULL", "NULL", "0"), "CHECK constraint failed");
-    rejects(&conn, &promo("percent", "NULL", "NULL", "100000001"), "CHECK constraint failed");
-    rejects(&conn, &promo("percent", "1", "'USD'", "10000000"), "CHECK constraint failed");
-    rejects(&conn, &promo("unknown", "NULL", "NULL", "10000000"), "CHECK constraint failed");
-    conn.execute_batch(&promo("percent", "NULL", "NULL", "100000000")).unwrap();
+    rejects(
+        &conn,
+        &promo("amount", "50000000", "NULL", "NULL"),
+        "CHECK constraint failed",
+    );
+    rejects(
+        &conn,
+        &promo("percent", "NULL", "NULL", "0"),
+        "CHECK constraint failed",
+    );
+    rejects(
+        &conn,
+        &promo("percent", "NULL", "NULL", "100000001"),
+        "CHECK constraint failed",
+    );
+    rejects(
+        &conn,
+        &promo("percent", "1", "'USD'", "10000000"),
+        "CHECK constraint failed",
+    );
+    rejects(
+        &conn,
+        &promo("unknown", "NULL", "NULL", "10000000"),
+        "CHECK constraint failed",
+    );
+    conn.execute_batch(&promo("percent", "NULL", "NULL", "100000000"))
+        .unwrap();
 
     // Provider 2's promotion cannot apply to provider 1's offer.
     rejects(
         &conn,
-        &format!("INSERT INTO promotion_offers (promotion_id, commercial_offer_id) VALUES ('pr', '{}')", id(0x61)),
+        &format!(
+            "INSERT INTO promotion_offers (promotion_id, commercial_offer_id) VALUES ('pr', '{}')",
+            id(0x61)
+        ),
         "different providers",
     );
     // Offer 0x63 runs Oct 2026; promotion 0x71 ends 2026-12-31.
     rejects(
         &conn,
-        &format!("UPDATE promotion_offers SET valid_from = '2026-11-01T00:00:00.000Z'
-                  WHERE commercial_offer_id = '{}'", id(0x63)),
+        &format!(
+            "UPDATE promotion_offers SET valid_from = '2026-11-01T00:00:00.000Z'
+                  WHERE commercial_offer_id = '{}'",
+            id(0x63)
+        ),
         "do not overlap",
     );
     rejects(
         &conn,
-        &format!("INSERT INTO promotion_offers (promotion_id, commercial_offer_id, valid_from)
-                  VALUES ('{}', '{}', '2027-01-01T00:00:00.000Z')", id(0x71), id(0x62)),
+        &format!(
+            "INSERT INTO promotion_offers (promotion_id, commercial_offer_id, valid_from)
+                  VALUES ('{}', '{}', '2027-01-01T00:00:00.000Z')",
+            id(0x71),
+            id(0x62)
+        ),
         "do not overlap",
     );
     rejects(
         &conn,
-        &format!("INSERT INTO promotion_offers (promotion_id, commercial_offer_id) VALUES ('{}', '{}')", id(0x71), id(0x61)),
+        &format!(
+            "INSERT INTO promotion_offers (promotion_id, commercial_offer_id) VALUES ('{}', '{}')",
+            id(0x71),
+            id(0x61)
+        ),
         "UNIQUE constraint failed",
     );
 }
@@ -574,19 +807,51 @@ fn promotions_follow_their_discount_kind_and_provider() {
 #[test]
 fn account_catalogue_links_must_agree() {
     let conn = seeded();
-    let link = |account: u32, set: &str| format!("UPDATE accounts SET {set} WHERE id = '{}'", id(account));
+    let link =
+        |account: u32, set: &str| format!("UPDATE accounts SET {set} WHERE id = '{}'", id(account));
     // Account 0x83 is unlinked.
-    rejects(&conn, &link(0x83, &format!("programme_variant_id = '{}'", id(0x21))), "provider");
     rejects(
         &conn,
-        &link(0x83, &format!("provider_id = '{}', programme_variant_id = '{}'", id(2), id(0x21))),
+        &link(0x83, &format!("programme_variant_id = '{}'", id(0x21))),
         "provider",
     );
-    rejects(&conn, &link(0x81, &format!("catalogue_version_id = '{}'", id(0x32))), "programme variant");
-    rejects(&conn, &link(0x81, &format!("programme_variant_id = '{}'", id(0x22))), "programme variant");
-    rejects(&conn, &link(0x83, &format!("selected_phase_path_id = '{}'", id(0x51))), "catalogue version");
-    rejects(&conn, &link(0x81, "programme_variant_id = 'nope'"), "provider");
-    rejects(&conn, &link(0x81, "size_source = 'guessed'"), "CHECK constraint failed");
+    rejects(
+        &conn,
+        &link(
+            0x83,
+            &format!(
+                "provider_id = '{}', programme_variant_id = '{}'",
+                id(2),
+                id(0x21)
+            ),
+        ),
+        "provider",
+    );
+    rejects(
+        &conn,
+        &link(0x81, &format!("catalogue_version_id = '{}'", id(0x32))),
+        "programme variant",
+    );
+    rejects(
+        &conn,
+        &link(0x81, &format!("programme_variant_id = '{}'", id(0x22))),
+        "programme variant",
+    );
+    rejects(
+        &conn,
+        &link(0x83, &format!("selected_phase_path_id = '{}'", id(0x51))),
+        "catalogue version",
+    );
+    rejects(
+        &conn,
+        &link(0x81, "programme_variant_id = 'nope'"),
+        "provider",
+    );
+    rejects(
+        &conn,
+        &link(0x81, "size_source = 'guessed'"),
+        "CHECK constraint failed",
+    );
     rejects(
         &conn,
         &format!("INSERT INTO accounts (id, name, starting_balance_micros, timezone, created_at, updated_at,
@@ -595,16 +860,35 @@ fn account_catalogue_links_must_agree() {
         "programme variant",
     );
     // Clearing the deepest link first is always allowed.
-    conn.execute_batch(&link(0x82, "selected_phase_path_id = NULL, catalogue_version_id = NULL")).unwrap();
+    conn.execute_batch(&link(
+        0x82,
+        "selected_phase_path_id = NULL, catalogue_version_id = NULL",
+    ))
+    .unwrap();
 }
 
 #[test]
 fn phase_history_is_append_only() {
     let conn = seeded();
     let msg = "append-only";
-    rejects(&conn, &format!("UPDATE account_phase_events SET note = 'x' WHERE id = '{}'", id(0xb2)), msg);
-    rejects(&conn, &format!("DELETE FROM account_phase_events WHERE id = '{}'", id(0xb2)), msg);
-    rejects(&conn, &format!("DELETE FROM accounts WHERE id = '{}'", id(0x81)), "FOREIGN KEY constraint failed");
+    rejects(
+        &conn,
+        &format!(
+            "UPDATE account_phase_events SET note = 'x' WHERE id = '{}'",
+            id(0xb2)
+        ),
+        msg,
+    );
+    rejects(
+        &conn,
+        &format!("DELETE FROM account_phase_events WHERE id = '{}'", id(0xb2)),
+        msg,
+    );
+    rejects(
+        &conn,
+        &format!("DELETE FROM accounts WHERE id = '{}'", id(0x81)),
+        "FOREIGN KEY constraint failed",
+    );
 
     let event_to = |account: u32, to_phase: &str, cols: &str, vals: &str| {
         format!(
@@ -615,22 +899,50 @@ fn phase_history_is_append_only() {
     };
     let event = |account: u32, cols: &str, vals: &str| event_to(account, "live_funded", cols, vals);
     // A correction names an event of the same account.
-    rejects(&conn, &event(0x82, ", correction_of_event_id", &format!(", '{}'", id(0xb1))), "FOREIGN KEY constraint failed");
-    rejects(&conn, &event(0x81, ", phase_path_id", &format!(", '{}'", id(0x51))), "CHECK constraint failed");
     rejects(
         &conn,
-        &event(0x81, ", catalogue_version_id, programme_phase_id", &format!(", '{}', '{}'", id(0x32), id(0x41))),
+        &event(
+            0x82,
+            ", correction_of_event_id",
+            &format!(", '{}'", id(0xb1)),
+        ),
         "FOREIGN KEY constraint failed",
     );
     rejects(
         &conn,
-        &event(0x81, ", catalogue_version_id, programme_phase_id, phase_path_id",
-               &format!(", '{}', '{}', '{}'", id(0x31), id(0x41), id(0x51))),
+        &event(0x81, ", phase_path_id", &format!(", '{}'", id(0x51))),
+        "CHECK constraint failed",
+    );
+    rejects(
+        &conn,
+        &event(
+            0x81,
+            ", catalogue_version_id, programme_phase_id",
+            &format!(", '{}', '{}'", id(0x32), id(0x41)),
+        ),
+        "FOREIGN KEY constraint failed",
+    );
+    rejects(
+        &conn,
+        &event(
+            0x81,
+            ", catalogue_version_id, programme_phase_id, phase_path_id",
+            &format!(", '{}', '{}', '{}'", id(0x31), id(0x41), id(0x51)),
+        ),
         "FOREIGN KEY constraint failed",
     );
     // `failed` is a record status, not a phase.
-    rejects(&conn, &event_to(0x81, "failed", "", ""), "CHECK constraint failed");
-    conn.execute_batch(&event(0x81, ", correction_of_event_id", &format!(", '{}'", id(0xb3)))).unwrap();
+    rejects(
+        &conn,
+        &event_to(0x81, "failed", "", ""),
+        "CHECK constraint failed",
+    );
+    conn.execute_batch(&event(
+        0x81,
+        ", correction_of_event_id",
+        &format!(", '{}'", id(0xb3)),
+    ))
+    .unwrap();
 }
 
 fn at_v5() -> Connection {
@@ -668,19 +980,70 @@ fn legacy_firms_and_programmes_map_to_the_catalogue() {
                 r.get::<_, Option<String>>(4)?, r.get::<_, String>(5)?, r.get::<_, String>(6)?, r.get::<_, Option<String>>(7)?))
         },
     );
-    let p = |firm: &str, slug: &str, name: &str, web: Option<&str>, notes: Option<&str>, status: &str, created: &str, archived: Option<&str>| {
-        (firm.to_string(), slug.to_string(), name.to_string(), web.map(String::from), notes.map(String::from),
-         status.to_string(), created.to_string(), archived.map(String::from))
+    let p = |firm: &str,
+             slug: &str,
+             name: &str,
+             web: Option<&str>,
+             notes: Option<&str>,
+             status: &str,
+             created: &str,
+             archived: Option<&str>| {
+        (
+            firm.to_string(),
+            slug.to_string(),
+            name.to_string(),
+            web.map(String::from),
+            notes.map(String::from),
+            status.to_string(),
+            created.to_string(),
+            archived.map(String::from),
+        )
     };
     assert_eq!(
         providers,
         [
-            p("f0", "gone", "Gone", None, None, "archived", "2025-01-01T00:00:00.000Z", Some("2025-06-01T00:00:00.000Z")),
-            p("f1", "apex-trader", "Apex Trader", Some("https://apex.example"), Some("note"), "unknown", "2026-01-01T00:00:00.000Z", None),
+            p(
+                "f0",
+                "gone",
+                "Gone",
+                None,
+                None,
+                "archived",
+                "2025-01-01T00:00:00.000Z",
+                Some("2025-06-01T00:00:00.000Z")
+            ),
+            p(
+                "f1",
+                "apex-trader",
+                "Apex Trader",
+                Some("https://apex.example"),
+                Some("note"),
+                "unknown",
+                "2026-01-01T00:00:00.000Z",
+                None
+            ),
             // Same slug as f1, created later; a website without a scheme stays on the firm only.
-            p("f2", "apex-trader-2", "apex  trader!", None, None, "unknown", "2026-01-03T00:00:00.000Z", None),
+            p(
+                "f2",
+                "apex-trader-2",
+                "apex  trader!",
+                None,
+                None,
+                "unknown",
+                "2026-01-03T00:00:00.000Z",
+                None
+            ),
             // No ASCII letters; the instant is normalized to milliseconds.
-            p("f3", "provider", "日本", None, None, "unknown", "2026-01-04T00:00:00.000Z", None),
+            p(
+                "f3",
+                "provider",
+                "日本",
+                None,
+                None,
+                "unknown",
+                "2026-01-04T00:00:00.000Z",
+                None
+            ),
         ]
     );
 
@@ -693,8 +1056,22 @@ fn legacy_firms_and_programmes_map_to_the_catalogue() {
     assert_eq!(
         families,
         [
-            ["g1", "f1", "50k-eval", "50K Eval", "evaluation_to_funded", "unknown"],
-            ["g2", "f1", "50k-eval-2", "50k eval", "instant_funding", "archived"],
+            [
+                "g1",
+                "f1",
+                "50k-eval",
+                "50K Eval",
+                "evaluation_to_funded",
+                "unknown"
+            ],
+            [
+                "g2",
+                "f1",
+                "50k-eval-2",
+                "50k eval",
+                "instant_funding",
+                "archived"
+            ],
             // Family slugs are per provider.
             ["g3", "f2", "50k-eval", "50K Eval", "other", "unknown"],
         ]
@@ -704,11 +1081,28 @@ fn legacy_firms_and_programmes_map_to_the_catalogue() {
         &conn,
         "SELECT a.id, p.legacy_firm_id, a.programme_variant_id, a.size_source
          FROM accounts a LEFT JOIN providers p ON p.id = a.provider_id ORDER BY a.id",
-        |r| Ok((r.get::<_, String>(0)?, r.get::<_, Option<String>>(1)?, r.get::<_, Option<String>>(2)?, r.get::<_, String>(3)?)),
+        |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, Option<String>>(1)?,
+                r.get::<_, Option<String>>(2)?,
+                r.get::<_, String>(3)?,
+            ))
+        },
     );
     let s = String::from;
-    assert_eq!(accounts, [(s("a1"), Some(s("f1")), None, s("unknown")), (s("a2"), None, None, s("unknown"))]);
-    let events: i64 = conn.query_row("SELECT count(*) FROM account_phase_events", [], |r| r.get(0)).unwrap();
+    assert_eq!(
+        accounts,
+        [
+            (s("a1"), Some(s("f1")), None, s("unknown")),
+            (s("a2"), None, None, s("unknown"))
+        ]
+    );
+    let events: i64 = conn
+        .query_row("SELECT count(*) FROM account_phase_events", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
     assert_eq!(events, 0, "no phase is inferred from account_type");
 }
 
@@ -731,14 +1125,28 @@ fn the_account_store_maps_new_firms_to_providers() {
         |r| Ok((r.get::<_, String>(0)?, r.get::<_, Option<String>>(1)?, r.get::<_, Option<String>>(2)?)),
     );
     let s = String::from;
-    assert_eq!(rows, [(s("one"), None, None), (s("two"), Some(s("Other Firm")), Some(s("other-firm")))]);
-    let providers: i64 = conn.query_row("SELECT count(*) FROM providers", [], |r| r.get(0)).unwrap();
-    assert_eq!(providers, 2, "Topstep's provider is kept after its accounts move away");
+    assert_eq!(
+        rows,
+        [
+            (s("one"), None, None),
+            (s("two"), Some(s("Other Firm")), Some(s("other-firm")))
+        ]
+    );
+    let providers: i64 = conn
+        .query_row("SELECT count(*) FROM providers", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(
+        providers, 2,
+        "Topstep's provider is kept after its accounts move away"
+    );
 }
 
 #[test]
 fn slug_rules() {
-    assert_eq!(super::steps::slug("  FundedNext — Stellar 2-Step ", "x"), "fundednext-stellar-2-step");
+    assert_eq!(
+        super::steps::slug("  FundedNext — Stellar 2-Step ", "x"),
+        "fundednext-stellar-2-step"
+    );
     assert_eq!(super::steps::slug("!!!", "provider"), "provider");
     assert_eq!(super::steps::slug(&"a-".repeat(80), "x").len(), 89);
 }
@@ -752,7 +1160,10 @@ fn at_v7() -> Connection {
 }
 
 fn set_status(conn: &Connection, v: &str, status: &str) -> rusqlite::Result<usize> {
-    conn.execute("UPDATE catalogue_versions SET verification_status = ?2 WHERE id = ?1", params![v, status])
+    conn.execute(
+        "UPDATE catalogue_versions SET verification_status = ?2 WHERE id = ?1",
+        params![v, status],
+    )
 }
 
 fn verify(conn: &Connection, v: &str) {
@@ -780,11 +1191,17 @@ fn migration_6_let_a_verified_version_be_edited_and_re_verified() {
     .unwrap();
     set_status(&conn, &v, "verified").unwrap();
     let signed: (String, String) = conn
-        .query_row("SELECT verified_by, verified_at FROM catalogue_versions WHERE id = ?1", [&v], |r| {
-            Ok((r.get(0)?, r.get(1)?))
-        })
+        .query_row(
+            "SELECT verified_by, verified_at FROM catalogue_versions WHERE id = ?1",
+            [&v],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
         .unwrap();
-    assert_eq!(signed, ("kyle".into(), T.into()), "edited content keeps the original sign-off");
+    assert_eq!(
+        signed,
+        ("kyle".into(), T.into()),
+        "edited content keeps the original sign-off"
+    );
 }
 
 #[test]
@@ -796,8 +1213,18 @@ fn a_version_that_was_ever_verified_stays_frozen() {
     verify(&conn, &v);
     set_status(&conn, &v, "stale").unwrap();
     // A re-review is a new superseding version, never a reopened one.
-    rejects(&conn, &format!("UPDATE catalogue_versions SET verification_status = 'needs_review' WHERE id = '{v}'"), "invalid");
-    rejects(&conn, &format!("UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{v}'"), "frozen");
+    rejects(
+        &conn,
+        &format!(
+            "UPDATE catalogue_versions SET verification_status = 'needs_review' WHERE id = '{v}'"
+        ),
+        "invalid",
+    );
+    rejects(
+        &conn,
+        &format!("UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{v}'"),
+        "frozen",
+    );
     set_status(&conn, &v, "verified").unwrap();
     set_status(&conn, &v, "superseded").unwrap();
 }
@@ -812,15 +1239,67 @@ fn migration_8_freezes_versions_reopened_under_migration_6() {
     migrate(&mut conn).unwrap();
 
     let frozen = "catalogue version is frozen";
-    rejects(&conn, &format!("UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{v}'"), frozen);
-    rejects(&conn, &format!("UPDATE catalogue_versions SET verified_by = NULL, verified_at = NULL WHERE id = '{v}'"), frozen);
-    rejects(&conn, &format!("DELETE FROM catalogue_versions WHERE id = '{v}'"), frozen);
-    rejects(&conn, &format!("UPDATE programme_phases SET display_order = 5 WHERE id = '{}'", id(0x41)), frozen);
-    rejects(&conn, &format!("UPDATE phase_paths SET provider_label = 'Daily+' WHERE id = '{}'", id(0x51)), frozen);
-    rejects(&conn, &format!("UPDATE commercial_offers SET sale_price_micros = 1 WHERE id = '{}'", id(0x61)), frozen);
-    rejects(&conn, &format!("DELETE FROM commercial_offer_sources WHERE commercial_offer_id = '{}'", id(0x61)), frozen);
-    rejects(&conn, &format!("DELETE FROM catalogue_version_sources WHERE catalogue_version_id = '{v}'"), frozen);
-    rejects(&conn, &format!("UPDATE catalogue_field_claims SET provider_text = '$1' WHERE catalogue_version_id = '{v}'"), frozen);
+    rejects(
+        &conn,
+        &format!("UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{v}'"),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!(
+            "UPDATE catalogue_versions SET verified_by = NULL, verified_at = NULL WHERE id = '{v}'"
+        ),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!("DELETE FROM catalogue_versions WHERE id = '{v}'"),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!(
+            "UPDATE programme_phases SET display_order = 5 WHERE id = '{}'",
+            id(0x41)
+        ),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!(
+            "UPDATE phase_paths SET provider_label = 'Daily+' WHERE id = '{}'",
+            id(0x51)
+        ),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!(
+            "UPDATE commercial_offers SET sale_price_micros = 1 WHERE id = '{}'",
+            id(0x61)
+        ),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!(
+            "DELETE FROM commercial_offer_sources WHERE commercial_offer_id = '{}'",
+            id(0x61)
+        ),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!("DELETE FROM catalogue_version_sources WHERE catalogue_version_id = '{v}'"),
+        frozen,
+    );
+    rejects(
+        &conn,
+        &format!(
+            "UPDATE catalogue_field_claims SET provider_text = '$1' WHERE catalogue_version_id = '{v}'"
+        ),
+        frozen,
+    );
     rejects(
         &conn,
         &format!("INSERT INTO programme_phases (id, catalogue_version_id, phase_key, provider_label, display_order)
@@ -829,20 +1308,29 @@ fn migration_8_freezes_versions_reopened_under_migration_6() {
     );
     // It can only be rejected; verifying it again would reuse the old sign-off.
     for status in ["verified", "draft"] {
-        rejects(&conn, &format!("UPDATE catalogue_versions SET verification_status = '{status}' WHERE id = '{v}'"), "invalid");
+        rejects(
+            &conn,
+            &format!(
+                "UPDATE catalogue_versions SET verification_status = '{status}' WHERE id = '{v}'"
+            ),
+            "invalid",
+        );
     }
     set_status(&conn, &v, "rejected").unwrap();
 
     // A version that was never verified is unaffected.
     let draft = id(0x32);
-    conn.execute_batch(&format!("UPDATE catalogue_versions SET revision_label = 'r2' WHERE id = '{draft}'")).unwrap();
+    conn.execute_batch(&format!(
+        "UPDATE catalogue_versions SET revision_label = 'r2' WHERE id = '{draft}'"
+    ))
+    .unwrap();
     set_status(&conn, &draft, "needs_review").unwrap();
     set_status(&conn, &draft, "draft").unwrap();
 }
 
 #[test]
 fn a_v7_journal_with_reviewed_versions_upgrades_without_changes() {
-    use super::upgrade_tests::{dump, dump_like, read_only, version, Journal};
+    use super::upgrade_tests::{Journal, dump, dump_like, read_only, version};
 
     let db = Journal::copy_of(&[]);
     {
@@ -863,13 +1351,32 @@ fn a_v7_journal_with_reviewed_versions_upgrades_without_changes() {
 
     let conn = open_file(&db.0).unwrap();
     assert_eq!(version(&conn), latest_version());
-    assert_eq!(version(&read_only(&db.backup())), 7, "the backup is the journal as it was");
+    assert_eq!(
+        version(&read_only(&db.backup())),
+        7,
+        "the backup is the journal as it was"
+    );
     assert_eq!(dump_like(&conn, &before), before);
-    let fk_problems: i64 = conn.query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| r.get(0)).unwrap();
+    let fk_problems: i64 = conn
+        .query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
     assert_eq!(fk_problems, 0);
 
     for v in [id(0x31), id(0x32)] {
-        rejects(&conn, &format!("UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{v}'"), "frozen");
+        rejects(
+            &conn,
+            &format!("UPDATE catalogue_versions SET revision_label = 'edited' WHERE id = '{v}'"),
+            "frozen",
+        );
     }
-    rejects(&conn, &format!("UPDATE catalogue_versions SET verification_status = 'needs_review' WHERE id = '{}'", id(0x31)), "invalid");
+    rejects(
+        &conn,
+        &format!(
+            "UPDATE catalogue_versions SET verification_status = 'needs_review' WHERE id = '{}'",
+            id(0x31)
+        ),
+        "invalid",
+    );
 }

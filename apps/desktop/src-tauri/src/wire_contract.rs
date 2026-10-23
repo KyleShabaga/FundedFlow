@@ -24,12 +24,14 @@ use std::path::PathBuf;
 
 use rusqlite::Connection;
 use serde::Serialize;
-use serde_json::{from_value, json, Value};
+use serde_json::{Value, from_value, json};
 
 use crate::csv_import;
 use crate::db::open_file;
 use crate::store::tests::db;
-use crate::store::{accounts, attempts, daily_reviews, insights, journal, ledger, settings, snapshots, trades};
+use crate::store::{
+    accounts, attempts, daily_reviews, insights, journal, ledger, settings, snapshots, trades,
+};
 
 const V3: &[u8] = include_bytes!("db/fixtures/fundedflow-v3.db");
 const V4: &[u8] = include_bytes!("db/fixtures/fundedflow-v4.db");
@@ -96,7 +98,16 @@ fn payloads(conn: &mut Connection) -> Value {
     let insights = if all_ids.is_empty() {
         Value::Null
     } else {
-        wire(insights::dataset_at(conn, insights::InsightsQuery { account_ids: all_ids }, PLACEHOLDER_INSTANT).unwrap())
+        wire(
+            insights::dataset_at(
+                conn,
+                insights::InsightsQuery {
+                    account_ids: all_ids,
+                },
+                PLACEHOLDER_INSTANT,
+            )
+            .unwrap(),
+        )
     };
     json!({ "accounts": wire(accounts), "perAccount": per_account, "settings": wire(settings::list(conn).unwrap()), "insights": insights })
 }
@@ -112,7 +123,11 @@ fn fresh() -> Value {
         })
     };
     let usd = accounts::create(&mut conn, from_value(account("Eval 50K", "USD")).unwrap()).unwrap();
-    let eur = accounts::create(&mut conn, from_value(account("Euro account", "EUR")).unwrap()).unwrap();
+    let eur = accounts::create(
+        &mut conn,
+        from_value(account("Euro account", "EUR")).unwrap(),
+    )
+    .unwrap();
     let trade = |id: &str, exit: bool| {
         json!({
             "accountId": id, "symbol": "ESZ6", "side": "long", "quantity": "1", "entryAt": "2026-10-19T13:30:00Z",
@@ -184,7 +199,13 @@ fn fresh() -> Value {
     };
     snapshots::save(&mut conn, from_value(snapshot("unknown")).unwrap()).unwrap();
     snapshots::save(&mut conn, from_value(snapshot("safe")).unwrap()).unwrap();
-    accounts::change_status(&mut conn, &usd.id, from_value(json!({ "status": "failed", "effectiveAt": null, "cause": null, "note": null })).unwrap()).unwrap();
+    accounts::change_status(
+        &mut conn,
+        &usd.id,
+        from_value(json!({ "status": "failed", "effectiveAt": null, "cause": null, "note": null }))
+            .unwrap(),
+    )
+    .unwrap();
     attempts::reset(
         &mut conn,
         from_value(json!({
@@ -215,7 +236,14 @@ fn upgraded(bytes: &[u8]) -> Value {
 }
 
 fn is_uuid(s: &str) -> bool {
-    s.len() == 36 && s.chars().enumerate().all(|(i, c)| if [8, 13, 18, 23].contains(&i) { c == '-' } else { c.is_ascii_hexdigit() })
+    s.len() == 36
+        && s.chars().enumerate().all(|(i, c)| {
+            if [8, 13, 18, 23].contains(&i) {
+                c == '-'
+            } else {
+                c.is_ascii_hexdigit()
+            }
+        })
 }
 
 /// Content without generated ids or this run's timestamps: a sort key that is the same on every run.
@@ -223,7 +251,12 @@ fn sort_key(value: &Value, run_started: &str) -> String {
     let mut v = value.clone();
     fn blank(v: &mut Value, run_started: &str) {
         match v {
-            Value::String(s) if is_uuid(s) || (s.len() == 24 && s.ends_with('Z') && s.as_str() >= run_started) => *s = String::new(),
+            Value::String(s)
+                if is_uuid(s)
+                    || (s.len() == 24 && s.ends_with('Z') && s.as_str() >= run_started) =>
+            {
+                *s = String::new()
+            }
             Value::Array(items) => items.iter_mut().for_each(|i| blank(i, run_started)),
             Value::Object(map) => map.values_mut().for_each(|i| blank(i, run_started)),
             _ => {}
@@ -253,12 +286,20 @@ fn stabilise(value: &mut Value, run_started: &str, ids: &mut HashMap<String, Str
             if is_uuid(s) {
                 let next = format!("id-{}", ids.len() + 1);
                 *s = ids.entry(s.clone()).or_insert(next).clone();
-            } else if s.len() == 24 && s.ends_with('Z') && s.as_bytes()[10] == b'T' && s.as_str() >= run_started {
+            } else if s.len() == 24
+                && s.ends_with('Z')
+                && s.as_bytes()[10] == b'T'
+                && s.as_str() >= run_started
+            {
                 *s = PLACEHOLDER_INSTANT.into();
             }
         }
-        Value::Array(items) => items.iter_mut().for_each(|v| stabilise(v, run_started, ids)),
-        Value::Object(map) => map.values_mut().for_each(|v| stabilise(v, run_started, ids)),
+        Value::Array(items) => items
+            .iter_mut()
+            .for_each(|v| stabilise(v, run_started, ids)),
+        Value::Object(map) => map
+            .values_mut()
+            .for_each(|v| stabilise(v, run_started, ids)),
         _ => {}
     }
 }
@@ -276,10 +317,15 @@ fn command_wire_fixture_matches_rust() {
     stabilise(&mut fixture, &run_started, &mut ids);
     let path = fixture_path();
     if std::env::var_os("FUNDEDFLOW_UPDATE_FIXTURES").is_some_and(|v| v == "1") {
-        std::fs::write(&path, serde_json::to_string_pretty(&fixture).unwrap() + "\n").unwrap();
+        std::fs::write(
+            &path,
+            serde_json::to_string_pretty(&fixture).unwrap() + "\n",
+        )
+        .unwrap();
         return;
     }
-    let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    let text =
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     let stored: Value = serde_json::from_str(&text).unwrap();
     assert!(
         stored == fixture,

@@ -2,8 +2,8 @@ use super::{
     snapshots::{self, SnapshotInput},
     tests::db,
 };
-use rusqlite::{params, Connection};
-use serde_json::{json, Value};
+use rusqlite::{Connection, params};
+use serde_json::{Value, json};
 const ACCOUNT: &str = "00000000-0000-4000-8000-000000000001";
 const VERSION: &str = "00000000-0000-4000-8000-000000000020";
 const AT: &str = "2026-10-01T00:00:00.000Z";
@@ -43,9 +43,10 @@ fn engine_payload_roundtrips_native_nulls_exact_values_hash_and_eod_identity() {
     assert!(outputs[1].realized_day_pnl.is_none());
     assert!(outputs[1].trading_days_completed.is_none());
     assert!(outputs[1].drawdown_locked.is_none());
-    assert!(c
-        .execute("UPDATE account_snapshots SET balance_micros=0", [])
-        .is_err());
+    assert!(
+        c.execute("UPDATE account_snapshots SET balance_micros=0", [])
+            .is_err()
+    );
     assert!(c.execute("DELETE FROM account_snapshots", []).is_err());
 }
 #[test]
@@ -71,9 +72,11 @@ fn rejects_tampered_engine_identity_and_false_safe_nulls_without_writes() {
     nulls["engineVersion"] = json!("legacy");
     let input: SnapshotInput = serde_json::from_value(nulls).unwrap();
     assert!(snapshots::save(&mut c, input).is_err());
-    assert!(snapshots::list(&c, ACCOUNT, None, None, false)
-        .unwrap()
-        .is_empty());
+    assert!(
+        snapshots::list(&c, ACCOUNT, None, None, false)
+            .unwrap()
+            .is_empty()
+    );
 }
 #[test]
 fn v14_snapshot_upgrade_preserves_legacy_and_reopens_with_backup() {
@@ -129,15 +132,17 @@ fn failed_v15_migration_rolls_back_rows_schema_and_user_version() {
         )
         .into_boxed_str(),
     );
-    assert!(crate::db::migrate_with(
-        &mut c,
-        &[crate::db::Migration {
-            version: 15,
-            name: "injected_failure",
-            step: crate::db::Step::Sql(failing)
-        }]
-    )
-    .is_err());
+    assert!(
+        crate::db::migrate_with(
+            &mut c,
+            &[crate::db::Migration {
+                version: 15,
+                name: "injected_failure",
+                step: crate::db::Step::Sql(failing)
+            }]
+        )
+        .is_err()
+    );
     assert_eq!(
         c.pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
@@ -153,14 +158,18 @@ fn snapshot_write_failure_and_archival_do_not_leave_partial_history() {
     seed(&c);
     let f = fixture();
     c.execute_batch("CREATE TEMP TRIGGER fail_snapshot BEFORE INSERT ON account_snapshots BEGIN SELECT RAISE(ABORT,'simulated disk error'); END;").unwrap();
-    assert!(snapshots::save(
-        &mut c,
-        serde_json::from_value(f[0]["snapshot"].clone()).unwrap()
-    )
-    .is_err());
-    assert!(snapshots::list(&c, ACCOUNT, None, None, false)
-        .unwrap()
-        .is_empty());
+    assert!(
+        snapshots::save(
+            &mut c,
+            serde_json::from_value(f[0]["snapshot"].clone()).unwrap()
+        )
+        .is_err()
+    );
+    assert!(
+        snapshots::list(&c, ACCOUNT, None, None, false)
+            .unwrap()
+            .is_empty()
+    );
     c.execute_batch("DROP TRIGGER fail_snapshot").unwrap();
     let saved = snapshots::save(
         &mut c,
@@ -168,11 +177,13 @@ fn snapshot_write_failure_and_archival_do_not_leave_partial_history() {
     )
     .unwrap();
     super::accounts::archive(&mut c, ACCOUNT).unwrap();
-    assert!(snapshots::save(
-        &mut c,
-        serde_json::from_value(f[1]["snapshot"].clone()).unwrap()
-    )
-    .is_err());
+    assert!(
+        snapshots::save(
+            &mut c,
+            serde_json::from_value(f[1]["snapshot"].clone()).unwrap()
+        )
+        .is_err()
+    );
     assert_eq!(snapshots::get(&c, &saved.id).unwrap(), saved);
 }
 

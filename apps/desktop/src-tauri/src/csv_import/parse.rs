@@ -37,25 +37,40 @@ pub fn parse(content: &str) -> ParsedCsv {
     if content.len() > MAX_CSV_BYTES {
         out.issues.push(FieldIssue::new(
             "content",
-            format!("The file is larger than {} MB.", MAX_CSV_BYTES / 1024 / 1024),
+            format!(
+                "The file is larger than {} MB.",
+                MAX_CSV_BYTES / 1024 / 1024
+            ),
         ));
         return out;
     }
     let text = content.strip_prefix('\u{feff}').unwrap_or(content);
     if text.trim().is_empty() {
-        out.issues.push(FieldIssue::new("content", "The file is empty."));
+        out.issues
+            .push(FieldIssue::new("content", "The file is empty."));
         return out;
     }
 
-    let mut reader = csv::ReaderBuilder::new().has_headers(true).flexible(true).from_reader(text.as_bytes());
+    let mut reader = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .flexible(true)
+        .from_reader(text.as_bytes());
     match reader.headers() {
-        Ok(h) if h.iter().any(|c| !c.trim().is_empty()) => out.headers = h.iter().map(str::to_string).collect(),
+        Ok(h) if h.iter().any(|c| !c.trim().is_empty()) => {
+            out.headers = h.iter().map(str::to_string).collect()
+        }
         Ok(_) => {
-            out.issues.push(FieldIssue::new("content", "The first line must be a header row with column names."));
+            out.issues.push(FieldIssue::new(
+                "content",
+                "The first line must be a header row with column names.",
+            ));
             return out;
         }
         Err(e) => {
-            out.issues.push(FieldIssue::new("content", format!("The header row cannot be read: {e}")));
+            out.issues.push(FieldIssue::new(
+                "content",
+                format!("The header row cannot be read: {e}"),
+            ));
             return out;
         }
     }
@@ -65,7 +80,9 @@ pub fn parse(content: &str) -> ParsedCsv {
     let bytes = text.as_bytes();
     let mut counted = (0usize, 1u64);
     let mut line_at = |pos: Option<&csv::Position>| -> u64 {
-        let Some(mut offset) = pos.map(|p| p.byte() as usize) else { return 0 };
+        let Some(mut offset) = pos.map(|p| p.byte() as usize) else {
+            return 0;
+        };
         // After a CRLF (or skipped empty lines) the reported start can be a
         // line break; a record itself never starts with one.
         while matches!(bytes.get(offset), Some(b'\n' | b'\r')) {
@@ -81,7 +98,9 @@ pub fn parse(content: &str) -> ParsedCsv {
         if i >= MAX_CSV_ROWS {
             out.issues.push(FieldIssue::new(
                 "content",
-                format!("The file has more than {MAX_CSV_ROWS} data rows; split it into smaller files."),
+                format!(
+                    "The file has more than {MAX_CSV_ROWS} data rows; split it into smaller files."
+                ),
             ));
             break;
         }
@@ -102,7 +121,10 @@ pub fn parse(content: &str) -> ParsedCsv {
         });
     }
     if out.rows.is_empty() && out.issues.is_empty() {
-        out.issues.push(FieldIssue::new("content", "The file has a header row but no data rows."));
+        out.issues.push(FieldIssue::new(
+            "content",
+            "The file has a header row but no data rows.",
+        ));
     }
     out
 }
@@ -124,9 +146,18 @@ mod tests {
 
     #[test]
     fn reports_empty_and_header_only_files() {
-        for (csv, expect) in [("", "empty"), ("\u{feff}\r\n", "empty"), (",,\n1,2,3\n", "header row"), ("a,b\n", "no data rows")] {
+        for (csv, expect) in [
+            ("", "empty"),
+            ("\u{feff}\r\n", "empty"),
+            (",,\n1,2,3\n", "header row"),
+            ("a,b\n", "no data rows"),
+        ] {
             let p = parse(csv);
-            assert!(p.issues[0].message.contains(expect), "{csv:?}: {:?}", p.issues);
+            assert!(
+                p.issues[0].message.contains(expect),
+                "{csv:?}: {:?}",
+                p.issues
+            );
         }
     }
 

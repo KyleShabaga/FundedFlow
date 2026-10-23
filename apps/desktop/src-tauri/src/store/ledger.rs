@@ -5,13 +5,13 @@
 //! (V1.5; nothing here computes ROI). Amounts are signed decimal text in the
 //! account currency; a payout is negative.
 
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
 use super::{account_ctx, opt_text, require_account};
 use crate::domain::{
-    format_instant, micros_to_string, new_id, now, parse_decimal, parse_payload_time, to_micros,
-    trading_day, MAX_NOTES_CHARS,
+    MAX_NOTES_CHARS, format_instant, micros_to_string, new_id, now, parse_decimal,
+    parse_payload_time, to_micros, trading_day,
 };
 use crate::error::{AppError, AppResult, Issues};
 

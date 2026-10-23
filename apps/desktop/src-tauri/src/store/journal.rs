@@ -1,4 +1,4 @@
-use rusqlite::{params, Connection, OptionalExtension, Row, Transaction};
+use rusqlite::{Connection, OptionalExtension, Row, Transaction, params};
 use serde::{Deserialize, Serialize};
 
 use super::{account_ctx, opt_text};
@@ -66,9 +66,17 @@ fn validate(conn: &Connection, input: JournalEntryInput) -> AppResult<Valid> {
 
     // Trim, drop blanks, de-duplicate case-insensitively keeping the first spelling.
     let mut tags: Vec<String> = Vec::new();
-    for tag in input.tags.iter().map(|t| t.trim()).filter(|t| !t.is_empty()) {
+    for tag in input
+        .tags
+        .iter()
+        .map(|t| t.trim())
+        .filter(|t| !t.is_empty())
+    {
         if tag.chars().count() > MAX_TAG_CHARS {
-            issues.add("tags", format!("each tag must be at most {MAX_TAG_CHARS} characters"));
+            issues.add(
+                "tags",
+                format!("each tag must be at most {MAX_TAG_CHARS} characters"),
+            );
         } else if !tags.iter().any(|t| t.eq_ignore_ascii_case(tag)) {
             tags.push(tag.to_string());
         }
@@ -80,9 +88,11 @@ fn validate(conn: &Connection, input: JournalEntryInput) -> AppResult<Valid> {
     let trade_id = opt_text(input.trade_id);
     if let Some(trade_id) = &trade_id {
         let trade: Option<(String, Option<String>)> = conn
-            .query_row("SELECT account_id, deleted_at FROM trades WHERE id = ?1", [trade_id], |r| {
-                Ok((r.get(0)?, r.get(1)?))
-            })
+            .query_row(
+                "SELECT account_id, deleted_at FROM trades WHERE id = ?1",
+                [trade_id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
             .optional()?;
         match trade {
             None | Some((_, Some(_))) => issues.add("tradeId", "trade not found"),
@@ -93,7 +103,13 @@ fn validate(conn: &Connection, input: JournalEntryInput) -> AppResult<Valid> {
         }
     }
     issues.into_result()?;
-    Ok(Valid { trade_id, entry_at, title, body: input.body, tags })
+    Ok(Valid {
+        trade_id,
+        entry_at,
+        title,
+        body: input.body,
+        tags,
+    })
 }
 
 const SELECT: &str = "SELECT j.id, j.account_id, j.trade_id, j.entry_at, j.title, j.body_md,
@@ -105,8 +121,9 @@ const SELECT: &str = "SELECT j.id, j.account_id, j.trade_id, j.entry_at, j.title
 
 fn from_row(r: &Row) -> rusqlite::Result<JournalEntry> {
     let tags_json: String = r.get(6)?;
-    let tags = serde_json::from_str(&tags_json)
-        .map_err(|e| rusqlite::Error::FromSqlConversionFailure(6, rusqlite::types::Type::Text, Box::new(e)))?;
+    let tags = serde_json::from_str(&tags_json).map_err(|e| {
+        rusqlite::Error::FromSqlConversionFailure(6, rusqlite::types::Type::Text, Box::new(e))
+    })?;
     Ok(JournalEntry {
         id: r.get(0)?,
         account_id: r.get(1)?,
@@ -123,7 +140,9 @@ fn from_row(r: &Row) -> rusqlite::Result<JournalEntry> {
 /// Entries of an account, newest first.
 pub fn list(conn: &Connection, account_id: &str) -> AppResult<Vec<JournalEntry>> {
     super::require_account(conn, account_id)?;
-    let mut stmt = conn.prepare(&format!("{SELECT} WHERE j.account_id = ?1 ORDER BY j.entry_at DESC, j.id"))?;
+    let mut stmt = conn.prepare(&format!(
+        "{SELECT} WHERE j.account_id = ?1 ORDER BY j.entry_at DESC, j.id"
+    ))?;
     let rows = stmt.query_map([account_id], from_row)?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
@@ -135,7 +154,10 @@ pub fn get(conn: &Connection, id: &str) -> AppResult<JournalEntry> {
 }
 
 fn set_tags(tx: &Transaction, entry_id: &str, tags: &[String], now: &str) -> AppResult<()> {
-    tx.execute("DELETE FROM journal_entry_tags WHERE journal_entry_id = ?1", [entry_id])?;
+    tx.execute(
+        "DELETE FROM journal_entry_tags WHERE journal_entry_id = ?1",
+        [entry_id],
+    )?;
     for name in tags {
         let existing: Option<String> = tx
             .query_row(
@@ -179,13 +201,24 @@ pub fn create(conn: &mut Connection, input: JournalEntryInput) -> AppResult<Jour
     get(conn, &id)
 }
 
-pub fn update(conn: &mut Connection, id: &str, input: JournalEntryInput) -> AppResult<JournalEntry> {
+pub fn update(
+    conn: &mut Connection,
+    id: &str,
+    input: JournalEntryInput,
+) -> AppResult<JournalEntry> {
     let account_id: String = conn
-        .query_row("SELECT account_id FROM journal_entries WHERE id = ?1", [id], |r| r.get(0))
+        .query_row(
+            "SELECT account_id FROM journal_entries WHERE id = ?1",
+            [id],
+            |r| r.get(0),
+        )
         .optional()?
         .ok_or_else(|| AppError::not_found("journal entry", id))?;
     if account_id != input.account_id {
-        return Err(AppError::invalid("accountId", "a journal entry cannot be moved to another account"));
+        return Err(AppError::invalid(
+            "accountId",
+            "a journal entry cannot be moved to another account",
+        ));
     }
     let v = validate(conn, input)?;
     let now = now();

@@ -4,19 +4,22 @@
 //! and that reading risk inputs for a preview writes nothing.
 
 use rusqlite::Connection;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::catalogue_tests::{id, rejects, seeded};
 use super::rulebook_tests::{account, assign, draft, fields, fixture_rules, verified_100k};
 use crate::error::AppError;
 use crate::rulebook::{
-    AssignmentGuard, ChangeContext, NewRulebook, RulebookDraftInput, RulebookDraftUpdate, RulebookEventQuery,
-    RulebookVersionDetail,
+    AssignmentGuard, ChangeContext, NewRulebook, RulebookDraftInput, RulebookDraftUpdate,
+    RulebookEventQuery, RulebookVersionDetail,
 };
 use crate::store::rulebooks as store;
 
 fn me(reason: &str) -> ChangeContext {
-    ChangeContext { actor: "tester".into(), reason: Some(reason.into()) }
+    ChangeContext {
+        actor: "tester".into(),
+        reason: Some(reason.into()),
+    }
 }
 
 /// The draft's content as an update, so a test can change one thing.
@@ -67,11 +70,16 @@ fn private_copy(conn: &mut Connection, account_id: &str, base: &str) -> Rulebook
 }
 
 fn events(conn: &Connection, q: RulebookEventQuery) -> Vec<(String, Option<String>)> {
-    store::list_events(conn, &q).unwrap().into_iter().map(|e| (e.action, e.reason)).collect()
+    store::list_events(conn, &q)
+        .unwrap()
+        .into_iter()
+        .map(|e| (e.action, e.reason))
+        .collect()
 }
 
 fn count(conn: &Connection, table: &str) -> i64 {
-    conn.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0)).unwrap()
+    conn.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0))
+        .unwrap()
 }
 
 #[test]
@@ -83,23 +91,63 @@ fn archived_private_rulebooks_reject_all_authoring_without_changing_history() {
     crate::store::accounts::archive(&mut conn, &owner).unwrap();
     let before = super::upgrade_tests::dump(&conn, &[]);
     let id = &draft.version.id;
-    assert!(store::update_draft(&mut conn, id, &draft.version.updated_at, content(&draft), me("Edit")).is_err());
+    assert!(
+        store::update_draft(
+            &mut conn,
+            id,
+            &draft.version.updated_at,
+            content(&draft),
+            me("Edit")
+        )
+        .is_err()
+    );
     assert!(store::publish_with(&mut conn, id, None, None, me("Publish")).is_err());
     assert!(store::discard_draft(&mut conn, id, &draft.version.updated_at, me("Discard")).is_err());
-    assert!(store::create_draft_with(&mut conn, RulebookDraftInput {
-        rulebook_id: Some(draft.rulebook.id.clone()), new_rulebook: None,
-        applicability: vec![], ..super::rulebook_tests::draft(fixture_rules(0xa1), 0x43, 0x32)
-    }, me("Another version")).is_err());
-    assert!(store::create_draft_with(&mut conn, RulebookDraftInput {
-        rulebook_id: None, new_rulebook: Some(NewRulebook {
-            provider_id: None, owner_account_id: Some(owner.clone()), slug: "another-private".into(),
-            display_name: "Another private book".into(), description: None,
-        }), applicability: vec![], ..super::rulebook_tests::draft(fixture_rules(0xa1), 0x43, 0x32)
-    }, me("New book")).is_err());
-    assert!(store::flag_conflict(&mut conn, crate::rulebook::SourceConflictInput {
-        rule_definition_id: draft.rules[0].id.clone(), source_id: super::catalogue_tests::id(0x91),
-        field: None, provider_text: None, note: "Conflict".into(),
-    }).is_err());
+    assert!(
+        store::create_draft_with(
+            &mut conn,
+            RulebookDraftInput {
+                rulebook_id: Some(draft.rulebook.id.clone()),
+                new_rulebook: None,
+                applicability: vec![],
+                ..super::rulebook_tests::draft(fixture_rules(0xa1), 0x43, 0x32)
+            },
+            me("Another version")
+        )
+        .is_err()
+    );
+    assert!(
+        store::create_draft_with(
+            &mut conn,
+            RulebookDraftInput {
+                rulebook_id: None,
+                new_rulebook: Some(NewRulebook {
+                    provider_id: None,
+                    owner_account_id: Some(owner.clone()),
+                    slug: "another-private".into(),
+                    display_name: "Another private book".into(),
+                    description: None,
+                }),
+                applicability: vec![],
+                ..super::rulebook_tests::draft(fixture_rules(0xa1), 0x43, 0x32)
+            },
+            me("New book")
+        )
+        .is_err()
+    );
+    assert!(
+        store::flag_conflict(
+            &mut conn,
+            crate::rulebook::SourceConflictInput {
+                rule_definition_id: draft.rules[0].id.clone(),
+                source_id: super::catalogue_tests::id(0x91),
+                field: None,
+                provider_text: None,
+                note: "Conflict".into(),
+            }
+        )
+        .is_err()
+    );
     assert_eq!(super::upgrade_tests::dump(&conn, &[]), before);
     crate::store::accounts::restore(&mut conn, &owner).unwrap();
     store::publish_with(&mut conn, id, None, None, me("Publish after restore")).unwrap();
@@ -115,49 +163,118 @@ fn a_draft_is_saved_only_against_the_revision_it_was_read_at() {
     let v = d.version.id.clone();
 
     let mut edit = content(&d);
-    edit.rules[0].parameters = json!({ "amount": { "state": "value", "value": "2500" }, "basis": "balance" });
-    let saved = store::update_draft(&mut conn, &v, &d.version.updated_at, edit.clone(), me("Lower target")).unwrap();
+    edit.rules[0].parameters =
+        json!({ "amount": { "state": "value", "value": "2500" }, "basis": "balance" });
+    let saved = store::update_draft(
+        &mut conn,
+        &v,
+        &d.version.updated_at,
+        edit.clone(),
+        me("Lower target"),
+    )
+    .unwrap();
     assert_eq!(saved.rules[0].rule.parameters["amount"]["value"], "2500");
-    assert!(saved.version.updated_at > d.version.updated_at, "every save moves the revision");
+    assert!(
+        saved.version.updated_at > d.version.updated_at,
+        "every save moves the revision"
+    );
     assert_eq!(saved.version.version_number, d.version.version_number);
 
     // Saving again from the old revision (a second window) is a conflict, not an overwrite.
     let mut other = content(&d);
-    other.rules[0].parameters = json!({ "amount": { "state": "value", "value": "9999" }, "basis": "balance" });
+    other.rules[0].parameters =
+        json!({ "amount": { "state": "value", "value": "9999" }, "basis": "balance" });
     assert!(matches!(
-        store::update_draft(&mut conn, &v, &d.version.updated_at, other, me("Other window")),
+        store::update_draft(
+            &mut conn,
+            &v,
+            &d.version.updated_at,
+            other,
+            me("Other window")
+        ),
         Err(AppError::Conflict { .. })
     ));
-    assert_eq!(store::get_version(&conn, &v).unwrap().rules[0].rule.parameters["amount"]["value"], "2500");
+    assert_eq!(
+        store::get_version(&conn, &v).unwrap().rules[0]
+            .rule
+            .parameters["amount"]["value"],
+        "2500"
+    );
 
     // Two quick saves in a row each get a later revision.
-    let again = store::update_draft(&mut conn, &v, &saved.version.updated_at, edit.clone(), me("Again")).unwrap();
+    let again = store::update_draft(
+        &mut conn,
+        &v,
+        &saved.version.updated_at,
+        edit.clone(),
+        me("Again"),
+    )
+    .unwrap();
     assert!(again.version.updated_at > saved.version.updated_at);
 
     // Publishing from a stale revision is refused too; from the current one it goes into use.
     assert!(matches!(
-        store::publish_with(&mut conn, &v, None, Some(&saved.version.updated_at), me("Use it")),
+        store::publish_with(
+            &mut conn,
+            &v,
+            None,
+            Some(&saved.version.updated_at),
+            me("Use it")
+        ),
         Err(AppError::Conflict { .. })
     ));
-    let published = store::publish_with(&mut conn, &v, None, Some(&again.version.updated_at), me("Use it")).unwrap();
+    let published = store::publish_with(
+        &mut conn,
+        &v,
+        None,
+        Some(&again.version.updated_at),
+        me("Use it"),
+    )
+    .unwrap();
     assert_eq!(published.version.verification_status, "needs_review");
     // Publishing your own rules records your confirmation, once, and it is frozen with the version.
-    assert_eq!(published.version.user_confirmed_at.as_deref(), Some(published.version.updated_at.as_str()));
-    rejects(&conn, &format!("UPDATE rulebook_versions SET user_confirmed_at = NULL WHERE id = '{v}'"), "frozen");
+    assert_eq!(
+        published.version.user_confirmed_at.as_deref(),
+        Some(published.version.updated_at.as_str())
+    );
+    rejects(
+        &conn,
+        &format!("UPDATE rulebook_versions SET user_confirmed_at = NULL WHERE id = '{v}'"),
+        "frozen",
+    );
 
     // Published content is frozen: neither the operation nor SQL can change it.
     assert!(matches!(
-        store::update_draft(&mut conn, &v, &published.version.updated_at, edit, me("Late edit")),
+        store::update_draft(
+            &mut conn,
+            &v,
+            &published.version.updated_at,
+            edit,
+            me("Late edit")
+        ),
         Err(AppError::Conflict { .. })
     ));
-    rejects(&conn, &format!("DELETE FROM rule_definitions WHERE rulebook_version_id = '{v}'"), "cannot change");
+    rejects(
+        &conn,
+        &format!("DELETE FROM rule_definitions WHERE rulebook_version_id = '{v}'"),
+        "cannot change",
+    );
 
     // The catalogue version it was copied from is untouched.
     assert_eq!(store::get_version(&conn, &base).unwrap(), before_base);
     assert_eq!(
-        events(&conn, RulebookEventQuery { rulebook_id: Some(d.rulebook.id.clone()), account_id: None }),
+        events(
+            &conn,
+            RulebookEventQuery {
+                rulebook_id: Some(d.rulebook.id.clone()),
+                account_id: None
+            }
+        ),
         [
-            ("draft_created".to_string(), Some("Start my own limits".to_string())),
+            (
+                "draft_created".to_string(),
+                Some("Start my own limits".to_string())
+            ),
             ("draft_saved".into(), Some("Lower target".into())),
             ("draft_saved".into(), Some("Again".into())),
             ("published".into(), Some("Use it".into())),
@@ -176,28 +293,58 @@ fn a_failed_save_changes_nothing() {
 
     // Invalid parameters are refused before writing.
     let mut bad = content(&d);
-    bad.rules[0].parameters = json!({ "amount": { "state": "value", "value": 3000 }, "basis": "unknown" });
-    assert_eq!(fields(store::update_draft(&mut conn, &v, &d.version.updated_at, bad, me("x")).unwrap_err()), ["rules[0].parameters"]);
+    bad.rules[0].parameters =
+        json!({ "amount": { "state": "value", "value": 3000 }, "basis": "unknown" });
+    assert_eq!(
+        fields(
+            store::update_draft(&mut conn, &v, &d.version.updated_at, bad, me("x")).unwrap_err()
+        ),
+        ["rules[0].parameters"]
+    );
     // A private rulebook never gets catalogue applicability.
     let mut catalogue = content(&d);
     catalogue.applicability = content(&store::get_version(&conn, &base).unwrap()).applicability;
-    assert_eq!(fields(store::update_draft(&mut conn, &v, &d.version.updated_at, catalogue, me("x")).unwrap_err()), ["applicability"]);
+    assert_eq!(
+        fields(
+            store::update_draft(&mut conn, &v, &d.version.updated_at, catalogue, me("x"))
+                .unwrap_err()
+        ),
+        ["applicability"]
+    );
     // A blank actor is refused.
-    let blank = ChangeContext { actor: "  ".into(), reason: None };
-    assert_eq!(fields(store::update_draft(&mut conn, &v, &d.version.updated_at, content(&d), blank).unwrap_err()), ["actor"]);
+    let blank = ChangeContext {
+        actor: "  ".into(),
+        reason: None,
+    };
+    assert_eq!(
+        fields(
+            store::update_draft(&mut conn, &v, &d.version.updated_at, content(&d), blank)
+                .unwrap_err()
+        ),
+        ["actor"]
+    );
 
     // A failure part-way through the transaction rolls every step back.
     conn.execute_batch("CREATE TEMP TRIGGER fail_rules BEFORE INSERT ON rule_definitions BEGIN SELECT RAISE(ABORT, 'injected'); END;")
         .unwrap();
     let mut edit = content(&d);
     edit.change_reason = Some("Changed".into());
-    assert!(store::update_draft(&mut conn, &v, &d.version.updated_at, edit.clone(), me("x")).is_err());
+    assert!(
+        store::update_draft(&mut conn, &v, &d.version.updated_at, edit.clone(), me("x")).is_err()
+    );
     conn.execute_batch("DROP TRIGGER fail_rules").unwrap();
     assert_eq!(store::get_version(&conn, &v).unwrap(), d);
     assert_eq!(count(&conn, "rulebook_events"), events_before);
 
     // The retry with the same revision then succeeds.
-    assert_eq!(store::update_draft(&mut conn, &v, &d.version.updated_at, edit, me("Retry")).unwrap().version.change_reason.as_deref(), Some("Changed"));
+    assert_eq!(
+        store::update_draft(&mut conn, &v, &d.version.updated_at, edit, me("Retry"))
+            .unwrap()
+            .version
+            .change_reason
+            .as_deref(),
+        Some("Changed")
+    );
 }
 
 #[test]
@@ -215,16 +362,32 @@ fn a_discarded_draft_is_kept_rejected_and_never_published() {
     )
     .unwrap();
     let v = d.version.id.clone();
-    let no_reason = ChangeContext { actor: "tester".into(), reason: None };
-    assert_eq!(fields(store::discard_draft(&mut conn, &v, &d.version.updated_at, no_reason).unwrap_err()), ["reason"]);
+    let no_reason = ChangeContext {
+        actor: "tester".into(),
+        reason: None,
+    };
+    assert_eq!(
+        fields(store::discard_draft(&mut conn, &v, &d.version.updated_at, no_reason).unwrap_err()),
+        ["reason"]
+    );
     assert!(matches!(
         store::discard_draft(&mut conn, &v, "2020-01-01T00:00:00.000Z", me("Not needed")),
         Err(AppError::Conflict { .. })
     ));
-    let gone = store::discard_draft(&mut conn, &v, &d.version.updated_at, me("Not needed")).unwrap();
+    let gone =
+        store::discard_draft(&mut conn, &v, &d.version.updated_at, me("Not needed")).unwrap();
     assert_eq!(gone.version.verification_status, "rejected");
-    assert!(store::list_versions(&conn, &id(0x90)).unwrap().iter().any(|x| x.version.id == v), "kept in history");
-    assert_eq!(fields(store::publish(&mut conn, &v, None).unwrap_err()), ["verificationStatus"]);
+    assert!(
+        store::list_versions(&conn, &id(0x90))
+            .unwrap()
+            .iter()
+            .any(|x| x.version.id == v),
+        "kept in history"
+    );
+    assert_eq!(
+        fields(store::publish(&mut conn, &v, None).unwrap_err()),
+        ["verificationStatus"]
+    );
     assert!(matches!(
         store::discard_draft(&mut conn, &v, &gone.version.updated_at, me("Again")),
         Err(AppError::Conflict { .. })
@@ -235,7 +398,13 @@ fn a_discarded_draft_is_kept_rejected_and_never_published() {
         store::discard_draft(&mut conn, &base, &verified.version.updated_at, me("x")),
         Err(AppError::Conflict { .. })
     ));
-    assert_eq!(store::get_version(&conn, &base).unwrap().version.verification_status, "verified");
+    assert_eq!(
+        store::get_version(&conn, &base)
+            .unwrap()
+            .version
+            .verification_status,
+        "verified"
+    );
 }
 
 #[test]
@@ -260,11 +429,26 @@ fn a_draft_whose_base_was_superseded_meanwhile_is_stale() {
     store::publish(&mut conn, &b, None).unwrap();
     // B is now the newer published version of the same base: A would hide it.
     let err = store::publish(&mut conn, &a, None).unwrap_err();
-    assert!(matches!(&err, AppError::Conflict { message } if message.contains("start a new draft")), "{err:?}");
-    assert_eq!(store::get_version(&conn, &a).unwrap().version.verification_status, "draft");
+    assert!(
+        matches!(&err, AppError::Conflict { message } if message.contains("start a new draft")),
+        "{err:?}"
+    );
+    assert_eq!(
+        store::get_version(&conn, &a)
+            .unwrap()
+            .version
+            .verification_status,
+        "draft"
+    );
     // The safe path: discard A and draft again from the newest version.
     let ad = store::get_version(&conn, &a).unwrap();
-    store::discard_draft(&mut conn, &a, &ad.version.updated_at, me("Superseded by version 5")).unwrap();
+    store::discard_draft(
+        &mut conn,
+        &a,
+        &ad.version.updated_at,
+        me("Superseded by version 5"),
+    )
+    .unwrap();
 }
 
 #[test]
@@ -274,38 +458,99 @@ fn assignment_is_guarded_by_what_the_caller_saw_and_audited() {
     let acc = account(&mut conn, "Eval");
     let other = account(&mut conn, "Other");
     let guard = |open: Option<String>, why: &str| {
-        Some(AssignmentGuard { expected_open_assignment_id: open, actor: "tester".into(), reason: Some(why.into()) })
+        Some(AssignmentGuard {
+            expected_open_assignment_id: open,
+            actor: "tester".into(),
+            reason: Some(why.into()),
+        })
     };
-    let first = store::assign_with(&mut conn, assign(&acc, &v1, "2026-10-01"), guard(None, "Start of evaluation")).unwrap();
+    let first = store::assign_with(
+        &mut conn,
+        assign(&acc, &v1, "2026-10-01"),
+        guard(None, "Start of evaluation"),
+    )
+    .unwrap();
 
     // A second window still thinks there is no assignment: refused, nothing ends.
     assert!(matches!(
-        store::assign_with(&mut conn, assign(&acc, &v1, "2026-10-12"), guard(None, "Stale")),
+        store::assign_with(
+            &mut conn,
+            assign(&acc, &v1, "2026-10-12"),
+            guard(None, "Stale")
+        ),
         Err(AppError::Conflict { .. })
     ));
-    assert_eq!(store::list_assignments(&conn, &acc).unwrap()[0].effective_to, None);
+    assert_eq!(
+        store::list_assignments(&conn, &acc).unwrap()[0].effective_to,
+        None
+    );
 
     let pv = {
         let d = private_copy(&mut conn, &acc, &v1);
-        store::publish(&mut conn, &d.version.id, None).unwrap().version.id
+        store::publish(&mut conn, &d.version.id, None)
+            .unwrap()
+            .version
+            .id
     };
-    let second =
-        store::assign_with(&mut conn, assign(&acc, &pv, "2026-10-12"), guard(Some(first.id.clone()), "My own limits")).unwrap();
+    let second = store::assign_with(
+        &mut conn,
+        assign(&acc, &pv, "2026-10-12"),
+        guard(Some(first.id.clone()), "My own limits"),
+    )
+    .unwrap();
     let history = store::list_assignments(&conn, &acc).unwrap();
     assert_eq!(history.len(), 2, "history is appended, not rewritten");
-    assert_eq!((history[0].rulebook_version_id.as_str(), history[0].effective_to.as_deref()), (v1.as_str(), Some("2026-10-12")));
+    assert_eq!(
+        (
+            history[0].rulebook_version_id.as_str(),
+            history[0].effective_to.as_deref()
+        ),
+        (v1.as_str(), Some("2026-10-12"))
+    );
     assert_eq!(history[1].id, second.id);
 
-    let log = store::list_events(&conn, &RulebookEventQuery { rulebook_id: None, account_id: Some(acc.clone()) }).unwrap();
+    let log = store::list_events(
+        &conn,
+        &RulebookEventQuery {
+            rulebook_id: None,
+            account_id: Some(acc.clone()),
+        },
+    )
+    .unwrap();
     let assigned: Vec<_> = log.iter().filter(|e| e.action == "assigned").collect();
     assert_eq!(assigned.len(), 2);
-    assert_eq!(assigned[0].assignment_id.as_deref(), Some(first.id.as_str()));
-    assert_eq!(assigned[1].reason.as_deref(), Some("My own limits"));
-    assert!(log.iter().any(|e| e.action == "draft_created"), "the account's private rulebook events are included");
-    // Another account sees none of it.
-    assert!(store::list_events(&conn, &RulebookEventQuery { rulebook_id: None, account_id: Some(other) }).unwrap().is_empty());
     assert_eq!(
-        fields(store::list_events(&conn, &RulebookEventQuery { rulebook_id: None, account_id: None }).unwrap_err()),
+        assigned[0].assignment_id.as_deref(),
+        Some(first.id.as_str())
+    );
+    assert_eq!(assigned[1].reason.as_deref(), Some("My own limits"));
+    assert!(
+        log.iter().any(|e| e.action == "draft_created"),
+        "the account's private rulebook events are included"
+    );
+    // Another account sees none of it.
+    assert!(
+        store::list_events(
+            &conn,
+            &RulebookEventQuery {
+                rulebook_id: None,
+                account_id: Some(other)
+            }
+        )
+        .unwrap()
+        .is_empty()
+    );
+    assert_eq!(
+        fields(
+            store::list_events(
+                &conn,
+                &RulebookEventQuery {
+                    rulebook_id: None,
+                    account_id: None
+                }
+            )
+            .unwrap_err()
+        ),
         ["rulebookId"]
     );
 }
@@ -315,7 +560,11 @@ fn the_audit_log_is_append_only() {
     let mut conn = seeded();
     let v1 = verified_100k(&mut conn);
     assert!(count(&conn, "rulebook_events") >= 3);
-    rejects(&conn, "UPDATE rulebook_events SET reason = 'rewritten'", "append-only");
+    rejects(
+        &conn,
+        "UPDATE rulebook_events SET reason = 'rewritten'",
+        "append-only",
+    );
     rejects(&conn, "DELETE FROM rulebook_events", "append-only");
     rejects(
         &conn,
@@ -334,7 +583,9 @@ fn reading_risk_inputs_for_a_preview_writes_nothing() {
     let v1 = verified_100k(&mut conn);
     let acc = account(&mut conn, "Eval");
     store::assign(&mut conn, assign(&acc, &v1, "2026-10-01")).unwrap();
-    let before: i64 = conn.query_row("SELECT total_changes()", [], |r| r.get(0)).unwrap();
+    let before: i64 = conn
+        .query_row("SELECT total_changes()", [], |r| r.get(0))
+        .unwrap();
     let query: crate::store::evidence::RiskInputsQuery = serde_json::from_value(json!({
         "accountId": acc, "asOf": "2026-10-20T20:00:00Z",
         "coverage": { "baseline": "incomplete", "closedTrades": "incomplete", "fees": "incomplete", "ledger": "incomplete",
@@ -343,8 +594,13 @@ fn reading_risk_inputs_for_a_preview_writes_nothing() {
     }))
     .unwrap();
     let inputs = crate::store::evidence::risk_inputs(&mut conn, query).unwrap();
-    assert_eq!(inputs["applicableAssignment"]["rulebookVersionId"], Value::String(v1));
-    let after: i64 = conn.query_row("SELECT total_changes()", [], |r| r.get(0)).unwrap();
+    assert_eq!(
+        inputs["applicableAssignment"]["rulebookVersionId"],
+        Value::String(v1)
+    );
+    let after: i64 = conn
+        .query_row("SELECT total_changes()", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(after, before);
 }
 
@@ -363,7 +619,8 @@ fn legacy_snapshot(conn: &Connection, account: &str) {
 }
 
 fn version(conn: &Connection) -> u32 {
-    conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap()
+    conn.pragma_query_value(None, "user_version", |r| r.get(0))
+        .unwrap()
 }
 
 fn balance_nullable(conn: &Connection) -> bool {
@@ -376,25 +633,39 @@ fn migrations_15_and_16_upgrade_a_populated_v14_journal_in_order_and_roll_back_o
     let mut conn = Connection::open_in_memory().unwrap();
     super::configure(&conn).unwrap();
     super::migrate_with(&mut conn, &super::MIGRATIONS[..14]).unwrap();
-    let acc = crate::store::accounts::create(&mut conn, crate::store::tests::account_input("Keep")).unwrap();
+    let acc = crate::store::accounts::create(&mut conn, crate::store::tests::account_input("Keep"))
+        .unwrap();
     legacy_snapshot(&conn, &acc.id);
     // v14 → v15: nullable engine snapshots, rows kept.
-    assert_eq!(super::migrate_with(&mut conn, &super::MIGRATIONS[..15]).unwrap(), 15);
+    assert_eq!(
+        super::migrate_with(&mut conn, &super::MIGRATIONS[..15]).unwrap(),
+        15
+    );
     assert!(balance_nullable(&conn));
     // A blocker for v16 makes it fail; the journal stays at v15 with its rows.
-    conn.execute_batch("CREATE TABLE rulebook_events (blocker INTEGER);").unwrap();
+    conn.execute_batch("CREATE TABLE rulebook_events (blocker INTEGER);")
+        .unwrap();
     assert!(super::migrate(&mut conn).is_err());
     assert_eq!(version(&conn), 15);
     assert_eq!(crate::store::accounts::get(&conn, &acc.id).unwrap(), acc);
     conn.execute_batch("DROP TABLE rulebook_events").unwrap();
-    assert_eq!(super::migrate_with(&mut conn, &super::MIGRATIONS[..16]).unwrap(), 16);
+    assert_eq!(
+        super::migrate_with(&mut conn, &super::MIGRATIONS[..16]).unwrap(),
+        16
+    );
     assert_eq!(count(&conn, "rulebook_events"), 0, "nothing is backfilled");
     assert_eq!(count(&conn, "account_snapshots"), 1);
     let kept = crate::store::snapshots::get(&conn, "legacy-snap").unwrap();
-    assert_eq!((kept.balance.as_deref(), kept.trading_days_completed), (Some("50000"), Some(0)));
+    assert_eq!(
+        (kept.balance.as_deref(), kept.trading_days_completed),
+        (Some("50000"), Some(0))
+    );
     assert_eq!(crate::store::accounts::get(&conn, &acc.id).unwrap(), acc);
     // Idempotent: a second run does nothing.
-    assert_eq!(super::migrate_with(&mut conn, &super::MIGRATIONS[..16]).unwrap(), 16);
+    assert_eq!(
+        super::migrate_with(&mut conn, &super::MIGRATIONS[..16]).unwrap(),
+        16
+    );
 }
 
 /// The unmerged Build 19 branch numbered the audit log 15. A journal it opened is at version 15
@@ -404,12 +675,17 @@ fn migration_16_repairs_a_journal_that_reached_15_on_the_build_19_branch() {
     let mut conn = Connection::open_in_memory().unwrap();
     super::configure(&conn).unwrap();
     super::migrate_with(&mut conn, &super::MIGRATIONS[..14]).unwrap();
-    let acc = crate::store::accounts::create(&mut conn, crate::store::tests::account_input("Branch")).unwrap();
+    let acc =
+        crate::store::accounts::create(&mut conn, crate::store::tests::account_input("Branch"))
+            .unwrap();
     legacy_snapshot(&conn, &acc.id);
     // What the branch's migration 15 did: the audit log only.
-    conn.execute_batch(include_str!("../../migrations/0016_rulebook_events.sql")).unwrap();
+    conn.execute_batch(include_str!("../../migrations/0016_rulebook_events.sql"))
+        .unwrap();
     conn.pragma_update(None, "user_version", 15).unwrap();
-    let rb: String = conn.query_row("SELECT id FROM rulebooks LIMIT 1", [], |r| r.get(0)).unwrap_or_default();
+    let rb: String = conn
+        .query_row("SELECT id FROM rulebooks LIMIT 1", [], |r| r.get(0))
+        .unwrap_or_default();
     if !rb.is_empty() {
         conn.execute(
             "INSERT INTO rulebook_events (id, rulebook_id, rulebook_version_id, action, actor, occurred_at)
@@ -420,11 +696,31 @@ fn migration_16_repairs_a_journal_that_reached_15_on_the_build_19_branch() {
     }
     let events_before = count(&conn, "rulebook_events");
     assert!(!balance_nullable(&conn));
-    assert_eq!(super::migrate_with(&mut conn, &super::MIGRATIONS[..16]).unwrap(), 16);
-    assert!(balance_nullable(&conn), "the skipped nullable snapshot rebuild was applied");
-    assert_eq!(count(&conn, "rulebook_events"), events_before, "existing audit rows kept");
-    assert_eq!(crate::store::snapshots::get(&conn, "legacy-snap").unwrap().balance.as_deref(), Some("50000"));
-    rejects(&conn, "UPDATE account_snapshots SET status = 'safe'", "immutable");
+    assert_eq!(
+        super::migrate_with(&mut conn, &super::MIGRATIONS[..16]).unwrap(),
+        16
+    );
+    assert!(
+        balance_nullable(&conn),
+        "the skipped nullable snapshot rebuild was applied"
+    );
+    assert_eq!(
+        count(&conn, "rulebook_events"),
+        events_before,
+        "existing audit rows kept"
+    );
+    assert_eq!(
+        crate::store::snapshots::get(&conn, "legacy-snap")
+            .unwrap()
+            .balance
+            .as_deref(),
+        Some("50000")
+    );
+    rejects(
+        &conn,
+        "UPDATE account_snapshots SET status = 'safe'",
+        "immutable",
+    );
     let triggers: i64 = conn
         .query_row("SELECT count(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'trg_rulebook_events_%'", [], |r| r.get(0))
         .unwrap();
@@ -445,39 +741,86 @@ fn drafts_assignments_and_the_log_survive_a_restart() {
         let d = private_copy(&mut conn, &acc, &base);
         let mut edit = content(&d);
         edit.change_reason = Some("Saved before closing".into());
-        let saved = store::update_draft(&mut conn, &d.version.id, &d.version.updated_at, edit, me("Before restart")).unwrap();
+        let saved = store::update_draft(
+            &mut conn,
+            &d.version.id,
+            &d.version.updated_at,
+            edit,
+            me("Before restart"),
+        )
+        .unwrap();
         (saved.version.id, saved.version.updated_at, acc)
     };
     let mut conn = super::open_file(&path).unwrap();
     let back = store::get_version(&conn, &v).unwrap();
-    assert_eq!((back.version.updated_at.as_str(), back.version.change_reason.as_deref()), (saved_at.as_str(), Some("Saved before closing")));
+    assert_eq!(
+        (
+            back.version.updated_at.as_str(),
+            back.version.change_reason.as_deref()
+        ),
+        (saved_at.as_str(), Some("Saved before closing"))
+    );
     // The reopened draft continues from the saved revision.
-    let published = store::publish_with(&mut conn, &v, None, Some(&saved_at), me("After restart")).unwrap();
+    let published =
+        store::publish_with(&mut conn, &v, None, Some(&saved_at), me("After restart")).unwrap();
     store::assign_with(
         &mut conn,
         assign(&acc, &published.version.id, "2026-10-05"),
-        Some(AssignmentGuard { expected_open_assignment_id: None, actor: "tester".into(), reason: Some("Restarted".into()) }),
+        Some(AssignmentGuard {
+            expected_open_assignment_id: None,
+            actor: "tester".into(),
+            reason: Some("Restarted".into()),
+        }),
     )
     .unwrap();
     drop(conn);
     let conn = super::open_file(&path).unwrap();
-    let log = events(&conn, RulebookEventQuery { rulebook_id: None, account_id: Some(acc) });
-    assert_eq!(log.iter().map(|e| e.0.as_str()).collect::<Vec<_>>(), ["draft_created", "draft_saved", "published", "assigned"]);
+    let log = events(
+        &conn,
+        RulebookEventQuery {
+            rulebook_id: None,
+            account_id: Some(acc),
+        },
+    );
+    assert_eq!(
+        log.iter().map(|e| e.0.as_str()).collect::<Vec<_>>(),
+        ["draft_created", "draft_saved", "published", "assigned"]
+    );
     drop(conn);
     let _ = std::fs::remove_dir_all(dir);
 }
 
 /// Generated ids and write times replaced by stable placeholders, consistently.
-fn normalize(v: &mut Value, key: Option<&str>, ids: &mut std::collections::BTreeMap<String, String>) {
+fn normalize(
+    v: &mut Value,
+    key: Option<&str>,
+    ids: &mut std::collections::BTreeMap<String, String>,
+) {
     match v {
-        Value::Object(o) => o.iter_mut().for_each(|(k, value)| normalize(value, Some(k), ids)),
+        Value::Object(o) => o
+            .iter_mut()
+            .for_each(|(k, value)| normalize(value, Some(k), ids)),
         Value::Array(a) => a.iter_mut().for_each(|value| normalize(value, None, ids)),
         Value::String(s) => {
-            if matches!(key, Some("createdAt" | "updatedAt" | "occurredAt" | "assignedAt" | "verifiedAt" | "userConfirmedAt" | "expectedUpdatedAt")) {
+            if matches!(
+                key,
+                Some(
+                    "createdAt"
+                        | "updatedAt"
+                        | "occurredAt"
+                        | "assignedAt"
+                        | "verifiedAt"
+                        | "userConfirmedAt"
+                        | "expectedUpdatedAt"
+                )
+            ) {
                 *s = "2026-10-21T00:00:00.000Z".into();
             } else if uuid::Uuid::parse_str(s).is_ok() {
                 let n = ids.len() + 1;
-                *s = ids.entry(s.clone()).or_insert_with(|| format!("00000000-0000-4000-8000-{n:012}")).clone();
+                *s = ids
+                    .entry(s.clone())
+                    .or_insert_with(|| format!("00000000-0000-4000-8000-{n:012}"))
+                    .clone();
             }
         }
         _ => (),
@@ -503,18 +846,42 @@ fn rulebook_command_wire_fixture() {
         "applicability": [],
     });
     let context = json!({ "actor": "tester", "reason": "Start my rules" });
-    let created = store::create_draft_with(&mut c, serde_json::from_value(create_input.clone()).unwrap(), me("Start my rules")).unwrap();
+    let created = store::create_draft_with(
+        &mut c,
+        serde_json::from_value(create_input.clone()).unwrap(),
+        me("Start my rules"),
+    )
+    .unwrap();
     let v = created.version.id.clone();
     let mut update = content(&created);
     update.change_reason = Some("Lower target".into());
-    update.rules[0].parameters = json!({ "amount": { "state": "value", "value": "2500" }, "basis": "balance" });
+    update.rules[0].parameters =
+        json!({ "amount": { "state": "value", "value": "2500" }, "basis": "balance" });
     let save_context = json!({ "actor": "tester", "reason": "Lower target" });
-    let saved = store::update_draft(&mut c, &v, &created.version.updated_at, update.clone(), me("Lower target")).unwrap();
+    let saved = store::update_draft(
+        &mut c,
+        &v,
+        &created.version.updated_at,
+        update.clone(),
+        me("Lower target"),
+    )
+    .unwrap();
     let issues = store::validate(&c, &v).unwrap();
     let publish_context = json!({ "actor": "tester", "reason": "Use it" });
-    let published = store::publish_with(&mut c, &v, None, Some(&saved.version.updated_at), me("Use it")).unwrap();
+    let published = store::publish_with(
+        &mut c,
+        &v,
+        None,
+        Some(&saved.version.updated_at),
+        me("Use it"),
+    )
+    .unwrap();
     let assign_input = assign(&acc, &v, "2026-10-05");
-    let guard = AssignmentGuard { expected_open_assignment_id: None, actor: "tester".into(), reason: Some("Assign".into()) };
+    let guard = AssignmentGuard {
+        expected_open_assignment_id: None,
+        actor: "tester".into(),
+        reason: Some("Assign".into()),
+    };
     let assigned = store::assign_with(&mut c, assign_input.clone(), Some(guard.clone())).unwrap();
     let second = store::create_draft_with(
         &mut c,
@@ -529,8 +896,17 @@ fn rulebook_command_wire_fixture() {
     )
     .unwrap();
     let discard_context = json!({ "actor": "tester", "reason": "Not needed" });
-    let discarded = store::discard_draft(&mut c, &second.version.id, &second.version.updated_at, me("Not needed")).unwrap();
-    let query = RulebookEventQuery { rulebook_id: None, account_id: Some(acc.clone()) };
+    let discarded = store::discard_draft(
+        &mut c,
+        &second.version.id,
+        &second.version.updated_at,
+        me("Not needed"),
+    )
+    .unwrap();
+    let query = RulebookEventQuery {
+        rulebook_id: None,
+        account_id: Some(acc.clone()),
+    };
     let mut payloads = json!([
         { "command": "list_rulebooks", "args": { "accountId": acc }, "output": store::list(&c, Some(&acc)).unwrap() },
         { "command": "create_rulebook_draft", "args": { "input": create_input, "context": context }, "output": created },
@@ -545,11 +921,18 @@ fn rulebook_command_wire_fixture() {
         { "command": "list_rulebook_events", "args": { "query": query }, "output": store::list_events(&c, &query).unwrap() },
     ]);
     normalize(&mut payloads, None, &mut Default::default());
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../src/test/fixtures/rulebook-wire.json");
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../src/test/fixtures/rulebook-wire.json");
     if std::env::var_os("FUNDEDFLOW_UPDATE_FIXTURES").is_some() {
-        std::fs::write(&path, format!("{}\n", serde_json::to_string_pretty(&payloads).unwrap())).unwrap();
+        std::fs::write(
+            &path,
+            format!("{}\n", serde_json::to_string_pretty(&payloads).unwrap()),
+        )
+        .unwrap();
     }
-    let stored: Value =
-        serde_json::from_str(&std::fs::read_to_string(path).expect("generate the rulebook wire fixture deliberately")).unwrap();
+    let stored: Value = serde_json::from_str(
+        &std::fs::read_to_string(path).expect("generate the rulebook wire fixture deliberately"),
+    )
+    .unwrap();
     assert_eq!(stored, payloads);
 }

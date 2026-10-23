@@ -86,7 +86,10 @@ pub(super) fn required(page_count: u64, page_size: u64) -> Required {
 }
 fn live_required(c: &Connection) -> Result<Required> {
     let get = |name| c.pragma_query_value(None, name, |r| r.get::<_, i64>(0));
-    Ok(required(get("page_count")?.max(0) as u64, get("page_size")?.max(0) as u64))
+    Ok(required(
+        get("page_count")?.max(0) as u64,
+        get("page_size")?.max(0) as u64,
+    ))
 }
 /// Free bytes at a folder. Tests substitute a fixed figure.
 pub(super) type Available<'a> = &'a dyn Fn(&Path) -> Result<u64>;

@@ -1,7 +1,7 @@
 //! Schema-level guarantees the rest of the app relies on.
 
 use super::*;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 
 const T: &str = "2026-10-19T14:30:00.000Z";
 
@@ -53,23 +53,34 @@ fn setup_trading() -> Connection {
 }
 
 fn count(conn: &Connection, table: &str) -> i64 {
-    conn.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0)).unwrap()
+    conn.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0))
+        .unwrap()
 }
 
 #[test]
 fn migrations_apply_cleanly_and_are_idempotent() {
     let mut conn = db();
-    let v: u32 = conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
+    let v: u32 = conn
+        .pragma_query_value(None, "user_version", |r| r.get(0))
+        .unwrap();
     assert_eq!(v, latest_version());
     // Second run is a no-op.
     assert_eq!(migrate(&mut conn).unwrap(), latest_version());
-    let ok: String = conn.query_row("PRAGMA integrity_check", [], |r| r.get(0)).unwrap();
+    let ok: String = conn
+        .query_row("PRAGMA integrity_check", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(ok, "ok");
     assert_eq!(count(&conn, "pragma_foreign_key_check"), 0);
-    let fk_on: i64 = conn.pragma_query_value(None, "foreign_keys", |r| r.get(0)).unwrap();
+    let fk_on: i64 = conn
+        .pragma_query_value(None, "foreign_keys", |r| r.get(0))
+        .unwrap();
     assert_eq!(fk_on, 1);
     let instruments: i64 = conn
-        .query_row("SELECT count(*) FROM instruments WHERE is_built_in = 1", [], |r| r.get(0))
+        .query_row(
+            "SELECT count(*) FROM instruments WHERE is_built_in = 1",
+            [],
+            |r| r.get(0),
+        )
         .unwrap();
     assert!(instruments >= 10);
 }
@@ -78,24 +89,44 @@ fn migrations_apply_cleanly_and_are_idempotent() {
 fn refuses_newer_schema() {
     let mut conn = Connection::open_in_memory().unwrap();
     conn.pragma_update(None, "user_version", 999).unwrap();
-    assert!(matches!(migrate(&mut conn), Err(MigrateError::NewerSchema { found: 999, .. })));
+    assert!(matches!(
+        migrate(&mut conn),
+        Err(MigrateError::NewerSchema { found: 999, .. })
+    ));
 }
 
 #[test]
 fn failed_migration_leaves_the_previous_version_intact() {
     let migrations = [
-        Migration { version: 1, name: "one", step: Step::Sql("CREATE TABLE a (x INTEGER);") },
-        Migration { version: 2, name: "two", step: Step::Sql("CREATE TABLE b (x INTEGER); SELECT nope FROM missing;") },
+        Migration {
+            version: 1,
+            name: "one",
+            step: Step::Sql("CREATE TABLE a (x INTEGER);"),
+        },
+        Migration {
+            version: 2,
+            name: "two",
+            step: Step::Sql("CREATE TABLE b (x INTEGER); SELECT nope FROM missing;"),
+        },
     ];
     let mut conn = Connection::open_in_memory().unwrap();
     let err = migrate_with(&mut conn, &migrations).unwrap_err();
     assert!(matches!(err, MigrateError::Migration { name: "two", .. }));
-    let v: u32 = conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
+    let v: u32 = conn
+        .pragma_query_value(None, "user_version", |r| r.get(0))
+        .unwrap();
     assert_eq!(v, 1);
     let b_exists: i64 = conn
-        .query_row("SELECT count(*) FROM sqlite_schema WHERE name = 'b'", [], |r| r.get(0))
+        .query_row(
+            "SELECT count(*) FROM sqlite_schema WHERE name = 'b'",
+            [],
+            |r| r.get(0),
+        )
         .unwrap();
-    assert_eq!(b_exists, 0, "the failed migration's DDL must be rolled back");
+    assert_eq!(
+        b_exists, 0,
+        "the failed migration's DDL must be rolled back"
+    );
 }
 
 #[test]
@@ -110,9 +141,13 @@ fn open_file_creates_the_journal_and_backs_up_before_upgrading() {
         migrate_with(&mut conn, &MIGRATIONS[..1]).unwrap();
     }
     let conn = open_file(&path).unwrap();
-    let v: u32 = conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
+    let v: u32 = conn
+        .pragma_query_value(None, "user_version", |r| r.get(0))
+        .unwrap();
     assert_eq!(v, latest_version());
-    let mode: String = conn.pragma_query_value(None, "journal_mode", |r| r.get(0)).unwrap();
+    let mode: String = conn
+        .pragma_query_value(None, "journal_mode", |r| r.get(0))
+        .unwrap();
     assert_eq!(mode, "wal");
     let backup = path.with_extension(format!("db.before-v{}.bak", latest_version()));
     assert!(backup.exists(), "expected a backup at {}", backup.display());
@@ -142,17 +177,33 @@ fn reimporting_the_same_trade_conflicts_per_account() {
 fn trade_constraints_reject_inconsistent_rows() {
     let conn = setup_trading();
     let attempt = |sql: &str| {
-        conn.execute(&format!("UPDATE trades SET {sql} WHERE id = 't1'"), []).is_err()
+        conn.execute(&format!("UPDATE trades SET {sql} WHERE id = 't1'"), [])
+            .is_err()
     };
     assert!(attempt("net_pnl_micros = 1"), "net must equal gross − fees");
-    assert!(attempt("exit_price = NULL"), "exit time and price go together");
-    assert!(attempt("exit_at = '2026-10-19T14:00:00.000Z'"), "exit before entry");
+    assert!(
+        attempt("exit_price = NULL"),
+        "exit time and price go together"
+    );
+    assert!(
+        attempt("exit_at = '2026-10-19T14:00:00.000Z'"),
+        "exit before entry"
+    );
     assert!(attempt("quantity = '-1'"), "quantity must be positive");
     assert!(attempt("quantity = '1.2.3'"));
     assert!(attempt("entry_price = '1e5'"));
-    assert!(attempt("entry_at = '2026-10-19 14:30'"), "instants are canonical UTC");
-    assert!(attempt("pnl_status = 'open'"), "a closed trade cannot be open");
-    assert!(attempt("account_id = 'other'"), "trades never move between accounts");
+    assert!(
+        attempt("entry_at = '2026-10-19 14:30'"),
+        "instants are canonical UTC"
+    );
+    assert!(
+        attempt("pnl_status = 'open'"),
+        "a closed trade cannot be open"
+    );
+    assert!(
+        attempt("account_id = 'other'"),
+        "trades never move between accounts"
+    );
     assert!(attempt("dedup_key = 'x'"), "import provenance is immutable");
     // Editable fields can change.
     conn.execute("UPDATE trades SET notes_md = 'late entry', fees_micros = 0, net_pnl_micros = 40000000 WHERE id = 't1'", [])
@@ -168,7 +219,13 @@ fn original_import_rows_are_immutable() {
         [],
     )
     .unwrap();
-    assert!(conn.execute("UPDATE import_rows SET raw_json = '[\"b\"]' WHERE id = 'r1'", []).is_err());
+    assert!(
+        conn.execute(
+            "UPDATE import_rows SET raw_json = '[\"b\"]' WHERE id = 'r1'",
+            []
+        )
+        .is_err()
+    );
 }
 
 #[test]
@@ -182,7 +239,12 @@ fn round_trip_sources_are_immutable() {
         [],
     )
     .unwrap();
-    let err = conn.execute("UPDATE trade_round_trips SET sell_price = '1' WHERE trade_id = 't1'", []).unwrap_err();
+    let err = conn
+        .execute(
+            "UPDATE trade_round_trips SET sell_price = '1' WHERE trade_id = 't1'",
+            [],
+        )
+        .unwrap_err();
     assert!(err.to_string().contains("immutable"), "{err}");
 }
 
@@ -200,14 +262,22 @@ fn journal_trade_must_belong_to_the_same_account() {
     insert("j1", "acc1", Some("t1")).unwrap();
     insert("j2", "acc1", None).unwrap();
     assert!(insert("j3", "acc2", Some("t1")).is_err());
-    assert!(conn.execute("UPDATE journal_entries SET account_id = 'acc2' WHERE id = 'j1'", []).is_err());
-    assert!(conn
-        .execute(
+    assert!(
+        conn.execute(
+            "UPDATE journal_entries SET account_id = 'acc2' WHERE id = 'j1'",
+            []
+        )
+        .is_err()
+    );
+    assert!(
+        conn.execute(
             "INSERT INTO journal_entries (id, account_id, entry_at, title, created_at, updated_at)
              VALUES ('j4', 'acc1', ?1, '   ', ?1, ?1)",
             [T],
         )
-        .is_err(), "title is required");
+        .is_err(),
+        "title is required"
+    );
 }
 
 #[test]
@@ -248,15 +318,31 @@ fn deleting_an_account_removes_everything_it_owns() {
 
     // Cascades through trades, imports, journal and rulebooks (frozen-rule
     // triggers allow the cascade because the parent version is deleted first).
-    conn.execute("DELETE FROM accounts WHERE id = 'acc1'", []).unwrap();
+    conn.execute("DELETE FROM accounts WHERE id = 'acc1'", [])
+        .unwrap();
     for table in [
-        "trades", "import_batches", "import_rows", "journal_entries", "journal_entry_tags", "trade_reviews", "trade_corrections",
-        "account_status_events", "legacy_account_rulebook_versions", "legacy_account_rules",
-        "rulebooks", "rulebook_versions", "rule_definitions", "account_rulebook_assignments",
+        "trades",
+        "import_batches",
+        "import_rows",
+        "journal_entries",
+        "journal_entry_tags",
+        "trade_reviews",
+        "trade_corrections",
+        "account_status_events",
+        "legacy_account_rulebook_versions",
+        "legacy_account_rules",
+        "rulebooks",
+        "rulebook_versions",
+        "rule_definitions",
+        "account_rulebook_assignments",
     ] {
         assert_eq!(count(&conn, table), 0, "{table} should be empty");
     }
-    assert_eq!(count(&conn, "tags"), 1, "tags are shared and outlive the account");
+    assert_eq!(
+        count(&conn, "tags"),
+        1,
+        "tags are shared and outlive the account"
+    );
 }
 
 #[test]
@@ -268,9 +354,15 @@ fn hard_deleting_a_trade_unlinks_journal_entries() {
         [T],
     )
     .unwrap();
-    conn.execute("DELETE FROM trades WHERE id = 't1'", []).unwrap();
-    let trade: Option<String> =
-        conn.query_row("SELECT trade_id FROM journal_entries WHERE id = 'j1'", [], |r| r.get(0)).unwrap();
+    conn.execute("DELETE FROM trades WHERE id = 't1'", [])
+        .unwrap();
+    let trade: Option<String> = conn
+        .query_row(
+            "SELECT trade_id FROM journal_entries WHERE id = 'j1'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
     assert_eq!(trade, None);
 }
 
@@ -290,8 +382,17 @@ fn activated_legacy_rulebooks_are_frozen() {
     ))
     .unwrap();
 
-    assert!(conn.execute("UPDATE legacy_account_rules SET params_json = '{}' WHERE id = 'r1'", []).is_err());
-    assert!(conn.execute("DELETE FROM legacy_account_rules WHERE id = 'r1'", []).is_err());
+    assert!(
+        conn.execute(
+            "UPDATE legacy_account_rules SET params_json = '{}' WHERE id = 'r1'",
+            []
+        )
+        .is_err()
+    );
+    assert!(
+        conn.execute("DELETE FROM legacy_account_rules WHERE id = 'r1'", [])
+            .is_err()
+    );
     assert!(conn
         .execute(
             &format!("INSERT INTO legacy_account_rules (id, rulebook_version_id, rule_type, created_at, updated_at)
@@ -334,7 +435,10 @@ fn audit_events_are_append_only() {
         params![T],
     )
     .unwrap();
-    assert!(conn.execute("UPDATE audit_events SET summary = 'x'", []).is_err());
+    assert!(
+        conn.execute("UPDATE audit_events SET summary = 'x'", [])
+            .is_err()
+    );
 }
 
 #[test]
@@ -378,7 +482,9 @@ fn migration_11_upgrades_a_v10_journal_without_changing_its_rows() {
     assert!(blocked.is_err());
 
     assert_eq!(migrate_with(&mut conn, &MIGRATIONS[..11]).unwrap(), 11);
-    let accounts: i64 = conn.query_row("SELECT COUNT(*) FROM accounts", [], |r| r.get(0)).unwrap();
+    let accounts: i64 = conn
+        .query_row("SELECT COUNT(*) FROM accounts", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(accounts, 2);
     let archive_events: Vec<(String, String, String)> = conn
         .prepare("SELECT account_id, action, occurred_at FROM account_archive_events")
@@ -387,7 +493,10 @@ fn migration_11_upgrades_a_v10_journal_without_changing_its_rows() {
         .unwrap()
         .collect::<Result<_, _>>()
         .unwrap();
-    assert_eq!(archive_events, [("archived".into(), "archived".into(), T.into())]);
+    assert_eq!(
+        archive_events,
+        [("archived".into(), "archived".into(), T.into())]
+    );
     // After: the same number is allowed beside a failed account, but not beside another live one.
     conn.execute(
         "INSERT INTO accounts (id, name, broker, external_ref, starting_balance_micros, timezone, created_at, updated_at)

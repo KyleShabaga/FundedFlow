@@ -2,7 +2,7 @@
 //! account was bought under, with a frozen copy of the terms and provenance.
 //! Append-only. Commercial terms never feed rule calculations.
 
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
 use super::catalogue;
@@ -37,7 +37,8 @@ pub struct OfferSelection {
     pub terms: serde_json::Value,
 }
 
-const SELECT: &str = "SELECT id, account_id, catalogue_version_id, commercial_offer_id, promotion_id, selected_at,
+const SELECT: &str =
+    "SELECT id, account_id, catalogue_version_id, commercial_offer_id, promotion_id, selected_at,
         recorded_at, note, terms_json FROM account_offer_selections";
 
 fn from_row(r: &rusqlite::Row) -> rusqlite::Result<OfferSelection> {
@@ -51,15 +52,18 @@ fn from_row(r: &rusqlite::Row) -> rusqlite::Result<OfferSelection> {
         selected_at: r.get(5)?,
         recorded_at: r.get(6)?,
         note: r.get(7)?,
-        terms: serde_json::from_str(&text)
-            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(8, rusqlite::types::Type::Text, Box::new(e)))?,
+        terms: serde_json::from_str(&text).map_err(|e| {
+            rusqlite::Error::FromSqlConversionFailure(8, rusqlite::types::Type::Text, Box::new(e))
+        })?,
     })
 }
 
 /// Readable for archived accounts. Oldest first.
 pub fn list(conn: &Connection, account_id: &str) -> AppResult<Vec<OfferSelection>> {
     require_account(conn, account_id)?;
-    let mut stmt = conn.prepare(&format!("{SELECT} WHERE account_id = ?1 ORDER BY selected_at, id"))?;
+    let mut stmt = conn.prepare(&format!(
+        "{SELECT} WHERE account_id = ?1 ORDER BY selected_at, id"
+    ))?;
     let rows = stmt.query_map([account_id], from_row)?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
@@ -71,9 +75,16 @@ pub fn list(conn: &Connection, account_id: &str) -> AppResult<Vec<OfferSelection
 pub fn select(conn: &mut Connection, input: OfferSelectionInput) -> AppResult<OfferSelection> {
     let selected_at = match input.selected_at.as_deref() {
         None => now(),
-        Some(s) => format_instant(parse_payload_time(s).map_err(|m| AppError::invalid("selectedAt", m))?),
+        Some(s) => {
+            format_instant(parse_payload_time(s).map_err(|m| AppError::invalid("selectedAt", m))?)
+        }
     };
-    let note = input.note.as_deref().map(str::trim).filter(|n| !n.is_empty()).map(str::to_string);
+    let note = input
+        .note
+        .as_deref()
+        .map(str::trim)
+        .filter(|n| !n.is_empty())
+        .map(str::to_string);
     if note.as_ref().is_some_and(|n| n.chars().count() > 2_000) {
         return Err(AppError::invalid("note", "must be at most 2000 characters"));
     }
@@ -85,7 +96,10 @@ pub fn select(conn: &mut Connection, input: OfferSelectionInput) -> AppResult<Of
         |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
     )?;
     let version = version.ok_or_else(|| {
-        AppError::invalid("commercialOfferId", "select the account's catalogue version before recording an offer")
+        AppError::invalid(
+            "commercialOfferId",
+            "select the account's catalogue version before recording an offer",
+        )
     })?;
 
     let snapshot = catalogue::load(&tx)?;
@@ -96,17 +110,27 @@ pub fn select(conn: &mut Connection, input: OfferSelectionInput) -> AppResult<Of
         .find(|o| o.id == input.commercial_offer_id)
         .ok_or_else(|| AppError::invalid("commercialOfferId", "unknown commercial offer"))?;
     if offer.catalogue_version_id != version {
-        return Err(AppError::invalid("commercialOfferId", "the offer belongs to a different catalogue version than the account's"));
+        return Err(AppError::invalid(
+            "commercialOfferId",
+            "the offer belongs to a different catalogue version than the account's",
+        ));
     }
     if offer.phase_path_id.is_some() && offer.phase_path_id != path {
-        return Err(AppError::invalid("commercialOfferId", "the offer is for a different path than the account's selected one"));
+        return Err(AppError::invalid(
+            "commercialOfferId",
+            "the offer is for a different path than the account's selected one",
+        ));
     }
     // Instants are stored in one fixed format, so text order is time order. Open bounds overlap everything.
     let inside = |from: &Option<String>, to: &Option<String>| {
-        from.as_ref().is_none_or(|f| *f <= selected_at) && to.as_ref().is_none_or(|t| selected_at < *t)
+        from.as_ref().is_none_or(|f| *f <= selected_at)
+            && to.as_ref().is_none_or(|t| selected_at < *t)
     };
     if !inside(&offer.effective_from, &offer.effective_to) {
-        return Err(AppError::invalid("selectedAt", "the offer was not in effect on the selection date"));
+        return Err(AppError::invalid(
+            "selectedAt",
+            "the offer was not in effect on the selection date",
+        ));
     }
 
     let promotion = match &input.promotion_id {
@@ -119,16 +143,24 @@ pub fn select(conn: &mut Connection, input: OfferSelectionInput) -> AppResult<Of
                 .find(|p| &p.id == id)
                 .ok_or_else(|| AppError::invalid("promotionId", "unknown promotion"))?;
             if Some(&p.provider_id) != provider.as_ref() {
-                return Err(AppError::invalid("promotionId", "the promotion belongs to a different provider"));
+                return Err(AppError::invalid(
+                    "promotionId",
+                    "the promotion belongs to a different provider",
+                ));
             }
             let link = snapshot
                 .graph
                 .promotion_offers
                 .iter()
                 .find(|l| &l.promotion_id == id && l.commercial_offer_id == offer.id)
-                .ok_or_else(|| AppError::invalid("promotionId", "the promotion does not apply to this offer"))?;
+                .ok_or_else(|| {
+                    AppError::invalid("promotionId", "the promotion does not apply to this offer")
+                })?;
             if !inside(&p.valid_from, &p.valid_to) || !inside(&link.valid_from, &link.valid_to) {
-                return Err(AppError::invalid("promotionId", "the promotion was not valid on the selection date"));
+                return Err(AppError::invalid(
+                    "promotionId",
+                    "the promotion was not valid on the selection date",
+                ));
             }
             Some((p, link))
         }
@@ -141,9 +173,15 @@ pub fn select(conn: &mut Connection, input: OfferSelectionInput) -> AppResult<Of
         }
         ids.sort();
         ids.dedup();
-        ids.into_iter().filter_map(|id| snapshot.sources.iter().find(|s| &s.id == id)).collect()
+        ids.into_iter()
+            .filter_map(|id| snapshot.sources.iter().find(|s| &s.id == id))
+            .collect()
     };
-    let version_row = snapshot.graph.catalogue_versions.iter().find(|v| v.id == version);
+    let version_row = snapshot
+        .graph
+        .catalogue_versions
+        .iter()
+        .find(|v| v.id == version);
     let terms = serde_json::json!({
         "offer": offer,
         "promotion": promotion.as_ref().map(|(p, _)| p),
@@ -176,7 +214,9 @@ pub fn select(conn: &mut Connection, input: OfferSelectionInput) -> AppResult<Of
             serde_json::to_string(&terms).map_err(|e| AppError::Database { message: e.to_string() })?
         ],
     )?;
-    let saved = tx.query_row(&format!("{SELECT} WHERE id = ?1"), [&id], from_row).optional()?;
+    let saved = tx
+        .query_row(&format!("{SELECT} WHERE id = ?1"), [&id], from_row)
+        .optional()?;
     tx.commit()?;
     saved.ok_or_else(|| AppError::not_found("offer selection", &id))
 }

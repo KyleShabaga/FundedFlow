@@ -11,7 +11,10 @@ use std::path::Path;
 
 use rusqlite::{Connection, Transaction};
 
-pub(crate) use steps::{convert_legacy_rulebooks, map_legacy_catalogue, provider_for_firm, rederive_trading_days, rulebook_events};
+pub(crate) use steps::{
+    convert_legacy_rulebooks, map_legacy_catalogue, provider_for_firm, rederive_trading_days,
+    rulebook_events,
+};
 
 /// File name of the journal database inside the app data directory
 /// (`%APPDATA%\com.fundedflow.desktop\` on Windows).
@@ -74,7 +77,9 @@ pub const MIGRATIONS: &[Migration] = &[
     Migration {
         version: 8,
         name: "freeze_ever_verified",
-        step: Step::Sql(include_str!("../../migrations/0008_freeze_ever_verified.sql")),
+        step: Step::Sql(include_str!(
+            "../../migrations/0008_freeze_ever_verified.sql"
+        )),
     },
     Migration {
         version: 9,
@@ -94,12 +99,16 @@ pub const MIGRATIONS: &[Migration] = &[
     Migration {
         version: 12,
         name: "snapshot_rulebook_fk",
-        step: Step::Sql(include_str!("../../migrations/0012_snapshot_rulebook_fk.sql")),
+        step: Step::Sql(include_str!(
+            "../../migrations/0012_snapshot_rulebook_fk.sql"
+        )),
     },
     Migration {
         version: 13,
         name: "account_offer_selections",
-        step: Step::Sql(include_str!("../../migrations/0013_account_offer_selections.sql")),
+        step: Step::Sql(include_str!(
+            "../../migrations/0013_account_offer_selections.sql"
+        )),
     },
     Migration {
         version: 14,
@@ -109,7 +118,9 @@ pub const MIGRATIONS: &[Migration] = &[
     Migration {
         version: 15,
         name: "nullable_engine_snapshots",
-        step: Step::Sql(include_str!("../../migrations/0015_nullable_engine_snapshots.sql")),
+        step: Step::Sql(include_str!(
+            "../../migrations/0015_nullable_engine_snapshots.sql"
+        )),
     },
     Migration {
         version: 16,
@@ -129,12 +140,16 @@ pub const MIGRATIONS: &[Migration] = &[
     Migration {
         version: 19,
         name: "rulebook_binding_provider",
-        step: Step::Sql(include_str!("../../migrations/0019_rulebook_binding_provider.sql")),
+        step: Step::Sql(include_str!(
+            "../../migrations/0019_rulebook_binding_provider.sql"
+        )),
     },
     Migration {
         version: 20,
         name: "source_fact_immutability",
-        step: Step::Sql(include_str!("../../migrations/0020_source_fact_immutability.sql")),
+        step: Step::Sql(include_str!(
+            "../../migrations/0020_source_fact_immutability.sql"
+        )),
     },
     Migration {
         version: 21,
@@ -159,14 +174,26 @@ pub fn configure(conn: &Connection) -> rusqlite::Result<()> {
 #[derive(Debug)]
 pub enum MigrateError {
     /// The journal was written by a newer FundedFlow build.
-    NewerSchema { found: u32, supported: u32 },
+    NewerSchema {
+        found: u32,
+        supported: u32,
+    },
     /// Migration `version` failed and was rolled back. Each migration commits
     /// on its own, so the journal is at `reached`: `from` if this was the
     /// first step of the upgrade, later if earlier steps were already saved.
-    Migration { name: &'static str, version: u32, from: u32, reached: u32, source: rusqlite::Error },
+    Migration {
+        name: &'static str,
+        version: u32,
+        from: u32,
+        reached: u32,
+        source: rusqlite::Error,
+    },
     /// The pre-upgrade backup could not be written (e.g. disk full); the
     /// upgrade was not attempted and the journal is still at `current`.
-    Backup { current: u32, message: String },
+    Backup {
+        current: u32,
+        message: String,
+    },
     Sqlite(rusqlite::Error),
     Io(std::io::Error),
 }
@@ -184,14 +211,23 @@ impl std::fmt::Display for MigrateError {
                 f,
                 "journal schema version {found} is newer than this app supports ({supported})"
             ),
-            MigrateError::Migration { name, version, from, reached, source } => write!(
+            MigrateError::Migration {
+                name,
+                version,
+                from,
+                reached,
+                source,
+            } => write!(
                 f,
                 "migration {version} '{name}' failed and was rolled back: {source} \
                  (upgrade started at version {from}; the journal is at version {reached})"
             ),
             MigrateError::Sqlite(e) => write!(f, "database error: {e}"),
             MigrateError::Backup { current, message } => {
-                write!(f, "could not write the pre-upgrade backup of version {current}: {message}")
+                write!(
+                    f,
+                    "could not write the pre-upgrade backup of version {current}: {message}"
+                )
             }
             MigrateError::Io(e) => write!(f, "could not prepare the data directory: {e}"),
         }
@@ -211,12 +247,18 @@ pub fn migrate(conn: &mut Connection) -> Result<u32, MigrateError> {
     migrate_with(conn, MIGRATIONS)
 }
 
-pub(crate) fn migrate_with(conn: &mut Connection, migrations: &[Migration]) -> Result<u32, MigrateError> {
+pub(crate) fn migrate_with(
+    conn: &mut Connection,
+    migrations: &[Migration],
+) -> Result<u32, MigrateError> {
     configure(conn)?;
     let current = current_version(conn)?;
     let supported = migrations.last().map(|m| m.version).unwrap_or(0);
     if current > supported {
-        return Err(MigrateError::NewerSchema { found: current, supported });
+        return Err(MigrateError::NewerSchema {
+            found: current,
+            supported,
+        });
     }
     let mut reached = current;
     for m in migrations.iter().filter(|m| m.version > current) {
@@ -271,7 +313,10 @@ fn open(path: &Path, untrusted: bool) -> Result<Connection, MigrateError> {
     // (WAL mode is stored in the database header).
     let current = current_version(&conn)?;
     if current > latest_version() {
-        return Err(MigrateError::NewerSchema { found: current, supported: latest_version() });
+        return Err(MigrateError::NewerSchema {
+            found: current,
+            supported: latest_version(),
+        });
     }
     conn.pragma_update_and_check(None, "journal_mode", "WAL", |r| r.get::<_, String>(0))?;
     conn.pragma_update(None, "synchronous", "NORMAL")?;
@@ -280,7 +325,10 @@ fn open(path: &Path, untrusted: bool) -> Result<Connection, MigrateError> {
         // A consistent copy (includes WAL content) the user can restore if an
         // upgrade goes wrong. Retain earlier recovery points before replacing
         // the stable path: a retry may start after only some migrations committed.
-        let backup_error = |e: &dyn std::fmt::Display| MigrateError::Backup { current, message: e.to_string() };
+        let backup_error = |e: &dyn std::fmt::Display| MigrateError::Backup {
+            current,
+            message: e.to_string(),
+        };
         let backup = backup_path(path);
         if backup.exists() {
             let retained = backup.with_extension(format!("previous-{}.bak", uuid::Uuid::now_v7()));
@@ -293,18 +341,19 @@ fn open(path: &Path, untrusted: bool) -> Result<Connection, MigrateError> {
             retain().map_err(|e| backup_error(&e))?;
             std::fs::remove_file(&backup).map_err(|e| backup_error(&e))?;
         }
-        conn.execute("VACUUM INTO ?1", [backup.to_string_lossy()]).map_err(|e| backup_error(&e))?;
+        conn.execute("VACUUM INTO ?1", [backup.to_string_lossy()])
+            .map_err(|e| backup_error(&e))?;
     }
     migrate(&mut conn)?;
     Ok(conn)
 }
 
 #[cfg(test)]
+mod catalogue_tests;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod upgrade_tests;
-#[cfg(test)]
-mod catalogue_tests;
 /// Writes the catalogue fixture into a database (any schema version from 6), for other modules' tests.
 #[cfg(test)]
 pub(crate) fn catalogue_tests_save(conn: &Connection, fixture: &crate::parity::CatalogueFixture) {
@@ -318,6 +367,6 @@ pub(crate) fn catalogue_tests_seeded() -> Connection {
 #[cfg(test)]
 mod legacy_rulebook_tests;
 #[cfg(test)]
-mod rulebook_tests;
-#[cfg(test)]
 mod rulebook_editor_tests;
+#[cfg(test)]
+mod rulebook_tests;
