@@ -39,7 +39,7 @@ import {
   ValidationSummary,
   type ValidationIssue,
 } from "../../../design-system";
-import { useActiveAccount } from "../../accounts/active-account";
+import { switchFailure, useActiveAccount } from "../../accounts/active-account";
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import { clock, longDay, STATUS_NOTE, tradePath, zoneLabel } from "../../journal/components/presentation";
 import { useLibrary } from "../../library/hooks/library";
@@ -152,7 +152,7 @@ function DayReview({ account, day, selectedId, onSelect }: {
 
       {selectedId !== null && selectedId !== account.id && (
         <InlineNotice tone="info" live="polite" title="This review isn't for the selected account"
-          actions={account.archivedAt === null ? <Button size="sm" onClick={() => { onSelect(account.id).catch(() => toast.show({ tone: "error", title: "The account wasn't switched" })); }}>Select {account.name}</Button> : undefined}>
+          actions={account.archivedAt === null ? <Button size="sm" onClick={() => { onSelect(account.id).catch(error => toast.show(switchFailure(error, { tone: "error", title: "The account wasn't switched" }))); }}>Select {account.name}</Button> : undefined}>
           You are viewing <strong>{account.name}</strong>'s review. The selection at the top of the window is a different account; nothing from it is shown here.
         </InlineNotice>
       )}

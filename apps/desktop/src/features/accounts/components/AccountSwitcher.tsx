@@ -11,7 +11,7 @@ import { Link } from "react-router-dom";
 import { DropdownMenu, formatInstant, type MenuEntry, StatusDot, useToast } from "../../../design-system";
 import { useDisplayTimeZone } from "../../settings/display-time-zone";
 import { useGuardedNavigate } from "../../shared/hooks/use-leave-guard";
-import { canBeActive, useActiveAccount } from "../active-account";
+import { canBeActive, switchFailure, useActiveAccount } from "../active-account";
 import { freshnessLine, policyText, type FreshnessStatus } from "../freshness";
 import { useAccountFreshness } from "../hooks/freshness";
 import { accountLabel } from "./presentation";
@@ -44,7 +44,7 @@ export function AccountSwitcher() {
   const choose = (id: string, name: string) =>
     select(id)
       .then(() => toast.show({ tone: "success", title: `${name} is the active account` }))
-      .catch(() => toast.show({ tone: "error", title: "The active account wasn't changed", description: "Try again when local data is available." }));
+      .catch(error => toast.show(switchFailure(error, { tone: "error", title: "The active account wasn't changed", description: "Try again when local data is available." })));
   // Explanatory times use the display time zone; the freshness itself compares instants, so the zone never changes it.
   const at = (instant: string) => (display.kind === "resolved" ? formatInstant(instant, { timeZone: display.zone, zoneName: "offset" }) : formatInstant(instant, { zoneName: "offset" }));
   const item = (a: (typeof choosable)[number]): MenuEntry => {

@@ -14,7 +14,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Button, DayCard, EmptyState, ErrorState, formatMoney, InlineNotice, LoadingState, MetricCard, StatusIndicator, useToast,
 } from "../../../design-system";
-import { useActiveAccount } from "../../accounts/active-account";
+import { switchFailure, useActiveAccount } from "../../accounts/active-account";
 import { ACCOUNT_TYPE_LABELS, AccountStatus, accountLabel, RulebookSummary, useAccountFacts } from "../../accounts/components/presentation";
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import { useCommitCsvImport, useImportHistory } from "../../imports/hooks/imports";
@@ -62,7 +62,7 @@ export function TodayPage() {
   const show = (a: AccountViewModel) => {
     setShowing(a.id);
     active.select(a.id)
-      .catch(() => toast.show({ tone: "error", title: "The account wasn't switched", description: "Try again when local data is available." }))
+      .catch(error => toast.show(switchFailure(error, { tone: "error", title: "The account wasn't switched", description: "Try again when local data is available." })))
       .finally(() => setShowing(null));
   };
   const overview = live.length > 1 || (live.length > 0 && (selected === null || !live.some(a => a.id === selected.id)))
