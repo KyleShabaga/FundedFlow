@@ -68,16 +68,33 @@ pub type Data = BTreeMap<String, Table>;
 fn quote(name: &str) -> String {
     format!("\"{}\"", name.replace('"', "\"\""))
 }
+/// Whether a schema object is one of SQLite's own, which archive checks skip. Any other object whose name
+/// starts with `sqlite` (in any case) could hide from those checks, so it fails validation.
+fn internal(kind: &str, name: &str, sql_is_null: bool) -> Result<bool> {
+    if !name.get(..6).is_some_and(|p| p.eq_ignore_ascii_case("sqlite")) {
+        return Ok(false);
+    }
+    let allowed = match kind {
+        "table" => matches!(name, "sqlite_sequence" | "sqlite_stat1" | "sqlite_stat4"),
+        "index" => name.starts_with("sqlite_autoindex_") && sql_is_null,
+        _ => false,
+    };
+    if allowed { Ok(true) } else { Err(fail(Code::Integrity)) }
+}
 pub fn dump(conn: &Connection) -> Result<Data> {
     let pages: i64 = conn.pragma_query_value(None, "page_count", |r| r.get(0))?;
     let page_size: i64 = conn.pragma_query_value(None, "page_size", |r| r.get(0))?;
     if pages.saturating_mul(page_size) > MAX_ENTRY as i64 {
         return Err(fail(Code::LimitExceeded));
     }
-    let mut stmt = conn.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")?;
-    let tables = stmt
-        .query_map([], |r| r.get::<_, String>(0))?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
+    let mut stmt = conn.prepare("SELECT name,sql IS NULL FROM sqlite_schema WHERE type='table' ORDER BY name")?;
+    let mut tables = Vec::new();
+    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?)))? {
+        let (name, sql_is_null) = row?;
+        if !internal("table", &name, sql_is_null)? {
+            tables.push(name);
+        }
+    }
     let mut data = BTreeMap::new();
     let mut total = 0u64;
     for name in tables {
@@ -463,15 +480,20 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
     })
 }
 fn schema(conn: &Connection) -> Result<Vec<(String, String, String)>> {
-    let mut s = conn.prepare("SELECT type,name,sql FROM sqlite_schema WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY type,name")?;
-    Ok(s.query_map([], |r| {
-        Ok((
-            r.get(0)?,
-            r.get(1)?,
-            r.get::<_, String>(2)?.replace("\r\n", "\n"),
-        ))
-    })?
-    .collect::<rusqlite::Result<_>>()?)
+    let mut s = conn.prepare("SELECT type,name,sql FROM sqlite_schema ORDER BY type,name")?;
+    let mut objects = Vec::new();
+    for row in s.query_map([], |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, Option<String>>(2)?))
+    })? {
+        let (kind, name, sql) = row?;
+        if internal(&kind, &name, sql.is_none())? {
+            continue;
+        }
+        if let Some(sql) = sql {
+            objects.push((kind, name, sql.replace("\r\n", "\n")));
+        }
+    }
+    Ok(objects)
 }
 pub fn validate_database(path: &Path, version: u32) -> Result<()> {
     let c = readonly(path)?;

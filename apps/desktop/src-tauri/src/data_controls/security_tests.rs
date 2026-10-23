@@ -253,3 +253,131 @@ fn populated_v3_archive_inspects_then_upgrades_only_staged_copy() {
     );
     assert_eq!(fs::read(&path).unwrap(), original);
 }
+/// `source` with `sql` applied to its journal and the manifest entry rehashed, so only the schema differs.
+fn tampered(root: &Path, source: &Path, sql: &str) -> std::path::PathBuf {
+    let mut entries = unpack(source);
+    let db = root.join("tampered.db");
+    let _ = fs::remove_file(&db);
+    fs::write(&db, &entries.iter().find(|(n, _)| n == "journal.sqlite").unwrap().1).unwrap();
+    Connection::open(&db).unwrap().execute_batch(sql).unwrap();
+    let bytes = fs::read(&db).unwrap();
+    let manifest = entries.iter_mut().find(|(n, _)| n == "manifest.json").unwrap();
+    let mut value: serde_json::Value = serde_json::from_slice(&manifest.1).unwrap();
+    for entry in value["entries"].as_array_mut().unwrap() {
+        if entry["path"] == "journal.sqlite" {
+            entry["bytes"] = serde_json::json!(bytes.len());
+            entry["sha256"] = serde_json::json!(filesystem::digest(&bytes));
+        }
+    }
+    manifest.1 = serde_json::to_vec(&value).unwrap();
+    entries.iter_mut().find(|(n, _)| n == "journal.sqlite").unwrap().1 = bytes;
+    let path = root.join("tampered.zip");
+    repack(&path, entries);
+    path
+}
+#[test]
+fn sqlite_lookalike_objects_cannot_hide_from_schema_or_data_checks() {
+    let dir = tempfile::tempdir().unwrap();
+    let good = good(dir.path());
+    let mut outcomes = Vec::new();
+    for sql in [
+        "CREATE TRIGGER sqlitex_evil AFTER INSERT ON settings BEGIN DELETE FROM accounts; END;",
+        "CREATE TABLE SQLITE1(x);",
+        "CREATE VIEW sqliteA AS SELECT 1;",
+        "PRAGMA writable_schema=ON; INSERT INTO sqlite_schema(type,name,tbl_name,rootpage,sql) VALUES('trigger','sqlite_x','settings',0,'CREATE TRIGGER sqlite_x AFTER INSERT ON settings BEGIN DELETE FROM accounts; END');",
+    ] {
+        let path = tampered(dir.path(), &good, sql);
+        let inspected = archive::inspect_to(&path, dir.path()).err().map(|e| e.code);
+        let validated =
+            archive::validate_database(&dir.path().join("tampered.db"), crate::db::latest_version())
+                .err()
+                .map(|e| e.code);
+        outcomes.push((sql, inspected, validated));
+    }
+    // A hidden table must not escape the data.json comparison either.
+    let c = Connection::open_in_memory().unwrap();
+    c.execute_batch("CREATE TABLE SQLITE1(x); INSERT INTO SQLITE1 VALUES(1);").unwrap();
+    let dumped = archive::dump(&c).err().map(|e| e.code);
+    let expected: Vec<_> = outcomes
+        .iter()
+        .map(|(sql, _, _)| (*sql, Some(Code::Integrity), Some(Code::Integrity)))
+        .collect();
+    assert_eq!((outcomes, dumped), (expected, Some(Code::Integrity)));
+}
+#[test]
+fn journals_with_sqlite_sequence_and_stat1_still_export_and_restore() {
+    let source = tempfile::tempdir().unwrap();
+    let mut c = super::tests::journal(&source.path().join("live.db"));
+    super::tests::account(&mut c, "archived");
+    c.execute_batch("INSERT INTO sqlite_sequence(name,seq) VALUES('risk_promotions',7); ANALYZE;").unwrap();
+    let before = archive::dump(&c).unwrap();
+    let out = source.path().join("backup.zip");
+    archive::export(&c, &source.path().join("attachments"), &out, true).unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let live = target.path().join(crate::db::DB_FILE_NAME);
+    let current = crate::db::open_file(&live).unwrap();
+    let p = restore::inspect(&current, target.path(), restore::InspectRequest { source: out.to_string_lossy().into() }).unwrap();
+    restore::prepare(
+        &current,
+        target.path(),
+        restore::RestoreRequest {
+            source: out.to_string_lossy().into(),
+            preview_token: p.preview_token,
+            confirmation: "REPLACE ENTIRE JOURNAL".into(),
+        },
+    )
+    .unwrap();
+    drop(current);
+    restore::recover(target.path(), &live).unwrap();
+    let restored = crate::db::open_file(&live).unwrap();
+    assert_eq!(archive::dump(&restored).unwrap(), before);
+    let seq: i64 = restored
+        .query_row("SELECT seq FROM sqlite_sequence WHERE name='risk_promotions'", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(seq, 7);
+    assert!(restored.prepare("SELECT 1 FROM sqlite_stat1").unwrap().exists([]).unwrap());
+}
+#[test]
+fn previous_version_safety_copy_with_internal_tables_still_rolls_back() {
+    let source = tempfile::tempdir().unwrap();
+    let mut s = super::tests::journal(&source.path().join("source.db"));
+    super::tests::account(&mut s, "incoming");
+    let out = source.path().join("backup.zip");
+    archive::export(&s, &source.path().join("attachments"), &out, true).unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let live = target.path().join(crate::db::DB_FILE_NAME);
+    let mut c = super::tests::journal(&live);
+    super::tests::account(&mut c, "original");
+    // sqlite_sequence already exists through the AUTOINCREMENT table; ANALYZE adds sqlite_stat1.
+    c.execute_batch("ANALYZE").unwrap();
+    let before = archive::dump(&c).unwrap();
+    let p = restore::inspect(&c, target.path(), restore::InspectRequest { source: out.to_string_lossy().into() }).unwrap();
+    restore::prepare(
+        &c,
+        target.path(),
+        restore::RestoreRequest {
+            source: out.to_string_lossy().into(),
+            preview_token: p.preview_token,
+            confirmation: "REPLACE ENTIRE JOURNAL".into(),
+        },
+    )
+    .unwrap();
+    drop(c);
+    // The shape a previous version leaves when it stops mid-install.
+    let marker = target.path().join("data-controls-pending.json");
+    let text = fs::read_to_string(&marker).unwrap().replace("prepared", "installing");
+    fs::write(&marker, text).unwrap();
+    fs::write(&live, b"interrupted overwrite").unwrap();
+    restore::recover(target.path(), &live).unwrap();
+    let restored = super::tests::journal(&live);
+    assert_eq!(archive::dump(&restored).unwrap(), before);
+    assert!(!marker.exists());
+}
+#[test]
+fn restore_candidates_open_with_untrusted_schema_while_live_journals_are_unchanged() {
+    let dir = tempfile::tempdir().unwrap();
+    let trusted = |c: &Connection| c.pragma_query_value(None, "trusted_schema", |r| r.get::<_, bool>(0)).unwrap();
+    let live = crate::db::open_file(&dir.path().join("live.db")).unwrap();
+    let candidate = crate::db::open_restore_candidate(&dir.path().join("candidate.db")).unwrap();
+    assert_eq!((trusted(&live), trusted(&candidate)), (trusted(&Connection::open_in_memory().unwrap()), false));
+}
