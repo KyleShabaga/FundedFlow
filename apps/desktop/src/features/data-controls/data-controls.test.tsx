@@ -51,7 +51,7 @@ const restorePreview: ArchiveRestorePreview = {
   },
 };
 const journalPreview: PermanentDeletionPreview = {
-  scope: { kind: "journal" }, accountName: null, affectedEntities: { instruments: 16 }, attachments: [], linkedAccountIds: [], blockers: [],
+  scope: { kind: "journal" }, accountName: null, affectedEntities: { instruments: 16 }, attachments: [], extraFiles: [], linkedAccountIds: [], blockers: [],
   previewToken: "delete-token", requiredConfirmation: "ERASE ENTIRE JOURNAL", localRecoveryCopies: 0,
   warnings: ["External/user-exported backups remain untouched; this is not a forensic secure-erase guarantee."],
 };
@@ -333,6 +333,29 @@ describe("permanent deletion", () => {
     expect(await within(dialog).findByText(/Your data changed after this preview/)).toBeTruthy();
     // A refused delete may still have quarantined or finished earlier cleanup: the status is re-read anyway.
     expect(runtime.check).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows leftover files that belong to no record before the erase is confirmed, and nothing when there are none", async () => {
+    const user = userEvent.setup();
+    const png = "0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b.png";
+    controls.previewDeletion.mockResolvedValue({
+      ...journalPreview,
+      extraFiles: [`screenshots/${png}`, "screenshots/.0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5c.part"],
+    });
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Erase entire journal…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Erase the entire local journal?" });
+    expect(await within(dialog).findByText(/2 leftover files that belong to no record are also removed with the journal/)).toBeTruthy();
+    expect(within(dialog).getByText(png)).toBeTruthy();
+    expect(within(dialog).queryByText(`screenshots/${png}`)).toBeNull();
+    cleanup();
+
+    controls.previewDeletion.mockResolvedValue({ ...journalPreview, extraFiles: [] });
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Erase entire journal…" }));
+    const empty = await screen.findByRole("dialog", { name: "Erase the entire local journal?" });
+    await within(empty).findByText(/Archives or CSV files you exported yourself are not touched/);
+    expect(within(empty).queryByText(/leftover file/)).toBeNull();
   });
 
   it("erases the whole journal through a separate flow and phrase, and offers file-cleanup retry", async () => {

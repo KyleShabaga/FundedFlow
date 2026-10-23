@@ -16,6 +16,7 @@ export const dataControlCodeSchema = z.enum([
   "unsupported_ownership",
   "busy",
   "recovery_required",
+  "unrecognized_file",
 ]);
 export const dataControlErrorSchema = z.object({
   code: dataControlCodeSchema,
@@ -116,6 +117,8 @@ export const permanentDeletionPreviewSchema = z.object({
   accountName: z.string().nullable(),
   affectedEntities: dataControlCountsSchema,
   attachments: z.array(archiveAttachmentSchema),
+  /** Whole-journal erase: storage keys of leftover files FundedFlow wrote that no record lists. Empty otherwise. */
+  extraFiles: z.array(z.string()),
   linkedAccountIds: z.array(z.string()),
   blockers: z.array(z.string()),
   previewToken: z.string(),

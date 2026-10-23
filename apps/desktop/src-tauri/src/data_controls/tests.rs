@@ -1709,3 +1709,285 @@ fn a_marker_whose_metadata_cannot_be_read_is_left_pending_never_quarantined() {
         deletion::Marker::Parsed(_)
     ));
 }
+/// Plant unowned managed extras (a finished screenshot and an interrupted write) under `attachments/`.
+fn plant_extras(root: &Path) -> (String, String) {
+    let shots = root.join("attachments/screenshots");
+    fs::create_dir_all(&shots).unwrap();
+    let png = format!("screenshots/{}.png", crate::domain::new_id());
+    let part = format!("screenshots/.{}.part", crate::domain::new_id());
+    fs::write(root.join("attachments").join(&png), b"stray screenshot").unwrap();
+    fs::write(root.join("attachments").join(&part), b"interrupted write").unwrap();
+    (png, part)
+}
+fn code_name(e: &ControlError) -> String {
+    serde_json::to_value(&e.code)
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+fn extra_files(p: &deletion::DeletionPreview) -> Vec<String> {
+    serde_json::from_value(serde_json::to_value(p).unwrap()["extraFiles"].clone()).unwrap()
+}
+#[test]
+fn restore_preserves_managed_extras_in_the_safety_copy_and_never_reinstates_them() {
+    let source = tempfile::tempdir().unwrap();
+    let archive = backup_with_account(source.path(), "incoming");
+    for rollback in [false, true] {
+        let target = tempfile::tempdir().unwrap();
+        let path = target.path().join(db::DB_FILE_NAME);
+        let mut c = journal(&path);
+        let a = account(&mut c, "original");
+        let j = journal_note(&mut c, &a);
+        image(&c, target.path(), &j, "image", "image.png");
+        let (png, part) = plant_extras(target.path());
+        let p = restore::inspect(
+            &c,
+            target.path(),
+            restore::InspectRequest {
+                source: archive.to_string_lossy().into(),
+            },
+        )
+        .unwrap();
+        let result = restore::prepare(
+            &c,
+            target.path(),
+            restore::RestoreRequest {
+                source: archive.to_string_lossy().into(),
+                preview_token: p.preview_token,
+                confirmation: "REPLACE ENTIRE JOURNAL".into(),
+            },
+        )
+        .unwrap();
+        drop(c);
+        let safety = target
+            .path()
+            .join("data-controls")
+            .join(&result.operation_id)
+            .join("safety-attachments");
+        assert_eq!(fs::read(safety.join(&png)).unwrap(), b"stray screenshot");
+        assert_eq!(fs::read(safety.join(&part)).unwrap(), b"interrupted write");
+        assert_eq!(
+            fs::read(safety.join("image.png")).unwrap(),
+            b"private screenshot"
+        );
+        if rollback {
+            let marker = target.path().join("data-controls-pending.json");
+            let text = fs::read_to_string(&marker)
+                .unwrap()
+                .replace("prepared", "installing");
+            fs::write(&marker, text).unwrap();
+            restore::recover(target.path(), &path).unwrap();
+            // The listed screenshot comes back; the extras stay only in the operation folder.
+            assert_eq!(
+                fs::read(target.path().join("attachments/image.png")).unwrap(),
+                b"private screenshot"
+            );
+        } else {
+            restore::recover(target.path(), &path).unwrap();
+        }
+        assert!(
+            !target.path().join("attachments").join(&png).exists(),
+            "rollback: {rollback}"
+        );
+        assert!(
+            !target.path().join("attachments").join(&part).exists(),
+            "rollback: {rollback}"
+        );
+        assert!(
+            safety.join(&png).exists() && safety.join(&part).exists(),
+            "rollback: {rollback}"
+        );
+    }
+}
+#[test]
+fn whole_journal_erase_lists_managed_extras_and_removes_them() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut c = journal(&dir.path().join("live.db"));
+    let a = account(&mut c, "A");
+    let j = journal_note(&mut c, &a);
+    image(&c, dir.path(), &j, "image", "image.png");
+    let (png, part) = plant_extras(dir.path());
+    let p = deletion::preview(
+        &c,
+        dir.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Journal,
+        },
+    )
+    .unwrap();
+    let mut expected = vec![png.clone(), part.clone()];
+    expected.sort();
+    assert_eq!(extra_files(&p), expected);
+    let account_scope = deletion::preview(
+        &c,
+        dir.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Account { account_id: a },
+        },
+    )
+    .unwrap();
+    assert!(extra_files(&account_scope).is_empty());
+    assert_eq!(
+        deletion::execute(&mut c, dir.path(), approved(&p))
+            .unwrap()
+            .state,
+        "completed"
+    );
+    assert!(!dir.path().join("attachments").join(&png).exists());
+    assert!(!dir.path().join("attachments").join(&part).exists());
+    assert!(!dir.path().join("attachments/image.png").exists());
+}
+#[test]
+fn an_extra_that_appears_or_disappears_after_the_preview_makes_the_erase_stale() {
+    for appear in [true, false] {
+        let dir = tempfile::tempdir().unwrap();
+        let mut c = journal(&dir.path().join("live.db"));
+        account(&mut c, "A");
+        let (png, _) = plant_extras(dir.path());
+        let p = deletion::preview(
+            &c,
+            dir.path(),
+            deletion::PreviewRequest {
+                scope: deletion::Scope::Journal,
+            },
+        )
+        .unwrap();
+        if appear {
+            fs::write(
+                dir.path().join(format!(
+                    "attachments/screenshots/{}.webp",
+                    crate::domain::new_id()
+                )),
+                b"late",
+            )
+            .unwrap();
+        } else {
+            fs::remove_file(dir.path().join("attachments").join(&png)).unwrap();
+        }
+        let err = deletion::execute(&mut c, dir.path(), approved(&p)).unwrap_err();
+        assert_eq!(err.code, Code::StalePreview, "appear: {appear}");
+        assert!(
+            !archive::account_ids(&c).unwrap().is_empty(),
+            "nothing erased"
+        );
+    }
+}
+#[test]
+fn unrecognised_files_get_their_own_code_and_unsafe_entries_stay_unsafe_path() {
+    let dir = tempfile::tempdir().unwrap();
+    let c = journal(&dir.path().join("live.db"));
+    // Built per component: `cmd`'s mklink below rejects mixed separators.
+    let shots = dir.path().join("attachments").join("screenshots");
+    fs::create_dir_all(&shots).unwrap();
+    for name in [
+        "Thumbs.db",
+        "screenshots/notes.txt",
+        "screenshots/ABC.png",
+        "screenshots/{}.gif",
+    ] {
+        let name = name.replace("{}", &crate::domain::new_id());
+        fs::write(dir.path().join("attachments").join(&name), b"x").unwrap();
+        let erase = deletion::preview(
+            &c,
+            dir.path(),
+            deletion::PreviewRequest {
+                scope: deletion::Scope::Journal,
+            },
+        )
+        .unwrap_err();
+        assert_eq!(code_name(&erase), "unrecognized_file", "{name}");
+        fs::remove_file(dir.path().join("attachments").join(&name)).unwrap();
+    }
+    // A link or reparse point is unsafe, never an extra.
+    let outside = tempfile::tempdir().unwrap();
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(outside.path(), shots.join("link")).unwrap();
+    #[cfg(windows)]
+    assert!(
+        std::process::Command::new("cmd")
+            .args(["/C", "mklink", "/J"])
+            .arg(shots.join("link"))
+            .arg(outside.path())
+            .output()
+            .unwrap()
+            .status
+            .success()
+    );
+    let erase = deletion::preview(
+        &c,
+        dir.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Journal,
+        },
+    )
+    .unwrap_err();
+    assert_eq!(erase.code, Code::UnsafePath);
+}
+#[test]
+fn an_interrupted_whole_journal_cleanup_removes_extras_on_retry_without_listing_them_in_its_marker()
+{
+    let dir = tempfile::tempdir().unwrap();
+    let mut c = journal(&dir.path().join("live.db"));
+    account(&mut c, "A");
+    let (png, part) = plant_extras(dir.path());
+    let held = dir
+        .path()
+        .join("data-controls")
+        .join(crate::domain::new_id());
+    fs::create_dir_all(&held).unwrap();
+    fs::write(held.join("held.bin"), b"x").unwrap();
+    let p = deletion::preview(
+        &c,
+        dir.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Journal,
+        },
+    )
+    .unwrap();
+    // Keep the cleanup pending: a listed recovery copy cannot be removed yet.
+    #[cfg(windows)]
+    let lock = {
+        use std::os::windows::fs::OpenOptionsExt;
+        fs::OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(held.join("held.bin"))
+            .unwrap()
+    };
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&held, fs::Permissions::from_mode(0o500)).unwrap();
+    }
+    assert_eq!(
+        deletion::execute(&mut c, dir.path(), approved(&p))
+            .unwrap()
+            .state,
+        "cleanup_pending"
+    );
+    let names = entries(&queue(dir.path()));
+    assert_eq!(names.len(), 1);
+    let bytes = fs::read(queue(dir.path()).join(&names[0])).unwrap();
+    let old: OldCleanup = serde_json::from_slice(&bytes).unwrap();
+    assert!(
+        old.attachments.is_empty(),
+        "extras are never written into a marker"
+    );
+    let text = String::from_utf8(bytes).unwrap();
+    assert!(!text.contains(&png) && !text.contains(&part));
+    #[cfg(windows)]
+    drop(lock);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&held, fs::Permissions::from_mode(0o700)).unwrap();
+    }
+    assert_eq!(
+        deletion::recover_cleanup(&c, dir.path()).unwrap(),
+        deletion::CleanupOutcome::Clear
+    );
+    assert!(!dir.path().join("attachments").join(&png).exists());
+    assert!(!dir.path().join("attachments").join(&part).exists());
+    assert!(!held.exists());
+}

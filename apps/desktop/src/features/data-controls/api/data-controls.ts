@@ -50,6 +50,7 @@ const CODE_COPY: Record<DataControlError["code"], string> = {
   unsupported_ownership: "Some of this account's history is shared or can't be separated safely, so it can't be deleted on its own.",
   busy: "Another FundedFlow window or process is using this journal. Close it and try again.",
   recovery_required: "An earlier restore or deletion needs to finish first. Use Retry in the app's recovery banner.",
+  unrecognized_file: "A file in FundedFlow's attachments folder wasn't created by FundedFlow and belongs to no record, so nothing was changed. Move it out of that folder, then try again.",
 };
 
 /** A failed native data control, kept with its stable code and native limit detail. Nothing in it is a path or a row. */

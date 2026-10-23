@@ -167,6 +167,7 @@ function PreviewDetails({ preview, isAccount }: { preview: PermanentDeletionPrev
         {preview.attachments.length > 0 && (
           <p className="dc-note">{preview.attachments.length} screenshot or file{preview.attachments.length === 1 ? "" : "s"} ({formatBytes(attachmentBytes)}) removed from disk.</p>
         )}
+        {!isAccount && preview.extraFiles.length > 0 && <ExtraFiles keys={preview.extraFiles} />}
         {!isAccount && preview.localRecoveryCopies > 0 && (
           <p className="dc-note">{preview.localRecoveryCopies} local recovery cop{preview.localRecoveryCopies === 1 ? "y" : "ies"} kept by FundedFlow will also be removed.</p>
         )}
@@ -178,6 +179,23 @@ function PreviewDetails({ preview, isAccount }: { preview: PermanentDeletionPrev
         Archives or CSV files you exported yourself are not touched, wherever you saved them. This is not a forensic secure erase.
       </InlineNotice>
     </>
+  );
+}
+
+/** Leftover files no record lists (a crash or failed removal), shown by name before the erase is confirmed. */
+function ExtraFiles({ keys }: { keys: string[] }) {
+  const SHOWN = 5;
+  const names = keys.map(key => key.slice(key.lastIndexOf("/") + 1));
+  const one = keys.length === 1;
+  return (
+    <div className="dc-note">
+      <p>{keys.length} leftover file{one ? "" : "s"} that belong{one ? "s" : ""} to no record {one ? "is" : "are"} also removed with the journal,
+        such as screenshots left behind by an interrupted save:</p>
+      <ul className="dc-list">
+        {names.slice(0, SHOWN).map((name, i) => <li key={keys[i]}><code className="dc-id">{name}</code></li>)}
+        {names.length > SHOWN && <li>and {names.length - SHOWN} more</li>}
+      </ul>
+    </div>
   );
 }
 

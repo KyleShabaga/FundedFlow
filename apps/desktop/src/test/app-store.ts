@@ -104,7 +104,7 @@ export function createAppStore(seed: AppStoreSeed = {}) {
     const { scope } = request;
     if (scope.kind === "journal") {
       return permanentDeletionPreviewSchema.parse({
-        scope, accountName: null, affectedEntities: { accounts: today.accounts.size, trades: journal.all.size }, attachments: [], linkedAccountIds: [], blockers: [],
+        scope, accountName: null, affectedEntities: { accounts: today.accounts.size, trades: journal.all.size }, attachments: [], extraFiles: [], linkedAccountIds: [], blockers: [],
         previewToken: tokenFor(scope), requiredConfirmation: "ERASE ENTIRE JOURNAL", localRecoveryCopies: 0,
         warnings: ["External/user-exported backups remain untouched; this is not a forensic secure-erase guarantee."],
       });
@@ -113,7 +113,7 @@ export function createAppStore(seed: AppStoreSeed = {}) {
     if (!account) throw fail("stale_preview");
     const linked = [account.predecessorAccountId, account.successorAccountId].filter((id): id is string => id !== null);
     return permanentDeletionPreviewSchema.parse({
-      scope, accountName: account.name, affectedEntities: { accounts: 1, trades: accountTrades(account.id) }, attachments: [], linkedAccountIds: linked,
+      scope, accountName: account.name, affectedEntities: { accounts: 1, trades: accountTrades(account.id) }, attachments: [], extraFiles: [], linkedAccountIds: linked,
       blockers: [...(linked.length ? ["linked_attempts"] : []), ...(blocked.get(account.id) ?? [])],
       previewToken: tokenFor(scope), requiredConfirmation: `DELETE ACCOUNT ${account.id}`, localRecoveryCopies: 0,
       warnings: ["External/user-exported backups remain untouched; this is not a forensic secure-erase guarantee."],
