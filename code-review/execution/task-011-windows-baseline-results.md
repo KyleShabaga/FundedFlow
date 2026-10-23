@@ -2,6 +2,14 @@
 
 Recorded 2026-10-23 from Kyle's results page (Notion "TASK-011 Results", https://app.notion.com/p/4021bd4b6bde80a8bbcbe9e1a6085c49). Tester: Kyle Shabaga. Parts (a) and (c) were run; part (b) was not run.
 
+> **Superseded, 2026-10-23 (Kyle: "Use the report as the truth").** A full rerun in Windows Sandbox replaces parts (a) and (c) below. The rerun used build eeda9a1 (installer SHA-256 91c12889…) on Windows 10 Enterprise 26H1 build 28000.2269, with WebView2 156.0.4314.42 and an AMD Ryzen 5 5600U with 3.99 GB RAM. Report: `sandbox/results-2026-10-23/task-011-022-sandbox-rerun-report.md`.
+>
+> - **(a) Rerun:** **no prompt in any case.** Title-bar X and Alt+F4 both closed the window at once in the rulebook draft, the trade review and the daily review. The typed text was lost and was not offered back after relaunch. The only guard is `beforeunload` (`use-leave-guard.ts:95-100`), which does not run when the native window closes. **TASK-023 is therefore needed: its "Not Needed" closure is reversed.** The earlier "P" results were most likely the in-app navigation dialog from step 2.
+> - **TASK-022 manual check:** **not met.** Mouse X1 and Alt+Left leave a dirty daily review with no dialog. The text can only be recovered through the "Restore them" banner. An in-app sidebar link does show the dialog.
+> - **B6, export to a junctioned folder:** refused with "Nothing was exported. The archive contains an unsafe file path, so it was rejected." Nothing was written, including partial or temp files. Exporting to a normal folder succeeded. The message wording is misleading (a nit).
+> - **(c) Rerun:** the preview took ≤ 3.1 s per step (50,000 new, 0 errors) and the commit took 10.7 s. The journal was then 57,982,976 bytes with a 58,895,432-byte WAL. **C3 was refused after 3.0 s: data.json was 72,059,754 bytes, over the 67,108,864 limit** (the known V1 gap). The window stayed responsive throughout. **ISSUE-010 does not escalate.**
+> - **CSV hashes:** the expected hashes are for CRLF files. A raw GitHub download has LF line endings and does not match until it is converted to CRLF.
+
 ## Missing from the header (to be filled by Kyle)
 
 The header fields are blank: date and time zone, machine, Windows edition and build, WebView2 version, installer SHA-256 check (Y/N), environment-variable checks, and the synthetic CSV hash check. The header template still names the earlier local build (`FundedFlow_0.1.0_x64-setup.exe`, e8acfb4f…, source 2135d79). The CI build on the kit page was `FundedFlow_0.1.1_x64-setup.exe`, 18ebc9ae…, source 819f967. Which build was tested is unconfirmed.

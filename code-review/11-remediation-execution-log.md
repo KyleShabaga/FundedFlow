@@ -10,7 +10,7 @@ The post-merge verification sweep ran on 2026-10-23 against `main` at c0c7c2f. T
 |---|---|---|---|---|
 | TASK-004 r4 | #113, #136 | eaf7ee3 | Verified | Drifted line references fixed in #136 |
 | TASK-010 r2 | — | — | Verified | Measurement (`execution/task-010-journal-growth-results.md`) |
-| TASK-011 r3 | — | — | In Progress | (a), (b) and (c) recorded (`execution/task-011-windows-baseline-results.md`); environment header pending a sandbox rerun of (a), (c), B6 and the TASK-022 check |
+| TASK-011 r3 | — | — | Verified | (a), (b) and (c) measured with full environment (sandbox rerun 2026-10-23) |
 | TASK-012 r3 | #109 | — | Verified | — |
 | TASK-013 r4 | #118 | — | Verified | — |
 | TASK-014 r5 | #119 | — | Verified | — |
@@ -21,8 +21,8 @@ The post-merge verification sweep ran on 2026-10-23 against `main` at c0c7c2f. T
 | TASK-019 r2 | #108 | — | Verified | — |
 | TASK-020 r2 | #112 | — | Verified | — |
 | TASK-021 r5 | #117 | — | Verified | — |
-| TASK-022 r5 | #111 | — | Verified | Owner X1/Alt+← check → TASK-030 (assigned 2026-10-23) |
-| TASK-023 | — | — | Closed Not Needed | TASK-011(a) evidence |
+| TASK-022 r5 | #111 | — | Implemented (reopened) | Manual check FAILED in the 2026-10-23 sandbox rerun: X1/Alt+Left leave with no dialog; fix needed |
+| TASK-023 | — | — | Needed (reopened 2026-10-23) | Sandbox rerun: no prompt on X/Alt+F4, text lost; Kyle to approve execution |
 | TASK-024 r5 | #115 | — | Verified | — |
 | TASK-025 r6 | #122 | — | Verified | Packaged first-run check → TASK-030 |
 | TASK-026 r5 | #130 | 819f967 | Verified | — |
@@ -44,7 +44,7 @@ A "—" in the Merge column means the merge SHA is in the PR's record and is not
 - **TASK-041 (Kyle, 2026-10-22, approval card):** partial B. Test, fixture and mockup copies of real rows are replaced. The v3/v4 `.db` upgrade fixtures, `generate.rs.txt` and the `v3Upgraded`/`v4Upgraded` sections of `command-wire.json` are an accepted residual. The criterion "`fundedflow-v3.db`/`-v4.db` regenerated" is waived.
 - **TASK-025 (Kyle, 2026-10-22):** draft-status option A. The `0.2.1-draft` documents ship as drafts, and the "About this draft" paragraph is accepted for V1. The mapping from each r5 criterion to the #107 line that satisfies it (or "superseded") is in the body of PR #122.
 - **TASK-039 (Kyle, 2026-10-22):** option A. No history rewrite, so there is no execution task.
-- **TASK-023 (2026-10-23):** closed Not Needed. TASK-011(a) shows a prompt on both X and Alt+F4 in every dirty editor; Cancel keeps the text.
+- **TASK-023 (2026-10-23):** first closed Not Needed on Kyle's manual run, then **reopened** after the sandbox rerun, which Kyle ruled is the truth: no prompt on X or Alt+F4.
 - **TASK-011(c) backup limit (Kyle, 2026-10-23):** a full backup is refused once `data.json` exceeds 64 MiB (about 50,000 trades). This is accepted as a V1 known gap for the release notes (TASK-035) and TASK-036. The fix is planned for V1.1 (Development Board card 4021bd4b6bde81249483d1071c21c6e6).
 - **TASK-045 (Kyle, 2026-10-23):** the 8 KiB per-calculation growth bound applies from the 2nd calculation on.
 - **TASK-018 (2026-10-23, auto-approve rule):** TASK-011(b) is not a blocker. The manual check moves to TASK-030.
