@@ -41,7 +41,8 @@ import { useSaveTradeReview, useTradeReview } from "../../reviews/hooks/reviews"
 import { useLeave, useLeaveGuard } from "../../shared/hooks/use-leave-guard";
 import { fieldErrors, retryRead, toMutationState } from "../../shared/presentation";
 import { UncertainOutcomeReview, type UncertainWrite } from "../../shared/UncertainOutcomeReview";
-import type { TradeViewModel } from "../../trades/view-models/trade";
+import { shownNetPnl, type TradeViewModel } from "../../trades/view-models/trade";
+import { FeesNotRecordedBadge } from "./presentation";
 import { Screenshots } from "./Screenshots";
 
 type Answer = "followed" | "missed" | "not_applicable";
@@ -293,7 +294,9 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
         </div>
         <div className="jr-review-fact">
           <span className="ds-label">Outcome</span>
-          <Pnl value={trade.realizedPnl} size="m" currency={trade.currency} />
+          {/* TASK-042 (R-NET): unknown net when fees were not recorded, as in the trade summary. */}
+          <Pnl value={shownNetPnl(trade)} size="m" currency={trade.currency} />
+          <FeesNotRecordedBadge trade={trade} />
         </div>
         <div className="jr-review-fact">
           <span className="ds-label">R-multiple</span>

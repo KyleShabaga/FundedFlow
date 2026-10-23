@@ -260,6 +260,15 @@ describe("Fees not recorded (TASK-042)", () => {
     expect(screen.getAllByText("Fees not recorded").length).toBeGreaterThan(1); // header badge too
   });
 
+  it("shows the review's outcome as unknown with the badge, not a dollar net, when fees were not recorded", async () => {
+    renderAt("/journal/trades/nf");
+    const label = await screen.findByText("Outcome");
+    const fact = label.closest(".jr-review-fact") as HTMLElement;
+    expect(within(fact).queryByText("+$26.00")).toBeNull();
+    expect(within(fact).getByText("—")).toBeTruthy();
+    expect(within(fact).getByText("Fees not recorded")).toBeTruthy();
+  });
+
   it("keeps an explicit zero fee as 0 when correcting, and leaves unrecorded fees blank", async () => {
     const user = userEvent.setup();
     renderAt("/journal/trades/z0");

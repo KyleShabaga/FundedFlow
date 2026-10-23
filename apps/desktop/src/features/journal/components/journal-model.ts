@@ -113,7 +113,7 @@ export interface Stats {
    * values (gross − 0), so these trades are counted before fees; views say so beside the totals.
    */
   feesNotRecorded: number;
-  /** Some trade here has fees not recorded, so `fees` is a lower bound, not the total. */
+  /** Some trade here has fees not recorded, so `fees` is a lower bound, not the total (null when none is recorded). */
   feesIncomplete: boolean;
   contracts: string | null;
   /** Winners ÷ known, as a percentage; null with no known trades. Display only. */
@@ -153,7 +153,8 @@ export function stats(rows: readonly JournalRow[]): Stats {
     breakeven: results.filter(r => r === "breakeven").length,
     net: known.length ? sumMoney(known.map(t => t.realizedPnl)) : null,
     gross: known.length ? sumMoney(known.map(t => t.grossPnl)) : null,
-    fees: trades.length ? sumMoney(trades.map(t => t.fees)) : null,
+    // Unknown, not $0.00, when no trade here has recorded fees (TASK-042).
+    fees: trades.some(t => t.feesRecorded) ? sumMoney(trades.map(t => t.fees)) : null,
     feesNotRecorded: known.filter(t => !t.feesRecorded).length,
     feesIncomplete: trades.some(t => !t.feesRecorded),
     contracts: trades.length ? sumMoney(trades.map(t => t.quantity)) : null,

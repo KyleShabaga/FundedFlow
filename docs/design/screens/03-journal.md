@@ -29,8 +29,8 @@ Review trading day by day, with notes, and browse every trade in one table.
   separate from the day's P&L.
 - Stats strip: net P&L (large `Pnl`), trades, win rate, gross P&L, contracts, fees, winners, losers, profit factor.
   Totals keep the stored values; when some trades have fees not recorded, a note says "Includes N trades with fees
-  not recorded (counted before fees)" and the fees total carries an "Incomplete" `Badge`. In the trade tables (and
-  the trade log, Library notes and deleted trades) such a trade's net P&L is `—` with a "Fees not recorded" badge
+  not recorded (counted before fees)" and the fees total carries an "Incomplete" `Badge` (`—` when no trade there has recorded fees). In the trade tables (and
+  the trade log, Library notes, deleted trades and the review card's Outcome) such a trade's net P&L is `—` with a "Fees not recorded" badge
   (TASK-042).
 - Expanded: cumulative P&L through the day (`EquityCurve`, `step={false}`) and the day's trades in a `DataTable`:
   result, symbol, side, source (Imported/Manual), open, close, qty, entry, exit, hold, net P&L, tags, review. First 8

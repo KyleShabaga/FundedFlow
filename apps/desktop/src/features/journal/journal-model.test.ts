@@ -40,7 +40,7 @@ describe("journal model", () => {
     // An explicit zero is a recorded fee.
     const zero = vm({ id: "z", accountId: "a", realizedPnl: "30", grossPnl: "30", fees: "0", feesRecorded: true });
     expect(stats(rows([zero]))).toMatchObject({ feesNotRecorded: 0, feesIncomplete: false });
-    expect(stats(rows([openUnrecorded]))).toMatchObject({ feesNotRecorded: 0, feesIncomplete: true });
+    expect(stats(rows([openUnrecorded]))).toMatchObject({ feesNotRecorded: 0, feesIncomplete: true, fees: null });
   });
 
   it("averages exactly with rounding half away from zero", () => {
