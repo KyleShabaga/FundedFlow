@@ -557,7 +557,7 @@ fn migration_22_marks_zero_fee_trades_not_recorded_and_changes_nothing_else() {
     conn.execute(open, [T]).unwrap();
     let before = fee_facts(&conn);
 
-    assert_eq!(migrate(&mut conn).unwrap(), 22);
+    assert_eq!(migrate_with(&mut conn, &MIGRATIONS[..22]).unwrap(), 22);
     assert_eq!(
         fee_facts(&conn),
         before,

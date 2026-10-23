@@ -11,7 +11,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use super::{account_ctx, require_account};
+use super::{account_ctx, frozen_v1, require_account};
 use crate::domain::{
     format_instant, micros_to_string, new_id, now, parse_decimal, parse_payload_time, to_micros,
 };
@@ -155,14 +155,27 @@ fn from_row(r: &rusqlite::Row) -> rusqlite::Result<Snapshot> {
     })
 }
 
+/// A row as stored: its explanation may still be in the compact `frozen-v1` form.
+pub(super) fn get_stored(conn: &Connection, id: &str) -> AppResult<Option<Snapshot>> {
+    Ok(conn
+        .query_row(
+            &format!("SELECT {COLUMNS} FROM account_snapshots WHERE id = ?1"),
+            [id],
+            from_row,
+        )
+        .optional()?)
+}
+
+/// Replaces a stored explanation with the one it encodes (TASK-045).
+fn decoded(decoder: &mut frozen_v1::Decoder, mut snapshot: Snapshot) -> AppResult<Snapshot> {
+    let raw = std::mem::take(&mut snapshot.explanation);
+    snapshot.explanation = decoder.decode(&snapshot.account_id, raw)?;
+    Ok(snapshot)
+}
+
 pub fn get(conn: &Connection, id: &str) -> AppResult<Snapshot> {
-    conn.query_row(
-        &format!("SELECT {COLUMNS} FROM account_snapshots WHERE id = ?1"),
-        [id],
-        from_row,
-    )
-    .optional()?
-    .ok_or_else(|| AppError::not_found("snapshot", id))
+    let snapshot = get_stored(conn, id)?.ok_or_else(|| AppError::not_found("snapshot", id))?;
+    decoded(&mut frozen_v1::Decoder::new(conn), snapshot)
 }
 
 /// Validated, converted figures of a snapshot input, ready to insert.
@@ -181,10 +194,11 @@ pub(super) struct Prepared {
 
 /// Store a snapshot as history, or return the existing end-of-day row for the same inputs.
 /// Writes only to a non-archived account. A saved snapshot is never the account's current risk
-/// result: only `risk_promotion::promote` can make one current (P0-02).
+/// result: only `risk_promotion::promote` can make one current (P0-02). IMMEDIATE, because storing an engine
+/// calculation reads the account's frozen spans and may open the next generation (TASK-045).
 pub fn save(conn: &mut Connection, input: SnapshotInput) -> AppResult<Snapshot> {
     let prepared = prepare(&input)?;
-    let tx = conn.transaction()?;
+    let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
     let saved = insert_prepared(&tx, &input, prepared)?;
     tx.commit()?;
     Ok(saved)
@@ -334,6 +348,14 @@ pub(super) fn insert_prepared(
         }
     }
     let id = new_id();
+    // TASK-045: an engine calculation is stored in the compact `frozen-v1` form when that decodes exactly.
+    let explanation = frozen_v1::encode(
+        tx,
+        &input.account_id,
+        &input.engine_version,
+        &input.explanation,
+    )?
+    .text;
     tx.execute(
         &format!(
             "INSERT INTO account_snapshots ({COLUMNS})
@@ -368,7 +390,7 @@ pub(super) fn insert_prepared(
             input.trading_days_required,
             input.status,
             serde_json::to_string(&input.status_reasons).map_err(|e| AppError::invalid("statusReasons", e.to_string()))?,
-            serde_json::to_string(&input.explanation).map_err(|e| AppError::invalid("explanation", e.to_string()))?,
+            explanation,
         ],
     )?;
     get(tx, &id)
@@ -396,19 +418,58 @@ pub fn list(
          ORDER BY trading_day DESC, calculated_at DESC, id"
     ))?;
     let rows = stmt.query_map(params![account_id, from, to, end_of_day_only], from_row)?;
-    Ok(rows.collect::<rusqlite::Result<_>>()?)
+    let mut decoder = frozen_v1::Decoder::new(conn);
+    rows.map(|row| decoded(&mut decoder, row?)).collect()
 }
 
 /// The most recently calculated snapshot of the account, if any.
 pub fn latest(conn: &Connection, account_id: &str) -> AppResult<Option<Snapshot>> {
     require_account(conn, account_id)?;
-    Ok(conn
-        .query_row(
+    conn.query_row(
             &format!("SELECT {COLUMNS} FROM account_snapshots WHERE account_id = ?1 ORDER BY calculated_at DESC, id DESC LIMIT 1"),
             [account_id],
             from_row,
         )
-        .optional()?)
+        .optional()?
+        .map(|s| decoded(&mut frozen_v1::Decoder::new(conn), s))
+        .transpose()
+}
+
+/// Whether a stored engine row, rebuilt as the input that wrote it (money as decimal text, as `from_row`
+/// reads it), passes `validate_engine_payload`: identity, frozen inputs, inputs hash and metric projection.
+/// Migration 23's eligibility check, and the tests' re-check of decoded rows.
+pub(crate) fn engine_payload_valid(s: &Snapshot) -> bool {
+    let input = SnapshotInput {
+        account_id: s.account_id.clone(),
+        rulebook_version_id: s.rulebook_version_id.clone(),
+        trading_day: s.trading_day.clone(),
+        is_end_of_day: s.is_end_of_day,
+        data_as_of: s.data_as_of.clone(),
+        data_source: s.data_source.clone(),
+        engine_version: s.engine_version.clone(),
+        inputs_hash: s.inputs_hash.clone(),
+        fees_included: s.fees_included,
+        unrealized_included: s.unrealized_included,
+        balance: s.balance.clone(),
+        realized_day_pnl: s.realized_day_pnl.clone(),
+        unrealized_pnl: s.unrealized_pnl.clone(),
+        daily_loss_limit: s.daily_loss_limit.clone(),
+        daily_loss_remaining: s.daily_loss_remaining.clone(),
+        drawdown_mode: s.drawdown_mode.clone(),
+        high_water_mark: s.high_water_mark.clone(),
+        drawdown_floor: s.drawdown_floor.clone(),
+        drawdown_headroom: s.drawdown_headroom.clone(),
+        drawdown_locked: s.drawdown_locked,
+        profit_target: s.profit_target.clone(),
+        trading_days_completed: s.trading_days_completed,
+        trading_days_required: s.trading_days_required,
+        status: s.status.clone(),
+        status_reasons: s.status_reasons.clone(),
+        explanation: s.explanation.clone(),
+    };
+    let mut issues = Issues::default();
+    validate_engine_payload(&input, &mut issues);
+    issues.into_result().is_ok()
 }
 
 /// Canonical JSON shared with the portable engine (UTF-16 ordering, including collections).

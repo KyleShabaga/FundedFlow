@@ -163,7 +163,24 @@ pub const MIGRATIONS: &[Migration] = &[
             "../../migrations/0022_trade_fees_recorded.sql"
         )),
     },
+    Migration {
+        version: 23,
+        name: "frozen_risk_sources",
+        step: Step::Rust(frozen_risk_sources),
+    },
 ];
+
+/// Migration 23 (TASK-045): the frozen-source tables, then every eligible stored engine calculation rewritten
+/// into the compact `frozen-v1` form (`store::frozen_v1::backfill`). The owner approved two exceptions to the
+/// migration rules for this migration only: new tables and triggers (OD-7(1)), and dropping/recreating the
+/// `account_snapshot_no_update` trigger to rewrite `explanation_json`, which is not a derived column (OD-7(2)).
+/// No table is rebuilt.
+fn frozen_risk_sources(tx: &Transaction) -> rusqlite::Result<()> {
+    tx.execute_batch(include_str!(
+        "../../migrations/0023_frozen_risk_sources.sql"
+    ))?;
+    crate::store::frozen_v1::backfill(tx)
+}
 
 /// Latest schema version this build understands.
 pub fn latest_version() -> u32 {

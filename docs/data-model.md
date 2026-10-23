@@ -1,6 +1,6 @@
 # FundedFlow local data model
 
-Status: V1, schema version 22 (TASK-042; Build 23 adds no migration) (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`) `0017_trade_reviews.sql` `0018_daily_reviews.sql` `0019_rulebook_binding_provider.sql`, `0020_source_fact_immutability.sql`, `0021_risk_promotions.sql` and `0022_trade_fees_recorded.sql`; see [Migrations](#database-location-and-migrations)).
+Status: V1, schema version 23 (TASK-045; Build 23 adds no migration) (`apps/desktop/src-tauri/migrations/0001_core_schema.sql`, `0002_seed_instruments.sql`, `0003_round_trip_imports.sql`, `0004_archive_accounts.sql`, the Rust data step 5 `rederive_trading_days`, `0006_provider_catalogue.sql` the Rust data step 7 `map_legacy_catalogue`, `0008_freeze_ever_verified.sql`, `0009_rulebooks.sql` the Rust data step 10 `convert_legacy_rulebooks` `0011_account_attempts.sql` `0012_snapshot_rulebook_fk.sql` `0013_account_offer_selections.sql`, `0014_financial_evidence.sql`, `0015_nullable_engine_snapshots.sql` the Rust step 16 `rulebook_events` (`0016_rulebook_events.sql`) `0017_trade_reviews.sql` `0018_daily_reviews.sql` `0019_rulebook_binding_provider.sql`, `0020_source_fact_immutability.sql`, `0021_risk_promotions.sql`, `0022_trade_fees_recorded.sql` and the Rust step 23 `frozen_risk_sources` (`0023_frozen_risk_sources.sql`); see [Migrations](#database-location-and-migrations)).
 Code: `apps/desktop/src-tauri/src/db` (migrations, opening), `apps/desktop/src-tauri/src/store` (accounts, trades, journal, rulebooks, reviews, library, attachments),
 `apps/desktop/src-tauri/src/csv_import`, `apps/desktop/src-tauri/src/domain.rs` (validation, trading day, P&L),
 `apps/desktop/src-tauri/src/commands.rs` (Tauri commands). Frontend types and Zod schemas: `apps/desktop/src/lib/data/`.
@@ -391,7 +391,54 @@ Repositories in `apps/desktop/src-tauri/src/store/` behind the `JournalRepositor
   returns the stored row. A saved snapshot is history only. The account's **current** result is the newest
   `risk_promotions` row (migration 21, P0-02). `promote_account_risk` writes it together with its snapshot in one
   `BEGIN IMMEDIATE` transaction, and only if the calculation's sources, re-read natively, are unchanged. Every read
-  rechecks that; see [P0-02](architecture/p0-02-risk-promotion.md).
+  rechecks that; see [P0-02](architecture/p0-02-risk-promotion.md). `save_account_snapshot` also writes in an
+  IMMEDIATE transaction (TASK-045). From schema 23 an engine calculation whose frozen inputs are canonical is
+  stored in the compact `frozen-v1` form: its source lists live once per record version in
+  [frozen risk sources](#frozen-risk-sources-task-045), and every read rebuilds the exact `explanation` it was
+  saved with. The command DTO, `inputsHash` and the source fingerprint are unchanged.
+
+### Frozen risk sources (TASK-045)
+
+A saved engine calculation keeps exactly what it used, but before schema 23 each one stored a full copy of every
+source list of its account in `explanation_json`, so the journal grew with trades × calculations and export (the
+only backup) hit its 64 MiB `data.json` cap within months. Migration 23 stores the same content without repeating
+it. Code: `apps/desktop/src-tauri/src/store/frozen_v1.rs`.
+
+| Table | Columns | Rules |
+|---|---|---|
+| `risk_frozen_records` | `account_id`, `kind`, `record_hash`, `record_json`; key `(account_id, kind, record_hash)` | One row per distinct record version of a list. `record_json` is the record as canonical engine JSON; `record_hash` is its sha256 (lowercase hex). Never updated; not deletable while the account exists |
+| `risk_frozen_spans` | `account_id`, `kind`, `record_hash`, `from_generation`, `to_generation`, `multiplicity`; key `(account_id, kind, record_hash, from_generation)`; `(account_id, kind, record_hash)` references `risk_frozen_records` | The record version is in the account's `kind` list from `from_generation` until (not including) `to_generation` (NULL while still in the latest list), `multiplicity` times. A span only closes, once (NULL → a later generation); not deletable while the account exists |
+
+`kind` is one of the `inputs` lists: `assignments`, `ledger`, `ledgerHistory`, `observations`, `phaseHistory`,
+`rulebookVersions`, `trades`. Generations are per account and only increase. Storing a calculation compares its lists
+with the account's open spans: if they are equal it reuses the latest generation and adds no rows; otherwise it opens
+the next generation, closing and opening only the spans that changed. Account deletion and whole-journal erase remove
+both tables with the account (`ON DELETE CASCADE`); deletion previews count them.
+
+**Decoding `frozen-v1` (for readers of `data.json`).** An `explanation_json` whose top-level object has
+`"$ff": "frozen-v1"` is encoded; any other value is the explanation itself.
+
+- `{"$ff":"frozen-v1","inline":X}`: the explanation is `X` (used for a caller explanation that itself has a
+  top-level `"$ff"` key).
+- Otherwise start from `explanation`, then:
+  1. For each `kind` in `lists`, set `inputs.<kind>` to the records of every span of the same account and kind with
+     `from_generation ≤ generation` and (`to_generation` NULL or `> generation`), each repeated `multiplicity`
+     times, sorted by `record_json` in UTF-16 code-unit order, each parsed as JSON.
+  2. Let `D` be the sorted set (UTF-16 order, duplicates removed) of `policy.reconciliationRevisionIds`, every
+     observation's `id` and `sourceReference`, every trade's `id` and non-empty `importBatchId`, and every `id` in
+     `ledger`, `ledgerHistory` and `phaseHistory` (the engine's `references`, `evaluate.ts`).
+  3. If `refs` is `true`, `engine.sourceReferences` is `D`.
+  4. For each `[i, extras, tail]` in `rules`, `engine.rules[i].sourceReferences` is the sorted set of `D` and
+     `extras`, followed by `tail` in order, where a number `n` stands for `inputs.observations[n].id`.
+  5. For each `[i, snapshotId, ruleId]` in `breaches`, `policy.priorBreaches[i].sourceReferences` is the
+     `sourceReferences` of the first rule with that `ruleId` in calculation `snapshotId` (same account, decoded by
+     these rules), sorted as canonical engine JSON.
+
+A calculation is encoded only if the result decodes to exactly the value it replaces; otherwise it, or the part that
+would not, is stored as given (a calculation whose `inputs` are not canonical is always stored as given). The format
+is frozen: a different format would get a new marker, and this decoder stays. From schema 23 archive validation also
+checks every record against its hash and that every encoded calculation decodes within its own account and still
+re-proves its `inputsHash`.
 - **Catalogue** (`store::catalogue`): `load` reads the whole catalogue (the same loader the fixture round-trip test
   uses); `transitionVersion` moves a version through review (`verified` needs a named reviewer, a stale version
   re-verified keeps its original sign-off, and the migration 6/8 triggers refuse illegal moves); `setAccountLink`
@@ -529,6 +576,7 @@ database's current version is `PRAGMA user_version`. There are two kinds of step
 | 20 | `source_fact_immutability` | SQL | Build 10.5: freezes captured source identity/content/date/hash facts without rewriting existing rows; independent reviewer/verification metadata remains updateable. |
 | 21 | `risk_promotions` | SQL | P0-02: append-only `risk_promotions` (account, snapshot, source fingerprint, promoted at); same-account, no-update and no-delete-while-the-account-exists triggers. Nothing backfilled: earlier snapshots stay history and are never current. See [P0-02](architecture/p0-02-risk-promotion.md) |
 | 22 | `trade_fees_recorded` | SQL | TASK-042: `trades.fees_recorded` (`ADD COLUMN`, CHECK `fees_recorded IN (0, 1)` and unrecorded fees are 0). Existing rows: fees above zero are recorded, zero is not recorded (a blank and an explicit zero were stored alike, and Performance imports are always 0). `updated_at`, `fees_micros` and `net_pnl_micros` are not touched. See [Fees recorded](#fees-recorded-task-042) |
+| 23 | `frozen_risk_sources` | Rust | TASK-045: runs `0023_frozen_risk_sources.sql` (`risk_frozen_records`, `risk_frozen_spans` and their immutability triggers), then rewrites every eligible stored engine calculation into the compact `frozen-v1` form, one row at a time: engine version `fundedflow-risk/…`, an engine explanation that passes `validate_engine_payload` when rebuilt from the row, and an encoding that decodes to the identical value; other rows stay byte-identical. It drops `account_snapshot_no_update` for the rewrite and recreates it from its own stored SQL. Idempotent. **Owner-approved exceptions, this migration only:** OD-7(1) new tables and triggers (B2-3 allows only `ADD COLUMN` plus index), because the calculations' sources need a store of their own; OD-7(2) the trigger drop/recreate and rewriting `explanation_json`, which is not a derived column, so that journals already near the archive cap can export again. No table is rebuilt and no VACUUM runs. See [Frozen risk sources](#frozen-risk-sources-task-045) |
 
 How an upgrade runs:
 

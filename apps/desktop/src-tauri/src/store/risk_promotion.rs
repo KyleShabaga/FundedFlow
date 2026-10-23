@@ -21,6 +21,7 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 use super::evidence::{RiskInputsQuery, risk_inputs_in};
+use super::frozen_v1;
 use super::reconciliation;
 use super::snapshots::{self, Snapshot, SnapshotInput, canonical_engine_json};
 use super::{account_ctx, require_account};
@@ -105,15 +106,24 @@ fn prior_breaches(
     })?;
     let mut seen = std::collections::HashSet::new();
     let mut out = Vec::new();
+    let mut decoder = frozen_v1::Decoder::new(conn);
     for row in rows {
         let (id, engine_version, explanation) = row?;
         if exclude == Some(id.as_str()) {
             continue;
         }
-        let Ok(e) = serde_json::from_str::<Value>(&explanation) else {
+        let Ok(stored) = serde_json::from_str::<Value>(&explanation) else {
             continue;
         };
-        if !is_engine(&engine_version, &e) {
+        // TASK-045: a compact row is read as stored (its engine result is small); a rule's references are
+        // rebuilt only for a breach this loop may emit, so a capture never rebuilds every calculation's lists.
+        let compact = frozen_v1::is_compact(&stored);
+        let e = match (compact, stored.get("inline")) {
+            (true, Some(inline)) => inline,
+            (true, None) => &stored["explanation"],
+            (false, _) => &stored,
+        };
+        if !is_engine(&engine_version, e) {
             continue;
         }
         let r = &e["engine"];
@@ -127,18 +137,22 @@ fn prior_breaches(
         if r["accountId"].as_str() != Some(account_id) {
             continue;
         }
-        for rule in r["rules"].as_array().into_iter().flatten() {
-            let refs = rule["sourceReferences"]
-                .as_array()
-                .cloned()
-                .unwrap_or_default();
+        for (index, rule) in r["rules"].as_array().into_iter().flatten().enumerate() {
             let Some(key) = rule["ruleKey"].as_str() else {
                 continue;
             };
-            if rule["state"].as_str() != Some("breached")
-                || refs.is_empty()
-                || !seen.insert(format!("{assignment}|{key}"))
-            {
+            let slot = format!("{assignment}|{key}");
+            if rule["state"].as_str() != Some("breached") || seen.contains(&slot) {
+                continue;
+            }
+            // Settled exactly before the slot is claimed: a breach with no references never claims it.
+            let refs = if compact && rule.get("sourceReferences").is_none() {
+                decoder.rule_refs(account_id, &stored, index)?
+            } else {
+                rule["sourceReferences"].clone()
+            };
+            let refs = refs.as_array().cloned().unwrap_or_default();
+            if refs.is_empty() || !seen.insert(slot) {
                 continue;
             }
             out.push(json!({ "accountId": account_id, "rulebookVersionId": version, "assignmentId": assignment,

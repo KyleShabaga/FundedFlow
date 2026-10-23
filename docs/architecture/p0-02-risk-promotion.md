@@ -62,6 +62,21 @@ promotion later compares. The cross-language contract is proven on real native p
 `risk-promotion-wire.test.ts` checks that canonical(frozen) equals canonical(capture), and `calculate-risk.test.ts`
 checks that parsing native inputs with zod changes nothing.
 
+### How frozen inputs are stored (TASK-045)
+
+What a calculation froze is unchanged, but from schema 23 it is not stored as one copy per calculation. Rust stores an
+engine calculation with canonical inputs in the compact `frozen-v1` form (`store/frozen_v1.rs`): the source lists
+live once per record version in `risk_frozen_records`, `risk_frozen_spans` records which versions each list held at
+each per-account generation, and the result, rule and carried-breach references are rebuilt from the decoded inputs
+and policy. Before writing, Rust checks that the encoding decodes to exactly the explanation it replaces, and stores
+anything that does not as given. Every read (`snapshots::get`, `list`, `latest`) decodes, so `frozen()`, freshness,
+promotion and the ordering rule see the same `explanation` as before, and `inputsHash` and the source fingerprint are
+byte-identical. `prior_breaches` reads each row's small stored engine result and rebuilds references only for the
+breaches it emits, so a capture no longer parses every calculation's full input lists. Storing a calculation (both
+`save_account_snapshot` and promotion) runs in a `BEGIN IMMEDIATE` transaction because it may open a new generation.
+Stale saves through `save_account_snapshot` can move the generation back and forth; they decode exactly but add spans
+on each switch. See [Frozen risk sources](../data-model.md#frozen-risk-sources-task-045).
+
 ### Atomic compare-and-promote
 
 `promote_account_risk(input)` either does all of the following in one `BEGIN IMMEDIATE` transaction or writes nothing:
