@@ -199,3 +199,39 @@ The update was made on 2026-10-22. The repository side is in commits `6961900` t
 - Merging `code-review/` to main: this needs a PR, which Kyle has not asked for.
 - Roadmap Triage cards proposed by the cards (TASK-022 account-switch remount, TASK-009 dedup docs and network-path enforcement, TASK-018 out-of-scope paths).
 - Runbook 10 §9 and 09 waves are historical and not updated. The 08 index is current.
+
+## 11. Board review and approvals (2026-10-22)
+
+**Board review.** Every Pending Review and Deferred card was re-checked against main `92e7980`, which is still the evidence revision. All 44 card hashes matched their committed specs. Each card has a review comment on the board.
+
+**Revisions (commits `db48258`, `a210808`; payloads `2be38ad`).** 23 cards were revised to fold in the review:
+- 004 r4, 009 r4, 014 r5, 015 r5, 016 r5, 017 r6, 018 r5, 021 r5, 022 r5, 024 r5, 025 r5, 027 r6, 028 r6, 029 r7, 031 r6, 034 r5, 035 r4, 037 r2, 039 r2, 040 r3, 041 r2, 042 r2, 044 r2.
+- The 08 index, 09 waves and 10 runbook were synced to match.
+
+Two independent reviewers re-checked the revisions, and their blocking items were applied. The board pages were republished with the new bodies, properties and a comment each. A new Spec Readiness option, r7, was added.
+
+**Approved by Kyle** in the board-review session, quoted exactly:
+> Approve TASK-004 r4, TASK-014 r5, TASK-015 r5, TASK-016 r5, TASK-017 r6, TASK-018 r5, TASK-022 r5, TASK-024 r5, TASK-025 r5, TASK-026 r4, TASK-027 r6, TASK-028 r6, TASK-030 r4, TASK-031 r6, TASK-032 r3, TASK-033 r3, TASK-034 r5, TASK-035 r4, TASK-036 r4, TASK-037 r2, TASK-038 r1, TASK-043 r1, TASK-044 r2.
+
+On the board, each of these 23 cards has:
+- Approval set to Approved;
+- Approved Specification Revision set to the full SHA-256 of the committed spec;
+- Approved By and Approved At (2026-10-22) filled in;
+- an Approval Scope;
+- the quote above appended to its Decision Notes.
+
+**These 23 card files must not be edited.**
+
+**Approved in total (35):** 001, 002, 003, 004, 005, 006, 008, 010, 011, 012, 013, 014, 015, 016, 017, 018, 019, 020, 022, 024, 025, 026, 027, 028, 030, 031, 032, 033, 034, 035, 036, 037, 038, 043, 044.
+
+**Still Pending Review (8)**, each waiting on an owner answer or acknowledgement:
+- 007 r4 (D5 and the real-export import condition)
+- 009 r4 (confirm decision 1)
+- 021 r5 (Q1)
+- 029 r7 (acknowledge the TASK-023 route)
+- 039 r2 (Git-history disposition)
+- 040 r3 (PR #107)
+- 041 r2 (ruling A or B)
+- 042 r2 (TASK-009 r4 plus four rules)
+
+**Deferred:** 023 r3. TASK-011(a) must also record Alt+F4; this is an execution note, and 011 is unchanged.
