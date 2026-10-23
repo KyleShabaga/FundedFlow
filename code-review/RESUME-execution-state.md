@@ -7,6 +7,18 @@ Coordinator: the Claude Code board-review session. Kyle's standing permissions f
 
 Kyle approves; Claude never records an approval.
 
+## Remaining plan (as of 2026-10-23 09:10 MDT)
+00. #131 TASK-028 MERGED (aebd450), #132 TASK-042 MERGED (97deff5; review fix 0f41b2c; Triage cards 4021bd4b6bde8123… and 4021bd4b6bde8198… filed). 28 PRs merged. TASK-045 (migration 0023) running as a worktree agent on `feat/task-045-calc-snapshot-dedup`. TASK-011 kit for Kyle: artifact https://claude.ai/artifact/3DKXuyuHS4C1bzn1b7rge2 (CI installer run 39971011229, FundedFlow_0.1.1_x64-setup.exe, sha256 18ebc9ae…, source 819f967). Usage: 5-hour 27%, weekly 84%.
+0b. #130 TASK-026 MERGED (819f967); 25 PRs merged in total. TASK-028 is running as a worktree agent (it uses the TASK-011-unmeasured branches).
+0a. Merged (2026-10-23): #129 TASK-044 (00ddb23) and #128 TASK-043 (4144cb6, marked Verified). 24 PRs merged in total. Running: TASK-026 (worktree agent) and TASK-042 (worktree agent; migration 0022, Kyle's 4 rules). Next: TASK-045 after 042 merges, then TASK-028 after 026. Usage: 5-hour 15%, weekly 83%.
+0. #120 TASK-027 MERGED (cc63bc5). TASK-026 is running as a worktree agent. #128 (043) and #129 (044) are reviewed MERGE-READY; merge when CI is green.
+1. DONE: #127 TASK-017 MERGED (af85fdb, 2026-10-23); its cards are updated. 21 PRs are merged in total. Earlier note: merge #127 (TASK-017) when CI is green. Sessions 043 (`local_edae2b8f-…`), 044 (`local_e3adc06c-…`) and 027-rebase (`local_13090c1d-…`) wait for that merge and then start.
+2. Review and merge each of their PRs. TASK-027 → then TASK-026 r5 (install docs).
+3. After 043 is Verified/merged: TASK-042 r2 (migration 0022, Kyle's four rules), then TASK-045 r2 (migration 0023, OD answers recorded on the card).
+4. Then TASK-028 r7, once 025 and 026 are merged. Its B1/B3 expected results branch on TASK-011 results ("unmeasured" is allowed).
+5. Blocked on Kyle's TASK-011 run: TASK-018, the TASK-023 decision, and TASK-029 onward (release gates W4–W6).
+- New work from automated turns: start sessions only on Kyle's own turns. Otherwise use Agent with `isolation: worktree`. Cold sessions (`local_fbf73df1`, `local_ff0fffc4`, `local_2c4b47ab`, `local_e213f3e8`) cost $3–5 to wake; don't message them.
+
 ## Usage rule (Kyle, 2026-10-22)
 Check `get_usage` after each merge or handoff. If the 5-hour or weekly limit reaches 95%, stop at a clean point (no half-sent briefs, no mid-merge), update this file and tell Kyle. At 23:10 MDT: 5-hour 25%, weekly 79% (resets 2026-10-25 03:59 MDT).
 
