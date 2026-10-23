@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Ready for Approval (r2) |
+| Status | Ready for Approval (r3) |
 | Type | Fix |
 | Audit priority | P1 (TASK-002 follow-up; release-blocking) |
 | Roadmap lane | Unassigned (owner) |
@@ -17,7 +17,7 @@
 | Verification platform | Any OS (Rust CSV-import and store tests); Windows CI on the PR |
 | Path convention | Paths starting `src-tauri/` are under `apps/desktop/`; `features/`, `lib/`, `journeys/`, `design-system/` are under `apps/desktop/src/` unless written in full |
 | Inspected source revision | 1012d63 (application source identical to 92e7980) |
-| Specification revision | r2 (2026-10-22; r1 + board review fixes) |
+| Specification revision | r3 (2026-10-22; r2 + Kyle's scope widening to the remaining mockup copies) |
 | Execution log | `code-review/11-remediation-execution-log.md` — created by the first task executed after approval (template in 08 index §I); every task appends its evidence there |
 | Pre-existing changes at spec time | None (clean tree; only code-review/ outputs) |
 | Baseline source SHA vs tested SHA | Baseline: 92e7980 (source) / 1012d63 (HEAD). Tested source SHA and installer EXE SHA-256: to be recorded at execution. |
@@ -47,6 +47,7 @@ Real exports committed as test fixtures (owner confirmation 2026-10-22). Read-on
 - Assertions that depend on the fixture's values, re-derived from the synthetic file: `src-tauri/src/csv_import/tests.rs` (including its value-level copies at `:89,91`, `:130`, `:133-134`, `:143-144`, `:188-196`, `:256-258`, replaced with synthetic values), `csv_import/regression_tests.rs`, `csv_import/wire_limit_tests.rs`, `csv_import/identity_tests.rs:73`, `store/attempt_tests.rs`, `store/insights_tests.rs`, `store/risk_promotion_tests.rs` (only where values change).
 - `test_csvimport/identity/fill-pair-v2.json`: replace the copied fill IDs with synthetic IDs and their contract keys, written by hand from the documented P0-01 contract (as `docs/architecture/p0-01-p0-03.md:112` requires), not by running the code under test.
 - Fixture guidance and copied identifiers in docs: `README.md:118,149`, `docs/architecture/build-17-csv-backend.md:14,23`, `docs/architecture/p0-01-p0-03.md:42`, `docs/design/mockups/TradeDetail.dc.html:100,109-112` (identifier, timestamp and P&L text only; no layout change).
+- Remaining real-value copies in mockups (Kyle's scope widening, 2026-10-22; found by the TASK-037 execution scan at 92e7980): `docs/design/mockups/TradeDetail.dc.html:50` (chart time window) and `:51, 64, 98` (row-9 prices); `docs/design/mockups/Import.dc.html:112-121` (about 9 rows: fill-ID suffixes, times, P&L, prices); `docs/design/mockups/DesignSystem.dc.html:132-134` (price pairs of 3 rows). Replace each value with an invented value of the same format and magnitude class; text values only, no layout or markup change. `Journal.dc.html:190-199` stays with TASK-041.
 
 ## Out of scope
 - `test_csvimport/Performance Oct 20.csv`, `Performance Oct 20(1).csv` and the real pair copied into `csv_import/direction_pnl_tests.rs` (TASK-038).
@@ -68,7 +69,7 @@ Real exports committed as test fixtures (owner confirmation 2026-10-22). Read-on
 - Prerequisites: TASK-002 approved (done, Option B). This card's own approval.
 - Recommended ordering: record TASK-039's owner disposition before opening this PR on GitHub; a public PR diff re-displays the deleted rows, and a later history rewrite also has to deal with PR refs.
 - Independent of TASK-038 (no shared files); either may merge first.
-- TASK-041 (split from this card): merge this card first; TASK-041 does not touch `csv_import/tests.rs` or `TradeDetail.dc.html`.
+- TASK-041 (split from this card): merge this card first; TASK-041 does not touch `csv_import/tests.rs`, `TradeDetail.dc.html`, `Import.dc.html` or `DesignSystem.dc.html`.
 - Likely shared-file conflicts: TASK-040 (formatting touches every Rust test file; see TASK-040 merge order); `README.md` (TASK-026 docs).
 - Dependants: TASK-029 (Blocked until this is Verified and merged).
 
@@ -77,7 +78,7 @@ Real exports committed as test fixtures (owner confirmation 2026-10-22). Read-on
 - [ ] Header line byte-identical to the original; CRLF endings, trailing newline, no BOM; each listed edge case is present (record row numbers, not values).
 - [ ] Every test that consumed the old fixture still exists and still covers its scenario; each changed expectation has a hand-derivation comment; the PR mapping table is reviewed.
 - [ ] Affected Rust tests pass (`csv_import::`, `store::attempt_tests`, `store::insights_tests`, `store::risk_promotion_tests`, `identity_tests`) and the full standard checks exit 0.
-- [ ] README and doc text no longer describe the fixture as a real export; copied identifiers removed from `p0-01-p0-03.md` and `TradeDetail.dc.html`.
+- [ ] README and doc text no longer describe the fixture as a real export; copied identifiers removed from `p0-01-p0-03.md` and `TradeDetail.dc.html`; the real values at `TradeDetail.dc.html:50, 51, 64, 98`, `Import.dc.html:112-121` and `DesignSystem.dc.html:132-134` replaced with invented values (scan counts recorded, no values).
 - [ ] Keep `FUNDEDFLOW_UPDATE_FIXTURES` and `FUNDEDFLOW_UPDATE_CSV_FIXTURES` **unset (not `0`)** for every check; never regenerate fixtures unless this card explicitly names the fixture and its diff is reviewed (this card names only `Performance.csv` and `fill-pair-v2.json`, both edited by hand).
 - [ ] Evidence (commands, exit codes, tested SHA, gaps) recorded in the execution log without raw CSV rows.
 
@@ -112,8 +113,13 @@ Code merged through an approved PR on a `feat/build-<n>-<slug>` branch per CLAUD
 - Criterion 1: a pair matches only when both values are in the same line or record; `csv_import/values.rs:339` and `docs/data-model.md:801` listed as known benign matches (board review 2026-10-22).
 - Criterion 1: the scan also covers the variants TASK-041 criterion 2 uses (each row's time-of-day pair and comma-formatted prices); review-notes header no longer begins "Not yet reviewed" (board review re-check 2026-10-22).
 
+## Changes in r3
+- Scope and criterion: added the remaining real-value copies the execution scan found outside r2's scope, `TradeDetail.dc.html:50, 51, 64, 98`, `Import.dc.html:112-121` and `DesignSystem.dc.html:132-134`, at Kyle's direction to widen TASK-037 rather than defer them to TASK-041 (scope widening 2026-10-22).
+- Prerequisites: TASK-041 also leaves `Import.dc.html` and `DesignSystem.dc.html` to this card (scope widening 2026-10-22).
+
 ## Independent review notes
 Reviewed (entries below; board review at r2 pending re-check). r1 was written from the Notion draft; draft scope carried over and made concrete from source at 1012d63. Reviewer to confirm: (a) including the copied identifiers in `fill-pair-v2.json`, `p0-01-p0-03.md` and `TradeDetail.dc.html` is within the draft's "no copied real … identifiers" intent (else split to a Triage card); (b) the coordinator's note that store tests contain copied IDs was not confirmed by the fill-ID scan — those files only consume the fixture.
 Independent review r1 (review3_B, 2026-10-22): CHANGES — (a) confirmed within Option B; (b) partly confirmed: store tests copy values, not IDs (split to TASK-041). Corrections applied in "Changes in r1 (after independent review)"; awaiting re-check.
 Independent review (currency pass, 2026-10-22): two reviewers plus a re-check of the blocking fixes; READY at r1.
 Board review (2026-10-22, against main 92e7980): APPROVE WITH NOTE; fixes folded in at r2. Independent re-check of r2 (two reviewers, 2026-10-22): blocking items applied; READY at r2.
+Revised to r3 at Kyle's direction (2026-10-22): scope widened to the remaining mockup copies found during execution; the rest of r2 is unchanged.
