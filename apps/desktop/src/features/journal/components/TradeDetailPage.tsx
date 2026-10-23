@@ -267,7 +267,9 @@ function TradeView({ account, record, named = false }: { account: AccountViewMod
           navigate("/journal?view=log");
           toast.show({
             tone: "success", title: `${t.symbol} trade deleted`, description: "Its review and screenshots are kept.",
-            action: { label: "Undo", onClick: () => void restore.submit(t.id).then(() => navigate(tradePath(t.id)), () => toast.show({ tone: "error", title: "The trade wasn't restored" })) },
+            action: { label: "Undo", onClick: () => void restore.submit(t.id).then(() => navigate(tradePath(t.id)), error => toast.show((error as { category?: string } | null)?.category === "uncertain-outcome"
+              ? { tone: "warning", title: "The trade may have been restored", description: "No answer came back. Check the trade log; the result is reviewed when you next add or edit a trade in this account, and nothing is sent again until then." }
+              : { tone: "error", title: "The trade wasn't restored" })) },
           });
         }}>
         <p>It leaves the journal, its day totals and risk figures. Its review, checklist answers and screenshots are kept, and it can be restored from Deleted trades in the trade log{t.source === "csv_import" ? " or by re-importing its CSV row" : ""}.</p>

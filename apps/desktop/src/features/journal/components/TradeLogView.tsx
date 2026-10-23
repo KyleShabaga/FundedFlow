@@ -143,7 +143,9 @@ function DeletedTrades({ account, onClose }: { account: AccountViewModel; onClos
                 <Button size="sm" loading={restore.isPending} disabled={readOnly || !restore.canSubmit} disabledReason={readOnly ? "Archived accounts are read-only" : undefined}
                   onClick={() => restore.submit(d.trade.id).then(
                     t => toast.show({ tone: "success", title: `${t.symbol} trade restored` }),
-                    () => toast.show({ tone: "error", title: "The trade wasn't restored", description: "Check the list and try again." }),
+                    error => toast.show((error as { category?: string } | null)?.category === "uncertain-outcome"
+                      ? { tone: "warning", title: "The trade may have been restored", description: "No answer came back. Check the deleted trades list; the result is reviewed when you next add or edit a trade in this account, and nothing is sent again until then." }
+                      : { tone: "error", title: "The trade wasn't restored", description: "Check the list and try again." }),
                   )}>
                   Restore
                 </Button>

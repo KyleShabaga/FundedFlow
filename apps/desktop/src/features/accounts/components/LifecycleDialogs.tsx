@@ -147,6 +147,11 @@ function StatusDialogBody({ account, initialStatus, open, onOpenChange }: Status
 
 /* ---------- Archive and restore ---------- */
 
+// TASK-024: an archive or restore with no answer may have been saved. An account that shows as archived offers no review
+// (its menu has no Edit, Change status or Start new attempt), so its lock lasts until FundedFlow restarts.
+const isUncertain = (error: unknown) => (error as { category?: string } | null)?.category === "uncertain-outcome";
+const LOCKED_UNTIL_RESTART = "Archiving and restoring this account are locked until you restart FundedFlow; check the account after reopening it.";
+
 export function ArchiveDialog({ account, open, onOpenChange, onArchived }: { account: AccountViewModel; open: boolean; onOpenChange: (open: boolean) => void; onArchived?: () => void }) {
   const archive = useArchiveAccount(account.id);
   const toast = useToast();
@@ -163,7 +168,13 @@ export function ArchiveDialog({ account, open, onOpenChange, onArchived }: { acc
         toast.show({ tone: "success", title: `${account.name} archived`, description: "Find it under the Archived filter." });
         onArchived?.();
       }}
-      describeError={() => "It wasn't archived. Check the account and try again."}
+      describeError={error => (!isUncertain(error)
+        ? "It wasn't archived. Check the account and try again."
+        : account.archivedAt !== null
+          ? `No answer came back, so it may have been archived. ${LOCKED_UNTIL_RESTART} Nothing is sent again.`
+          : "No answer came back, so it may have been archived. Close this and check the account; archived accounts are under the Archived filter. "
+            + "If it is archived, archiving and restoring it are locked until you restart FundedFlow; check it again after reopening. "
+            + "If it isn't, its Edit, Change status or Start new attempt dialog shows what was saved. Nothing is sent again.")}
     >
       <p>It leaves the account lists and becomes read-only. Its trades, imports, journal and history are kept, and you can restore it at any time.</p>
     </ConfirmDialog>
@@ -188,7 +199,9 @@ export function RestoreDialog({ account, open, onOpenChange }: { account: Accoun
       describeError={error =>
         (error as { category?: string })?.category === "conflict"
           ? "Another active or paused account already uses this broker account number. Close or archive that one first."
-          : "It wasn't restored. Check the account and try again."
+          : isUncertain(error)
+            ? `No answer came back for this account's last change, so it may already have been archived or restored. ${LOCKED_UNTIL_RESTART} Nothing is sent again.`
+            : "It wasn't restored. Check the account and try again."
       }
     >
       <p>It returns to the account lists with its status unchanged ({statusLabels[account.status].toLowerCase()}).</p>
