@@ -165,3 +165,37 @@ The update was made on 2026-10-22. The repository side is in commits `6961900` t
 - Owner amendments (009, 016, 017, 021) are recorded only in the board's Decision Notes.
 
 **Still Pending Review:** 023, 027–041.
+
+## 10. Approved-task audit fixes (2026-10-22 to 23)
+
+**Source.** A separate audit session reviewed the 25 approved cards. Its report is `code-review/stage2-approved-task-audit-2026-10-22.md` on branch `claude/zen-albattani-bg7wk3`, commit `d3c8c60`.
+
+**Kyle's decisions in this session:**
+- Revised approved cards go back to Pending Review.
+- TASK-009 fees: a V1 migration, delivered by a new task.
+- TASK-007 D5: accept the shared classes and close it.
+- TASK-024: widen the scope and fix the wording.
+
+**Cards revised and moved back to Pending Review (13):** 004 r3, 007 r4, 009 r3, 014 r4, 015 r4, 016 r4, 017 r5, 018 r4, 021 r4, 022 r4, 024 r4, 025 r4, 026 r4. Their Notion-only owner amendments (016, 017, 021) are now folded into the card text.
+
+**Pending cards aligned:** 028 r5, 029 r6, 030 r4, 031 r5, 036 r4.
+
+**New cards:**
+- TASK-042: fees-recorded flag migration.
+- TASK-043: B2-1 rollback fix.
+- TASK-044: retention disclosure.
+
+**Review.** Three independent reviewers plus a re-check: all READY.
+
+**Board changes:**
+- 18 pages updated and 3 pages created.
+- The 13 cards above were set to Pending Review. Approved By, Approved At and Approved Specification Revision are kept as history.
+- Dependencies: 025 → [001, 006]; 026 → [006, 027].
+- New Spec Readiness options r5 and r6.
+
+**Still Approved on the board (12):** 001, 002, 003, 005, 006, 008, 010, 011, 012, 013, 019, 020. Their hashes are unchanged.
+
+**Not done:**
+- Merging `code-review/` to main: this needs a PR, which Kyle has not asked for.
+- Roadmap Triage cards proposed by the cards (TASK-022 account-switch remount, TASK-009 dedup docs and network-path enforcement, TASK-018 out-of-scope paths).
+- Runbook 10 §9 and 09 waves are historical and not updated. The 08 index is current.

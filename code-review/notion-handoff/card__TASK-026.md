@@ -4,7 +4,7 @@
 ## Decision summary
 - **Spec readiness:** Ready for Approval at r4 (approved-task audit fixes; independently reviewed).
 - **Specification:** `code-review/remediation-tasks/TASK-026-install-uninstall-webview2-docs.md` · revision r4 · sha256 `c35b90fad98b8dddb0748dc60f6c439216995c6b9eafdae9e3b0770e6e55e3b7`
-- **Proposed wave:** W3a · **Dependencies:** TASK-006
+- **Proposed wave:** W3a · **Dependencies:** TASK-006, TASK-027
 - **Proposed approval scope:** PROPOSAL — NOT YET APPROVED: TASK-026 at spec r4 (sha256 c35b90fad98b), scope exactly as the card; prerequisites must be complete.
 
 ## Objective, trigger and why it matters

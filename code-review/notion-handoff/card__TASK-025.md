@@ -4,7 +4,7 @@
 ## Decision summary
 - **Spec readiness:** Ready for Approval at r4 (approved-task audit fixes; independently reviewed).
 - **Specification:** `code-review/remediation-tasks/TASK-025-owner-only-legal-notices.md` · revision r4 · sha256 `db73b136d407e2b6b4948ad827e774aa18a3c034fa4e362cfad66a102e8da3b8`
-- **Proposed wave:** W3a · **Dependencies:** TASK-001, TASK-006, TASK-026
+- **Proposed wave:** W3a · **Dependencies:** TASK-001, TASK-006
 - **Proposed approval scope:** PROPOSAL — NOT YET APPROVED: TASK-025 at spec r4 (sha256 db73b136d407), scope exactly as the card; prerequisites must be complete.
 
 ## Objective, trigger and why it matters
