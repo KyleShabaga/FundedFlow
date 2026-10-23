@@ -4,7 +4,7 @@ FundedFlow third-party notices
 About this file
 ---------------
 
-FundedFlow 0.1.0 for Windows x64 (x86_64-pc-windows-msvc) includes the third-party components listed below. Each is licensed by its own authors under the licence named in its entry; the full licence texts follow at the end, each printed once and referenced by its [T] number.
+FundedFlow 0.1.1 for Windows x64 (x86_64-pc-windows-msvc) includes the third-party components listed below. Each is licensed by its own authors under the licence named in its entry; the full licence texts follow at the end, each printed once and referenced by its [T] number.
 
 This build includes 232 Rust crates, 58 npm packages and 3 fonts: 293 components, with 38 distinct licence texts.
 

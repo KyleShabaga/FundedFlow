@@ -86,7 +86,7 @@
         "maxEntries": 4096,
         "maxEntryBytes": 67108864,
         "maxTotalBytes": 268435456,
-        "producerVersion": "0.1.0",
+        "producerVersion": "0.1.1",
         "protection": "plaintext",
         "schemaVersion": 3,
         "timeEncoding": "stored-UTC-instants;account-IANA-zone-and-reset;stored-trading-day"
