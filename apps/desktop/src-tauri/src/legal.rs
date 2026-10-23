@@ -47,32 +47,56 @@ pub struct LegalStore {
 
 impl LegalStore {
     pub fn new(dir: Result<PathBuf, String>) -> Self {
-        Self { path: dir.map(|dir| dir.join(ACCEPTANCE_FILE_NAME)) }
+        Self {
+            path: dir.map(|dir| dir.join(ACCEPTANCE_FILE_NAME)),
+        }
     }
 }
 
 fn token_ok(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= 64
-        && value.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b'_' | b'+'))
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b'_' | b'+'))
 }
 
 fn validate(documents: &[AcceptedDocument]) -> AppResult<()> {
     if documents.is_empty() || documents.len() > MAX_DOCUMENTS {
-        return Err(AppError::invalid("documents", format!("between 1 and {MAX_DOCUMENTS} documents are required")));
+        return Err(AppError::invalid(
+            "documents",
+            format!("between 1 and {MAX_DOCUMENTS} documents are required"),
+        ));
     }
     for (index, doc) in documents.iter().enumerate() {
         if !token_ok(&doc.id) {
-            return Err(AppError::invalid(&format!("documents[{index}].id"), "must be a short identifier"));
+            return Err(AppError::invalid(
+                &format!("documents[{index}].id"),
+                "must be a short identifier",
+            ));
         }
         if !token_ok(&doc.version) {
-            return Err(AppError::invalid(&format!("documents[{index}].version"), "must be a short version"));
+            return Err(AppError::invalid(
+                &format!("documents[{index}].version"),
+                "must be a short version",
+            ));
         }
-        if doc.digest.len() != 64 || !doc.digest.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) {
-            return Err(AppError::invalid(&format!("documents[{index}].digest"), "must be a lowercase SHA-256 hex digest"));
+        if doc.digest.len() != 64
+            || !doc
+                .digest
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        {
+            return Err(AppError::invalid(
+                &format!("documents[{index}].digest"),
+                "must be a lowercase SHA-256 hex digest",
+            ));
         }
         if documents[..index].iter().any(|other| other.id == doc.id) {
-            return Err(AppError::invalid(&format!("documents[{index}].id"), "is listed twice"));
+            return Err(AppError::invalid(
+                &format!("documents[{index}].id"),
+                "is listed twice",
+            ));
         }
     }
     Ok(())
@@ -92,14 +116,27 @@ pub fn read(path: &Path) -> Option<LegalAcceptance> {
 }
 
 /// Replaces the record atomically (a temporary file in the same directory, flushed, then renamed).
-pub fn write(path: &Path, documents: Vec<AcceptedDocument>, accepted_at: String) -> AppResult<LegalAcceptance> {
+pub fn write(
+    path: &Path,
+    documents: Vec<AcceptedDocument>,
+    accepted_at: String,
+) -> AppResult<LegalAcceptance> {
     validate(&documents)?;
-    let record = LegalAcceptance { documents, accepted_at };
-    let unavailable = |e: std::io::Error| AppError::Unavailable { message: format!("the acceptance record could not be saved: {e}") };
-    let dir = path.parent().ok_or_else(|| AppError::Unavailable { message: "the app config folder is unknown".into() })?;
+    let record = LegalAcceptance {
+        documents,
+        accepted_at,
+    };
+    let unavailable = |e: std::io::Error| AppError::Unavailable {
+        message: format!("the acceptance record could not be saved: {e}"),
+    };
+    let dir = path.parent().ok_or_else(|| AppError::Unavailable {
+        message: "the app config folder is unknown".into(),
+    })?;
     fs::create_dir_all(dir).map_err(unavailable)?;
     let mut file = tempfile::NamedTempFile::new_in(dir).map_err(unavailable)?;
-    let bytes = serde_json::to_vec_pretty(&record).map_err(|e| AppError::Unavailable { message: e.to_string() })?;
+    let bytes = serde_json::to_vec_pretty(&record).map_err(|e| AppError::Unavailable {
+        message: e.to_string(),
+    })?;
     file.write_all(&bytes).map_err(unavailable)?;
     file.as_file().sync_all().map_err(unavailable)?;
     file.persist(path).map_err(|e| unavailable(e.error))?;
@@ -114,8 +151,14 @@ pub fn get_legal_acceptance(store: State<'_, LegalStore>) -> Option<LegalAccepta
 
 /// Records that the user accepted these document versions now.
 #[tauri::command]
-pub fn record_legal_acceptance(store: State<'_, LegalStore>, documents: Vec<AcceptedDocument>) -> AppResult<LegalAcceptance> {
-    let path = store.path.as_ref().map_err(|e| AppError::Unavailable { message: e.clone() })?;
+pub fn record_legal_acceptance(
+    store: State<'_, LegalStore>,
+    documents: Vec<AcceptedDocument>,
+) -> AppResult<LegalAcceptance> {
+    let path = store
+        .path
+        .as_ref()
+        .map_err(|e| AppError::Unavailable { message: e.clone() })?;
     write(path, documents, domain::now())
 }
 
@@ -124,7 +167,11 @@ mod tests {
     use super::*;
 
     fn doc(id: &str) -> AcceptedDocument {
-        AcceptedDocument { id: id.into(), version: "0.1.0-draft".into(), digest: "ab".repeat(32) }
+        AcceptedDocument {
+            id: id.into(),
+            version: "0.1.0-draft".into(),
+            digest: "ab".repeat(32),
+        }
     }
     const AT: &str = "2026-10-21T18:00:00.000Z";
 
@@ -138,13 +185,23 @@ mod tests {
     fn write_then_read_round_trips_and_creates_the_folder() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config").join(ACCEPTANCE_FILE_NAME);
-        let written = write(&path, vec![doc("privacy-notice"), doc("user-agreement")], AT.into()).unwrap();
+        let written = write(
+            &path,
+            vec![doc("privacy-notice"), doc("user-agreement")],
+            AT.into(),
+        )
+        .unwrap();
         assert_eq!(read(&path), Some(written.clone()));
         assert_eq!(written.accepted_at, AT);
         // Accepting again replaces the record rather than appending to it.
         let mut newer = doc("privacy-notice");
         newer.version = "0.2.0".into();
-        write(&path, vec![newer.clone()], "2026-10-22T09:00:00.000Z".into()).unwrap();
+        write(
+            &path,
+            vec![newer.clone()],
+            "2026-10-22T09:00:00.000Z".into(),
+        )
+        .unwrap();
         assert_eq!(read(&path).unwrap().documents, vec![newer]);
         let leftovers: Vec<_> = fs::read_dir(path.parent().unwrap()).unwrap().collect();
         assert_eq!(leftovers.len(), 1, "no temporary files remain");
@@ -186,10 +243,15 @@ mod tests {
             vec![doc("privacy notice")],
             vec![upper],
             vec![doc("privacy-notice"), doc("privacy-notice")],
-            (0..=MAX_DOCUMENTS).map(|i| doc(&format!("doc-{i}"))).collect(),
+            (0..=MAX_DOCUMENTS)
+                .map(|i| doc(&format!("doc-{i}")))
+                .collect(),
         ];
         for documents in cases {
-            assert!(matches!(write(&path, documents, AT.into()), Err(AppError::Validation { .. })));
+            assert!(matches!(
+                write(&path, documents, AT.into()),
+                Err(AppError::Validation { .. })
+            ));
         }
         assert!(!path.exists());
     }

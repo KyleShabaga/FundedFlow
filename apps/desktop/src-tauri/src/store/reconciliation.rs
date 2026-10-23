@@ -2,7 +2,7 @@
 //! comparisons replayable after current trades, ledger or account settings change.
 use super::{
     account_ctx,
-    evidence::{self, decode, encode, exact_money, Observation},
+    evidence::{self, Observation, decode, encode, exact_money},
     ledger::{self, LedgerEntry, LedgerRevision},
     require_account,
     trades::{self, Trade},
@@ -11,7 +11,7 @@ use crate::{
     domain::{format_instant, micros_to_string, new_id, now, parse_payload_time},
     error::{AppError, AppResult},
 };
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

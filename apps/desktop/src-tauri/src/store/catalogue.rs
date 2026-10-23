@@ -8,7 +8,7 @@
 //! the desktop UI. Every rule in the schema's triggers still applies to what
 //! these functions write, and a violation comes back as a conflict.
 
-use rusqlite::{params, Connection, OptionalExtension, Row};
+use rusqlite::{Connection, OptionalExtension, Row, params};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -23,21 +23,39 @@ fn money(m: Option<i64>) -> Option<String> {
 
 /// An enum column as its wire type; an unknown value is a corrupt row, not a panic.
 fn wire<T: DeserializeOwned>(text: String) -> rusqlite::Result<T> {
-    serde_json::from_value(serde_json::Value::String(text.clone()))
-        .map_err(|e| rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, format!("'{text}': {e}").into()))
+    serde_json::from_value(serde_json::Value::String(text.clone())).map_err(|e| {
+        rusqlite::Error::FromSqlConversionFailure(
+            0,
+            rusqlite::types::Type::Text,
+            format!("'{text}': {e}").into(),
+        )
+    })
 }
 
 fn json<T: DeserializeOwned>(text: String) -> rusqlite::Result<T> {
-    serde_json::from_str(&text).map_err(|e| rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e)))
+    serde_json::from_str(&text).map_err(|e| {
+        rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
+    })
 }
 
-fn source_ids(conn: &Connection, table: &str, owner: &str, id: &str) -> rusqlite::Result<Vec<String>> {
-    conn.prepare(&format!("SELECT source_id FROM {table} WHERE {owner} = ?1 ORDER BY source_id"))?
-        .query_map([id], |r| r.get(0))?
-        .collect()
+fn source_ids(
+    conn: &Connection,
+    table: &str,
+    owner: &str,
+    id: &str,
+) -> rusqlite::Result<Vec<String>> {
+    conn.prepare(&format!(
+        "SELECT source_id FROM {table} WHERE {owner} = ?1 ORDER BY source_id"
+    ))?
+    .query_map([id], |r| r.get(0))?
+    .collect()
 }
 
-fn all<T>(conn: &Connection, sql: &str, map: impl Fn(&Row) -> rusqlite::Result<T>) -> rusqlite::Result<Vec<T>> {
+fn all<T>(
+    conn: &Connection,
+    sql: &str,
+    map: impl Fn(&Row) -> rusqlite::Result<T>,
+) -> rusqlite::Result<Vec<T>> {
     conn.prepare(sql)?.query_map([], |r| map(r))?.collect()
 }
 
@@ -105,7 +123,12 @@ fn load_all(conn: &Connection) -> rusqlite::Result<CatalogueSnapshot> {
     let catalogue_versions = all(conn, "SELECT * FROM catalogue_versions ORDER BY id", |r| {
         let id: String = r.get("id")?;
         Ok(CatalogueVersion {
-            source_ids: source_ids(conn, "catalogue_version_sources", "catalogue_version_id", &id)?,
+            source_ids: source_ids(
+                conn,
+                "catalogue_version_sources",
+                "catalogue_version_id",
+                &id,
+            )?,
             claims: conn
                 .prepare(
                     "SELECT field, origin, source_id, provider_text FROM catalogue_field_claims
@@ -184,7 +207,9 @@ fn load_all(conn: &Connection) -> rusqlite::Result<CatalogueSnapshot> {
                 amount: money(r.get("discount_amount_micros")?).unwrap_or_default(),
                 currency: r.get("discount_currency")?,
             },
-            "percent" => PromotionDiscount::Percent { percent: money(r.get("discount_percent_micros")?).unwrap_or_default() },
+            "percent" => PromotionDiscount::Percent {
+                percent: money(r.get("discount_percent_micros")?).unwrap_or_default(),
+            },
             _ => PromotionDiscount::Unknown,
         };
         Ok(Promotion {
@@ -199,14 +224,18 @@ fn load_all(conn: &Connection) -> rusqlite::Result<CatalogueSnapshot> {
             verification_status: wire(r.get("verification_status")?)?,
         })
     })?;
-    let promotion_offers = all(conn, "SELECT * FROM promotion_offers ORDER BY promotion_id, commercial_offer_id", |r| {
-        Ok(PromotionOffer {
-            promotion_id: r.get("promotion_id")?,
-            commercial_offer_id: r.get("commercial_offer_id")?,
-            valid_from: r.get("valid_from")?,
-            valid_to: r.get("valid_to")?,
-        })
-    })?;
+    let promotion_offers = all(
+        conn,
+        "SELECT * FROM promotion_offers ORDER BY promotion_id, commercial_offer_id",
+        |r| {
+            Ok(PromotionOffer {
+                promotion_id: r.get("promotion_id")?,
+                commercial_offer_id: r.get("commercial_offer_id")?,
+                valid_from: r.get("valid_from")?,
+                valid_to: r.get("valid_to")?,
+            })
+        },
+    )?;
     let sources = all(conn, "SELECT * FROM catalogue_sources ORDER BY id", |r| {
         Ok(SourceReference {
             id: r.get("id")?,
@@ -245,7 +274,14 @@ fn load_all(conn: &Connection) -> rusqlite::Result<CatalogueSnapshot> {
 // Version review
 // ---------------------------------------------------------------------------
 
-const TRANSITIONS: &[&str] = &["draft", "needs_review", "verified", "stale", "superseded", "rejected"];
+const TRANSITIONS: &[&str] = &[
+    "draft",
+    "needs_review",
+    "verified",
+    "stale",
+    "superseded",
+    "rejected",
+];
 
 /// Move a catalogue version along its review states. The schema's trigger
 /// decides which moves are legal (`canTransitionVerification`); this adds the
@@ -258,22 +294,38 @@ pub fn transition_version(
     reviewer: Option<&str>,
 ) -> AppResult<CatalogueVersion> {
     if !TRANSITIONS.contains(&to) {
-        return Err(AppError::invalid("to", format!("must be one of {}", TRANSITIONS.join(", "))));
+        return Err(AppError::invalid(
+            "to",
+            format!("must be one of {}", TRANSITIONS.join(", ")),
+        ));
     }
     let reviewer = reviewer.map(str::trim).filter(|r| !r.is_empty());
     if to == "verified" && reviewer.is_none() {
-        return Err(AppError::invalid("reviewer", "name the person who verified this version"));
+        return Err(AppError::invalid(
+            "reviewer",
+            "name the person who verified this version",
+        ));
     }
     if reviewer.is_some_and(|r| r.chars().count() > 200) {
-        return Err(AppError::invalid("reviewer", "must be at most 200 characters"));
+        return Err(AppError::invalid(
+            "reviewer",
+            "must be at most 200 characters",
+        ));
     }
     let tx = conn.transaction()?;
     let found: Option<String> = tx
-        .query_row("SELECT verification_status FROM catalogue_versions WHERE id = ?1", [version_id], |r| r.get(0))
+        .query_row(
+            "SELECT verification_status FROM catalogue_versions WHERE id = ?1",
+            [version_id],
+            |r| r.get(0),
+        )
         .optional()?;
     let from = found.ok_or_else(|| AppError::not_found("catalogue version", version_id))?;
     if from == to {
-        return Err(AppError::invalid("to", format!("the version is already {to}")));
+        return Err(AppError::invalid(
+            "to",
+            format!("the version is already {to}"),
+        ));
     }
     if to == "superseded" {
         // The replacement must already be verified, so a version is never retired without one.
@@ -283,7 +335,10 @@ pub fn transition_version(
             |r| r.get(0),
         )?;
         if !replaced {
-            return Err(AppError::invalid("to", "a version is superseded only by a verified correction that names it"));
+            return Err(AppError::invalid(
+                "to",
+                "a version is superseded only by a verified correction that names it",
+            ));
         }
     }
     let changed = if to == "verified" {
@@ -295,7 +350,10 @@ pub fn transition_version(
             params![version_id, reviewer, now()],
         )?
     } else {
-        tx.execute("UPDATE catalogue_versions SET verification_status = ?2 WHERE id = ?1", params![version_id, to])?
+        tx.execute(
+            "UPDATE catalogue_versions SET verification_status = ?2 WHERE id = ?1",
+            params![version_id, to],
+        )?
     };
     debug_assert_eq!(changed, 1);
     tx.commit()?;
@@ -349,15 +407,26 @@ pub fn set_link(conn: &mut Connection, input: AccountLinkInput) -> AppResult<Acc
     account_ctx(&tx, &input.account_id)?;
     let provider: Option<String> = match &input.programme_variant_id {
         Some(variant) => Some(
-            tx.query_row("SELECT provider_id FROM programme_variants WHERE id = ?1", [variant], |r| r.get(0))
-                .optional()?
-                .ok_or_else(|| AppError::invalid("programmeVariantId", "unknown programme variant"))?,
+            tx.query_row(
+                "SELECT provider_id FROM programme_variants WHERE id = ?1",
+                [variant],
+                |r| r.get(0),
+            )
+            .optional()?
+            .ok_or_else(|| AppError::invalid("programmeVariantId", "unknown programme variant"))?,
         ),
         None => {
             if input.catalogue_version_id.is_some() || input.selected_phase_path_id.is_some() {
-                return Err(AppError::invalid("programmeVariantId", "a version or path needs its programme variant"));
+                return Err(AppError::invalid(
+                    "programmeVariantId",
+                    "a version or path needs its programme variant",
+                ));
             }
-            tx.query_row("SELECT provider_id FROM accounts WHERE id = ?1", [&input.account_id], |r| r.get(0))?
+            tx.query_row(
+                "SELECT provider_id FROM accounts WHERE id = ?1",
+                [&input.account_id],
+                |r| r.get(0),
+            )?
         }
     };
     tx.execute(
@@ -420,26 +489,52 @@ fn event_row(r: &Row) -> rusqlite::Result<AccountPhaseEvent> {
 /// Recording order (then id), which is the order the history applies in. Readable for archived accounts.
 pub fn list_phase_events(conn: &Connection, account_id: &str) -> AppResult<Vec<AccountPhaseEvent>> {
     require_account(conn, account_id)?;
-    let mut stmt = conn.prepare(&format!("{EVENT} WHERE account_id = ?1 ORDER BY recorded_at, id"))?;
+    let mut stmt = conn.prepare(&format!(
+        "{EVENT} WHERE account_id = ?1 ORDER BY recorded_at, id"
+    ))?;
     let rows = stmt.query_map([account_id], event_row)?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
 /// Append an event. Phase history is append-only: nothing is edited or deleted, and phase is
 /// never inferred from `account_type` or status. The actor is always the user.
-pub fn record_phase_event(conn: &mut Connection, input: PhaseEventInput) -> AppResult<AccountPhaseEvent> {
+pub fn record_phase_event(
+    conn: &mut Connection,
+    input: PhaseEventInput,
+) -> AppResult<AccountPhaseEvent> {
     let mut issues = Issues::default();
-    let label = input.provider_label.as_deref().map(str::trim).filter(|l| !l.is_empty()).map(str::to_string);
-    let note = input.note.as_deref().map(str::trim).filter(|n| !n.is_empty()).map(str::to_string);
-    let occurred_at = match input.occurred_at.as_deref().map(parse_payload_time).transpose() {
+    let label = input
+        .provider_label
+        .as_deref()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .map(str::to_string);
+    let note = input
+        .note
+        .as_deref()
+        .map(str::trim)
+        .filter(|n| !n.is_empty())
+        .map(str::to_string);
+    let occurred_at = match input
+        .occurred_at
+        .as_deref()
+        .map(parse_payload_time)
+        .transpose()
+    {
         Ok(t) => t.map(crate::domain::format_instant),
         Err(m) => {
             issues.add("occurredAt", m);
             None
         }
     };
-    if matches!(input.source, PhaseEventSource::System | PhaseEventSource::CatalogueDerived) {
-        issues.add("source", "an entry made here is user_entered, imported or unknown");
+    if matches!(
+        input.source,
+        PhaseEventSource::System | PhaseEventSource::CatalogueDerived
+    ) {
+        issues.add(
+            "source",
+            "an entry made here is user_entered, imported or unknown",
+        );
     }
     issues.into_result()?;
 

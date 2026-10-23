@@ -14,20 +14,34 @@ pub struct FieldIssue {
 
 impl FieldIssue {
     pub fn new(field: impl Into<String>, message: impl Into<String>) -> Self {
-        Self { field: field.into(), message: message.into() }
+        Self {
+            field: field.into(),
+            message: message.into(),
+        }
     }
 }
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum AppError {
-    Validation { message: String, issues: Vec<FieldIssue> },
-    NotFound { message: String },
+    Validation {
+        message: String,
+        issues: Vec<FieldIssue>,
+    },
+    NotFound {
+        message: String,
+    },
     /// A uniqueness or relationship constraint rejected the write.
-    Conflict { message: String },
-    Database { message: String },
+    Conflict {
+        message: String,
+    },
+    Database {
+        message: String,
+    },
     /// The journal database is not open; see `runtime_status`.
-    Unavailable { message: String },
+    Unavailable {
+        message: String,
+    },
 }
 
 pub type AppResult<T> = Result<T, AppError>;
@@ -46,7 +60,9 @@ impl AppError {
     }
 
     pub fn not_found(what: &str, id: &str) -> Self {
-        AppError::NotFound { message: format!("{what} '{id}' was not found") }
+        AppError::NotFound {
+            message: format!("{what} '{id}' was not found"),
+        }
     }
 }
 
@@ -54,9 +70,13 @@ impl From<rusqlite::Error> for AppError {
     fn from(e: rusqlite::Error) -> Self {
         match &e {
             rusqlite::Error::SqliteFailure(f, msg) if f.code == ErrorCode::ConstraintViolation => {
-                AppError::Conflict { message: msg.clone().unwrap_or_else(|| e.to_string()) }
+                AppError::Conflict {
+                    message: msg.clone().unwrap_or_else(|| e.to_string()),
+                }
             }
-            _ => AppError::Database { message: e.to_string() },
+            _ => AppError::Database {
+                message: e.to_string(),
+            },
         }
     }
 }
@@ -85,6 +105,10 @@ impl Issues {
     }
 
     pub fn into_result(self) -> AppResult<()> {
-        if self.0.is_empty() { Ok(()) } else { Err(AppError::validation(self.0)) }
+        if self.0.is_empty() {
+            Ok(())
+        } else {
+            Err(AppError::validation(self.0))
+        }
     }
 }

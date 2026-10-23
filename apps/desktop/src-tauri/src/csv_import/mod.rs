@@ -10,10 +10,10 @@ pub mod dedup;
 pub mod detect;
 pub mod normalize;
 pub mod parse;
-pub mod values;
 pub(crate) mod target;
+pub mod values;
 
-use rusqlite::{params, Connection, OptionalExtension, Row};
+use rusqlite::{Connection, OptionalExtension, Row, params};
 use serde::{Deserialize, Serialize};
 
 use crate::domain::{canonical, format_instant, micros_to_string, new_id, now, parse_tz};
@@ -23,8 +23,8 @@ use dedup::{Duplicate, Match, Restore};
 pub use detect::{ColumnMapping, Format};
 use detect::{Detection, MappedField};
 use normalize::{NormalizedTrade, Outcome};
-use parse::{ParsedCsv, MAX_CSV_BYTES, MAX_CSV_ROWS};
-use values::{detect_date_format, DateFormat};
+use parse::{MAX_CSV_BYTES, MAX_CSV_ROWS, ParsedCsv};
+use values::{DateFormat, detect_date_format};
 
 /// Rows echoed in full by a preview; beyond this only rows needing
 /// attention (invalid, duplicate, blank or with warnings) are listed.
@@ -206,11 +206,18 @@ struct Analysis {
 
 impl Analysis {
     fn format(&self) -> Format {
-        self.detection.as_ref().map(|d| d.format).unwrap_or(Format::Generic)
+        self.detection
+            .as_ref()
+            .map(|d| d.format)
+            .unwrap_or(Format::Generic)
     }
 }
 
-fn choose_date_format(req: &CsvImportRequest, parsed: &ParsedCsv, d: &Detection) -> Result<(DateFormat, String), String> {
+fn choose_date_format(
+    req: &CsvImportRequest,
+    parsed: &ParsedCsv,
+    d: &Detection,
+) -> Result<(DateFormat, String), String> {
     let explicit = match req.date_format {
         DateFormatChoice::Ymd => Some(DateFormat::Ymd),
         DateFormatChoice::Mdy => Some(DateFormat::Mdy),
@@ -228,16 +235,21 @@ fn choose_date_format(req: &CsvImportRequest, parsed: &ParsedCsv, d: &Detection)
         .rows
         .iter()
         .take(1_000)
-        .flat_map(|r| time_fields.iter().filter_map(|f| d.columns.get(f).and_then(|i| r.cells.get(i))))
+        .flat_map(|r| {
+            time_fields
+                .iter()
+                .filter_map(|f| d.columns.get(f).and_then(|i| r.cells.get(i)))
+        })
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .collect();
     match (d.format, detect_date_format(&samples)) {
         (_, Ok(found)) => Ok(found),
         // Performance exports write month first; say so instead of guessing silently.
-        (Format::Performance, Err(e)) if e.contains("Choose the date format") => {
-            Ok((DateFormat::Mdy, "M/D/YYYY HH:MM:SS, the performance export's date format".into()))
-        }
+        (Format::Performance, Err(e)) if e.contains("Choose the date format") => Ok((
+            DateFormat::Mdy,
+            "M/D/YYYY HH:MM:SS, the performance export's date format".into(),
+        )),
         (_, Err(e)) => Err(e),
     }
 }
@@ -257,11 +269,15 @@ fn analyze(conn: &Connection, req: &CsvImportRequest) -> AppResult<Analysis> {
     };
     let name = req.file_name.trim();
     if name.is_empty() || name.chars().count() > 255 {
-        a.file_issues.push(FieldIssue::new("fileName", "must be 1–255 characters"));
+        a.file_issues
+            .push(FieldIssue::new("fileName", "must be 1–255 characters"));
     }
     let tz = parse_tz(&req.timezone);
     if tz.is_none() {
-        a.file_issues.push(FieldIssue::new("timezone", "must be an IANA time zone such as America/New_York"));
+        a.file_issues.push(FieldIssue::new(
+            "timezone",
+            "must be an IANA time zone such as America/New_York",
+        ));
     }
 
     a.parsed = parse::parse(&req.content);
@@ -294,7 +310,12 @@ fn analyze(conn: &Connection, req: &CsvImportRequest) -> AppResult<Analysis> {
             account: &account,
             instruments: &instruments,
         };
-        a.outcomes = a.parsed.rows.iter().map(|r| normalize::normalize(r, &ctx)).collect();
+        a.outcomes = a
+            .parsed
+            .rows
+            .iter()
+            .map(|r| normalize::normalize(r, &ctx))
+            .collect();
     }
     a.detection = Some(d);
     Ok(a)
@@ -370,7 +391,10 @@ pub fn preview(conn: &Connection, req: &CsvImportRequest) -> AppResult<CsvPrevie
         warning_count: 0,
         rows: Vec::new(),
         rows_omitted: 0,
-        limits: Limits { max_bytes: MAX_CSV_BYTES, max_rows: MAX_CSV_ROWS },
+        limits: Limits {
+            max_bytes: MAX_CSV_BYTES,
+            max_rows: MAX_CSV_ROWS,
+        },
     };
     for (i, ((raw, outcome), m)) in rows.into_iter().zip(matches).enumerate() {
         let (duplicate, restores, ambiguous) = match m {
@@ -384,12 +408,23 @@ pub fn preview(conn: &Connection, req: &CsvImportRequest) -> AppResult<CsvPrevie
         let (status, errors, trade) = match outcome {
             Outcome::Blank => ("blank", Vec::new(), None),
             Outcome::Invalid { errors, .. } => ("invalid", errors.clone(), None),
-            Outcome::Valid { .. } if ambiguous.is_some() => {
-                ("invalid", vec![FieldIssue::new("identity", ambiguous.as_ref().unwrap().reason.clone())], None)
-            }
-            Outcome::Valid { trade, .. } => {
-                (if duplicate.is_some() { "duplicate" } else { "new" }, Vec::new(), Some(trade_preview(trade)))
-            }
+            Outcome::Valid { .. } if ambiguous.is_some() => (
+                "invalid",
+                vec![FieldIssue::new(
+                    "identity",
+                    ambiguous.as_ref().unwrap().reason.clone(),
+                )],
+                None,
+            ),
+            Outcome::Valid { trade, .. } => (
+                if duplicate.is_some() {
+                    "duplicate"
+                } else {
+                    "new"
+                },
+                Vec::new(),
+                Some(trade_preview(trade)),
+            ),
         };
         match status {
             "blank" => p.blank_count += 1,
@@ -442,7 +477,11 @@ fn snapshot(req: &CsvImportRequest, a: &Analysis) -> String {
     .to_string()
 }
 
-fn insert_round_trip(conn: &Connection, trade_id: &str, rt: &normalize::RoundTrip) -> rusqlite::Result<()> {
+fn insert_round_trip(
+    conn: &Connection,
+    trade_id: &str,
+    rt: &normalize::RoundTrip,
+) -> rusqlite::Result<()> {
     conn.execute(
         "INSERT INTO trade_round_trips (trade_id, buy_fill_id, sell_fill_id, buy_price, sell_price, bought_at,
                                         sold_at, bought_at_source, sold_at_source, duration_source,
@@ -500,27 +539,37 @@ fn write_batch(conn: &mut Connection, req: &CsvImportRequest, started: &str) -> 
         ],
     )?;
 
-    let (mut imported, mut duplicate, mut blank, mut failed, mut warned) = (0i64, 0i64, 0i64, 0i64, 0i64);
+    let (mut imported, mut duplicate, mut blank, mut failed, mut warned) =
+        (0i64, 0i64, 0i64, 0i64, 0i64);
     // Trades inserted or restored by this batch, so in-file duplicates can point at them.
     let mut inserted: std::collections::HashMap<String, String> = std::collections::HashMap::new();
     for ((raw, outcome), m) in rows.into_iter().zip(matches) {
         let row_id = new_id();
         let warnings = warnings_of(outcome);
         warned += i64::from(!warnings.is_empty());
-        let (status, errors, duplicate_of): (&str, Vec<FieldIssue>, Option<String>) = match (outcome, &m) {
-            (Outcome::Blank, _) => ("skipped", vec![FieldIssue::new("row", "blank row")], None),
-            (Outcome::Invalid { errors, .. }, _) => ("invalid", errors.clone(), None),
-            (Outcome::Valid { .. }, Match::Duplicate(d)) => (
-                "duplicate",
-                vec![FieldIssue::new("row", d.reason.clone())],
-                d.trade_id.clone().or_else(|| inserted.get(&d.key).cloned()),
-            ),
-            // The row record keeps why it wrote no new trade.
-            (Outcome::Valid { .. }, Match::Restore(r)) => ("imported", vec![FieldIssue::new("row", r.reason.clone())], None),
-            // Recorded, never guessed: see dedup::Ambiguity.
-            (Outcome::Valid { .. }, Match::Ambiguous(a)) => ("invalid", vec![FieldIssue::new("identity", a.reason.clone())], None),
-            (Outcome::Valid { .. }, Match::New) => ("imported", Vec::new(), None),
-        };
+        let (status, errors, duplicate_of): (&str, Vec<FieldIssue>, Option<String>) =
+            match (outcome, &m) {
+                (Outcome::Blank, _) => ("skipped", vec![FieldIssue::new("row", "blank row")], None),
+                (Outcome::Invalid { errors, .. }, _) => ("invalid", errors.clone(), None),
+                (Outcome::Valid { .. }, Match::Duplicate(d)) => (
+                    "duplicate",
+                    vec![FieldIssue::new("row", d.reason.clone())],
+                    d.trade_id.clone().or_else(|| inserted.get(&d.key).cloned()),
+                ),
+                // The row record keeps why it wrote no new trade.
+                (Outcome::Valid { .. }, Match::Restore(r)) => (
+                    "imported",
+                    vec![FieldIssue::new("row", r.reason.clone())],
+                    None,
+                ),
+                // Recorded, never guessed: see dedup::Ambiguity.
+                (Outcome::Valid { .. }, Match::Ambiguous(a)) => (
+                    "invalid",
+                    vec![FieldIssue::new("identity", a.reason.clone())],
+                    None,
+                ),
+                (Outcome::Valid { .. }, Match::New) => ("imported", Vec::new(), None),
+            };
         match status {
             "skipped" => blank += 1,
             "invalid" => failed += 1,
@@ -555,7 +604,14 @@ fn write_batch(conn: &mut Connection, req: &CsvImportRequest, started: &str) -> 
                 dedup_key: &key,
                 broker_trade_id: trade.broker_trade_id.as_deref(),
             };
-            let trade_id = trades::insert(&tx, &req.account_id, Some(&prov), &trade.fields, &trade.derived, started)?;
+            let trade_id = trades::insert(
+                &tx,
+                &req.account_id,
+                Some(&prov),
+                &trade.fields,
+                &trade.derived,
+                started,
+            )?;
             if let Some(rt) = &trade.round_trip {
                 insert_round_trip(&tx, &trade_id, rt)?;
             }
@@ -574,9 +630,19 @@ fn write_batch(conn: &mut Connection, req: &CsvImportRequest, started: &str) -> 
 }
 
 /// Record an attempt that wrote no trades, so import history explains it.
-fn record_failed(conn: &Connection, req: &CsvImportRequest, a: &Analysis, started: &str, error: &str) -> AppResult<()> {
+fn record_failed(
+    conn: &Connection,
+    req: &CsvImportRequest,
+    a: &Analysis,
+    started: &str,
+    error: &str,
+) -> AppResult<()> {
     let name = req.file_name.trim();
-    let name: String = if name.is_empty() { "(unnamed)".into() } else { name.chars().take(255).collect() };
+    let name: String = if name.is_empty() {
+        "(unnamed)".into()
+    } else {
+        name.chars().take(255).collect()
+    };
     conn.execute(
         "INSERT INTO import_batches (id, account_id, file_name, file_sha256, file_size, mapping_snapshot_json,
                                      source_timezone, source_format, status, row_count, failed_count,
@@ -626,7 +692,10 @@ pub fn commit(conn: &mut Connection, req: &CsvImportRequest) -> AppResult<Import
 /// Test callers outside the acknowledgement regression suite model the complete
 /// preview/review flow. Production callers must send their actual reviewed token.
 #[cfg(test)]
-pub(crate) fn commit_reviewed(conn: &mut Connection, req: &CsvImportRequest) -> AppResult<ImportBatch> {
+pub(crate) fn commit_reviewed(
+    conn: &mut Connection,
+    req: &CsvImportRequest,
+) -> AppResult<ImportBatch> {
     let p = preview(conn, req)?;
     let mut reviewed = req.clone();
     reviewed.target_acknowledgement = Some(target::Acknowledgement {
@@ -663,15 +732,21 @@ fn batch_from_row(r: &Row) -> rusqlite::Result<ImportBatch> {
 }
 
 pub fn get_batch(conn: &Connection, id: &str) -> AppResult<ImportBatch> {
-    conn.query_row(&format!("{BATCH_SELECT} WHERE id = ?1"), [id], batch_from_row)
-        .optional()?
-        .ok_or_else(|| AppError::not_found("import", id))
+    conn.query_row(
+        &format!("{BATCH_SELECT} WHERE id = ?1"),
+        [id],
+        batch_from_row,
+    )
+    .optional()?
+    .ok_or_else(|| AppError::not_found("import", id))
 }
 
 /// Import attempts for an account, newest first.
 pub fn list_batches(conn: &Connection, account_id: &str) -> AppResult<Vec<ImportBatch>> {
     crate::store::require_account(conn, account_id)?;
-    let mut stmt = conn.prepare(&format!("{BATCH_SELECT} WHERE account_id = ?1 ORDER BY created_at DESC, id"))?;
+    let mut stmt = conn.prepare(&format!(
+        "{BATCH_SELECT} WHERE account_id = ?1 ORDER BY created_at DESC, id"
+    ))?;
     let rows = stmt.query_map([account_id], batch_from_row)?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
@@ -685,8 +760,9 @@ pub fn list_problem_rows(conn: &Connection, batch_id: &str) -> AppResult<Vec<Imp
          ORDER BY row_number",
     )?;
     fn json_col<T: serde::de::DeserializeOwned>(r: &Row, i: usize) -> rusqlite::Result<T> {
-        serde_json::from_str(&r.get::<_, String>(i)?)
-            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(i, rusqlite::types::Type::Text, Box::new(e)))
+        serde_json::from_str(&r.get::<_, String>(i)?).map_err(|e| {
+            rusqlite::Error::FromSqlConversionFailure(i, rusqlite::types::Type::Text, Box::new(e))
+        })
     }
     let rows = stmt.query_map([batch_id], |r| {
         Ok(ImportRowRecord {

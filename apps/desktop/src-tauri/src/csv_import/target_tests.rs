@@ -6,7 +6,9 @@ use crate::store::attempts::{self, ResetInput};
 use serde_json::json;
 
 fn csv(entry: &str, exit: &str, id: &str) -> String {
-    format!("Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Trade ID\nMNQZ6,Buy,1,{entry},21000,{exit},21001,{id}\n")
+    format!(
+        "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Trade ID\nMNQZ6,Buy,1,{entry},21000,{exit},21001,{id}\n"
+    )
 }
 
 fn reset(conn: &mut Connection, id: &str, at: &str) -> String {
@@ -304,12 +306,13 @@ fn incomplete_or_nonmonotonic_boundaries_block_without_inventing_dates() {
         ),
     )
     .unwrap();
-    assert!(p
-        .target_assessment
-        .blocked
-        .as_ref()
-        .unwrap()
-        .contains("inconsistent"));
+    assert!(
+        p.target_assessment
+            .blocked
+            .as_ref()
+            .unwrap()
+            .contains("inconsistent")
+    );
 }
 
 #[test]

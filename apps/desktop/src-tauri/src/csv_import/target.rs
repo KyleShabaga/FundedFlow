@@ -7,7 +7,7 @@ use rusqlite::{Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use super::{dedup, pairs, trade_preview, Analysis, CsvImportRequest, Match, Outcome};
+use super::{Analysis, CsvImportRequest, Match, Outcome, dedup, pairs, trade_preview};
 use crate::domain::{format_instant, parse_payload_time};
 use crate::error::{AppError, AppResult};
 use crate::store::accounts;
@@ -164,7 +164,9 @@ pub(super) fn assess(
         }
     }
     if outside > 0 && assessment.blocked.is_none() {
-        assessment.blocked = Some(format!("{outside} importable row(s) fall outside this attempt's exact reset interval or span a reset. Choose the correct attempt or split the file; trades are never moved automatically."));
+        assessment.blocked = Some(format!(
+            "{outside} importable row(s) fall outside this attempt's exact reset interval or span a reset. Choose the correct attempt or split the file; trades are never moved automatically."
+        ));
     }
     if assessment.candidate_count > 0 && account.status != "active" {
         assessment.confirmations.push(format!(
@@ -192,7 +194,10 @@ pub(super) fn verify(req: &CsvImportRequest, assessment: &Assessment) -> AppResu
         )
     })?;
     if ack.preview_token != assessment.preview_token {
-        return Err(AppError::invalid("targetAcknowledgement", "The file, destination or lineage changed. Preview the file again and review the destination."));
+        return Err(AppError::invalid(
+            "targetAcknowledgement",
+            "The file, destination or lineage changed. Preview the file again and review the destination.",
+        ));
     }
     if !assessment.confirmations.is_empty() && !ack.historical_confirmed {
         return Err(AppError::invalid(

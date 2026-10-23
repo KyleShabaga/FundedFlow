@@ -23,7 +23,7 @@ use std::path::{Path, PathBuf};
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -92,7 +92,12 @@ fn le16(b: &[u8], i: usize) -> Option<u32> {
     Some(u16::from_le_bytes([*b.get(i)?, *b.get(i + 1)?]) as u32)
 }
 fn le24(b: &[u8], i: usize) -> Option<u32> {
-    Some(u32::from_le_bytes([*b.get(i)?, *b.get(i + 1)?, *b.get(i + 2)?, 0]))
+    Some(u32::from_le_bytes([
+        *b.get(i)?,
+        *b.get(i + 1)?,
+        *b.get(i + 2)?,
+        0,
+    ]))
 }
 
 /// PNG, JPEG or WebP, identified by signature, with dimensions read from the header.
@@ -105,7 +110,12 @@ pub fn sniff(bytes: &[u8]) -> Option<ImageInfo> {
         }
         let w = u32::from_be_bytes(bytes.get(16..20)?.try_into().ok()?);
         let h = u32::from_be_bytes(bytes.get(20..24)?.try_into().ok()?);
-        return Some(ImageInfo { mime: "image/png", ext: "png", width: w, height: h });
+        return Some(ImageInfo {
+            mime: "image/png",
+            ext: "png",
+            width: w,
+            height: h,
+        });
     }
     if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
         // Walk the markers to the first start-of-frame.
@@ -131,7 +141,12 @@ pub fn sniff(bytes: &[u8]) -> Option<ImageInfo> {
             if sof {
                 let h = be16(bytes, i + 5)?;
                 let w = be16(bytes, i + 7)?;
-                return Some(ImageInfo { mime: "image/jpeg", ext: "jpg", width: w, height: h });
+                return Some(ImageInfo {
+                    mime: "image/jpeg",
+                    ext: "jpg",
+                    width: w,
+                    height: h,
+                });
             }
             if marker == 0xDA || marker == 0xD9 {
                 return None;
@@ -158,7 +173,12 @@ pub fn sniff(bytes: &[u8]) -> Option<ImageInfo> {
             b"VP8X" => (le24(bytes, 24)? + 1, le24(bytes, 27)? + 1),
             _ => return None,
         };
-        return Some(ImageInfo { mime: "image/webp", ext: "webp", width: w, height: h });
+        return Some(ImageInfo {
+            mime: "image/webp",
+            ext: "webp",
+            width: w,
+            height: h,
+        });
     }
     None
 }
@@ -169,15 +189,31 @@ pub fn check_image(bytes: &[u8]) -> AppResult<ImageInfo> {
         return Err(AppError::invalid("file", "the file is empty"));
     }
     if bytes.len() > MAX_BYTES {
-        return Err(AppError::invalid("file", "screenshots can be at most 10 MB"));
+        return Err(AppError::invalid(
+            "file",
+            "screenshots can be at most 10 MB",
+        ));
     }
-    let info = sniff(bytes)
-        .ok_or_else(|| AppError::invalid("file", "only PNG, JPEG and WebP images can be attached (checked from the file's contents)"))?;
+    let info = sniff(bytes).ok_or_else(|| {
+        AppError::invalid(
+            "file",
+            "only PNG, JPEG and WebP images can be attached (checked from the file's contents)",
+        )
+    })?;
     if info.width == 0 || info.height == 0 {
         return Err(AppError::invalid("file", "the image has no pixels"));
     }
-    if info.width > MAX_SIDE || info.height > MAX_SIDE || info.width as u64 * info.height as u64 > MAX_PIXELS {
-        return Err(AppError::invalid("file", format!("the image is too large ({} × {} pixels)", info.width, info.height)));
+    if info.width > MAX_SIDE
+        || info.height > MAX_SIDE
+        || info.width as u64 * info.height as u64 > MAX_PIXELS
+    {
+        return Err(AppError::invalid(
+            "file",
+            format!(
+                "the image is too large ({} × {} pixels)",
+                info.width, info.height
+            ),
+        ));
     }
     Ok(info)
 }
@@ -186,7 +222,11 @@ fn display_name(name: Option<String>) -> Option<String> {
     // Keep only the final component and printable characters; this is a label, not a path.
     let name = name?;
     let base = name.rsplit(['/', '\\']).next().unwrap_or("");
-    let clean: String = base.chars().filter(|c| !c.is_control()).take(MAX_NAME_CHARS).collect();
+    let clean: String = base
+        .chars()
+        .filter(|c| !c.is_control())
+        .take(MAX_NAME_CHARS)
+        .collect();
     let clean = clean.trim().to_string();
     (!clean.is_empty()).then_some(clean)
 }
@@ -199,14 +239,22 @@ fn hex(bytes: &[u8]) -> String {
 /// folder, flushed, then renamed into place.
 fn write_new(root: &Path, key: &str, bytes: &[u8]) -> std::io::Result<PathBuf> {
     let target = root.join(key);
-    let dir = target.parent().ok_or_else(|| std::io::Error::other("no parent folder"))?;
+    let dir = target
+        .parent()
+        .ok_or_else(|| std::io::Error::other("no parent folder"))?;
     fs::create_dir_all(dir)?;
     if fs::symlink_metadata(&target).is_ok() {
-        return Err(std::io::Error::new(std::io::ErrorKind::AlreadyExists, "attachment file already exists"));
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::AlreadyExists,
+            "attachment file already exists",
+        ));
     }
     let temp = dir.join(format!(".{}.part", new_id()));
     let result = (|| {
-        let mut f = fs::OpenOptions::new().write(true).create_new(true).open(&temp)?;
+        let mut f = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temp)?;
         f.write_all(bytes)?;
         f.sync_all()?;
         drop(f);
@@ -220,12 +268,21 @@ fn write_new(root: &Path, key: &str, bytes: &[u8]) -> std::io::Result<PathBuf> {
 
 /// Attach a screenshot to a trade's review (creating an empty review if the trade has none).
 /// The review's text and revision are not touched, so a failure here never loses notes.
-pub fn add(conn: &mut Connection, root: &Path, input: ScreenshotInput) -> AppResult<AttachmentMeta> {
+pub fn add(
+    conn: &mut Connection,
+    root: &Path,
+    input: ScreenshotInput,
+) -> AppResult<AttachmentMeta> {
     let encoded = input.data_base64.trim();
     if encoded.len() > MAX_BYTES.div_ceil(3) * 4 + 4 {
-        return Err(AppError::invalid("file", "screenshots can be at most 10 MB"));
+        return Err(AppError::invalid(
+            "file",
+            "screenshots can be at most 10 MB",
+        ));
     }
-    let bytes = STANDARD.decode(encoded).map_err(|_| AppError::invalid("file", "the file data could not be read"))?;
+    let bytes = STANDARD
+        .decode(encoded)
+        .map_err(|_| AppError::invalid("file", "the file data could not be read"))?;
     let info = check_image(&bytes)?;
     let sha = hex(&bytes);
     let name = display_name(input.file_name);
@@ -235,7 +292,11 @@ pub fn add(conn: &mut Connection, root: &Path, input: ScreenshotInput) -> AppRes
         let tx = conn.transaction()?;
         account_ctx(&tx, &input.account_id)?;
         let owner: Option<String> = tx
-            .query_row("SELECT account_id FROM trades WHERE id = ?1 AND deleted_at IS NULL", [&input.trade_id], |r| r.get(0))
+            .query_row(
+                "SELECT account_id FROM trades WHERE id = ?1 AND deleted_at IS NULL",
+                [&input.trade_id],
+                |r| r.get(0),
+            )
             .optional()?;
         if owner.as_deref() != Some(input.account_id.as_str()) {
             return Err(AppError::not_found("trade", &input.trade_id));
@@ -249,18 +310,24 @@ pub fn add(conn: &mut Connection, root: &Path, input: ScreenshotInput) -> AppRes
             |r| Ok((r.get(0)?, r.get(1)?)),
         )?;
         if duplicate {
-            return Err(AppError::Conflict { message: "this screenshot is already attached to the trade".into() });
+            return Err(AppError::Conflict {
+                message: "this screenshot is already attached to the trade".into(),
+            });
         }
         if count >= MAX_PER_REVIEW {
-            return Err(AppError::invalid("file", format!("a trade can have at most {MAX_PER_REVIEW} screenshots")));
+            return Err(AppError::invalid(
+                "file",
+                format!("a trade can have at most {MAX_PER_REVIEW} screenshots"),
+            ));
         }
     }
 
     let id = new_id();
     let key = format!("screenshots/{id}.{}", info.ext);
     let base = root.join(ATTACHMENTS_DIR);
-    let path = write_new(&base, &key, &bytes)
-        .map_err(|e| AppError::Database { message: format!("the screenshot could not be saved to the data folder: {e}") })?;
+    let path = write_new(&base, &key, &bytes).map_err(|e| AppError::Database {
+        message: format!("the screenshot could not be saved to the data folder: {e}"),
+    })?;
     let saved = (|| -> AppResult<()> {
         let tx = conn.transaction()?;
         let review_id = super::reviews::ensure(&tx, &input.account_id, &input.trade_id)?;
@@ -298,7 +365,9 @@ const META: &str = "SELECT a.id, a.original_name, a.mime_type, a.byte_size, a.wi
     WHERE l.deleted_at IS NULL AND a.deleted_at IS NULL";
 
 fn file_status(root: Option<&Path>, key: &str, size: i64) -> String {
-    let Some(root) = root else { return "unknown".into() };
+    let Some(root) = root else {
+        return "unknown".into();
+    };
     match fs::symlink_metadata(root.join(ATTACHMENTS_DIR).join(key)) {
         Ok(m) if m.is_file() && m.len() == size as u64 => "ok".into(),
         Ok(_) => "changed".into(),
@@ -306,7 +375,9 @@ fn file_status(root: Option<&Path>, key: &str, size: i64) -> String {
     }
 }
 
-fn meta_row(root: Option<&Path>) -> impl Fn(&rusqlite::Row) -> rusqlite::Result<AttachmentMeta> + '_ {
+fn meta_row(
+    root: Option<&Path>,
+) -> impl Fn(&rusqlite::Row) -> rusqlite::Result<AttachmentMeta> + '_ {
     move |r| {
         let size: i64 = r.get(3)?;
         let key: String = r.get(9)?;
@@ -326,16 +397,30 @@ fn meta_row(root: Option<&Path>) -> impl Fn(&rusqlite::Row) -> rusqlite::Result<
 }
 
 fn meta(conn: &Connection, root: Option<&Path>, id: &str) -> AppResult<Option<AttachmentMeta>> {
-    Ok(conn.query_row(&format!("{META} AND a.id = ?1"), [id], meta_row(root)).optional()?)
+    Ok(conn
+        .query_row(&format!("{META} AND a.id = ?1"), [id], meta_row(root))
+        .optional()?)
 }
 
-pub(crate) fn for_review(conn: &Connection, root: Option<&Path>, review_id: &str) -> AppResult<Vec<AttachmentMeta>> {
-    let mut stmt = conn.prepare(&format!("{META} AND l.trade_review_id = ?1 ORDER BY l.sort_order, l.id"))?;
-    Ok(stmt.query_map([review_id], meta_row(root))?.collect::<rusqlite::Result<_>>()?)
+pub(crate) fn for_review(
+    conn: &Connection,
+    root: Option<&Path>,
+    review_id: &str,
+) -> AppResult<Vec<AttachmentMeta>> {
+    let mut stmt = conn.prepare(&format!(
+        "{META} AND l.trade_review_id = ?1 ORDER BY l.sort_order, l.id"
+    ))?;
+    Ok(stmt
+        .query_map([review_id], meta_row(root))?
+        .collect::<rusqlite::Result<_>>()?)
 }
 
 /// The screenshot's account, storage key, size, hash and type, when it is attached to an active trade of `account_id`.
-fn owned(conn: &Connection, account_id: &str, id: &str) -> AppResult<(String, i64, String, String)> {
+fn owned(
+    conn: &Connection,
+    account_id: &str,
+    id: &str,
+) -> AppResult<(String, i64, String, String)> {
     conn.query_row(
         "SELECT a.storage_key, a.byte_size, a.sha256, a.mime_type
          FROM attachments a JOIN attachment_links l ON l.attachment_id = a.id
@@ -350,7 +435,12 @@ fn owned(conn: &Connection, account_id: &str, id: &str) -> AppResult<(String, i6
 }
 
 /// The screenshot's bytes after checking its size, hash and type, or a missing/corrupt status.
-pub fn read(conn: &Connection, root: &Path, account_id: &str, id: &str) -> AppResult<ScreenshotData> {
+pub fn read(
+    conn: &Connection,
+    root: &Path,
+    account_id: &str,
+    id: &str,
+) -> AppResult<ScreenshotData> {
     let (key, size, sha, mime) = owned(conn, account_id, id)?;
     let path = root.join(ATTACHMENTS_DIR).join(&key);
     let status = |s: &str, data: Option<String>| ScreenshotData {
@@ -359,11 +449,15 @@ pub fn read(conn: &Connection, root: &Path, account_id: &str, id: &str) -> AppRe
         mime_type: mime.clone(),
         data_base64: data,
     };
-    let Ok(m) = fs::symlink_metadata(&path) else { return Ok(status("missing", None)) };
+    let Ok(m) = fs::symlink_metadata(&path) else {
+        return Ok(status("missing", None));
+    };
     if !m.is_file() || m.len() != size as u64 {
         return Ok(status("corrupt", None));
     }
-    let Ok(bytes) = fs::read(&path) else { return Ok(status("missing", None)) };
+    let Ok(bytes) = fs::read(&path) else {
+        return Ok(status("missing", None));
+    };
     if hex(&bytes) != sha || sniff(&bytes).map(|i| i.mime) != Some(mime.as_str()) {
         return Ok(status("corrupt", None));
     }
@@ -377,7 +471,10 @@ pub fn remove(conn: &mut Connection, account_id: &str, id: &str) -> AppResult<()
     owned(&tx, account_id, id)?;
     let now = now();
     tx.execute("UPDATE attachment_links SET deleted_at = ?2, updated_at = ?2 WHERE attachment_id = ?1 AND deleted_at IS NULL", params![id, now])?;
-    tx.execute("UPDATE attachments SET deleted_at = ?2, updated_at = ?2 WHERE id = ?1", params![id, now])?;
+    tx.execute(
+        "UPDATE attachments SET deleted_at = ?2, updated_at = ?2 WHERE id = ?1",
+        params![id, now],
+    )?;
     tx.commit()?;
     Ok(())
 }

@@ -14,7 +14,9 @@ use crate::store::{accounts, trades as trade_store};
 const PERFORMANCE: &str = include_str!("../../../../../test_csvimport/Performance.csv");
 
 /// Lines of the fixture whose sell fill is timestamped before the buy fill.
-const SELL_FIRST_LINES: [u64; 21] = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 52, 53, 54, 55, 56, 57];
+const SELL_FIRST_LINES: [u64; 21] = [
+    8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 52, 53, 54, 55, 56, 57,
+];
 
 fn request(account_id: &str, content: &str) -> CsvImportRequest {
     CsvImportRequest {
@@ -40,7 +42,10 @@ fn count(conn: &Connection, sql: &str) -> i64 {
 }
 
 fn row(p: &CsvPreview, line: u64) -> &RowReport {
-    p.rows.iter().find(|r| r.line_number == line).unwrap_or_else(|| panic!("no line {line}"))
+    p.rows
+        .iter()
+        .find(|r| r.line_number == line)
+        .unwrap_or_else(|| panic!("no line {line}"))
 }
 
 fn fields(issues: &[FieldIssue]) -> Vec<&str> {
@@ -56,11 +61,19 @@ fn fixture_format_is_detected_with_every_column_recognised() {
     let (conn, account) = setup();
     let p = preview(&conn, &request(&account, PERFORMANCE)).unwrap();
     assert_eq!(p.format, Format::Performance);
-    assert!(p.file_issues.is_empty() && p.file_warnings.is_empty(), "{:?} {:?}", p.file_issues, p.file_warnings);
+    assert!(
+        p.file_issues.is_empty() && p.file_warnings.is_empty(),
+        "{:?} {:?}",
+        p.file_issues,
+        p.file_warnings
+    );
     assert_eq!(p.headers.len(), 13);
     assert!(p.ignored_headers.is_empty(), "{:?}", p.ignored_headers);
-    let mapped: Vec<(&str, &str)> =
-        p.mapping.iter().map(|m| (m.field, m.header.as_deref().expect(m.field))).collect();
+    let mapped: Vec<(&str, &str)> = p
+        .mapping
+        .iter()
+        .map(|m| (m.field, m.header.as_deref().expect(m.field)))
+        .collect();
     for pair in [
         ("buyPrice", "buyPrice"),
         ("soldTimestamp", "soldTimestamp"),
@@ -74,7 +87,16 @@ fn fixture_format_is_detected_with_every_column_recognised() {
         assert!(mapped.contains(&pair), "{pair:?} in {mapped:?}");
     }
     assert_eq!(p.date_format, Some(values::DateFormat::Mdy));
-    assert_eq!((p.row_count, p.new_count, p.invalid_count, p.duplicate_count, p.blank_count), (67, 67, 0, 0, 0));
+    assert_eq!(
+        (
+            p.row_count,
+            p.new_count,
+            p.invalid_count,
+            p.duplicate_count,
+            p.blank_count
+        ),
+        (67, 67, 0, 0, 0)
+    );
     assert_eq!(p.rows.len(), 67);
     assert_eq!(p.warning_count as usize, SELL_FIRST_LINES.len());
 }
@@ -86,20 +108,52 @@ fn fixture_money_and_duration_styles_parse() {
     let t = |line| row(&p, line).trade.as_ref().unwrap();
 
     let first = t(2);
-    assert_eq!((first.symbol.as_str(), first.quantity.as_str()), ("MNQZ6", "1"));
-    assert_eq!((first.entry_price.as_str(), first.exit_price.as_deref()), ("21009.25", Some("21010.5")));
+    assert_eq!(
+        (first.symbol.as_str(), first.quantity.as_str()),
+        ("MNQZ6", "1")
+    );
+    assert_eq!(
+        (first.entry_price.as_str(), first.exit_price.as_deref()),
+        ("21009.25", Some("21010.5"))
+    );
     assert_eq!(first.reported_pnl.as_deref(), Some("2.5"), "$2.50");
-    assert_eq!(first.realized_pnl.as_deref(), Some("2.5"), "(21010.50 − 21009.25) × 1 × $2");
-    assert_eq!((first.duration.as_deref(), first.duration_seconds), (Some("33sec"), Some(33)), "09:30:17 → 09:30:50");
-    assert_eq!((first.buy_fill_id.as_deref(), first.sell_fill_id.as_deref()), (Some("500000000001"), Some("500000000002")));
-    assert_eq!(first.entry_at, "2026-10-19T13:30:17.000Z", "M/D/YYYY 09:30:17 read in America/New_York (EDT, UTC−4)");
+    assert_eq!(
+        first.realized_pnl.as_deref(),
+        Some("2.5"),
+        "(21010.50 − 21009.25) × 1 × $2"
+    );
+    assert_eq!(
+        (first.duration.as_deref(), first.duration_seconds),
+        (Some("33sec"), Some(33)),
+        "09:30:17 → 09:30:50"
+    );
+    assert_eq!(
+        (first.buy_fill_id.as_deref(), first.sell_fill_id.as_deref()),
+        (Some("500000000001"), Some("500000000002"))
+    );
+    assert_eq!(
+        first.entry_at, "2026-10-19T13:30:17.000Z",
+        "M/D/YYYY 09:30:17 read in America/New_York (EDT, UTC−4)"
+    );
     assert_eq!(t(3).reported_pnl.as_deref(), Some("0"), "$0.00");
-    assert_eq!((t(8).duration.as_deref(), t(8).duration_seconds), (Some("1min 54sec"), Some(114)), "60 + 54");
+    assert_eq!(
+        (t(8).duration.as_deref(), t(8).duration_seconds),
+        (Some("1min 54sec"), Some(114)),
+        "60 + 54"
+    );
     assert_eq!(t(17).reported_pnl.as_deref(), Some("-4.5"), "$(4.50)");
-    assert_eq!(t(17).realized_pnl.as_deref(), Some("-4.5"), "short: (21028.00 − 21030.25) × 1 × $2");
+    assert_eq!(
+        t(17).realized_pnl.as_deref(),
+        Some("-4.5"),
+        "short: (21028.00 − 21030.25) × 1 × $2"
+    );
     assert_eq!(t(21).duration_seconds, Some(191), "3min 11sec = 180 + 11");
     // Every exported P&L matches the calculation, so no P&L warnings.
-    assert!(p.rows.iter().all(|r| r.warnings.iter().all(|w| w.field != "realizedPnl")));
+    assert!(
+        p.rows
+            .iter()
+            .all(|r| r.warnings.iter().all(|w| w.field != "realizedPnl"))
+    );
 }
 
 #[test]
@@ -110,11 +164,19 @@ fn fixture_rows_sharing_a_fill_stay_distinct() {
     // closed by one sell.
     for lines in [[2, 3, 4], [20, 21, 22]] {
         let reports: Vec<&RowReport> = lines.iter().map(|l| row(&p, *l)).collect();
-        assert!(reports.iter().all(|r| r.status == "new" && r.duplicate.is_none()), "{lines:?}");
+        assert!(
+            reports
+                .iter()
+                .all(|r| r.status == "new" && r.duplicate.is_none()),
+            "{lines:?}"
+        );
     }
     let t3 = row(&p, 3).trade.as_ref().unwrap();
     let t4 = row(&p, 4).trade.as_ref().unwrap();
-    assert_eq!((&t3.entry_at, &t3.exit_at, &t3.realized_pnl), (&t4.entry_at, &t4.exit_at, &t4.realized_pnl));
+    assert_eq!(
+        (&t3.entry_at, &t3.exit_at, &t3.realized_pnl),
+        (&t4.entry_at, &t4.exit_at, &t4.realized_pnl)
+    );
     assert_ne!(t3.sell_fill_id, t4.sell_fill_id);
 }
 
@@ -122,29 +184,70 @@ fn fixture_rows_sharing_a_fill_stay_distinct() {
 fn fixture_sell_before_buy_keeps_both_timestamps_and_warns() {
     let (mut conn, account) = setup();
     let p = preview(&conn, &request(&account, PERFORMANCE)).unwrap();
-    let warned: Vec<u64> = p.rows.iter().filter(|r| !r.warnings.is_empty()).map(|r| r.line_number).collect();
+    let warned: Vec<u64> = p
+        .rows
+        .iter()
+        .filter(|r| !r.warnings.is_empty())
+        .map(|r| r.line_number)
+        .collect();
     assert_eq!(warned, SELL_FIRST_LINES);
 
     let r = row(&p, 8);
-    assert_eq!(r.status, "new", "an order anomaly is a warning, not an error");
+    assert_eq!(
+        r.status, "new",
+        "an order anomaly is a warning, not an error"
+    );
     assert_eq!(fields(&r.warnings), ["soldTimestamp"]);
-    assert!(r.warnings[0].message.contains("10/19/2026 09:54:59") && r.warnings[0].message.contains("short"));
+    assert!(
+        r.warnings[0].message.contains("10/19/2026 09:54:59")
+            && r.warnings[0].message.contains("short")
+    );
     let t = r.trade.as_ref().unwrap();
     assert_eq!((t.side, t.entry_basis), ("short", Some("sell_first")));
     assert_eq!(t.bought_at_source.as_deref(), Some("10/19/2026 09:56:53"));
     assert_eq!(t.sold_at_source.as_deref(), Some("10/19/2026 09:54:59"));
     // Entry = sell 09:54:59 EDT, exit = buy 09:56:53 EDT (UTC−4).
-    assert_eq!((t.entry_at.as_str(), t.exit_at.as_deref()), ("2026-10-19T13:54:59.000Z", Some("2026-10-19T13:56:53.000Z")));
-    assert_eq!(t.realized_pnl.as_deref(), Some("7"), "short: (21024.75 − 21021.25) × 1 × $2");
-    assert_eq!(row(&p, 2).trade.as_ref().unwrap().entry_basis, Some("buy_first"));
+    assert_eq!(
+        (t.entry_at.as_str(), t.exit_at.as_deref()),
+        ("2026-10-19T13:54:59.000Z", Some("2026-10-19T13:56:53.000Z"))
+    );
+    assert_eq!(
+        t.realized_pnl.as_deref(),
+        Some("7"),
+        "short: (21024.75 − 21021.25) × 1 × $2"
+    );
+    assert_eq!(
+        row(&p, 2).trade.as_ref().unwrap().entry_basis,
+        Some("buy_first")
+    );
 
     commit(&mut conn, &request(&account, PERFORMANCE)).unwrap();
     let saved = trade_store::list(&conn, &account).unwrap();
-    let st = saved.iter().find(|t| t.round_trip.as_ref().unwrap().sell_fill_id.as_deref() == Some("500000000013")).unwrap();
+    let st = saved
+        .iter()
+        .find(|t| t.round_trip.as_ref().unwrap().sell_fill_id.as_deref() == Some("500000000013"))
+        .unwrap();
     let rt = st.round_trip.as_ref().unwrap();
-    assert_eq!((rt.bought_at_source.as_str(), rt.sold_at_source.as_str()), ("10/19/2026 09:56:53", "10/19/2026 09:54:59"));
-    assert_eq!((rt.buy_price.as_str(), rt.sell_price.as_str(), rt.entry_basis.as_str()), ("21021.25", "21024.75", "sell_first"));
-    assert_eq!((rt.price_format.as_deref(), rt.price_format_type.as_deref(), rt.tick_size.as_deref()), (Some("-2"), Some("0"), Some("0.25")));
+    assert_eq!(
+        (rt.bought_at_source.as_str(), rt.sold_at_source.as_str()),
+        ("10/19/2026 09:56:53", "10/19/2026 09:54:59")
+    );
+    assert_eq!(
+        (
+            rt.buy_price.as_str(),
+            rt.sell_price.as_str(),
+            rt.entry_basis.as_str()
+        ),
+        ("21021.25", "21024.75", "sell_first")
+    );
+    assert_eq!(
+        (
+            rt.price_format.as_deref(),
+            rt.price_format_type.as_deref(),
+            rt.tick_size.as_deref()
+        ),
+        (Some("-2"), Some("0"), Some("0.25"))
+    );
 }
 
 #[test]
@@ -156,7 +259,15 @@ fn fixture_import_persists_and_reimport_flags_fill_pairs() {
         let a = accounts::create(&mut conn, account_input("Eval")).unwrap();
         let b = commit(&mut conn, &request(&a.id, PERFORMANCE)).unwrap();
         assert_eq!(b.source_format, "performance");
-        assert_eq!((b.row_count, b.imported_count, b.duplicate_count, b.failed_count), (67, 67, 0, 0));
+        assert_eq!(
+            (
+                b.row_count,
+                b.imported_count,
+                b.duplicate_count,
+                b.failed_count
+            ),
+            (67, 67, 0, 0)
+        );
         assert_eq!(b.warning_count, 21);
         a.id
     };
@@ -165,19 +276,40 @@ fn fixture_import_persists_and_reimport_flags_fill_pairs() {
     let mut conn = crate::db::open_file(&path).unwrap();
     let saved = trade_store::list(&conn, &account).unwrap();
     assert_eq!(saved.len(), 67);
-    assert!(saved.iter().all(|t| t.source == "csv_import" && t.round_trip.is_some()));
-    assert_eq!(count(&conn, "SELECT count(*) FROM import_rows WHERE warnings_json <> '[]'"), 21);
+    assert!(
+        saved
+            .iter()
+            .all(|t| t.source == "csv_import" && t.round_trip.is_some())
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT count(*) FROM import_rows WHERE warnings_json <> '[]'"
+        ),
+        21
+    );
 
     let p = preview(&conn, &request(&account, PERFORMANCE)).unwrap();
     assert!(p.file_previously_imported);
     assert_eq!((p.new_count, p.duplicate_count), (0, 67));
     let dup = row(&p, 2).duplicate.as_ref().unwrap();
-    assert_eq!((dup.of, dup.key.as_str()), ("saved", "fills2:12:500000000001:500000000002"));
-    assert!(dup.reason.contains("buy/sell fill IDs (500000000001 / 500000000002)"), "{}", dup.reason);
+    assert_eq!(
+        (dup.of, dup.key.as_str()),
+        ("saved", "fills2:12:500000000001:500000000002")
+    );
+    assert!(
+        dup.reason
+            .contains("buy/sell fill IDs (500000000001 / 500000000002)"),
+        "{}",
+        dup.reason
+    );
     assert!(dup.reason.contains("'Performance.csv'"));
 
     let b = commit(&mut conn, &request(&account, PERFORMANCE)).unwrap();
-    assert_eq!((b.imported_count, b.duplicate_count, b.skipped_count), (0, 67, 67));
+    assert_eq!(
+        (b.imported_count, b.duplicate_count, b.skipped_count),
+        (0, 67, 67)
+    );
     assert_eq!(trade_store::list(&conn, &account).unwrap().len(), 67);
     drop(conn);
     let _ = std::fs::remove_dir_all(&dir);
@@ -214,18 +346,29 @@ fn invalid_values_get_row_specific_errors_and_are_excluded() {
     ];
     for (line, want) in expect {
         let r = row(&p, line);
-        assert_eq!((r.status, fields(&r.errors)), ("invalid", want.clone()), "line {line}");
+        assert_eq!(
+            (r.status, fields(&r.errors)),
+            ("invalid", want.clone()),
+            "line {line}"
+        );
     }
     assert!(row(&p, 2).errors[0].message.contains("column 'qty'"));
     assert!(row(&p, 4).errors[0].message.contains("M/D/YYYY"));
-    assert_eq!(row(&p, 7).raw[0], "<b>MNQ</b>", "raw text is kept verbatim for display as text");
+    assert_eq!(
+        row(&p, 7).raw[0],
+        "<b>MNQ</b>",
+        "raw text is kept verbatim for display as text"
+    );
     assert_eq!(row(&p, 8).errors[0].field, "row");
     assert_eq!(row(&p, 10).status, "blank");
     assert_eq!(row(&p, 11).status, "new");
     assert_eq!((p.new_count, p.invalid_count, p.blank_count), (1, 7, 1));
 
     let b = commit(&mut conn, &request(&account, &content)).unwrap();
-    assert_eq!((b.imported_count, b.failed_count, b.skipped_count), (1, 7, 1));
+    assert_eq!(
+        (b.imported_count, b.failed_count, b.skipped_count),
+        (1, 7, 1)
+    );
     let problems = list_problem_rows(&conn, &b.id).unwrap();
     assert_eq!(problems.iter().filter(|r| r.status == "invalid").count(), 7);
     assert_eq!(problems[0].errors[0].field, "quantity");
@@ -245,11 +388,22 @@ fn a_failed_save_leaves_no_partial_import() {
     let err = commit(&mut conn, &request(&account, PERFORMANCE)).unwrap_err();
     assert!(err.to_string().contains("disk full"));
     for table in ["trades", "trade_round_trips", "import_rows"] {
-        assert_eq!(count(&conn, &format!("SELECT count(*) FROM {table}")), 0, "{table}");
+        assert_eq!(
+            count(&conn, &format!("SELECT count(*) FROM {table}")),
+            0,
+            "{table}"
+        );
     }
     let batches = list_batches(&conn, &account).unwrap();
     assert_eq!(batches.len(), 1);
-    assert_eq!((batches[0].status.as_str(), batches[0].imported_count, batches[0].row_count), ("failed", 0, 67));
+    assert_eq!(
+        (
+            batches[0].status.as_str(),
+            batches[0].imported_count,
+            batches[0].row_count
+        ),
+        ("failed", 0, 67)
+    );
 }
 
 #[test]
@@ -266,7 +420,11 @@ MNQZ6,1,21050.00,21050.75,$1.50,10/19/2026 11:05:10,10/19/2026 11:06:40
     let dup = row(&p, 3).duplicate.as_ref().unwrap();
     assert_eq!(dup.of, "file");
     assert!(dup.key.starts_with("rt:"));
-    assert!(dup.reason.contains("line 2") && dup.reason.contains("no IDs"), "{}", dup.reason);
+    assert!(
+        dup.reason.contains("line 2") && dup.reason.contains("no IDs"),
+        "{}",
+        dup.reason
+    );
     commit(&mut conn, &request(&account, content)).unwrap();
     let again = preview(&conn, &request(&account, content)).unwrap();
     assert_eq!((again.new_count, again.duplicate_count), (0, 3));
@@ -291,19 +449,54 @@ fn generic_broker_csv_is_mapped_validated_and_deduplicated() {
     assert_eq!(p.format, Format::Generic);
     assert!(p.file_issues.is_empty(), "{:?}", p.file_issues);
     assert_eq!(p.date_format, Some(values::DateFormat::Ymd));
-    assert_eq!((p.new_count, p.invalid_count, p.blank_count, p.duplicate_count), (2, 1, 1, 1));
+    assert_eq!(
+        (
+            p.new_count,
+            p.invalid_count,
+            p.blank_count,
+            p.duplicate_count
+        ),
+        (2, 1, 1, 1)
+    );
 
     let t1 = row(&p, 2).trade.as_ref().unwrap();
-    assert_eq!((t1.entry_price.as_str(), t1.realized_pnl.as_deref()), ("5000.25", Some("35.02")));
-    assert_eq!(fields(&row(&p, 3).warnings), ["fees"], "negative fees are flagged");
+    assert_eq!(
+        (t1.entry_price.as_str(), t1.realized_pnl.as_deref()),
+        ("5000.25", Some("35.02"))
+    );
+    assert_eq!(
+        fields(&row(&p, 3).warnings),
+        ["fees"],
+        "negative fees are flagged"
+    );
     assert_eq!(fields(&row(&p, 4).errors), ["quantity", "exitAt"]);
     let dup = row(&p, 6).duplicate.as_ref().unwrap();
-    assert!(dup.reason.contains("trade ID (T1)") && dup.reason.contains("line 2"), "{}", dup.reason);
+    assert!(
+        dup.reason.contains("trade ID (T1)") && dup.reason.contains("line 2"),
+        "{}",
+        dup.reason
+    );
 
     let b = commit(&mut conn, &request(&account, GENERIC)).unwrap();
-    assert_eq!((b.imported_count, b.duplicate_count, b.failed_count, b.skipped_count), (2, 1, 1, 2));
-    let notes: Vec<_> = trade_store::list(&conn, &account).unwrap().into_iter().filter_map(|t| t.notes).collect();
-    assert_eq!(notes, ["retest, \"A+\" setup"], "quoted commas and escaped quotes survive");
+    assert_eq!(
+        (
+            b.imported_count,
+            b.duplicate_count,
+            b.failed_count,
+            b.skipped_count
+        ),
+        (2, 1, 1, 2)
+    );
+    let notes: Vec<_> = trade_store::list(&conn, &account)
+        .unwrap()
+        .into_iter()
+        .filter_map(|t| t.notes)
+        .collect();
+    assert_eq!(
+        notes,
+        ["retest, \"A+\" setup"],
+        "quoted commas and escaped quotes survive"
+    );
 }
 
 #[test]
@@ -315,7 +508,14 @@ ESZ6,Buy,1,2026-10-19 09:30:00,5000,2026-10-19 09:31:00,5001
 ";
     let p = preview(&conn, &request(&account, content)).unwrap();
     assert_eq!((p.new_count, p.duplicate_count), (1, 1));
-    assert!(row(&p, 3).duplicate.as_ref().unwrap().reason.contains("line 2"));
+    assert!(
+        row(&p, 3)
+            .duplicate
+            .as_ref()
+            .unwrap()
+            .reason
+            .contains("line 2")
+    );
 }
 
 #[test]
@@ -327,10 +527,17 @@ ESZ6,Buy,1,03/04/2026 09:30:00,5000
     let p = preview(&conn, &request(&account, content)).unwrap();
     assert_eq!(fields(&p.file_issues), ["dateFormat"]);
 
-    let dmy = CsvImportRequest { date_format: DateFormatChoice::Dmy, ..request(&account, content) };
+    let dmy = CsvImportRequest {
+        date_format: DateFormatChoice::Dmy,
+        ..request(&account, content)
+    };
     let p = preview(&conn, &dmy).unwrap();
     assert!(p.file_issues.is_empty());
-    assert_eq!(row(&p, 2).trade.as_ref().unwrap().entry_at, "2026-04-03T13:30:00.000Z", "3 April, EDT");
+    assert_eq!(
+        row(&p, 2).trade.as_ref().unwrap().entry_at,
+        "2026-04-03T13:30:00.000Z",
+        "3 April, EDT"
+    );
 }
 
 #[test]
@@ -339,11 +546,18 @@ fn file_level_problems_block_the_import_and_are_recorded() {
     for (content, field) in [
         ("", "content"),
         ("Symbol,Side,Qty,Entry Time,Entry Price\n", "content"),
-        ("Symbol,Side,Qty,Qty,Entry Time,Entry Price\nES,Buy,1,1,2026-10-19 09:30:00,5000\n", "columns.quantity"),
+        (
+            "Symbol,Side,Qty,Qty,Entry Time,Entry Price\nES,Buy,1,1,2026-10-19 09:30:00,5000\n",
+            "columns.quantity",
+        ),
         ("Foo,Bar\n1,2\n", "columns.symbol"),
     ] {
         let p = preview(&conn, &request(&account, content)).unwrap();
-        assert_eq!(p.file_issues.first().map(|i| i.field.as_str()), Some(field), "{content:?}");
+        assert_eq!(
+            p.file_issues.first().map(|i| i.field.as_str()),
+            Some(field),
+            "{content:?}"
+        );
     }
     let err = commit(&mut conn, &request(&account, "Foo,Bar\n1,2\n")).unwrap_err();
     assert!(matches!(err, AppError::Validation { .. }));
@@ -355,32 +569,64 @@ fn file_level_problems_block_the_import_and_are_recorded() {
 fn reimporting_restores_deleted_trades_once_and_keeps_active_ones_duplicate() {
     let (mut conn, account) = setup();
     commit(&mut conn, &request(&account, PERFORMANCE)).unwrap();
-    let deleted: Vec<_> = trade_store::list(&conn, &account).unwrap().into_iter().take(2).collect();
+    let deleted: Vec<_> = trade_store::list(&conn, &account)
+        .unwrap()
+        .into_iter()
+        .take(2)
+        .collect();
     for t in &deleted {
         trade_store::delete(&mut conn, &t.id).unwrap();
     }
 
     // Preview and commit agree: the two deleted trades come back, the rest are duplicates.
     let p = preview(&conn, &request(&account, PERFORMANCE)).unwrap();
-    assert_eq!((p.new_count, p.restore_count, p.duplicate_count), (2, 2, 65));
+    assert_eq!(
+        (p.new_count, p.restore_count, p.duplicate_count),
+        (2, 2, 65)
+    );
     for t in &deleted {
-        let r = p.rows.iter().find(|r| r.restores.as_ref().is_some_and(|x| x.trade_id == t.id)).unwrap();
+        let r = p
+            .rows
+            .iter()
+            .find(|r| r.restores.as_ref().is_some_and(|x| x.trade_id == t.id))
+            .unwrap();
         assert_eq!(r.status, "new");
         assert!(r.duplicate.is_none());
-        assert!(r.restores.as_ref().unwrap().reason.contains("deleted on"), "{:?}", r.restores);
+        assert!(
+            r.restores.as_ref().unwrap().reason.contains("deleted on"),
+            "{:?}",
+            r.restores
+        );
     }
 
     let b = commit(&mut conn, &request(&account, PERFORMANCE)).unwrap();
     assert_eq!((b.imported_count, b.duplicate_count), (2, 65));
-    let ids: Vec<String> = trade_store::list(&conn, &account).unwrap().into_iter().map(|t| t.id).collect();
+    let ids: Vec<String> = trade_store::list(&conn, &account)
+        .unwrap()
+        .into_iter()
+        .map(|t| t.id)
+        .collect();
     assert_eq!(ids.len(), 67);
-    assert!(deleted.iter().all(|t| ids.contains(&t.id)), "the same trades are restored, not copied");
-    assert_eq!(count(&conn, "SELECT count(*) FROM trades"), 67, "no second row per trade");
+    assert!(
+        deleted.iter().all(|t| ids.contains(&t.id)),
+        "the same trades are restored, not copied"
+    );
+    assert_eq!(
+        count(&conn, "SELECT count(*) FROM trades"),
+        67,
+        "no second row per trade"
+    );
 
     // Without deletions, a repeat import is all duplicates.
     let again = commit(&mut conn, &request(&account, PERFORMANCE)).unwrap();
     assert_eq!((again.imported_count, again.duplicate_count), (0, 67));
-    assert_eq!(count(&conn, "SELECT count(*) FROM trades WHERE deleted_at IS NULL"), 67);
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT count(*) FROM trades WHERE deleted_at IS NULL"
+        ),
+        67
+    );
 }
 
 #[test]

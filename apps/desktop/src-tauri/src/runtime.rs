@@ -130,26 +130,62 @@ impl FailureCategory {
 fn failure(category: FailureCategory, detail: String) -> RuntimeFailure {
     use FailureCategory::*;
     let (retryable, message) = match category {
-        DataDirectory => (true, "FundedFlow could not create its data folder. Check that your user profile folder is writable, then retry."),
-        OpenFailed => (true, "FundedFlow could not open your journal database. If another copy of FundedFlow or a sync/backup tool is using it, close it and retry. Your data has not been changed."),
-        BackupFailed => (true, "FundedFlow could not save a backup before upgrading your journal, so it did not upgrade. Free up disk space and retry. Your data has not been changed."),
-        MigrationFailed => (true, "Upgrading your journal failed and was rolled back. Your data has not been changed. Retry, or contact support with the details below."),
-        NewerSchema => (false, "Your journal was created by a newer version of FundedFlow. Install the latest version to open it. Your data has not been changed."),
+        DataDirectory => (
+            true,
+            "FundedFlow could not create its data folder. Check that your user profile folder is writable, then retry.",
+        ),
+        OpenFailed => (
+            true,
+            "FundedFlow could not open your journal database. If another copy of FundedFlow or a sync/backup tool is using it, close it and retry. Your data has not been changed.",
+        ),
+        BackupFailed => (
+            true,
+            "FundedFlow could not save a backup before upgrading your journal, so it did not upgrade. Free up disk space and retry. Your data has not been changed.",
+        ),
+        MigrationFailed => (
+            true,
+            "Upgrading your journal failed and was rolled back. Your data has not been changed. Retry, or contact support with the details below.",
+        ),
+        NewerSchema => (
+            false,
+            "Your journal was created by a newer version of FundedFlow. Install the latest version to open it. Your data has not been changed.",
+        ),
     };
-    RuntimeFailure { category, retryable, message: message.into(), detail, failed_migration: None }
+    RuntimeFailure {
+        category,
+        retryable,
+        message: message.into(),
+        detail,
+        failed_migration: None,
+    }
 }
 
 /// The failure and the journal's schema version, where the error tells it.
 fn classify(e: &MigrateError, path: &Path) -> (RuntimeFailure, Option<u32>) {
     match e {
-        MigrateError::NewerSchema { found, .. } => (failure(FailureCategory::NewerSchema, e.to_string()), Some(*found)),
-        MigrateError::Backup { current, .. } => (failure(FailureCategory::BackupFailed, e.to_string()), Some(*current)),
+        MigrateError::NewerSchema { found, .. } => (
+            failure(FailureCategory::NewerSchema, e.to_string()),
+            Some(*found),
+        ),
+        MigrateError::Backup { current, .. } => (
+            failure(FailureCategory::BackupFailed, e.to_string()),
+            Some(*current),
+        ),
         MigrateError::Io(_) => (failure(FailureCategory::DataDirectory, e.to_string()), None),
         MigrateError::Sqlite(_) => (failure(FailureCategory::OpenFailed, e.to_string()), None),
-        MigrateError::Migration { name, version, from, reached, .. } => {
+        MigrateError::Migration {
+            name,
+            version,
+            from,
+            reached,
+            ..
+        } => {
             let mut f = failure(FailureCategory::MigrationFailed, e.to_string());
             let backup = db::backup_path(path);
-            let backup = backup.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+            let backup = backup
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
             // Each migration commits on its own: only the failed step is
             // undone, so "nothing changed" is true only if it was the first.
             f.message = if reached == from {
@@ -227,33 +263,63 @@ impl Runtime {
     }
 
     /// Stage an approved restore and immediately stop all database access until restart/retry.
-    pub fn prepare_restore(&self, request: crate::data_controls::RestoreRequest) -> crate::data_controls::Result<crate::data_controls::RestoreResult> {
-        let path=self.path.as_ref().map_err(|_| crate::data_controls::fail(crate::data_controls::Code::Io))?;
-        let root=path.parent().ok_or_else(|| crate::data_controls::fail(crate::data_controls::Code::UnsafePath))?;
-        let mut conn=lock(&self.conn);
-        let c=conn.as_mut().ok_or_else(|| crate::data_controls::fail(crate::data_controls::Code::Busy))?;
+    pub fn prepare_restore(
+        &self,
+        request: crate::data_controls::RestoreRequest,
+    ) -> crate::data_controls::Result<crate::data_controls::RestoreResult> {
+        let path = self
+            .path
+            .as_ref()
+            .map_err(|_| crate::data_controls::fail(crate::data_controls::Code::Io))?;
+        let root = path
+            .parent()
+            .ok_or_else(|| crate::data_controls::fail(crate::data_controls::Code::UnsafePath))?;
+        let mut conn = lock(&self.conn);
+        let c = conn
+            .as_mut()
+            .ok_or_else(|| crate::data_controls::fail(crate::data_controls::Code::Busy))?;
         // Quarantined records no longer block a restore; a pending cleanup does, because an installed restore
         // changes the erase operation that cleanup needs to remove the pre-erase recovery copies.
-        let outcome=crate::data_controls::recover_cleanup(c,root);
+        let outcome = crate::data_controls::recover_cleanup(c, root);
         self.set_cleanup(crate::data_controls::cleanup_state(root));
-        if !matches!(outcome, Ok(CleanupOutcome::Clear | CleanupOutcome::Quarantined)) {
-            return Err(crate::data_controls::fail(crate::data_controls::Code::RecoveryRequired));
+        if !matches!(
+            outcome,
+            Ok(CleanupOutcome::Clear | CleanupOutcome::Quarantined)
+        ) {
+            return Err(crate::data_controls::fail(
+                crate::data_controls::Code::RecoveryRequired,
+            ));
         }
-        let result=crate::data_controls::prepare_restore(c,root,request)?;
+        let result = crate::data_controls::prepare_restore(c, root, request)?;
         // The safety image already contains the committed WAL. Closing prevents stale writes after confirmation.
-        *conn=None;
-        let mut status=lock(&self.status); status.state=RuntimeState::Failed; status.stage=RuntimeStage::Open;
-        let mut f=failure(FailureCategory::OpenFailed,"Confirmed restore staged".into());
+        *conn = None;
+        let mut status = lock(&self.status);
+        status.state = RuntimeState::Failed;
+        status.stage = RuntimeStage::Open;
+        let mut f = failure(
+            FailureCategory::OpenFailed,
+            "Confirmed restore staged".into(),
+        );
         f.message="A confirmed restore is staged. Restart FundedFlow or retry runtime initialization to install it; data commands are paused.".into();
-        status.failure=Some(f);
+        status.failure = Some(f);
         Ok(result)
     }
 
     /// The same connection lock and native boundary as ordinary journal commands.
-    pub fn with_controls<T>(&self, f: impl FnOnce(&mut Connection, &Path) -> crate::data_controls::Result<T>) -> crate::data_controls::Result<T> {
-        if self.status().state != RuntimeState::Ready { return Err(crate::data_controls::fail(crate::data_controls::Code::Busy)); }
-        let path = self.path.as_ref().map_err(|_| crate::data_controls::fail(crate::data_controls::Code::Io))?;
-        let root = path.parent().ok_or_else(|| crate::data_controls::fail(crate::data_controls::Code::UnsafePath))?;
+    pub fn with_controls<T>(
+        &self,
+        f: impl FnOnce(&mut Connection, &Path) -> crate::data_controls::Result<T>,
+    ) -> crate::data_controls::Result<T> {
+        if self.status().state != RuntimeState::Ready {
+            return Err(crate::data_controls::fail(crate::data_controls::Code::Busy));
+        }
+        let path = self
+            .path
+            .as_ref()
+            .map_err(|_| crate::data_controls::fail(crate::data_controls::Code::Io))?;
+        let root = path
+            .parent()
+            .ok_or_else(|| crate::data_controls::fail(crate::data_controls::Code::UnsafePath))?;
         match lock(&self.conn).as_mut() {
             Some(c) => f(c, root),
             None => Err(crate::data_controls::fail(crate::data_controls::Code::Busy)),
@@ -269,7 +335,10 @@ impl Runtime {
     }
 
     /// `permanently_delete_data`, then the cleanup it left in the status.
-    pub fn delete_data(&self, request: crate::data_controls::DeleteRequest) -> crate::data_controls::Result<crate::data_controls::DeleteResult> {
+    pub fn delete_data(
+        &self,
+        request: crate::data_controls::DeleteRequest,
+    ) -> crate::data_controls::Result<crate::data_controls::DeleteResult> {
         self.with_controls(|c, root| {
             let result = crate::data_controls::delete_data(c, root, request);
             self.set_cleanup(crate::data_controls::cleanup_state(root));
@@ -283,7 +352,9 @@ impl Runtime {
             let outcome = crate::data_controls::recover_cleanup(c, root);
             self.set_cleanup(crate::data_controls::cleanup_state(root));
             match outcome? {
-                CleanupOutcome::Pending => Err(crate::data_controls::fail(crate::data_controls::Code::RecoveryRequired)),
+                CleanupOutcome::Pending => Err(crate::data_controls::fail(
+                    crate::data_controls::Code::RecoveryRequired,
+                )),
                 CleanupOutcome::Clear | CleanupOutcome::Quarantined => Ok(()),
             }
         })
@@ -333,7 +404,10 @@ impl Runtime {
                 let created = !path.exists();
                 (self.open(path), created)
             }
-            Err(e) => (Err((failure(FailureCategory::DataDirectory, e.clone()), None)), false),
+            Err(e) => (
+                Err((failure(FailureCategory::DataDirectory, e.clone()), None)),
+                false,
+            ),
         };
 
         let mut status = lock(&self.status);
@@ -361,12 +435,34 @@ impl Runtime {
 
     fn open(&self, path: &Path) -> Result<(Connection, u32), (RuntimeFailure, Option<u32>)> {
         self.set_stage(RuntimeStage::Open);
-        let root = path.parent().ok_or_else(|| (failure(FailureCategory::DataDirectory, "No data directory".into()), None))?;
-        std::fs::create_dir_all(root).map_err(|_| (failure(FailureCategory::DataDirectory, "Could not create data directory".into()), None))?;
+        let root = path.parent().ok_or_else(|| {
+            (
+                failure(FailureCategory::DataDirectory, "No data directory".into()),
+                None,
+            )
+        })?;
+        std::fs::create_dir_all(root).map_err(|_| {
+            (
+                failure(
+                    FailureCategory::DataDirectory,
+                    "Could not create data directory".into(),
+                ),
+                None,
+            )
+        })?;
         let mut ownership = lock(&self.ownership);
         if ownership.is_none() {
-            crate::data_controls::filesystem_ownership(root).map(|file| *ownership = Some(file))
-                .map_err(|_| (failure(FailureCategory::OpenFailed, "Journal is already owned or its directory is unsafe".into()), None))?;
+            crate::data_controls::filesystem_ownership(root)
+                .map(|file| *ownership = Some(file))
+                .map_err(|_| {
+                    (
+                        failure(
+                            FailureCategory::OpenFailed,
+                            "Journal is already owned or its directory is unsafe".into(),
+                        ),
+                        None,
+                    )
+                })?;
         }
         drop(ownership);
         crate::data_controls::recover(root, path).map_err(|e| {
@@ -408,14 +504,21 @@ impl Runtime {
         let mut status = lock(&self.status);
         status.state = RuntimeState::Failed;
         status.stage = RuntimeStage::Open;
-        let mut f = failure(FailureCategory::OpenFailed, "Developer reset handed off".into());
+        let mut f = failure(
+            FailureCategory::OpenFailed,
+            "Developer reset handed off".into(),
+        );
         f.message = "Reset All Data was handed off. FundedFlow is closing so the reset tool can run; the journal is closed.".into();
         status.failure = Some(f);
     }
 
     /// The per-user data folder that holds the journal (and its `attachments/` folder), when known.
     pub fn data_dir(&self) -> Option<PathBuf> {
-        self.path.as_ref().ok().and_then(|p| p.parent()).map(Path::to_path_buf)
+        self.path
+            .as_ref()
+            .ok()
+            .and_then(|p| p.parent())
+            .map(Path::to_path_buf)
     }
 
     /// Run `f` on the journal, or report it unavailable at once while the

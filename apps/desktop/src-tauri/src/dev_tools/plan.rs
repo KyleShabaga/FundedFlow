@@ -27,7 +27,16 @@ pub enum Preset {
 }
 
 /// Every named scenario, one synthetic account each. `stress` is only in the Stress preset.
-pub const SCENARIOS: [&str; 8] = ["happy_path", "passed", "at_risk", "failed", "archived", "empty", "import_duplicates", "stress"];
+pub const SCENARIOS: [&str; 8] = [
+    "happy_path",
+    "passed",
+    "at_risk",
+    "failed",
+    "archived",
+    "empty",
+    "import_duplicates",
+    "stress",
+];
 
 impl Preset {
     pub fn scenarios(self) -> &'static [&'static str] {
@@ -91,15 +100,32 @@ pub fn inst(root: &str) -> Inst {
         "MGC" => ((1, 1), 100, 24_000, 152, 25, true, false),
         other => panic!("no synthetic instrument {other}"),
     };
-    let root = SCENARIO_ROOTS.iter().find(|r| **r == root).copied().expect("known root");
-    Inst { root, tick, tick_cents, base_ticks, fee_cents, typical, micro, quarterly }
+    let root = SCENARIO_ROOTS
+        .iter()
+        .find(|r| **r == root)
+        .copied()
+        .expect("known root");
+    Inst {
+        root,
+        tick,
+        tick_cents,
+        base_ticks,
+        fee_cents,
+        typical,
+        micro,
+        quarterly,
+    }
 }
 
-const SCENARIO_ROOTS: [&str; 12] = ["NQ", "MNQ", "ES", "MES", "YM", "MYM", "RTY", "M2K", "CL", "MCL", "GC", "MGC"];
+const SCENARIO_ROOTS: [&str; 12] = [
+    "NQ", "MNQ", "ES", "MES", "YM", "MYM", "RTY", "M2K", "CL", "MCL", "GC", "MGC",
+];
 
 impl Inst {
     pub fn price(&self, ticks: i64) -> String {
-        (Decimal::from(ticks) * Decimal::new(self.tick.0, self.tick.1)).normalize().to_string()
+        (Decimal::from(ticks) * Decimal::new(self.tick.0, self.tick.1))
+            .normalize()
+            .to_string()
     }
 
     /// Front contract symbol for a day, e.g. MNQZ6.
@@ -108,7 +134,11 @@ impl Inst {
         let (mut year, month) = (day.year(), day.month());
         let mut m = if self.quarterly {
             let q = month.div_ceil(3) * 3;
-            if month == q && day.day() > 12 { q + 3 } else { q }
+            if month == q && day.day() > 12 {
+                q + 3
+            } else {
+                q
+            }
         } else {
             month + 1
         };
@@ -116,7 +146,12 @@ impl Inst {
             m -= 12;
             year += 1;
         }
-        format!("{}{}{}", self.root, CODES[(m - 1) as usize], year.rem_euclid(10))
+        format!(
+            "{}{}{}",
+            self.root,
+            CODES[(m - 1) as usize],
+            year.rem_euclid(10)
+        )
     }
 }
 
@@ -243,7 +278,13 @@ impl ScenarioPlan {
         let rules = self.rules.as_ref()?;
         let dd = rules.drawdown_cents?;
         if rules.trailing {
-            let hwm = self.eod.iter().map(|(_, b)| *b).chain([self.account.start_cents]).max().unwrap();
+            let hwm = self
+                .eod
+                .iter()
+                .map(|(_, b)| *b)
+                .chain([self.account.start_cents])
+                .max()
+                .unwrap();
             Some(hwm - dd)
         } else {
             Some(self.account.start_cents - dd)
@@ -295,11 +336,22 @@ fn weekday(day: NaiveDate) -> bool {
 
 /// The previous calendar evening whose overnight session belongs to `day` (Sunday for a Monday).
 fn previous_evening(day: NaiveDate) -> NaiveDate {
-    if day.weekday() == Weekday::Mon { day - Duration::days(1) } else { day.pred_opt().unwrap() }
+    if day.weekday() == Weekday::Mon {
+        day - Duration::days(1)
+    } else {
+        day.pred_opt().unwrap()
+    }
 }
 
 impl<'a> Sim<'a> {
-    fn new(seed: u64, key: &str, spec: &'a AccountSpec, rules: Option<&'a RuleSpec>, roots: &'a [(&'static str, i64)], mood_weights: [(Mood, i64); 3]) -> Self {
+    fn new(
+        seed: u64,
+        key: &str,
+        spec: &'a AccountSpec,
+        rules: Option<&'a RuleSpec>,
+        roots: &'a [(&'static str, i64)],
+        mood_weights: [(Mood, i64); 3],
+    ) -> Self {
         Sim {
             rng: Rng::stream(seed, key),
             spec,
@@ -322,7 +374,11 @@ impl<'a> Sim<'a> {
     fn floor(&self) -> Option<i64> {
         let r = self.rules?;
         let dd = r.drawdown_cents?;
-        Some(if r.trailing { self.hwm - dd } else { self.spec.start_cents - dd })
+        Some(if r.trailing {
+            self.hwm - dd
+        } else {
+            self.spec.start_cents - dd
+        })
     }
 
     fn drawdown(&self) -> i64 {
@@ -346,7 +402,8 @@ impl<'a> Sim<'a> {
                 *l
             }
             None => {
-                let l = inst.base_ticks + self.rng.range(-inst.base_ticks / 50, inst.base_ticks / 50);
+                let l =
+                    inst.base_ticks + self.rng.range(-inst.base_ticks / 50, inst.base_ticks / 50);
                 self.levels.push((inst.root, l));
                 l
             }
@@ -354,9 +411,21 @@ impl<'a> Sim<'a> {
     }
 
     /// Records one trade of `qty` contracts closing `result` ticks in its favour (negative: against).
-    fn push(&mut self, inst: Inst, long: bool, qty: i64, (entry, hold_secs): (DateTime<Utc>, i64), result: i64, note: Option<String>) {
+    fn push(
+        &mut self,
+        inst: Inst,
+        long: bool,
+        qty: i64,
+        (entry, hold_secs): (DateTime<Utc>, i64),
+        result: i64,
+        note: Option<String>,
+    ) {
         let entry_ticks = self.level(&inst);
-        let exit_ticks = if long { entry_ticks + result } else { entry_ticks - result };
+        let exit_ticks = if long {
+            entry_ticks + result
+        } else {
+            entry_ticks - result
+        };
         let fee_cents = inst.fee_cents * qty;
         let gross_cents = result * inst.tick_cents * qty;
         let net_cents = gross_cents - fee_cents;
@@ -385,7 +454,11 @@ impl<'a> Sim<'a> {
     }
 
     fn day_of(&self, at: DateTime<Utc>) -> NaiveDate {
-        trading_day(at, self.spec.tz, crate::domain::parse_reset_time(self.spec.reset).unwrap())
+        trading_day(
+            at,
+            self.spec.tz,
+            crate::domain::parse_reset_time(self.spec.reset).unwrap(),
+        )
     }
 
     /// Shorten the last trade's hold (P&L unchanged), e.g. to close before the reset.
@@ -406,7 +479,11 @@ impl<'a> Sim<'a> {
         for qty in 1..=max_qty {
             let fees = inst.fee_cents * qty;
             let per = inst.tick_cents * qty;
-            let ticks = if want >= 0 { (want + fees + per - 1) / per } else { ((-want - fees).max(1) + per - 1) / per };
+            let ticks = if want >= 0 {
+                (want + fees + per - 1) / per
+            } else {
+                ((-want - fees).max(1) + per - 1) / per
+            };
             chosen = (qty, ticks.max(1));
             if ticks <= cap {
                 break;
@@ -415,7 +492,14 @@ impl<'a> Sim<'a> {
         let (qty, ticks) = chosen;
         let long = self.rng.chance(50);
         let hold = self.rng.range(120, 1800);
-        self.push(inst, long, qty, (entry, hold), if want >= 0 { ticks } else { -ticks }, Some(note.into()));
+        self.push(
+            inst,
+            long,
+            qty,
+            (entry, hold),
+            if want >= 0 { ticks } else { -ticks },
+            Some(note.into()),
+        );
     }
 
     /// One ordinary trade. With `guard`, a loss that would take the account near its drawdown floor or
@@ -424,7 +508,14 @@ impl<'a> Sim<'a> {
         let root = *self.rng.weighted(self.roots);
         let inst = inst(root);
         let long = self.rng.chance(55);
-        let qty = self.rng.range(1, if inst.micro { self.max_micro } else { self.max_mini });
+        let qty = self.rng.range(
+            1,
+            if inst.micro {
+                self.max_micro
+            } else {
+                self.max_mini
+            },
+        );
         let win_pct = match mood {
             Mood::Good => 64,
             Mood::Normal => 50,
@@ -436,20 +527,42 @@ impl<'a> Sim<'a> {
         } else if self.rng.chance(win_pct) {
             (self.rng.range(typ / 4, typ * 2), None)
         } else {
-            let slip = if self.rng.chance(30) { self.rng.range(1, 2) } else { 0 };
+            let slip = if self.rng.chance(30) {
+                self.rng.range(1, 2)
+            } else {
+                0
+            };
             let loss = self.rng.range(typ / 4, typ * 6 / 5) + slip;
-            (-loss, (slip > 0).then(|| format!("Stop slipped {slip} tick{}.", if slip == 1 { "" } else { "s" })))
+            (
+                -loss,
+                (slip > 0).then(|| {
+                    format!(
+                        "Stop slipped {slip} tick{}.",
+                        if slip == 1 { "" } else { "s" }
+                    )
+                }),
+            )
         };
         let net = result * inst.tick_cents * qty - inst.fee_cents * qty;
         if guard && net < 0 {
-            let near_floor = self.floor().is_some_and(|f| self.balance + net < f + self.drawdown() * 3 / 10);
-            let near_daily = self.rules.and_then(|r| r.daily_loss_cents).is_some_and(|dll| self.day_pnl + net < -dll * 7 / 10);
+            let near_floor = self
+                .floor()
+                .is_some_and(|f| self.balance + net < f + self.drawdown() * 3 / 10);
+            let near_daily = self
+                .rules
+                .and_then(|r| r.daily_loss_cents)
+                .is_some_and(|dll| self.day_pnl + net < -dll * 7 / 10);
             if near_floor || near_daily {
                 result = self.rng.range(2, 6);
                 note = Some("Scratched early to protect the day.".into());
             }
         }
-        if guard && net > 0 && self.profit_cap.is_some_and(|cap| self.balance + net - self.spec.start_cents > cap) {
+        if guard
+            && net > 0
+            && self
+                .profit_cap
+                .is_some_and(|cap| self.balance + net - self.spec.start_cents > cap)
+        {
             result = -self.rng.range(2, 6);
             note = Some("Gave back a little: no new highs today.".into());
         }
@@ -459,7 +572,9 @@ impl<'a> Sim<'a> {
 
     /// `n` ordinary trades in the regular session of `day`.
     fn session(&mut self, day: NaiveDate, n: usize, mood: Mood, guard: bool) {
-        let mut minutes: Vec<i64> = (0..n).map(|_| self.rng.range(9 * 60 + 31, 15 * 60 + 45)).collect();
+        let mut minutes: Vec<i64> = (0..n)
+            .map(|_| self.rng.range(9 * 60 + 31, 15 * 60 + 45))
+            .collect();
         minutes.sort_unstable();
         for m in minutes {
             let s = self.rng.range(0, 59) as u32;
@@ -494,7 +609,11 @@ type Parts = (Vec<PlannedTrade>, Vec<(NaiveDate, i64)>);
 
 /// Weekdays from `first` through `last`.
 fn weekdays(first: NaiveDate, last: NaiveDate) -> Vec<NaiveDate> {
-    first.iter_days().take_while(|d| *d <= last).filter(|d| weekday(*d)).collect()
+    first
+        .iter_days()
+        .take_while(|d| *d <= last)
+        .filter(|d| weekday(*d))
+        .collect()
 }
 
 /// Mondays right after a New York daylight-saving change inside the window.
@@ -503,14 +622,25 @@ fn dst_mondays(days: &[NaiveDate]) -> Vec<NaiveDate> {
         .copied()
         .filter(|d| d.weekday() == Weekday::Mon)
         .filter(|d| {
-            let offset = |day: NaiveDate| NY.from_local_datetime(&day.and_hms_opt(12, 0, 0).unwrap()).unwrap().naive_utc() - day.and_hms_opt(12, 0, 0).unwrap();
+            let offset = |day: NaiveDate| {
+                NY.from_local_datetime(&day.and_hms_opt(12, 0, 0).unwrap())
+                    .unwrap()
+                    .naive_utc()
+                    - day.and_hms_opt(12, 0, 0).unwrap()
+            };
             offset(*d) != offset(*d - Duration::days(3))
         })
         .collect()
 }
 
 /// (account type, firm, platform) and (time zone, reset time).
-fn account(name: &str, key: &str, (account_type, firm, platform): (&'static str, &'static str, &'static str), (tz_name, reset): (&'static str, &'static str), start_dollars: i64) -> AccountSpec {
+fn account(
+    name: &str,
+    key: &str,
+    (account_type, firm, platform): (&'static str, &'static str, &'static str),
+    (tz_name, reset): (&'static str, &'static str),
+    start_dollars: i64,
+) -> AccountSpec {
     AccountSpec {
         name: name.into(),
         account_type,
@@ -537,7 +667,13 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
 
     let plan = match key {
         "happy_path" => {
-            let spec = account("DEMO · Evaluation 50K (on track)", key, ("evaluation", "DEMO Firm Alpha (fictional)", "Tradovate"), ("America/New_York", "17:00"), 50_000);
+            let spec = account(
+                "DEMO · Evaluation 50K (on track)",
+                key,
+                ("evaluation", "DEMO Firm Alpha (fictional)", "Tradovate"),
+                ("America/New_York", "17:00"),
+                50_000,
+            );
             let rules = RuleSpec {
                 target_cents: Some(3_000 * D),
                 drawdown_cents: Some(2_000 * D),
@@ -560,15 +696,29 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
             let quiet_from = before[before.len() - 10];
             let mut loss_pending = true;
             // A Wednesday two weeks back: trades either side of the 17:00 reset.
-            let boundary_wed = before.iter().rev().copied().find(|d| d.weekday() == Weekday::Wed && *d < anchor - Duration::days(10));
-            let boundary_mon = before.iter().rev().copied().find(|d| d.weekday() == Weekday::Mon && *d < anchor - Duration::days(17));
+            let boundary_wed = before
+                .iter()
+                .rev()
+                .copied()
+                .find(|d| d.weekday() == Weekday::Wed && *d < anchor - Duration::days(10));
+            let boundary_mon = before
+                .iter()
+                .rev()
+                .copied()
+                .find(|d| d.weekday() == Weekday::Mon && *d < anchor - Duration::days(17));
             let dst = dst_mondays(&before);
             let last = before.last().copied();
             for day in &days {
                 let day = *day;
                 let mood = sim.next_mood();
                 // Overnight session: the evening before belongs to this trading day.
-                let overnight = if day == anchor { 3 } else if Some(day) == boundary_mon || dst.contains(&day) { 1 } else { 0 };
+                let overnight = if day == anchor {
+                    3
+                } else if Some(day) == boundary_mon || dst.contains(&day) {
+                    1
+                } else {
+                    0
+                };
                 let thursday_after = boundary_wed.map(|w| w + Duration::days(1));
                 for i in 0..overnight {
                     let entry = at_ny(previous_evening(day), 18 + i as u32, 10 + 7 * i as u32, 12);
@@ -577,7 +727,10 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
                 if Some(day) == thursday_after {
                     let entry = at_ny(day - Duration::days(1), 17, 3, 5);
                     sim.random(entry, mood, true);
-                    sim.retime_last(240, "Traded 17:03 ET: after the reset, so it counts for Thursday.");
+                    sim.retime_last(
+                        240,
+                        "Traded 17:03 ET: after the reset, so it counts for Thursday.",
+                    );
                 }
                 if day == anchor {
                     sim.close_day(day);
@@ -585,11 +738,29 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
                 }
                 // The large days have no other trades, so the day's P&L is the large trade.
                 if day == big_win {
-                    let want = (sim.rng.range(1_200, 1_600) * D).min(target * 85 / 100 - sim.net()).max(1_050 * D);
-                    sim.shaped("NQ", at_ny(day, 10, 2, 41), want, "Large winner: trend day, held the runner.");
-                } else if loss_pending && day >= big_loss && day < quiet_from && sim.floor().is_some_and(|f| sim.balance - 1_000 * D > f + 600 * D) {
+                    let want = (sim.rng.range(1_200, 1_600) * D)
+                        .min(target * 85 / 100 - sim.net())
+                        .max(1_050 * D);
+                    sim.shaped(
+                        "NQ",
+                        at_ny(day, 10, 2, 41),
+                        want,
+                        "Large winner: trend day, held the runner.",
+                    );
+                } else if loss_pending
+                    && day >= big_loss
+                    && day < quiet_from
+                    && sim
+                        .floor()
+                        .is_some_and(|f| sim.balance - 1_000 * D > f + 600 * D)
+                {
                     let want = -sim.rng.range(850, 950) * D;
-                    sim.shaped("NQ", at_ny(day, 13, 47, 9), want, "Large loss: faded a breakout and sized up.");
+                    sim.shaped(
+                        "NQ",
+                        at_ny(day, 13, 47, 9),
+                        want,
+                        "Large loss: faded a breakout and sized up.",
+                    );
                     loss_pending = false;
                 } else if day == busy {
                     sim.session(day, 12, mood, true);
@@ -599,16 +770,29 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
                 }
                 if Some(day) == boundary_wed {
                     sim.random(at_ny(day, 16, 58, 30), mood, true);
-                    sim.retime_last(50, "Closed 16:59 ET: before the 17:00 reset, so it counts for Wednesday.");
+                    sim.retime_last(
+                        50,
+                        "Closed 16:59 ET: before the 17:00 reset, so it counts for Wednesday.",
+                    );
                 }
                 if Some(day) == last {
                     // Keep the evaluation open: between 30% and 80% of its target.
                     if sim.net() > target * 8 / 10 {
                         let want = target * 65 / 100 - sim.net();
-                        sim.shaped("NQ", at_ny(day, 15, 21, 3), want, "Gave back part of the week's gains.");
+                        sim.shaped(
+                            "NQ",
+                            at_ny(day, 15, 21, 3),
+                            want,
+                            "Gave back part of the week's gains.",
+                        );
                     } else if sim.net() < target * 3 / 10 {
                         let want = target / 2 - sim.net();
-                        sim.shaped("MNQ", at_ny(day, 15, 21, 3), want, "Clean A+ setup into the close.");
+                        sim.shaped(
+                            "MNQ",
+                            at_ny(day, 15, 21, 3),
+                            want,
+                            "Clean A+ setup into the close.",
+                        );
                     }
                 }
                 sim.close_day(day);
@@ -616,15 +800,28 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
             let parts = sim.into_parts();
             ScenarioPlan {
                 covers: vec![
-                    "multi-trade days", "high-volume day (12 trades)", "large positive day", "large negative day",
-                    "consecutive winning and losing days", "trades either side of the 17:00 reset", "Sunday-evening trade rolled to Monday",
-                    "daylight-saving boundary (when in the window)", "trades today (overnight session)", "complete daily reviews",
+                    "multi-trade days",
+                    "high-volume day (12 trades)",
+                    "large positive day",
+                    "large negative day",
+                    "consecutive winning and losing days",
+                    "trades either side of the 17:00 reset",
+                    "Sunday-evening trade rolled to Monday",
+                    "daylight-saving boundary (when in the window)",
+                    "trades today (overnight session)",
+                    "complete daily reviews",
                 ],
                 ..finish(key, spec, Some(rules), parts, first_day)
             }
         }
         "passed" => {
-            let spec = account("DEMO · Evaluation 100K (target reached)", key, ("evaluation", "DEMO Firm Beta (fictional)", "Rithmic"), ("America/Chicago", "16:00"), 100_000);
+            let spec = account(
+                "DEMO · Evaluation 100K (target reached)",
+                key,
+                ("evaluation", "DEMO Firm Beta (fictional)", "Rithmic"),
+                ("America/Chicago", "16:00"),
+                100_000,
+            );
             let rules = RuleSpec {
                 target_cents: Some(6_000 * D),
                 drawdown_cents: Some(3_000 * D),
@@ -647,7 +844,12 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
                 }
                 if day == stop && sim.net() < target {
                     let want = target - sim.net() + sim.rng.range(150, 400) * D;
-                    sim.shaped("NQ", at_ny(day, 14, 12, 40), want, "Final push: target reached.");
+                    sim.shaped(
+                        "NQ",
+                        at_ny(day, 14, 12, 40),
+                        want,
+                        "Final push: target reached.",
+                    );
                 }
                 sim.close_day(day);
                 if sim.net() >= target {
@@ -656,16 +858,30 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
                 }
             }
             let day = passed_on.expect("the target is reached by the stop day");
-            let status = StatusPlan { status: "passed", effective_at: at_ny(day, 16, 30, 0), cause: "Profit target reached (synthetic scenario)" };
+            let status = StatusPlan {
+                status: "passed",
+                effective_at: at_ny(day, 16, 30, 0),
+                cause: "Profit target reached (synthetic scenario)",
+            };
             let parts = sim.into_parts();
             ScenarioPlan {
                 status: Some(status),
-                covers: vec!["profit target reached", "passed evaluation", "Chicago time zone with a 16:00 reset"],
+                covers: vec![
+                    "profit target reached",
+                    "passed evaluation",
+                    "Chicago time zone with a 16:00 reset",
+                ],
                 ..finish(key, spec, Some(rules), parts, first_day)
             }
         }
         "at_risk" => {
-            let spec = account("DEMO · Sim Funded 150K — Drawdown watch (near the trailing max-loss floor)", key, ("sim_funded", "DEMO Firm Alpha (fictional)", "NinjaTrader"), ("America/New_York", "17:00"), 150_000);
+            let spec = account(
+                "DEMO · Sim Funded 150K — Drawdown watch (near the trailing max-loss floor)",
+                key,
+                ("sim_funded", "DEMO Firm Alpha (fictional)", "NinjaTrader"),
+                ("America/New_York", "17:00"),
+                150_000,
+            );
             let rules = RuleSpec {
                 drawdown_cents: Some(4_500 * D),
                 trailing: true,
@@ -687,9 +903,23 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
                 }
                 if let Some(i) = tail.iter().position(|d| *d == day) {
                     // Three losing days in a row, each inside the daily loss limit.
-                    let part = if i == 2 { needed - needed / 3 * 2 } else { needed / 3 };
-                    sim.shaped("MNQ", at_ny(day, 10, 5 + 9 * i as u32, 17), -(part / 2), "Chopped up in the open.");
-                    sim.shaped("NQ", at_ny(day, 13, 40, 2), -(part - part / 2), "Forced a trade after the open loss.");
+                    let part = if i == 2 {
+                        needed - needed / 3 * 2
+                    } else {
+                        needed / 3
+                    };
+                    sim.shaped(
+                        "MNQ",
+                        at_ny(day, 10, 5 + 9 * i as u32, 17),
+                        -(part / 2),
+                        "Chopped up in the open.",
+                    );
+                    sim.shaped(
+                        "NQ",
+                        at_ny(day, 13, 40, 2),
+                        -(part - part / 2),
+                        "Forced a trade after the open loss.",
+                    );
                 } else if sim.rng.chance(if stress { 50 } else { 55 }) {
                     let n = sim.rng.range(1, 3) as usize;
                     sim.session(day, n, mood, true);
@@ -699,12 +929,23 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
             let parts = sim.into_parts();
             ScenarioPlan {
                 watch_days: tail,
-                covers: vec!["account approaching its drawdown limit", "three consecutive losing days", "long account name", "draft daily reviews on the losing days"],
+                covers: vec![
+                    "account approaching its drawdown limit",
+                    "three consecutive losing days",
+                    "long account name",
+                    "draft daily reviews on the losing days",
+                ],
                 ..finish(key, spec, Some(rules), parts, first_day)
             }
         }
         "failed" => {
-            let spec = account("DEMO · Evaluation 50K (failed: max loss breached)", key, ("evaluation", "DEMO Firm Gamma (fictional)", "ProjectX"), ("America/New_York", "17:00"), 50_000);
+            let spec = account(
+                "DEMO · Evaluation 50K (failed: max loss breached)",
+                key,
+                ("evaluation", "DEMO Firm Gamma (fictional)", "ProjectX"),
+                ("America/New_York", "17:00"),
+                50_000,
+            );
             let rules = RuleSpec {
                 target_cents: Some(3_000 * D),
                 drawdown_cents: Some(2_000 * D),
@@ -716,36 +957,73 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
             let roots = [("NQ", 60), ("MNQ", 40)];
             let mut sim = Sim::new(seed, key, &spec, Some(&rules), &roots, good(35, 40, 25));
             let breach = before[before.len() * 65 / 100];
-            let tilt: Vec<NaiveDate> = before.iter().copied().filter(|d| *d < breach).rev().take(3).collect();
+            let tilt: Vec<NaiveDate> = before
+                .iter()
+                .copied()
+                .filter(|d| *d < breach)
+                .rev()
+                .take(3)
+                .collect();
             for day in before.iter().copied().filter(|d| *d <= breach) {
                 let mood = sim.next_mood();
                 if day == breach {
                     // Revenge trading: each loss bigger than the last, through the floor.
                     let total = sim.balance - sim.floor().unwrap() + 350 * D;
                     for (i, share) in [(0, 20), (1, 30), (2, 50)] {
-                        sim.shaped("NQ", at_ny(day, 9 + 2 * i, 41, 6), -(total * share / 100), "Revenge trade after the first loss.");
+                        sim.shaped(
+                            "NQ",
+                            at_ny(day, 9 + 2 * i, 41, 6),
+                            -(total * share / 100),
+                            "Revenge trade after the first loss.",
+                        );
                     }
                 } else if tilt.contains(&day) {
-                    let room = sim.balance - (sim.floor().unwrap() + rules.drawdown_cents.unwrap() / 10);
+                    let room =
+                        sim.balance - (sim.floor().unwrap() + rules.drawdown_cents.unwrap() / 10);
                     let loss = (rules.drawdown_cents.unwrap() / 5).min(room).max(50 * D);
-                    sim.shaped("NQ", at_ny(day, 11, 3, 50), -loss, "Tilted after missing the move.");
+                    sim.shaped(
+                        "NQ",
+                        at_ny(day, 11, 3, 50),
+                        -loss,
+                        "Tilted after missing the move.",
+                    );
                 } else if sim.rng.chance(60) {
                     let n = sim.rng.range(1, 3) as usize;
                     sim.session(day, n, mood, true);
                 }
                 sim.close_day(day);
             }
-            let status = StatusPlan { status: "failed", effective_at: at_ny(breach, 16, 30, 0), cause: "Maximum loss limit breached (synthetic scenario)" };
+            let status = StatusPlan {
+                status: "failed",
+                effective_at: at_ny(breach, 16, 30, 0),
+                cause: "Maximum loss limit breached (synthetic scenario)",
+            };
             let parts = sim.into_parts();
             ScenarioPlan {
                 status: Some(status),
-                covers: vec!["failed evaluation", "drawdown breached", "losing streak before the breach", "no trades after failing"],
+                covers: vec![
+                    "failed evaluation",
+                    "drawdown breached",
+                    "losing streak before the breach",
+                    "no trades after failing",
+                ],
                 ..finish(key, spec, Some(rules), parts, first_day)
             }
         }
         "archived" => {
-            let spec = account("DEMO · Evaluation 25K (closed and archived)", key, ("evaluation", "DEMO Firm Beta (fictional)", "Tradovate"), ("America/New_York", "17:00"), 25_000);
-            let rules = RuleSpec { target_cents: Some(1_500 * D), drawdown_cents: Some(1_500 * D), trailing: true, ..RuleSpec::default() };
+            let spec = account(
+                "DEMO · Evaluation 25K (closed and archived)",
+                key,
+                ("evaluation", "DEMO Firm Beta (fictional)", "Tradovate"),
+                ("America/New_York", "17:00"),
+                25_000,
+            );
+            let rules = RuleSpec {
+                target_cents: Some(1_500 * D),
+                drawdown_cents: Some(1_500 * D),
+                trailing: true,
+                ..RuleSpec::default()
+            };
             let roots = [("MES", 60), ("MNQ", 40)];
             let mut sim = Sim::new(seed, key, &spec, Some(&rules), &roots, good(40, 40, 20));
             let active: Vec<NaiveDate> = before.iter().copied().take(30).collect();
@@ -760,23 +1038,52 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
             let closed = at_ny(*active.last().unwrap() + Duration::days(1), 9, 0, 0);
             let parts = sim.into_parts();
             ScenarioPlan {
-                status: Some(StatusPlan { status: "closed", effective_at: closed, cause: "Closed by the trader (synthetic scenario)" }),
+                status: Some(StatusPlan {
+                    status: "closed",
+                    effective_at: closed,
+                    cause: "Closed by the trader (synthetic scenario)",
+                }),
                 archived: true,
-                covers: vec!["archived account", "closed status", "history that ends early in the window"],
+                covers: vec![
+                    "archived account",
+                    "closed status",
+                    "history that ends early in the window",
+                ],
                 ..finish(key, spec, Some(rules), parts, first_day)
             }
         }
         "empty" => {
-            let spec = account("DEMO · Evaluation 50K (no trades yet)", key, ("evaluation", "DEMO Firm Gamma (fictional)", "Tradovate"), ("America/New_York", "17:00"), 50_000);
+            let spec = account(
+                "DEMO · Evaluation 50K (no trades yet)",
+                key,
+                ("evaluation", "DEMO Firm Gamma (fictional)", "Tradovate"),
+                ("America/New_York", "17:00"),
+                50_000,
+            );
             let sim = Sim::new(seed, key, &spec, None, &[], good(1, 1, 1));
             let parts = sim.into_parts();
             ScenarioPlan {
-                covers: vec!["empty account", "no rulebook set up", "no opening balance", "calendar empty state"],
+                covers: vec![
+                    "empty account",
+                    "no rulebook set up",
+                    "no opening balance",
+                    "calendar empty state",
+                ],
                 ..finish(key, spec, None, parts, first_day)
             }
         }
         "import_duplicates" => {
-            let spec = account("DEMO · Evaluation 50K (CSV imports, London time)", key, ("evaluation", "DEMO Firm Alpha (fictional)", "Tradovate (CSV export)"), ("Europe/London", "22:00"), 50_000);
+            let spec = account(
+                "DEMO · Evaluation 50K (CSV imports, London time)",
+                key,
+                (
+                    "evaluation",
+                    "DEMO Firm Alpha (fictional)",
+                    "Tradovate (CSV export)",
+                ),
+                ("Europe/London", "22:00"),
+                50_000,
+            );
             let roots = [("MNQ", 70), ("MGC", 30)];
             let mut sim = Sim::new(seed, key, &spec, None, &roots, good(40, 40, 20));
             for day in &before {
@@ -790,8 +1097,12 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
             let parts = sim.into_parts();
             let mut plan = ScenarioPlan {
                 covers: vec![
-                    "import history with two batches", "duplicate rows already imported", "duplicate row within one file",
-                    "invalid row reported, not imported", "no rulebook set up", "London time zone with a 22:00 reset",
+                    "import history with two batches",
+                    "duplicate rows already imported",
+                    "duplicate row within one file",
+                    "invalid row reported, not imported",
+                    "no rulebook set up",
+                    "London time zone with a 22:00 reset",
                 ],
                 ..finish(key, spec, None, parts, first_day)
             };
@@ -800,7 +1111,13 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
             plan
         }
         "stress" => {
-            let spec = account("DEMO · Stress Sim Funded 250K — high-volume scalping account with a deliberately long name", key, ("sim_funded", "DEMO Firm Delta (fictional)", "Rithmic"), ("America/Chicago", "16:00"), 250_000);
+            let spec = account(
+                "DEMO · Stress Sim Funded 250K — high-volume scalping account with a deliberately long name",
+                key,
+                ("sim_funded", "DEMO Firm Delta (fictional)", "Rithmic"),
+                ("America/Chicago", "16:00"),
+                250_000,
+            );
             let rules = RuleSpec {
                 drawdown_cents: Some(7_500 * D),
                 trailing: false,
@@ -809,7 +1126,18 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
                 max_contracts: Some((20, 200)),
                 ..RuleSpec::default()
             };
-            let roots = [("MNQ", 25), ("MES", 15), ("M2K", 10), ("MYM", 10), ("MCL", 10), ("MGC", 10), ("NQ", 8), ("ES", 6), ("CL", 3), ("GC", 3)];
+            let roots = [
+                ("MNQ", 25),
+                ("MES", 15),
+                ("M2K", 10),
+                ("MYM", 10),
+                ("MCL", 10),
+                ("MGC", 10),
+                ("NQ", 8),
+                ("ES", 6),
+                ("CL", 3),
+                ("GC", 3),
+            ];
             let mut sim = Sim::new(seed, key, &spec, Some(&rules), &roots, good(35, 40, 25));
             sim.max_micro = 10;
             for day in &before {
@@ -825,7 +1153,12 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
             }
             let parts = sim.into_parts();
             ScenarioPlan {
-                covers: vec!["high-volume days (20–30 trades)", "ten instruments", "static drawdown", "long account name"],
+                covers: vec![
+                    "high-volume days (20–30 trades)",
+                    "ten instruments",
+                    "static drawdown",
+                    "long account name",
+                ],
                 ..finish(key, spec, Some(rules), parts, first_day)
             }
         }
@@ -834,8 +1167,18 @@ pub fn plan(key: &str, preset: Preset, seed: u32, anchor: NaiveDate) -> Option<S
     Some(plan)
 }
 
-fn finish(key: &str, account: AccountSpec, rules: Option<RuleSpec>, (trades, eod): Parts, first_day: NaiveDate) -> ScenarioPlan {
-    let key = SCENARIOS.iter().find(|k| **k == key).copied().expect("known scenario");
+fn finish(
+    key: &str,
+    account: AccountSpec,
+    rules: Option<RuleSpec>,
+    (trades, eod): Parts,
+    first_day: NaiveDate,
+) -> ScenarioPlan {
+    let key = SCENARIOS
+        .iter()
+        .find(|k| **k == key)
+        .copied()
+        .expect("known scenario");
     let mut trades = trades;
     trades.sort_by_key(|t| (t.entry, t.exit));
     ScenarioPlan {
@@ -858,10 +1201,15 @@ fn finish(key: &str, account: AccountSpec, rules: Option<RuleSpec>, (trades, eod
 // CSV files for the import scenario
 // ---------------------------------------------------------------------------
 
-const CSV_HEADER: &str = "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Fees,Trade ID";
+const CSV_HEADER: &str =
+    "Symbol,Side,Qty,Entry Time,Entry Price,Exit Time,Exit Price,Fees,Trade ID";
 
 fn csv_row(plan: &ScenarioPlan, i: usize, t: &PlannedTrade) -> String {
-    let local = |at: DateTime<Utc>| at.with_timezone(&plan.account.tz).format("%Y-%m-%d %H:%M:%S").to_string();
+    let local = |at: DateTime<Utc>| {
+        at.with_timezone(&plan.account.tz)
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
+    };
     let inst = t.instrument();
     format!(
         "{},{},{},{},{},{},{},{},DEMO-CSV-{:04}",
@@ -880,7 +1228,12 @@ fn csv_row(plan: &ScenarioPlan, i: usize, t: &PlannedTrade) -> String {
 /// Two exports: the first two thirds of the history, then the rest with three rows already imported,
 /// one row repeated within the file and one row whose price cannot be read.
 fn csv_files(plan: &ScenarioPlan) -> Vec<CsvFile> {
-    let rows: Vec<String> = plan.imported.iter().enumerate().map(|(i, t)| csv_row(plan, i, t)).collect();
+    let rows: Vec<String> = plan
+        .imported
+        .iter()
+        .enumerate()
+        .map(|(i, t)| csv_row(plan, i, t))
+        .collect();
     let split = rows.len() * 2 / 3;
     let first = &rows[..split];
     let rest = &rows[split..];
@@ -889,10 +1242,20 @@ fn csv_files(plan: &ScenarioPlan) -> Vec<CsvFile> {
     if let Some(repeat) = rest.first() {
         second.push(repeat.clone());
     }
-    second.push("MNQZ6,Buy,1,2026-01-05 15:00:00,not-a-price,2026-01-05 15:05:00,21000,1.32,DEMO-CSV-BAD1".into());
+    second.push(
+        "MNQZ6,Buy,1,2026-01-05 15:00:00,not-a-price,2026-01-05 15:05:00,21000,1.32,DEMO-CSV-BAD1"
+            .into(),
+    );
     let file = |rows: &[String]| format!("{CSV_HEADER}\n{}\n", rows.join("\n"));
     vec![
-        CsvFile { name: "DEMO-tradovate-export-part1.csv".into(), content: file(first), rows: first.len(), new_rows: first.len(), duplicate_rows: 0, invalid_rows: 0 },
+        CsvFile {
+            name: "DEMO-tradovate-export-part1.csv".into(),
+            content: file(first),
+            rows: first.len(),
+            new_rows: first.len(),
+            duplicate_rows: 0,
+            invalid_rows: 0,
+        },
         CsvFile {
             name: "DEMO-tradovate-export-part2.csv".into(),
             content: file(&second),
@@ -913,4 +1276,3 @@ pub fn parse_day(s: &str) -> Option<NaiveDate> {
 pub fn today() -> NaiveDate {
     Utc::now().with_timezone(&NY).date_naive()
 }
-

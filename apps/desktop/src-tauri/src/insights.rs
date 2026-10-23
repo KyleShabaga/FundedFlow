@@ -6,7 +6,7 @@
 //! See docs/architecture/build-23-insights.md for the definitions.
 
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::domain::{micros_to_string, parse_decimal, to_micros};
 
@@ -52,7 +52,11 @@ fn ratio_text(n: i128, d: i128, dp: u32) -> String {
     let frac = format!("{:0width$}", abs % scale, width = dp as usize);
     let frac = frac.trim_end_matches('0');
     let sign = if neg { "-" } else { "" };
-    if frac.is_empty() { format!("{sign}{}", abs / scale) } else { format!("{sign}{}.{frac}", abs / scale) }
+    if frac.is_empty() {
+        format!("{sign}{}", abs / scale)
+    } else {
+        format!("{sign}{}.{frac}", abs / scale)
+    }
 }
 
 fn value(v: impl Into<Value>) -> Value {
@@ -73,11 +77,18 @@ fn money(m: i128) -> Value {
 
 /// The parity projection of the summary: counts, ids and every metric as `{state, value | code}`.
 pub fn summarize(trades: &[MetricTrade]) -> Value {
-    let closed: Vec<&MetricTrade> = trades.iter().filter(|t| t.exit_at.is_some() && t.pnl_status != "open").collect();
+    let closed: Vec<&MetricTrade> = trades
+        .iter()
+        .filter(|t| t.exit_at.is_some() && t.pnl_status != "open")
+        .collect();
     let mut eligible: Vec<(&MetricTrade, i128, i128, i128)> = Vec::new();
     let mut unknown: Vec<&str> = Vec::new();
     for t in &closed {
-        match (t.realized_pnl.as_deref().and_then(micros), t.gross_pnl.as_deref().and_then(micros), micros(&t.fees)) {
+        match (
+            t.realized_pnl.as_deref().and_then(micros),
+            t.gross_pnl.as_deref().and_then(micros),
+            micros(&t.fees),
+        ) {
             (Some(net), Some(gross), Some(fees)) => eligible.push((t, net, gross, fees)),
             _ => unknown.push(&t.id),
         }
@@ -95,14 +106,22 @@ pub fn summarize(trades: &[MetricTrade]) -> Value {
         .collect();
 
     let n = eligible.len();
-    let none_known = || if closed.is_empty() { state("na", "no_closed_trades") } else { state("unavailable", "pnl_unknown") };
+    let none_known = || {
+        if closed.is_empty() {
+            state("na", "no_closed_trades")
+        } else {
+            state("unavailable", "pnl_unknown")
+        }
+    };
     let net: i128 = eligible.iter().map(|e| e.1).sum();
     let gross: i128 = eligible.iter().map(|e| e.2).sum();
     let fees: i128 = eligible.iter().map(|e| e.3).sum();
     let win_sum: i128 = wins.iter().map(|e| e.1).sum();
     let loss_sum: i128 = losses.iter().map(|e| e.1).sum();
     let mean = |total: i128, count: usize| money(div_round(total, count as i128));
-    let ids = |list: &[&&(&MetricTrade, i128, i128, i128)]| list.iter().map(|e| e.0.id.clone()).collect::<Vec<_>>();
+    let ids = |list: &[&&(&MetricTrade, i128, i128, i128)]| {
+        list.iter().map(|e| e.0.id.clone()).collect::<Vec<_>>()
+    };
 
     json!({
         "tradeIds": closed.iter().map(|t| t.id.clone()).collect::<Vec<_>>(),
@@ -147,6 +166,10 @@ mod tests {
         assert_eq!(ratio_text(-1, 8, 2), "-0.13");
         assert_eq!(ratio_text(1, 8, 2), "0.13");
         assert_eq!(ratio_text(100, 1, 2), "100");
-        assert_eq!(ratio_text(-1, 1000, 2), "0", "a value that rounds to zero has no sign");
+        assert_eq!(
+            ratio_text(-1, 1000, 2),
+            "0",
+            "a value that rounds to zero has no sign"
+        );
     }
 }

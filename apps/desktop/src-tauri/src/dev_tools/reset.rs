@@ -26,7 +26,11 @@ use crate::runtime::Runtime;
 
 /// The repository's scripts folder (debug builds run from a checkout).
 fn scripts_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("..").join("scripts")
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("..")
+        .join("scripts")
 }
 
 /// Node.js, as on the developer's PATH (override with FUNDEDFLOW_NODE).
@@ -65,7 +69,9 @@ pub fn dismiss_report(data_dir: &Path, identifier: &str) -> AppResult<()> {
     match std::fs::remove_file(report_path(data_dir, identifier)) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(e) => Err(AppError::Database { message: format!("could not remove the reset report: {e}") }),
+        Err(e) => Err(AppError::Database {
+            message: format!("could not remove the reset report: {e}"),
+        }),
     }
 }
 
@@ -133,7 +139,9 @@ fn counts(runtime: &Runtime) -> AppResult<RecordCounts> {
 fn run_tool_preview(data_dir: &Path) -> AppResult<(String, String)> {
     let tool = scripts_dir().join("reset-test-data.mjs");
     if !tool.is_file() {
-        return Err(AppError::Conflict { message: format!("the reset tool was not found at {}", tool.display()) });
+        return Err(AppError::Conflict {
+            message: format!("the reset tool was not found at {}", tool.display()),
+        });
     }
     let output = Command::new(node())
         .arg(&tool)
@@ -142,11 +150,18 @@ fn run_tool_preview(data_dir: &Path) -> AppResult<(String, String)> {
         .arg(data_dir)
         .stdin(Stdio::null())
         .output()
-        .map_err(|e| AppError::Conflict { message: format!("could not run Node.js for the reset tool ({e}); nothing was changed") })?;
+        .map_err(|e| AppError::Conflict {
+            message: format!("could not run Node.js for the reset tool ({e}); nothing was changed"),
+        })?;
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
     if !output.status.success() {
-        return Err(AppError::Conflict { message: format!("the reset tool refused the preview: {}", if stderr.is_empty() { &stdout } else { &stderr }) });
+        return Err(AppError::Conflict {
+            message: format!(
+                "the reset tool refused the preview: {}",
+                if stderr.is_empty() { &stdout } else { &stderr }
+            ),
+        });
     }
     Ok((tool.display().to_string(), stdout))
 }
@@ -164,21 +179,30 @@ pub fn preview(runtime: &Runtime, data_dir: &Path) -> AppResult<ResetPreview> {
         scope,
         counts,
         backup_pattern: format!("{}.backup-<timestamp>-<id>", data_dir.display()),
-        cli: format!("node scripts/reset-test-data.mjs --all --yes --data-dir \"{}\"", data_dir.display()),
+        cli: format!(
+            "node scripts/reset-test-data.mjs --all --yes --data-dir \"{}\"",
+            data_dir.display()
+        ),
         tool,
         tool_output,
     })
 }
 
 fn write_report(data_dir: &Path, identifier: &str, report: &ResetReport) -> AppResult<()> {
-    let text = serde_json::to_string_pretty(report).map_err(|e| AppError::Database { message: e.to_string() })?;
-    std::fs::write(report_path(data_dir, identifier), text)
-        .map_err(|e| AppError::Database { message: format!("could not write the reset report beside the test journal: {e}") })
+    let text = serde_json::to_string_pretty(report).map_err(|e| AppError::Database {
+        message: e.to_string(),
+    })?;
+    std::fs::write(report_path(data_dir, identifier), text).map_err(|e| AppError::Database {
+        message: format!("could not write the reset report beside the test journal: {e}"),
+    })
 }
 
 /// Start the helper in its own process group (Unix) or detached (Windows), so it outlives the app.
 fn spawn_helper(data_dir: &Path, identifier: &str) -> std::io::Result<()> {
-    let log = std::fs::OpenOptions::new().create(true).append(true).open(log_path(data_dir, identifier))?;
+    let log = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log_path(data_dir, identifier))?;
     let mut command = Command::new(node());
     command
         .arg(scripts_dir().join("dev-reset-handoff.mjs"))
@@ -203,7 +227,9 @@ fn spawn_helper(data_dir: &Path, identifier: &str) -> std::io::Result<()> {
         const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
         const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
         // Leave a `cargo run` job when allowed, so closing the dev session does not end the helper.
-        command.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB);
+        command.creation_flags(
+            DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB,
+        );
         if command.spawn().is_ok() {
             return Ok(());
         }
@@ -212,12 +238,19 @@ fn spawn_helper(data_dir: &Path, identifier: &str) -> std::io::Result<()> {
     command.spawn().map(|_| ())
 }
 
-pub fn handoff(runtime: &Runtime, data_dir: &Path, identifier: &str, confirmation: &str) -> AppResult<ResetHandoff> {
+pub fn handoff(
+    runtime: &Runtime,
+    data_dir: &Path,
+    identifier: &str,
+    confirmation: &str,
+) -> AppResult<ResetHandoff> {
     if confirmation != "RESET" {
         return Err(AppError::invalid("confirmation", "Type RESET to confirm"));
     }
     if !scripts_dir().join("dev-reset-handoff.mjs").is_file() {
-        return Err(AppError::Conflict { message: "the reset handoff helper is missing; nothing was changed".into() });
+        return Err(AppError::Conflict {
+            message: "the reset handoff helper is missing; nothing was changed".into(),
+        });
     }
     // The tool must accept this target before the journal is given up.
     run_tool_preview(data_dir)?;
@@ -245,7 +278,9 @@ pub fn handoff(runtime: &Runtime, data_dir: &Path, identifier: &str, confirmatio
         if runtime.begin_initialize() {
             runtime.initialize();
         }
-        return Err(AppError::Conflict { message: failed.message });
+        return Err(AppError::Conflict {
+            message: failed.message,
+        });
     }
     Ok(ResetHandoff {
         data_dir: data_dir.display().to_string(),

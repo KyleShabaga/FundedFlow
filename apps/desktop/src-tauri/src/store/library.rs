@@ -4,7 +4,7 @@
 //! strategies, tags, checklists and items are archived, and a review keeps the
 //! labels it was made with (`store::reviews`).
 
-use rusqlite::{params, Connection, OptionalExtension, Row};
+use rusqlite::{Connection, OptionalExtension, Row, params};
 use serde::{Deserialize, Serialize};
 
 use super::opt_text;
@@ -132,8 +132,14 @@ fn name_issue(issues: &mut Issues, field: &str, name: &str, max: usize) {
 
 fn description(issues: &mut Issues, text: Option<String>) -> Option<String> {
     let text = opt_text(text);
-    if text.as_ref().is_some_and(|t| t.chars().count() > MAX_DESCRIPTION_CHARS) {
-        issues.add("description", format!("must be at most {MAX_DESCRIPTION_CHARS} characters"));
+    if text
+        .as_ref()
+        .is_some_and(|t| t.chars().count() > MAX_DESCRIPTION_CHARS)
+    {
+        issues.add(
+            "description",
+            format!("must be at most {MAX_DESCRIPTION_CHARS} characters"),
+        );
     }
     text
 }
@@ -141,7 +147,9 @@ fn description(issues: &mut Issues, text: Option<String>) -> Option<String> {
 /// A uniqueness violation as a readable conflict.
 fn unique(e: rusqlite::Error, what: &str) -> AppError {
     match AppError::from(e) {
-        AppError::Conflict { .. } => AppError::Conflict { message: format!("{what} with this name already exists") },
+        AppError::Conflict { .. } => AppError::Conflict {
+            message: format!("{what} with this name already exists"),
+        },
         other => other,
     }
 }
@@ -164,8 +172,12 @@ const STRATEGY: &str = "SELECT s.id, s.name, s.description_md, s.is_archived,
     FROM strategies s WHERE s.deleted_at IS NULL";
 
 pub fn strategies(conn: &Connection) -> AppResult<Vec<Strategy>> {
-    let mut stmt = conn.prepare(&format!("{STRATEGY} ORDER BY s.is_archived, s.name COLLATE NOCASE, s.id"))?;
-    Ok(stmt.query_map([], strategy_row)?.collect::<rusqlite::Result<_>>()?)
+    let mut stmt = conn.prepare(&format!(
+        "{STRATEGY} ORDER BY s.is_archived, s.name COLLATE NOCASE, s.id"
+    ))?;
+    Ok(stmt
+        .query_map([], strategy_row)?
+        .collect::<rusqlite::Result<_>>()?)
 }
 
 pub fn strategy(conn: &Connection, id: &str) -> AppResult<Strategy> {
@@ -174,7 +186,11 @@ pub fn strategy(conn: &Connection, id: &str) -> AppResult<Strategy> {
         .ok_or_else(|| AppError::not_found("strategy", id))
 }
 
-pub fn save_strategy(conn: &mut Connection, id: Option<&str>, input: StrategyInput) -> AppResult<Strategy> {
+pub fn save_strategy(
+    conn: &mut Connection,
+    id: Option<&str>,
+    input: StrategyInput,
+) -> AppResult<Strategy> {
     let mut issues = Issues::default();
     name_issue(&mut issues, "name", &input.name, MAX_NAME_CHARS);
     let description = description(&mut issues, input.description);
@@ -226,7 +242,9 @@ pub fn tags(conn: &Connection) -> AppResult<Vec<Tag>> {
     let mut stmt = conn.prepare(&format!(
         "{TAG} ORDER BY t.archived_at IS NOT NULL, t.kind, t.name COLLATE NOCASE, t.id"
     ))?;
-    Ok(stmt.query_map([], tag_row)?.collect::<rusqlite::Result<_>>()?)
+    Ok(stmt
+        .query_map([], tag_row)?
+        .collect::<rusqlite::Result<_>>()?)
 }
 
 pub fn tag(conn: &Connection, id: &str) -> AppResult<Tag> {
@@ -273,12 +291,18 @@ fn items(conn: &Connection, checklist_id: &str) -> AppResult<Vec<ChecklistItem>>
          WHERE checklist_id = ?1 AND deleted_at IS NULL ORDER BY is_archived, sort_order, id",
     )?;
     let rows = stmt.query_map([checklist_id], |r| {
-        Ok(ChecklistItem { id: r.get(0)?, label: r.get(1)?, sort_order: r.get(2)?, archived: r.get::<_, i64>(3)? == 1 })
+        Ok(ChecklistItem {
+            id: r.get(0)?,
+            label: r.get(1)?,
+            sort_order: r.get(2)?,
+            archived: r.get::<_, i64>(3)? == 1,
+        })
     })?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
-const CHECKLIST: &str = "SELECT c.id, c.name, c.description_md, c.scope, c.strategy_id, c.is_archived,
+const CHECKLIST: &str =
+    "SELECT c.id, c.name, c.description_md, c.scope, c.strategy_id, c.is_archived,
         (SELECT count(*) FROM trade_reviews r WHERE r.checklist_id = c.id AND r.deleted_at IS NULL)
           + (SELECT count(*) FROM daily_reviews d WHERE d.checklist_id = c.id),
         c.created_at, c.updated_at
@@ -302,11 +326,23 @@ fn checklist_rows(conn: &Connection, sql: &str, args: &[&str]) -> AppResult<Vec<
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
-    heads.into_iter().map(|mut c| Ok({ c.items = items(conn, &c.id)?; c })).collect()
+    heads
+        .into_iter()
+        .map(|mut c| {
+            Ok({
+                c.items = items(conn, &c.id)?;
+                c
+            })
+        })
+        .collect()
 }
 
 pub fn checklists(conn: &Connection) -> AppResult<Vec<Checklist>> {
-    checklist_rows(conn, &format!("{CHECKLIST} ORDER BY c.is_archived, c.scope DESC, c.name COLLATE NOCASE, c.id"), &[])
+    checklist_rows(
+        conn,
+        &format!("{CHECKLIST} ORDER BY c.is_archived, c.scope DESC, c.name COLLATE NOCASE, c.id"),
+        &[],
+    )
 }
 
 pub fn checklist(conn: &Connection, id: &str) -> AppResult<Checklist> {
@@ -318,7 +354,11 @@ pub fn checklist(conn: &Connection, id: &str) -> AppResult<Checklist> {
 /// Create or replace a checklist and its items in one transaction. Items keep
 /// their ids when renamed, so past reviews still point at them; their past
 /// answers keep the label they were given under.
-pub fn save_checklist(conn: &mut Connection, id: Option<&str>, input: ChecklistInput) -> AppResult<Checklist> {
+pub fn save_checklist(
+    conn: &mut Connection,
+    id: Option<&str>,
+    input: ChecklistInput,
+) -> AppResult<Checklist> {
     let mut issues = Issues::default();
     name_issue(&mut issues, "name", &input.name, MAX_NAME_CHARS);
     let description = description(&mut issues, input.description);
@@ -333,7 +373,12 @@ pub fn save_checklist(conn: &mut Connection, id: Option<&str>, input: ChecklistI
         issues.add("items", format!("at most {MAX_ITEMS} items"));
     }
     for (i, item) in input.items.iter().enumerate() {
-        name_issue(&mut issues, &format!("items.{i}.label"), &item.label, MAX_ITEM_CHARS);
+        name_issue(
+            &mut issues,
+            &format!("items.{i}.label"),
+            &item.label,
+            MAX_ITEM_CHARS,
+        );
     }
     let ids: Vec<&str> = input.items.iter().filter_map(|i| i.id.as_deref()).collect();
     if ids.iter().enumerate().any(|(i, a)| ids[..i].contains(a)) {
@@ -349,7 +394,10 @@ pub fn save_checklist(conn: &mut Connection, id: Option<&str>, input: ChecklistI
         Some(id) => {
             let current = checklist(&tx, id)?;
             if current.scope != input.scope && current.review_count > 0 {
-                return Err(AppError::invalid("scope", "a checklist that reviews use cannot change scope"));
+                return Err(AppError::invalid(
+                    "scope",
+                    "a checklist that reviews use cannot change scope",
+                ));
             }
             tx.execute(
                 "UPDATE checklists SET name = ?2, description_md = ?3, scope = ?4, strategy_id = ?5, updated_at = ?6
@@ -381,7 +429,12 @@ pub fn save_checklist(conn: &mut Connection, id: Option<&str>, input: ChecklistI
                     params![item_id, label, order as i64, now],
                 )?;
             }
-            Some(item_id) => return Err(AppError::invalid("items", format!("item '{item_id}' is not in this checklist"))),
+            Some(item_id) => {
+                return Err(AppError::invalid(
+                    "items",
+                    format!("item '{item_id}' is not in this checklist"),
+                ));
+            }
             None => {
                 tx.execute(
                     "INSERT INTO checklist_items (id, checklist_id, label, sort_order, created_at, updated_at)
@@ -428,5 +481,9 @@ pub fn set_archived(conn: &mut Connection, input: ArchiveInput) -> AppResult<()>
 }
 
 pub fn load(conn: &Connection) -> AppResult<Library> {
-    Ok(Library { strategies: strategies(conn)?, tags: tags(conn)?, checklists: checklists(conn)? })
+    Ok(Library {
+        strategies: strategies(conn)?,
+        tags: tags(conn)?,
+        checklists: checklists(conn)?,
+    })
 }

@@ -1,9 +1,11 @@
 //! Rust data steps run by migrations (`Step::Rust`). Each runs inside its
 //! migration's transaction and must be idempotent.
 
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, params};
 
-use crate::domain::{format_instant, new_id, now, parse_instant, parse_reset_time, parse_tz, trading_day};
+use crate::domain::{
+    format_instant, new_id, now, parse_instant, parse_reset_time, parse_tz, trading_day,
+};
 
 /// Migration 5: recompute every stored `trades.trading_day` with
 /// `domain::trading_day` (exit time, or entry while open; the account's
@@ -37,9 +39,11 @@ pub(crate) fn rederive_trading_days(conn: &Connection) -> rusqlite::Result<usize
     let mut update = conn.prepare("UPDATE trades SET trading_day = ?2 WHERE id = ?1")?;
     let mut corrected = 0;
     for (id, entry_at, exit_at, stored, tz, reset) in rows {
-        let (Some(tz), Some(reset), Some(at)) =
-            (parse_tz(&tz), parse_reset_time(&reset), parse_instant(exit_at.as_deref().unwrap_or(&entry_at)))
-        else {
+        let (Some(tz), Some(reset), Some(at)) = (
+            parse_tz(&tz),
+            parse_reset_time(&reset),
+            parse_instant(exit_at.as_deref().unwrap_or(&entry_at)),
+        ) else {
             continue;
         };
         let day = trading_day(at, tz, reset).to_string();
@@ -91,7 +95,11 @@ pub(crate) fn map_legacy_catalogue(conn: &Connection) -> rusqlite::Result<()> {
         .collect::<rusqlite::Result<Vec<_>>>()?;
     for (id, name, category, created_at, updated_at, deleted_at, provider) in programmes {
         let slug = unique_slug(&slug(&name, "programme"), |s| {
-            exists(conn, "SELECT 1 FROM programme_families WHERE provider_id = ?1 AND slug = ?2", params![provider, s])
+            exists(
+                conn,
+                "SELECT 1 FROM programme_families WHERE provider_id = ?1 AND slug = ?2",
+                params![provider, s],
+            )
         })?;
         let now = now();
         conn.execute(
@@ -123,9 +131,16 @@ pub(crate) fn map_legacy_catalogue(conn: &Connection) -> rusqlite::Result<()> {
 /// The provider mapped from a legacy firm, created on first use (by
 /// migration 7, and by the account store when it creates a firm). `None` if
 /// there is no such firm.
-pub(crate) fn provider_for_firm(conn: &Connection, firm_id: &str) -> rusqlite::Result<Option<String>> {
+pub(crate) fn provider_for_firm(
+    conn: &Connection,
+    firm_id: &str,
+) -> rusqlite::Result<Option<String>> {
     let existing: Option<String> = conn
-        .query_row("SELECT id FROM providers WHERE legacy_firm_id = ?1", [firm_id], |r| r.get(0))
+        .query_row(
+            "SELECT id FROM providers WHERE legacy_firm_id = ?1",
+            [firm_id],
+            |r| r.get(0),
+        )
         .optional()?;
     if existing.is_some() {
         return Ok(existing);
@@ -149,10 +164,14 @@ pub(crate) fn provider_for_firm(conn: &Connection, firm_id: &str) -> rusqlite::R
     let Some((name, website, notes, created_at, updated_at, deleted_at)) = firm else {
         return Ok(None);
     };
-    let slug = unique_slug(&slug(&name, "provider"), |s| exists(conn, "SELECT 1 FROM providers WHERE slug = ?1", [s]))?;
+    let slug = unique_slug(&slug(&name, "provider"), |s| {
+        exists(conn, "SELECT 1 FROM providers WHERE slug = ?1", [s])
+    })?;
     // Only an http(s) address fits website_url; anything else stays on the firm.
     let website = website.map(|w| w.trim().to_string()).filter(|w| {
-        w.strip_prefix("https://").or_else(|| w.strip_prefix("http://")).is_some_and(|rest| !rest.is_empty())
+        w.strip_prefix("https://")
+            .or_else(|| w.strip_prefix("http://"))
+            .is_some_and(|rest| !rest.is_empty())
     });
     let now = now();
     let id = new_id();
@@ -193,11 +212,18 @@ pub(crate) fn slug(name: &str, fallback: &str) -> String {
     }
     out.truncate(MAX_SLUG);
     let out = out.trim_end_matches('-');
-    if out.is_empty() { fallback.to_string() } else { out.to_string() }
+    if out.is_empty() {
+        fallback.to_string()
+    } else {
+        out.to_string()
+    }
 }
 
 /// `base`, or the first free one of `base-2`, `base-3`, ...
-fn unique_slug(base: &str, taken: impl Fn(&str) -> rusqlite::Result<bool>) -> rusqlite::Result<String> {
+fn unique_slug(
+    base: &str,
+    taken: impl Fn(&str) -> rusqlite::Result<bool>,
+) -> rusqlite::Result<String> {
     let mut candidate = base.to_string();
     let mut n = 1;
     while taken(&candidate)? {
@@ -208,12 +234,16 @@ fn unique_slug(base: &str, taken: impl Fn(&str) -> rusqlite::Result<bool>) -> ru
 }
 
 fn exists(conn: &Connection, sql: &str, params: impl rusqlite::Params) -> rusqlite::Result<bool> {
-    conn.query_row(sql, params, |_| Ok(())).optional().map(|o| o.is_some())
+    conn.query_row(sql, params, |_| Ok(()))
+        .optional()
+        .map(|o| o.is_some())
 }
 
 /// A legacy timestamp in the catalogue's strict instant format (UTC, ms, `Z`).
 fn stored_instant(s: &str, fallback: &str) -> String {
-    parse_instant(s).map(format_instant).unwrap_or_else(|| fallback.to_string())
+    parse_instant(s)
+        .map(format_instant)
+        .unwrap_or_else(|| fallback.to_string())
 }
 
 /// Migration 10: convert the legacy account-owned rulebooks (renamed by 0009
@@ -282,7 +312,12 @@ pub(crate) fn convert_legacy_rulebooks(conn: &Connection) -> rusqlite::Result<()
             ],
         )?;
 
-        let source_id = match v.source_reference.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        let source_id = match v
+            .source_reference
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
             None => None,
             Some(reference) => {
                 let id = new_id();
@@ -316,8 +351,12 @@ pub(crate) fn convert_legacy_rulebooks(conn: &Connection) -> rusqlite::Result<()
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         for rule in rules {
-            let (rule_type, parameters, support) =
-                convert_legacy_rule(&rule.rule_type, &rule.evaluation, &rule.value_state, &rule.params_json);
+            let (rule_type, parameters, support) = convert_legacy_rule(
+                &rule.rule_type,
+                &rule.evaluation,
+                &rule.value_state,
+                &rule.params_json,
+            );
             let rule_created = stored_instant(&rule.created_at, &created);
             conn.execute(
                 "INSERT INTO rule_definitions (id, rulebook_version_id, rule_key, rule_type, parameter_schema_version,
@@ -348,7 +387,10 @@ pub(crate) fn convert_legacy_rulebooks(conn: &Connection) -> rusqlite::Result<()
         }
 
         if v.status != "draft" {
-            conn.execute("UPDATE rulebook_versions SET verification_status = 'needs_review' WHERE id = ?1", [&v.id])?;
+            conn.execute(
+                "UPDATE rulebook_versions SET verification_status = 'needs_review' WHERE id = ?1",
+                [&v.id],
+            )?;
         }
     }
 
@@ -375,7 +417,11 @@ pub(crate) fn convert_legacy_rulebooks(conn: &Connection) -> rusqlite::Result<()
     for (version_id, account_id, from, to, source, assigned_at) in intervals {
         // Two versions from one day: the earlier one never governed a day.
         if to.as_deref() == Some(from.as_str())
-            || exists(conn, "SELECT 1 FROM account_rulebook_assignments WHERE rulebook_version_id = ?1", [&version_id])?
+            || exists(
+                conn,
+                "SELECT 1 FROM account_rulebook_assignments WHERE rulebook_version_id = ?1",
+                [&version_id],
+            )?
         {
             continue;
         }
@@ -435,7 +481,9 @@ fn account_rulebook(conn: &Connection, account_id: &str, at: &str) -> rusqlite::
         |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
     )?;
     let display = format!("{name} rules");
-    let slug = unique_slug(&slug(&display, "account-rules"), |s| exists(conn, "SELECT 1 FROM rulebooks WHERE slug = ?1", [s]))?;
+    let slug = unique_slug(&slug(&display, "account-rules"), |s| {
+        exists(conn, "SELECT 1 FROM rulebooks WHERE slug = ?1", [s])
+    })?;
     let id = new_id();
     conn.execute(
         "INSERT INTO rulebooks (id, provider_id, owner_account_id, slug, display_name, record_status, created_at, updated_at)
@@ -462,7 +510,9 @@ pub(crate) fn rulebook_events(conn: &Connection) -> rusqlite::Result<()> {
         |r| r.get::<_, i64>(0).map(|n| n == 1),
     )?;
     if balance_not_null {
-        conn.execute_batch(include_str!("../../migrations/0015_nullable_engine_snapshots.sql"))?;
+        conn.execute_batch(include_str!(
+            "../../migrations/0015_nullable_engine_snapshots.sql"
+        ))?;
     }
     conn.execute_batch(include_str!("../../migrations/0016_rulebook_events.sql"))
 }

@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 mod catalogue;
-mod data_controls;
 mod commands;
 mod csv_import;
+mod data_controls;
 mod db;
 // Build 26.9 developer tools: absent from release builds (no code, no commands).
 #[cfg(any(debug_assertions, test))]
@@ -16,11 +16,11 @@ mod insights;
 mod legal;
 #[cfg(test)]
 mod parity;
-#[cfg(test)]
-mod wire_contract;
 mod rulebook;
 mod runtime;
 mod store;
+#[cfg(test)]
+mod wire_contract;
 
 use tauri::Manager;
 
@@ -187,7 +187,8 @@ pub fn run() {
             // The test journal's folder also holds its acceptance record, so it never touches the real one.
             #[cfg(debug_assertions)]
             let (dir, config_dir) = {
-                let dev = dev_tools::DevEnvironment::from_env(dir.clone().ok(), &app.config().identifier);
+                let dev =
+                    dev_tools::DevEnvironment::from_env(dir.clone().ok(), &app.config().identifier);
                 let config_dir = match (&dev.isolated, &dev.problem) {
                     (Some(isolated), _) => Ok(isolated.clone()),
                     (None, Some(problem)) => Err(problem.clone()),

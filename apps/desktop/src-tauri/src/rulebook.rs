@@ -10,7 +10,7 @@
 
 use serde::de::{DeserializeOwned, Error as _};
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::domain::{canonical, micros_to_string, parse_decimal, to_micros};
 use crate::error::FieldIssue;
@@ -32,7 +32,13 @@ impl<'de> Deserialize<'de> for Money {
             .filter(|v| canonical(*v) == s && !v.is_sign_negative())
             .and_then(to_micros)
             .is_some_and(|m| micros_to_string(m) == s);
-        if ok { Ok(Money(s)) } else { Err(D::Error::custom(format!("'{s}' is not a canonical non-negative amount"))) }
+        if ok {
+            Ok(Money(s))
+        } else {
+            Err(D::Error::custom(format!(
+                "'{s}' is not a canonical non-negative amount"
+            )))
+        }
     }
 }
 
@@ -46,7 +52,11 @@ impl<'de> Deserialize<'de> for Share {
         let ok = parse_decimal(&s).is_some_and(|v| {
             canonical(v) == s && v > rust_decimal::Decimal::ZERO && v <= rust_decimal::Decimal::ONE
         });
-        if ok { Ok(Share(s)) } else { Err(D::Error::custom(format!("'{s}' is not a share in (0, 1]"))) }
+        if ok {
+            Ok(Share(s))
+        } else {
+            Err(D::Error::custom(format!("'{s}' is not a share in (0, 1]")))
+        }
     }
 }
 
@@ -66,7 +76,11 @@ pub struct PositiveCount(#[serde(deserialize_with = "positive")] pub u32);
 
 fn positive<'de, D: Deserializer<'de>>(d: D) -> Result<u32, D::Error> {
     let n = u32::deserialize(d)?;
-    if n >= 1 { Ok(n) } else { Err(D::Error::custom("must be at least 1")) }
+    if n >= 1 {
+        Ok(n)
+    } else {
+        Err(D::Error::custom("must be at least 1"))
+    }
 }
 
 macro_rules! choice {
@@ -77,24 +91,83 @@ macro_rules! choice {
     };
 }
 
-choice!(TargetBasis { Balance, Equity, Unknown });
-choice!(UnrealizedBasis { Realized, RealizedAndUnrealized, Unknown });
-choice!(ResetBasis { AccountTradingDay, ProviderSession, Unknown });
-choice!(Breach { Hard, Soft, Unknown });
-choice!(LimitCondition { Always, BelowInitialTrail, Unknown });
-choice!(DrawdownMethod { Static, EndOfDayTrailing, IntradayTrailing, Unknown });
-choice!(DayBasis { TradingDay, CalendarDay, Unknown });
-choice!(ConsistencyDenominator { TotalProfit, ProfitTarget, Unknown });
-choice!(ConsistencyScope { Evaluation, Payout, Both, Unknown });
+choice!(TargetBasis {
+    Balance,
+    Equity,
+    Unknown
+});
+choice!(UnrealizedBasis {
+    Realized,
+    RealizedAndUnrealized,
+    Unknown
+});
+choice!(ResetBasis {
+    AccountTradingDay,
+    ProviderSession,
+    Unknown
+});
+choice!(Breach {
+    Hard,
+    Soft,
+    Unknown
+});
+choice!(LimitCondition {
+    Always,
+    BelowInitialTrail,
+    Unknown
+});
+choice!(DrawdownMethod {
+    Static,
+    EndOfDayTrailing,
+    IntradayTrailing,
+    Unknown
+});
+choice!(DayBasis {
+    TradingDay,
+    CalendarDay,
+    Unknown
+});
+choice!(ConsistencyDenominator {
+    TotalProfit,
+    ProfitTarget,
+    Unknown
+});
+choice!(ConsistencyScope {
+    Evaluation,
+    Payout,
+    Both,
+    Unknown
+});
 choice!(ContractClass { Mini, Micro, Any });
-choice!(LimitCombination { Each, Either, AggregateEquivalent, Unknown });
-choice!(PhaseKey { Evaluation, SimulatedFunded, LiveFunded, Other, Unknown });
-choice!(RestrictionCategory { News, Overnight, Weekend, Strategy, Inactivity, Other });
+choice!(LimitCombination {
+    Each,
+    Either,
+    AggregateEquivalent,
+    Unknown
+});
+choice!(PhaseKey {
+    Evaluation,
+    SimulatedFunded,
+    LiveFunded,
+    Other,
+    Unknown
+});
+choice!(RestrictionCategory {
+    News,
+    Overnight,
+    Weekend,
+    Strategy,
+    Inactivity,
+    Other
+});
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct ProfitTarget { amount: Presence<Money>, basis: TargetBasis }
+struct ProfitTarget {
+    amount: Presence<Money>,
+    basis: TargetBasis,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -110,37 +183,63 @@ struct DailyLossLimit {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct TrailLock { trigger_balance: Money, locked_floor: Money }
+struct TrailLock {
+    trigger_balance: Money,
+    locked_floor: Money,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct MaxDrawdown { amount: Presence<Money>, method: DrawdownMethod, basis: UnrealizedBasis, lock: Presence<TrailLock> }
+struct MaxDrawdown {
+    amount: Presence<Money>,
+    method: DrawdownMethod,
+    basis: UnrealizedBasis,
+    lock: Presence<TrailLock>,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct MinTradingDays { days: Presence<PositiveCount>, min_day_profit: Presence<Money>, day_basis: DayBasis }
+struct MinTradingDays {
+    days: Presence<PositiveCount>,
+    min_day_profit: Presence<Money>,
+    day_basis: DayBasis,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct Consistency { max_best_day_share: Presence<Share>, denominator: ConsistencyDenominator, applies_to: ConsistencyScope }
+struct Consistency {
+    max_best_day_share: Presence<Share>,
+    denominator: ConsistencyDenominator,
+    applies_to: ConsistencyScope,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct PositionLimit { contract_class: ContractClass, symbol_root: Option<String>, max_contracts: PositiveCount }
+struct PositionLimit {
+    contract_class: ContractClass,
+    symbol_root: Option<String>,
+    max_contracts: PositiveCount,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct MaxPositionSize { limits: Presence<Vec<PositionLimit>>, combination: LimitCombination, micros_per_mini: Presence<PositiveCount> }
+struct MaxPositionSize {
+    limits: Presence<Vec<PositionLimit>>,
+    combination: LimitCombination,
+    micros_per_mini: Presence<PositiveCount>,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct MaxTradesPerDay { count: Presence<PositiveCount> }
+struct MaxTradesPerDay {
+    count: Presence<PositiveCount>,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -156,32 +255,48 @@ struct PayoutEligibility {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct PayoutCountTransition { payouts_required: Presence<PositiveCount>, next_phase: PhaseKey }
+struct PayoutCountTransition {
+    payouts_required: Presence<PositiveCount>,
+    next_phase: PhaseKey,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct ScalingStep { balance_at_least: Money, max_contracts: PositiveCount }
+struct ScalingStep {
+    balance_at_least: Money,
+    max_contracts: PositiveCount,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct ScalingPlan { offered: Presence<bool>, schedule: Presence<Vec<ScalingStep>> }
+struct ScalingPlan {
+    offered: Presence<bool>,
+    schedule: Presence<Vec<ScalingStep>>,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct TradingRestriction { category: RestrictionCategory, description: String }
+struct TradingRestriction {
+    category: RestrictionCategory,
+    description: String,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct ManualCheck { description: String }
+struct ManualCheck {
+    description: String,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(dead_code)]
-struct UnknownRule { description: Option<String> }
+struct UnknownRule {
+    description: Option<String>,
+}
 
 /// Rule types confirmed by a person, never calculated.
 pub const MANUAL_RULE_TYPES: [&str; 3] = ["trading_restriction", "manual_check", "unknown"];
@@ -203,7 +318,9 @@ fn required_values(rule_type: &str) -> &'static [&'static str] {
 }
 
 fn shape<T: DeserializeOwned>(parameters: &Value) -> Result<(), String> {
-    serde_json::from_value::<T>(parameters.clone()).map(|_| ()).map_err(|e| e.to_string())
+    serde_json::from_value::<T>(parameters.clone())
+        .map(|_| ())
+        .map_err(|e| e.to_string())
 }
 
 /// Checks `parameters` against the shape of `rule_type`.
@@ -446,7 +563,10 @@ pub struct ChangeContext {
 impl ChangeContext {
     /// The label used by callers that predate the audit log.
     pub fn local() -> Self {
-        Self { actor: "local_user".into(), reason: None }
+        Self {
+            actor: "local_user".into(),
+            reason: None,
+        }
     }
 }
 
@@ -489,7 +609,11 @@ pub struct RulebookEventQuery {
 fn rule_key_ok(key: &str) -> bool {
     !key.is_empty()
         && key.len() <= 100
-        && key.split(':').all(|w| !w.is_empty() && w.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_'))
+        && key.split(':').all(|w| {
+            !w.is_empty()
+                && w.bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+        })
 }
 
 /// Shape and consistency of a set of rules (`checkRuleDefinitions`, plus the
@@ -500,16 +624,31 @@ pub fn check_rule_definitions(rules: &[RuleDefinitionInput]) -> Vec<FieldIssue> 
     for (i, rule) in rules.iter().enumerate() {
         let at = |field: &str| format!("rules[{i}].{field}");
         if !rule_key_ok(&rule.rule_key) {
-            issues.push(FieldIssue::new(at("ruleKey"), "Use lowercase words joined by ':'"));
+            issues.push(FieldIssue::new(
+                at("ruleKey"),
+                "Use lowercase words joined by ':'",
+            ));
         }
         if !keys.insert(rule.rule_key.clone()) {
-            issues.push(FieldIssue::new(at("ruleKey"), format!("Duplicate rule key '{}'", rule.rule_key)));
+            issues.push(FieldIssue::new(
+                at("ruleKey"),
+                format!("Duplicate rule key '{}'", rule.rule_key),
+            ));
         }
         if rule.parameter_schema_version != RULE_PARAMETER_SCHEMA_VERSION {
-            issues.push(FieldIssue::new(at("parameterSchemaVersion"), "Unsupported parameter schema version"));
+            issues.push(FieldIssue::new(
+                at("parameterSchemaVersion"),
+                "Unsupported parameter schema version",
+            ));
         }
-        if !matches!(rule.support_status.as_str(), "supported" | "manual_only" | "unsupported" | "needs_setup") {
-            issues.push(FieldIssue::new(at("supportStatus"), "Unknown support status"));
+        if !matches!(
+            rule.support_status.as_str(),
+            "supported" | "manual_only" | "unsupported" | "needs_setup"
+        ) {
+            issues.push(FieldIssue::new(
+                at("supportStatus"),
+                "Unknown support status",
+            ));
         }
         if let Err(e) = check_parameters(&rule.rule_type, &rule.parameters) {
             issues.push(FieldIssue::new(at("parameters"), e));
@@ -517,20 +656,38 @@ pub fn check_rule_definitions(rules: &[RuleDefinitionInput]) -> Vec<FieldIssue> 
         }
         let manual = MANUAL_RULE_TYPES.contains(&rule.rule_type.as_str());
         if manual && !matches!(rule.support_status.as_str(), "manual_only" | "unsupported") {
-            issues.push(FieldIssue::new(at("supportStatus"), format!("A {} rule is confirmed by a person (manual_only)", rule.rule_type)));
+            issues.push(FieldIssue::new(
+                at("supportStatus"),
+                format!(
+                    "A {} rule is confirmed by a person (manual_only)",
+                    rule.rule_type
+                ),
+            ));
         }
-        let missing: Vec<&str> =
-            required_values(&rule.rule_type).iter().copied().filter(|p| !value_known(&rule.parameters, p)).collect();
+        let missing: Vec<&str> = required_values(&rule.rule_type)
+            .iter()
+            .copied()
+            .filter(|p| !value_known(&rule.parameters, p))
+            .collect();
         if rule.support_status == "supported" && !missing.is_empty() {
-            issues.push(FieldIssue::new(at("supportStatus"), format!("Unknown {}: mark the rule needs_setup", missing.join(", "))));
+            issues.push(FieldIssue::new(
+                at("supportStatus"),
+                format!("Unknown {}: mark the rule needs_setup", missing.join(", ")),
+            ));
         }
         if rule.support_status == "needs_setup" && missing.is_empty() && !manual {
-            issues.push(FieldIssue::new(at("supportStatus"), "Every needed value is known: mark the rule supported"));
+            issues.push(FieldIssue::new(
+                at("supportStatus"),
+                "Every needed value is known: mark the rule supported",
+            ));
         }
         match rule.override_kind.as_deref() {
             None => {}
             Some("personal_limit") if rule.provider_label.is_some() => {
-                issues.push(FieldIssue::new(at("providerLabel"), "A personal limit has no provider wording"));
+                issues.push(FieldIssue::new(
+                    at("providerLabel"),
+                    "A personal limit has no provider wording",
+                ));
             }
             Some("personal_limit") => {}
             Some(_) => issues.push(FieldIssue::new(at("overrideKind"), "Unknown override kind")),
@@ -607,7 +764,10 @@ fn convert_known(rule_type: &str, p: &Map<String, Value>) -> Option<Value> {
             json!({ "days": count_value(p.get("days")?)?, "minDayProfit": profit, "dayBasis": "trading_day" })
         }
         "consistency" if only(&["max_best_day_share_bps"]) => {
-            let bps = p.get("max_best_day_share_bps")?.as_i64().filter(|b| (1..=10_000).contains(b))?;
+            let bps = p
+                .get("max_best_day_share_bps")?
+                .as_i64()
+                .filter(|b| (1..=10_000).contains(b))?;
             let share = canonical(rust_decimal::Decimal::new(bps, 4));
             json!({ "maxBestDayShare": { "state": "value", "value": share }, "denominator": "unknown", "appliesTo": "unknown" })
         }
@@ -616,7 +776,8 @@ fn convert_known(rule_type: &str, p: &Map<String, Value>) -> Option<Value> {
                 None | Some(Value::Null) => Value::Null,
                 Some(Value::String(s)) => {
                     let s = s.trim().to_ascii_uppercase();
-                    if s.is_empty() || s.len() > 10 || !s.bytes().all(|b| b.is_ascii_alphanumeric()) {
+                    if s.is_empty() || s.len() > 10 || !s.bytes().all(|b| b.is_ascii_alphanumeric())
+                    {
                         return None;
                     }
                     Value::String(s)
@@ -627,7 +788,9 @@ fn convert_known(rule_type: &str, p: &Map<String, Value>) -> Option<Value> {
             json!({ "limits": { "state": "value", "value": [{ "contractClass": "any", "symbolRoot": root, "maxContracts": max }] },
                     "combination": "each", "microsPerMini": { "state": "unknown" } })
         }
-        "max_trades_per_day" if only(&["count"]) => json!({ "count": count_value(p.get("count")?)? }),
+        "max_trades_per_day" if only(&["count"]) => {
+            json!({ "count": count_value(p.get("count")?)? })
+        }
         "manual_check" if only(&["description"]) => {
             let d = p.get("description")?.as_str()?.trim();
             if d.is_empty() {
@@ -644,10 +807,16 @@ fn unknown_parameters(rule_type: &str) -> Option<Value> {
     let u = json!({ "state": "unknown" });
     Some(match rule_type {
         "profit_target" => json!({ "amount": u, "basis": "unknown" }),
-        "daily_loss_limit" => json!({ "limit": u, "basis": "unknown", "resetBasis": "unknown", "breach": "unknown", "condition": "unknown" }),
-        "max_drawdown" => json!({ "amount": u, "method": "unknown", "basis": "unknown", "lock": u }),
+        "daily_loss_limit" => {
+            json!({ "limit": u, "basis": "unknown", "resetBasis": "unknown", "breach": "unknown", "condition": "unknown" })
+        }
+        "max_drawdown" => {
+            json!({ "amount": u, "method": "unknown", "basis": "unknown", "lock": u })
+        }
         "min_trading_days" => json!({ "days": u, "minDayProfit": u, "dayBasis": "unknown" }),
-        "consistency" => json!({ "maxBestDayShare": u, "denominator": "unknown", "appliesTo": "unknown" }),
+        "consistency" => {
+            json!({ "maxBestDayShare": u, "denominator": "unknown", "appliesTo": "unknown" })
+        }
         "max_position_size" => json!({ "limits": u, "combination": "unknown", "microsPerMini": u }),
         "max_trades_per_day" => json!({ "count": u }),
         _ => return None,
@@ -657,7 +826,12 @@ fn unknown_parameters(rule_type: &str) -> Option<Value> {
 /// A legacy rule converted to `(rule_type, parameters, support_status)`.
 /// Params that do not have the documented legacy shape are kept verbatim in an
 /// `unknown` rule marked `unsupported`, so nothing is guessed or lost.
-pub fn convert_legacy_rule(rule_type: &str, evaluation: &str, value_state: &str, params_json: &str) -> (String, Value, String) {
+pub fn convert_legacy_rule(
+    rule_type: &str,
+    evaluation: &str,
+    value_state: &str,
+    params_json: &str,
+) -> (String, Value, String) {
     let parsed: Option<Map<String, Value>> = serde_json::from_str(params_json).ok();
     let converted = match (value_state, &parsed) {
         ("unknown", _) => unknown_parameters(rule_type).map(|p| (p, "needs_setup")),
@@ -671,14 +845,23 @@ pub fn convert_legacy_rule(rule_type: &str, evaluation: &str, value_state: &str,
         // A calculated rule marked for manual confirmation stays a checklist item.
         Some((params, "manual_only")) if rule_type != "manual_check" => {
             let description = format!("Confirm manually: legacy {rule_type} rule {params}");
-            ("manual_check".into(), json!({ "description": description }), "manual_only".into())
+            (
+                "manual_check".into(),
+                json!({ "description": description }),
+                "manual_only".into(),
+            )
         }
         Some((params, status)) if check_parameters(rule_type, &params).is_ok() => {
             (rule_type.into(), params, status.into())
         }
         _ => {
-            let description = format!("Legacy {rule_type} rule ({value_state}) with parameters {params_json}");
-            ("unknown".into(), json!({ "description": description }), "unsupported".into())
+            let description =
+                format!("Legacy {rule_type} rule ({value_state}) with parameters {params_json}");
+            (
+                "unknown".into(),
+                json!({ "description": description }),
+                "unsupported".into(),
+            )
         }
     }
 }
@@ -715,24 +898,55 @@ mod tests {
         assert!(check_parameters("consistency", &share("0.5")).is_ok());
         assert!(check_parameters("consistency", &share("1.5")).is_err());
         assert!(check_parameters("consistency", &share("0")).is_err());
-        for valid in ["1", "0.9999999999999999999999999999", "0.0000000000000000000000000001"] {
-            assert!(check_parameters("consistency", &share(valid)).is_ok(), "{valid}");
+        for valid in [
+            "1",
+            "0.9999999999999999999999999999",
+            "0.0000000000000000000000000001",
+        ] {
+            assert!(
+                check_parameters("consistency", &share(valid)).is_ok(),
+                "{valid}"
+            );
         }
         assert!(check_parameters("consistency", &share("1.0000000000000000000000000001")).is_err());
     }
 
     #[test]
     fn legacy_rules_convert_without_guessing() {
-        let (t, p, s) = convert_legacy_rule("consistency", "calculated", "known", r#"{"max_best_day_share_bps":3000}"#);
+        let (t, p, s) = convert_legacy_rule(
+            "consistency",
+            "calculated",
+            "known",
+            r#"{"max_best_day_share_bps":3000}"#,
+        );
         assert_eq!((t.as_str(), s.as_str()), ("consistency", "supported"));
         assert_eq!(p["maxBestDayShare"]["value"], "0.3");
         let (t, p, s) = convert_legacy_rule("max_drawdown", "calculated", "unknown", "{}");
-        assert_eq!((t.as_str(), s.as_str(), &p["method"]), ("max_drawdown", "needs_setup", &json!("unknown")));
-        let (t, _, s) = convert_legacy_rule("profit_target", "calculated", "known", r#"{"amount_micros":"x"}"#);
+        assert_eq!(
+            (t.as_str(), s.as_str(), &p["method"]),
+            ("max_drawdown", "needs_setup", &json!("unknown"))
+        );
+        let (t, _, s) = convert_legacy_rule(
+            "profit_target",
+            "calculated",
+            "known",
+            r#"{"amount_micros":"x"}"#,
+        );
         assert_eq!((t.as_str(), s.as_str()), ("unknown", "unsupported"));
-        let (t, _, s) = convert_legacy_rule("profit_target", "manual_confirmation", "known", r#"{"amount_micros":1}"#);
+        let (t, _, s) = convert_legacy_rule(
+            "profit_target",
+            "manual_confirmation",
+            "known",
+            r#"{"amount_micros":1}"#,
+        );
         assert_eq!((t.as_str(), s.as_str()), ("manual_check", "manual_only"));
-        assert_eq!(legacy_rule_key("max_position_size", "firm", 5), "max_position_size:firm:5");
-        assert_eq!(legacy_rule_key("daily_loss_limit", "personal", 1), "daily_loss_limit:personal");
+        assert_eq!(
+            legacy_rule_key("max_position_size", "firm", 5),
+            "max_position_size:firm:5"
+        );
+        assert_eq!(
+            legacy_rule_key("daily_loss_limit", "personal", 1),
+            "daily_loss_limit:personal"
+        );
     }
 }

@@ -1,8 +1,11 @@
 //! Offline data controls. No content or caller-selected paths are logged.
 mod archive;
 mod deletion;
+pub use deletion::{
+    CleanupOutcome, cleanup_state, execute as delete_data, preview as preview_deletion,
+    recover_cleanup,
+};
 pub use deletion::{DeleteRequest, DeleteResult, DeletionPreview, PreviewRequest};
-pub use deletion::{CleanupOutcome, cleanup_state, execute as delete_data, preview as preview_deletion, recover_cleanup};
 mod filesystem;
 mod restore;
 pub use restore::{InspectRequest, RestorePreview, RestoreRequest, RestoreResult};
@@ -83,9 +86,15 @@ pub(crate) fn fail(code: Code) -> ControlError {
 }
 /// `LimitExceeded` naming the component over its limit, for example `database pages: 70254592 bytes, limit 67108864 bytes`.
 pub(crate) fn over_limit(component: &str, measured: u64, limit: u64, unit: &str) -> ControlError {
-    let unit = if unit.is_empty() { String::new() } else { format!(" {unit}") };
+    let unit = if unit.is_empty() {
+        String::new()
+    } else {
+        format!(" {unit}")
+    };
     ControlError {
-        detail: Some(format!("{component}: {measured}{unit}, limit {limit}{unit}")),
+        detail: Some(format!(
+            "{component}: {measured}{unit}, limit {limit}{unit}"
+        )),
         ..fail(Code::LimitExceeded)
     }
 }

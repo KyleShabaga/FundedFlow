@@ -7,7 +7,7 @@ use super::{
     trades,
 };
 use crate::domain::micros_to_string;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 fn input(account: &str, kind: &str, value: Option<&str>, at: &str) -> ObservationInput {
     ObservationInput {
         account_id: account.into(),
@@ -81,15 +81,17 @@ fn observations_are_immutable_scoped_versioned_and_archived_readable() {
     let json = serde_json::to_string(&original).unwrap();
     let decoded: evidence::Observation = serde_json::from_str(&json).unwrap();
     assert_eq!(decoded.input.value, original.input.value);
-    assert!(evidence::correct(
-        &mut c,
-        &original.id,
-        ObservationCorrection {
-            replacement: input(&b.id, "balance", Some("1"), "2026-10-19T20:00:00Z"),
-            reason: "wrong attempt".into()
-        }
-    )
-    .is_err());
+    assert!(
+        evidence::correct(
+            &mut c,
+            &original.id,
+            ObservationCorrection {
+                replacement: input(&b.id, "balance", Some("1"), "2026-10-19T20:00:00Z"),
+                reason: "wrong attempt".into()
+            }
+        )
+        .is_err()
+    );
     let corrected = evidence::correct(
         &mut c,
         &original.id,
@@ -103,22 +105,25 @@ fn observations_are_immutable_scoped_versioned_and_archived_readable() {
         corrected.supersedes_id.as_deref(),
         Some(original.id.as_str())
     );
-    assert!(evidence::correct(
-        &mut c,
-        &original.id,
-        ObservationCorrection {
-            replacement: original.input.clone(),
-            reason: "fork".into()
-        }
-    )
-    .is_err());
+    assert!(
+        evidence::correct(
+            &mut c,
+            &original.id,
+            ObservationCorrection {
+                replacement: original.input.clone(),
+                reason: "fork".into()
+            }
+        )
+        .is_err()
+    );
     assert_eq!(
         evidence::get(&c, &original.id).unwrap().input.value,
         Some("50000.000001".into())
     );
-    assert!(c
-        .execute("UPDATE financial_observations SET value_micros=0", [])
-        .is_err());
+    assert!(
+        c.execute("UPDATE financial_observations SET value_micros=0", [])
+            .is_err()
+    );
     assert!(c.execute("DELETE FROM financial_observations", []).is_err());
     assert!(evidence::list(&c, &b.id).unwrap().is_empty());
     accounts::archive(&mut c, &a.id).unwrap();
@@ -155,9 +160,10 @@ fn ledger_legacy_and_explicit_corrections_replay_and_rollback() {
     assert!(h[2].reason.contains("no reason supplied"));
     assert_eq!(h[2].supersedes_id.as_deref(), Some(h[1].id.as_str()));
     assert_eq!(ledger::balance_adjustment(&c, &a.id).unwrap(), "0");
-    assert!(c
-        .execute("UPDATE ledger_revisions SET actor='x'", [])
-        .is_err());
+    assert!(
+        c.execute("UPDATE ledger_revisions SET actor='x'", [])
+            .is_err()
+    );
 }
 #[test]
 fn reconciliation_freezes_inputs_corrections_and_does_not_balance() {
@@ -534,15 +540,17 @@ fn observation_correction_failure_preserves_original_and_history() {
     )
     .unwrap();
     c.execute_batch("CREATE TEMP TRIGGER fail_observation BEFORE INSERT ON financial_observations BEGIN SELECT RAISE(ABORT,'simulated failure'); END;").unwrap();
-    assert!(evidence::correct(
-        &mut c,
-        &o.id,
-        ObservationCorrection {
-            replacement: o.input.clone(),
-            reason: "correct".into()
-        }
-    )
-    .is_err());
+    assert!(
+        evidence::correct(
+            &mut c,
+            &o.id,
+            ObservationCorrection {
+                replacement: o.input.clone(),
+                reason: "correct".into()
+            }
+        )
+        .is_err()
+    );
     assert_eq!(evidence::list(&c, &a.id).unwrap().len(), 1);
 }
 #[test]

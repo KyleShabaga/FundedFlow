@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use rusqlite::Connection;
 
-use super::upgrade_tests::{dump, dump_like, read_only, version, Dump, Journal};
+use super::upgrade_tests::{Dump, Journal, dump, dump_like, read_only, version};
 use super::*;
 
 const LEGACY_RULES: &[u8] = include_bytes!("fixtures/fundedflow-v8-legacy-rules.db");
@@ -40,7 +40,12 @@ fn rv(n: u32) -> String {
 }
 
 fn strings(conn: &Connection, sql: &str) -> BTreeSet<String> {
-    conn.prepare(sql).unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect()
+    conn.prepare(sql)
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
 }
 
 fn count(conn: &Connection, sql: &str) -> i64 {
@@ -54,40 +59,93 @@ fn the_legacy_rules_fixture_covers_every_matrix_case() {
     assert_eq!(version(&conn), 8);
     let set = |items: &[&str]| items.iter().map(|s| s.to_string()).collect::<BTreeSet<_>>();
 
-    assert_eq!(strings(&conn, "SELECT status FROM rulebook_versions"), set(&["active", "draft", "retired"]));
-    assert_eq!(strings(&conn, "SELECT source FROM rulebook_versions"), set(&["copied", "manual", "template"]));
-    assert_eq!(count(&conn, "SELECT count(*) FROM rulebook_versions WHERE deleted_at IS NOT NULL"), 1);
-    assert_eq!(count(&conn, "SELECT count(*) FROM rulebook_versions WHERE verified_at IS NOT NULL"), 2);
-    assert_eq!(count(&conn, "SELECT count(*) FROM rulebook_versions WHERE source_reference IS NOT NULL"), 3);
+    assert_eq!(
+        strings(&conn, "SELECT status FROM rulebook_versions"),
+        set(&["active", "draft", "retired"])
+    );
+    assert_eq!(
+        strings(&conn, "SELECT source FROM rulebook_versions"),
+        set(&["copied", "manual", "template"])
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT count(*) FROM rulebook_versions WHERE deleted_at IS NOT NULL"
+        ),
+        1
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT count(*) FROM rulebook_versions WHERE verified_at IS NOT NULL"
+        ),
+        2
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT count(*) FROM rulebook_versions WHERE source_reference IS NOT NULL"
+        ),
+        3
+    );
     assert_eq!(
         strings(&conn, "SELECT rule_type FROM rules"),
-        set(&["consistency", "daily_loss_limit", "manual_check", "max_drawdown", "max_position_size",
-              "max_trades_per_day", "min_trading_days", "profit_target"]),
+        set(&[
+            "consistency",
+            "daily_loss_limit",
+            "manual_check",
+            "max_drawdown",
+            "max_position_size",
+            "max_trades_per_day",
+            "min_trading_days",
+            "profit_target"
+        ]),
     );
-    assert_eq!(strings(&conn, "SELECT origin FROM rules"), set(&["firm", "personal"]));
-    assert_eq!(strings(&conn, "SELECT value_state FROM rules"), set(&["known", "unknown"]));
-    assert_eq!(strings(&conn, "SELECT evaluation FROM rules"), set(&["calculated", "manual_confirmation"]));
+    assert_eq!(
+        strings(&conn, "SELECT origin FROM rules"),
+        set(&["firm", "personal"])
+    );
+    assert_eq!(
+        strings(&conn, "SELECT value_state FROM rules"),
+        set(&["known", "unknown"])
+    );
+    assert_eq!(
+        strings(&conn, "SELECT evaluation FROM rules"),
+        set(&["calculated", "manual_confirmation"])
+    );
 
     // Accounts: one with a successor, one archived with an active rulebook, one with none.
     assert_eq!(
-        count(&conn, "SELECT count(*) FROM accounts a JOIN accounts p ON p.id = a.parent_account_id
-                      WHERE a.name = 'Funded 50K' AND p.name = 'Eval 50K'"),
+        count(
+            &conn,
+            "SELECT count(*) FROM accounts a JOIN accounts p ON p.id = a.parent_account_id
+                      WHERE a.name = 'Funded 50K' AND p.name = 'Eval 50K'"
+        ),
         1
     );
     assert_eq!(
-        count(&conn, "SELECT count(*) FROM accounts a JOIN rulebook_versions v ON v.account_id = a.id
-                      WHERE a.archived_at IS NOT NULL AND v.status = 'active'"),
+        count(
+            &conn,
+            "SELECT count(*) FROM accounts a JOIN rulebook_versions v ON v.account_id = a.id
+                      WHERE a.archived_at IS NOT NULL AND v.status = 'active'"
+        ),
         1
     );
     assert_eq!(
-        count(&conn, "SELECT count(*) FROM accounts a WHERE NOT EXISTS
-                      (SELECT 1 FROM rulebook_versions v WHERE v.account_id = a.id)"),
+        count(
+            &conn,
+            "SELECT count(*) FROM accounts a WHERE NOT EXISTS
+                      (SELECT 1 FROM rulebook_versions v WHERE v.account_id = a.id)"
+        ),
         1
     );
     // Snapshots pinned to a retired and an active version, and one with none.
     assert_eq!(
-        strings(&conn, "SELECT coalesce(v.status, 'none') FROM account_snapshots s
-                        LEFT JOIN rulebook_versions v ON v.id = s.rulebook_version_id"),
+        strings(
+            &conn,
+            "SELECT coalesce(v.status, 'none') FROM account_snapshots s
+                        LEFT JOIN rulebook_versions v ON v.id = s.rulebook_version_id"
+        ),
         set(&["active", "none", "retired"]),
     );
 }
@@ -104,8 +162,15 @@ fn upgraded() -> (Journal, Dump, Connection) {
 fn upgrading_keeps_every_legacy_row_and_converts_it_per_the_matrix() {
     let (db, mut before, conn) = upgraded();
     assert_eq!(version(&conn), latest_version());
-    assert_eq!(version(&read_only(&db.backup())), 8, "the backup is the journal as it was");
-    assert_eq!(count(&conn, "SELECT count(*) FROM pragma_foreign_key_check"), 0);
+    assert_eq!(
+        version(&read_only(&db.backup())),
+        8,
+        "the backup is the journal as it was"
+    );
+    assert_eq!(
+        count(&conn, "SELECT count(*) FROM pragma_foreign_key_check"),
+        0
+    );
 
     // Every legacy row survives, under the renamed tables; only the user-manual
     // sources the conversion adds are new.
@@ -113,7 +178,10 @@ fn upgrading_keeps_every_legacy_row_and_converts_it_per_the_matrix() {
     assert!(sources.1.is_empty());
     assert_eq!(dump_like(&conn, &before), before);
     assert_eq!(
-        strings(&conn, "SELECT descriptor || '|' || source_type || '|' || verification_status FROM catalogue_sources"),
+        strings(
+            &conn,
+            "SELECT descriptor || '|' || source_type || '|' || verification_status FROM catalogue_sources"
+        ),
         [
             "copied from Eval 50K v2|user_manual|needs_review",
             "copied from v2|user_manual|needs_review",
@@ -125,11 +193,26 @@ fn upgrading_keeps_every_legacy_row_and_converts_it_per_the_matrix() {
 
     // One private rulebook per account with legacy versions, never a catalogue one.
     assert_eq!(
-        strings(&conn, "SELECT a.name || '|' || b.record_status || '|' || (b.provider_id IS a.provider_id)
-                        FROM rulebooks b JOIN accounts a ON a.id = b.owner_account_id"),
-        ["Eval 50K|active|1", "Funded 50K|active|1", "Personal limits|archived|1"].map(String::from).into(),
+        strings(
+            &conn,
+            "SELECT a.name || '|' || b.record_status || '|' || (b.provider_id IS a.provider_id)
+                        FROM rulebooks b JOIN accounts a ON a.id = b.owner_account_id"
+        ),
+        [
+            "Eval 50K|active|1",
+            "Funded 50K|active|1",
+            "Personal limits|archived|1"
+        ]
+        .map(String::from)
+        .into(),
     );
-    assert_eq!(count(&conn, "SELECT count(*) FROM rulebooks WHERE owner_account_id IS NULL"), 0);
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT count(*) FROM rulebooks WHERE owner_account_id IS NULL"
+        ),
+        0
+    );
 
     // Versions keep their IDs and numbers; published means needs_review, never verified.
     let versions: BTreeMap<String, (String, String, String, Option<String>)> = conn
@@ -139,40 +222,80 @@ fn upgrading_keeps_every_legacy_row_and_converts_it_per_the_matrix() {
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    let v = |s: &str, o: &str, rs: &str, c: Option<&str>| (s.into(), o.into(), rs.into(), c.map(String::from));
+    let v = |s: &str, o: &str, rs: &str, c: Option<&str>| {
+        (s.into(), o.into(), rs.into(), c.map(String::from))
+    };
     assert_eq!(
         versions,
         BTreeMap::from([
-            (rv(1), v("needs_review", "legacy_manual", "active", Some("2026-08-31T09:00:00.000Z"))),
+            (
+                rv(1),
+                v(
+                    "needs_review",
+                    "legacy_manual",
+                    "active",
+                    Some("2026-08-31T09:00:00.000Z")
+                )
+            ),
             (rv(2), v("needs_review", "legacy_template", "active", None)),
             (rv(3), v("draft", "legacy_copied", "active", None)),
             (rv(4), v("draft", "legacy_manual", "archived", None)),
-            (rv(0x11), v("needs_review", "legacy_copied", "active", Some("2026-10-14T18:00:00.000Z"))),
+            (
+                rv(0x11),
+                v(
+                    "needs_review",
+                    "legacy_copied",
+                    "active",
+                    Some("2026-10-14T18:00:00.000Z")
+                )
+            ),
             (rv(0x21), v("needs_review", "legacy_manual", "active", None)),
         ])
     );
-    assert_eq!(count(&conn, "SELECT count(*) FROM rulebook_versions WHERE verified_at IS NOT NULL"), 0);
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT count(*) FROM rulebook_versions WHERE verified_at IS NOT NULL"
+        ),
+        0
+    );
 
     // Rules keep their IDs; personal rules are overrides, never provider claims.
-    assert_eq!(count(&conn, "SELECT count(*) FROM rule_definitions WHERE id IN (SELECT id FROM legacy_account_rules)"), 18);
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT count(*) FROM rule_definitions WHERE id IN (SELECT id FROM legacy_account_rules)"
+        ),
+        18
+    );
     assert_eq!(
         count(&conn, "SELECT count(*) FROM rule_definitions d JOIN legacy_account_rules l ON l.id = d.id
                       WHERE (l.origin = 'personal') <> (d.override_kind IS 'personal_limit') OR d.provider_label IS NOT NULL"),
         0
     );
     // Rules of versions with a source reference carry an unreviewed claim on it.
-    assert_eq!(count(&conn, "SELECT count(*) FROM rule_claims WHERE claim_status = 'candidate' AND origin = 'user_entered'"), 13);
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT count(*) FROM rule_claims WHERE claim_status = 'candidate' AND origin = 'user_entered'"
+        ),
+        13
+    );
 
     // Assignments are the matrix's intervals.
     let assignments: Vec<(String, String, Option<String>, String)> = conn
-        .prepare("SELECT rulebook_version_id, effective_from, effective_to, assignment_source
-                  FROM account_rulebook_assignments ORDER BY rulebook_version_id")
+        .prepare(
+            "SELECT rulebook_version_id, effective_from, effective_to, assignment_source
+                  FROM account_rulebook_assignments ORDER BY rulebook_version_id",
+        )
         .unwrap()
         .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    let a = |id: String, from: &str, to: Option<&str>, src: &str| (id, from.into(), to.map(String::from), src.into());
+    let a = |id: String, from: &str, to: Option<&str>, src: &str| {
+        (id, from.into(), to.map(String::from), src.into())
+    };
     assert_eq!(
         assignments,
         vec![
@@ -185,7 +308,10 @@ fn upgrading_keeps_every_legacy_row_and_converts_it_per_the_matrix() {
 
     // Snapshots still resolve, to the converted version with the same ID.
     assert_eq!(
-        count(&conn, "SELECT count(*) FROM account_snapshots s JOIN rulebook_versions v ON v.id = s.rulebook_version_id"),
+        count(
+            &conn,
+            "SELECT count(*) FROM account_snapshots s JOIN rulebook_versions v ON v.id = s.rulebook_version_id"
+        ),
         3
     );
 
@@ -226,8 +352,13 @@ fn converted_rules_match_the_shared_golden_file() {
     if std::env::var_os("UPDATE_GOLDEN").is_some() {
         std::fs::write(&path, &actual).unwrap();
     }
-    let expected = std::fs::read_to_string(&path).unwrap().replace("\r\n", "\n");
-    assert_eq!(actual, expected, "run with UPDATE_GOLDEN=1 if the change is intended");
+    let expected = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace("\r\n", "\n");
+    assert_eq!(
+        actual, expected,
+        "run with UPDATE_GOLDEN=1 if the change is intended"
+    );
 }
 
 #[test]
@@ -265,7 +396,10 @@ fn assignment_intervals_follow_effective_from_and_contain_their_snapshots() {
     assert_eq!(pinned.len(), 3);
     for (v, day) in pinned {
         let (from, to) = &intervals[&v];
-        assert!(day >= *from && to.as_ref().is_none_or(|to| day < *to), "{day} outside {v} [{from}, {to:?})");
+        assert!(
+            day >= *from && to.as_ref().is_none_or(|to| day < *to),
+            "{day} outside {v} [{from}, {to:?})"
+        );
     }
 }
 
@@ -282,9 +416,19 @@ fn rule_keys_are_unique_per_version() {
         .collect();
     let unique: BTreeSet<_> = keys.iter().collect();
     assert_eq!(unique.len(), keys.len(), "{keys:?}");
-    let v1: BTreeSet<&str> = keys.iter().filter(|(v, _)| *v == rv(1)).map(|(_, k)| k.as_str()).collect();
-    assert!(v1.contains("max_position_size:firm:5") && v1.contains("max_position_size:firm:6"), "{v1:?}");
-    assert!(v1.contains("max_trades_per_day:personal") && v1.contains("manual_check:personal:9"), "{v1:?}");
+    let v1: BTreeSet<&str> = keys
+        .iter()
+        .filter(|(v, _)| *v == rv(1))
+        .map(|(_, k)| k.as_str())
+        .collect();
+    assert!(
+        v1.contains("max_position_size:firm:5") && v1.contains("max_position_size:firm:6"),
+        "{v1:?}"
+    );
+    assert!(
+        v1.contains("max_trades_per_day:personal") && v1.contains("manual_check:personal:9"),
+        "{v1:?}"
+    );
 }
 
 #[test]
@@ -295,7 +439,10 @@ fn legacy_parameters_use_only_the_keys_the_matrix_maps() {
     let mapped: BTreeMap<&str, &[&str]> = BTreeMap::from([
         ("profit_target", &["amount_micros"][..]),
         ("daily_loss_limit", &["amount_micros", "basis"][..]),
-        ("max_drawdown", &["amount_micros", "includes_unrealized", "lock", "mode"][..]),
+        (
+            "max_drawdown",
+            &["amount_micros", "includes_unrealized", "lock", "mode"][..],
+        ),
         ("min_trading_days", &["days", "min_day_profit_micros"][..]),
         ("consistency", &["max_best_day_share_bps"][..]),
         ("max_position_size", &["max_contracts", "symbol_root"][..]),
@@ -311,13 +458,24 @@ fn legacy_parameters_use_only_the_keys_the_matrix_maps() {
         .collect();
     for (rule_type, state, params) in rows {
         let value: serde_json::Value = serde_json::from_str(&params).unwrap();
-        let keys: BTreeSet<&str> = value.as_object().unwrap().keys().map(String::as_str).collect();
+        let keys: BTreeSet<&str> = value
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
         if state == "unknown" {
-            assert!(keys.is_empty(), "an unknown value carries no parameters: {rule_type} {params}");
+            assert!(
+                keys.is_empty(),
+                "an unknown value carries no parameters: {rule_type} {params}"
+            );
             continue;
         }
         let allowed: BTreeSet<&str> = mapped[rule_type.as_str()].iter().copied().collect();
-        assert!(keys.is_subset(&allowed), "{rule_type}: {keys:?} not in {allowed:?}");
+        assert!(
+            keys.is_subset(&allowed),
+            "{rule_type}: {keys:?} not in {allowed:?}"
+        );
         // Money is already micro-units; nothing to rescale.
         for (k, v) in value.as_object().unwrap() {
             if k.ends_with("_micros") {

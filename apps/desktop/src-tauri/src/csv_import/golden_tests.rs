@@ -1,12 +1,14 @@
 //! Golden baseline from the current Rust engine. TS checks DTO compatibility only;
 //! it has no CSV normalization implementation yet. Never call this algorithm parity.
 use super::*;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 #[test]
 fn normalization_v1_golden_baseline_matches_rust() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../test_csvimport/build17/normalization-v1.json");
-    let mut fixture: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../test_csvimport/build17/normalization-v1.json");
+    let mut fixture: Value =
+        serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(fixture["fixtureVersion"], 1);
     assert_eq!(fixture["behaviorBaseline"], "rust-csv-v1");
     let update = std::env::var_os("FUNDEDFLOW_UPDATE_CSV_FIXTURES").is_some_and(|v| v == "1");
@@ -17,7 +19,10 @@ fn normalization_v1_golden_baseline_matches_rust() {
             crate::store::accounts::AccountInput {
                 currency: case["account"]["currency"].as_str().unwrap().into(),
                 timezone: case["account"]["timezone"].as_str().unwrap().into(),
-                trading_day_reset_time: case["account"]["tradingDayResetTime"].as_str().unwrap().into(),
+                trading_day_reset_time: case["account"]["tradingDayResetTime"]
+                    .as_str()
+                    .unwrap()
+                    .into(),
                 ..account_input("Golden CSV")
             },
         )
@@ -65,7 +70,8 @@ fn normalization_v1_golden_baseline_matches_rust() {
                             |r| r.get(0),
                         )
                         .unwrap();
-                    let saved = serde_json::to_value(trade_store::get(&conn, &id).unwrap()).unwrap();
+                    let saved =
+                        serde_json::to_value(trade_store::get(&conn, &id).unwrap()).unwrap();
                     let preview = serde_json::to_value(report.trade.as_ref().unwrap()).unwrap();
                     for field in [
                         "symbol",
@@ -101,7 +107,8 @@ fn normalization_v1_golden_baseline_matches_rust() {
         let mut p = serde_json::to_value(p).unwrap();
         // The digest includes generated account identity and timestamps.
         p["targetAssessment"]["previewToken"] = json!("<preview-token>");
-        let expected = json!({ "preview": p, "dedupKeys": keys, "batch": batch, "commitError": commit_error });
+        let expected =
+            json!({ "preview": p, "dedupKeys": keys, "batch": batch, "commitError": commit_error });
         if update {
             case["expected"] = expected;
         } else {

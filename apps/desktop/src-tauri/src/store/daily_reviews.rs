@@ -15,17 +15,19 @@
 //! closed-trade outcome are reported separately, and neither says anything
 //! about prop-firm rule compliance.
 
-use chrono::{DateTime, Datelike, Days, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc, Weekday};
+use chrono::{
+    DateTime, Datelike, Days, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc, Weekday,
+};
 use chrono_tz::Tz;
-use rusqlite::{params, Connection, OptionalExtension, Transaction};
+use rusqlite::{Connection, OptionalExtension, Transaction, params};
 use rust_decimal::{Decimal, RoundingStrategy};
 use serde::{Deserialize, Serialize};
 
 use super::reviews::{ChecklistAnswer, ChecklistAnswerInput, LabelRef};
 use super::{account_ctx, opt_text, require_account};
 use crate::domain::{
-    canonical, format_instant, format_reset_time, micros_to_string, new_id, parse_decimal, parse_instant, parse_reset_time,
-    parse_tz, to_micros, trading_day,
+    canonical, format_instant, format_reset_time, micros_to_string, new_id, parse_decimal,
+    parse_instant, parse_reset_time, parse_tz, to_micros, trading_day,
 };
 use crate::error::{AppError, AppResult, Issues};
 
@@ -295,10 +297,18 @@ fn account(conn: &Connection, id: &str) -> AppResult<Account> {
         [id],
         |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
     )?;
-    let corrupt = || AppError::Database { message: format!("account '{id}' has invalid session settings") };
+    let corrupt = || AppError::Database {
+        message: format!("account '{id}' has invalid session settings"),
+    };
     let tz = parse_tz(&tz_text).ok_or_else(corrupt)?;
     let reset = parse_reset_time(&reset_text).ok_or_else(corrupt)?;
-    Ok(Account { tz, reset, reset_text: format_reset_time(reset), tz_text, archived })
+    Ok(Account {
+        tz,
+        reset,
+        reset_text: format_reset_time(reset),
+        tz_text,
+        archived,
+    })
 }
 
 /// A Monday-to-Friday calendar date.
@@ -308,7 +318,10 @@ pub(crate) fn parse_trading_day(text: &str) -> AppResult<NaiveDate> {
         .filter(|d| d.format("%Y-%m-%d").to_string() == text.trim())
         .ok_or_else(|| AppError::invalid("tradingDay", "must be a date (YYYY-MM-DD)"))?;
     if matches!(day.weekday(), Weekday::Sat | Weekday::Sun) {
-        return Err(AppError::invalid("tradingDay", "is not a trading day: trading days run Monday to Friday"));
+        return Err(AppError::invalid(
+            "tradingDay",
+            "is not a trading day: trading days run Monday to Friday",
+        ));
     }
     Ok(day)
 }
@@ -345,8 +358,15 @@ fn previous_weekday(day: NaiveDate) -> NaiveDate {
 
 /// The trading day's window [start, end): it starts when the previous trading day ends, so a Monday
 /// includes the weekend.
-pub(crate) fn session_window(day: NaiveDate, tz: Tz, reset: NaiveTime) -> (DateTime<Utc>, DateTime<Utc>) {
-    (session_end(previous_weekday(day), tz, reset), session_end(day, tz, reset))
+pub(crate) fn session_window(
+    day: NaiveDate,
+    tz: Tz,
+    reset: NaiveTime,
+) -> (DateTime<Utc>, DateTime<Utc>) {
+    (
+        session_end(previous_weekday(day), tz, reset),
+        session_end(day, tz, reset),
+    )
 }
 
 /* ---------- Stored rows ---------- */
@@ -387,7 +407,9 @@ fn from_row(r: &rusqlite::Row) -> rusqlite::Result<Row> {
 fn stored(conn: &Connection, account_id: &str, day: &str) -> AppResult<Option<Row>> {
     Ok(conn
         .query_row(
-            &format!("SELECT {COLUMNS} FROM daily_reviews WHERE account_id = ?1 AND trading_day = ?2"),
+            &format!(
+                "SELECT {COLUMNS} FROM daily_reviews WHERE account_id = ?1 AND trading_day = ?2"
+            ),
             params![account_id, day],
             from_row,
         )
@@ -423,8 +445,7 @@ fn trade_now(r: &rusqlite::Row) -> rusqlite::Result<TradeNow> {
         updated_at: r.get(9)?,
     })
 }
-const TRADE_COLUMNS: &str =
-    "t.id, t.symbol, t.side, t.entry_at, t.exit_at, t.net_pnl_micros, t.pnl_status, t.trading_day, t.deleted_at IS NOT NULL, t.updated_at";
+const TRADE_COLUMNS: &str = "t.id, t.symbol, t.side, t.entry_at, t.exit_at, t.net_pnl_micros, t.pnl_status, t.trading_day, t.deleted_at IS NOT NULL, t.updated_at";
 
 /// Active trades of the account on `day`, in entry order (ties by id, so duplicate timestamps are stable).
 fn day_trades(conn: &Connection, account_id: &str, day: &str) -> AppResult<Vec<TradeNow>> {
@@ -450,7 +471,12 @@ fn links(conn: &Connection, review_id: &str) -> AppResult<Vec<(Link, TradeNow)>>
          WHERE l.daily_review_id = ?1 ORDER BY t.entry_at, t.id"
     ))?;
     let rows = stmt.query_map([review_id], |r| {
-        let link = Link { trade_id: r.get(0)?, net: r.get(1)?, pnl_status: r.get(2)?, updated_at: r.get(3)? };
+        let link = Link {
+            trade_id: r.get(0)?,
+            net: r.get(1)?,
+            pnl_status: r.get(2)?,
+            updated_at: r.get(3)?,
+        };
         let t = TradeNow {
             id: r.get(4)?,
             symbol: r.get(5)?,
@@ -469,8 +495,17 @@ fn links(conn: &Connection, review_id: &str) -> AppResult<Vec<(Link, TradeNow)>>
 }
 
 /// Replace the review's trade links with the day's trades now.
-fn relink(tx: &Transaction, review_id: &str, account_id: &str, day: &str, now: &str) -> AppResult<()> {
-    tx.execute("DELETE FROM daily_review_trades WHERE daily_review_id = ?1", [review_id])?;
+fn relink(
+    tx: &Transaction,
+    review_id: &str,
+    account_id: &str,
+    day: &str,
+    now: &str,
+) -> AppResult<()> {
+    tx.execute(
+        "DELETE FROM daily_review_trades WHERE daily_review_id = ?1",
+        [review_id],
+    )?;
     for t in day_trades(tx, account_id, day)? {
         tx.execute(
             "INSERT INTO daily_review_trades (daily_review_id, trade_id, trading_day_snapshot, net_pnl_micros_snapshot,
@@ -489,7 +524,12 @@ struct Membership {
     changed: bool,
 }
 
-fn membership(conn: &Connection, account_id: &str, day: &str, review_id: Option<&str>) -> AppResult<Membership> {
+fn membership(
+    conn: &Connection,
+    account_id: &str,
+    day: &str,
+    review_id: Option<&str>,
+) -> AppResult<Membership> {
     let now = day_trades(conn, account_id, day)?;
     let linked = match review_id {
         Some(id) => links(conn, id)?,
@@ -501,7 +541,13 @@ fn membership(conn: &Connection, account_id: &str, day: &str, review_id: Option<
         .map(|t| {
             let link = review_id.map(|_| match linked.iter().find(|(l, _)| l.trade_id == t.id) {
                 None => "added",
-                Some((l, _)) if l.updated_at != t.updated_at || l.net != t.net || l.pnl_status != t.pnl_status => "changed",
+                Some((l, _))
+                    if l.updated_at != t.updated_at
+                        || l.net != t.net
+                        || l.pnl_status != t.pnl_status =>
+                {
+                    "changed"
+                }
                 Some(_) => "linked",
             });
             changed |= link.is_some_and(|l| l != "linked");
@@ -538,7 +584,12 @@ fn membership(conn: &Connection, account_id: &str, day: &str, review_id: Option<
         open,
         net: (!known.is_empty()).then(|| micros_to_string(known.iter().sum())),
     };
-    Ok(Membership { trades, missing, outcome, changed })
+    Ok(Membership {
+        trades,
+        missing,
+        outcome,
+        changed,
+    })
 }
 
 /* ---------- Checklist ---------- */
@@ -565,12 +616,21 @@ fn answers(conn: &Connection, review_id: &str) -> AppResult<Vec<ChecklistAnswer>
 }
 
 /// Active items of a checklist not answered.
-fn unanswered(conn: &Connection, checklist_id: Option<&str>, answered: &[ChecklistAnswer]) -> AppResult<i64> {
+fn unanswered(
+    conn: &Connection,
+    checklist_id: Option<&str>,
+    answered: &[ChecklistAnswer],
+) -> AppResult<i64> {
     let Some(id) = checklist_id else { return Ok(0) };
     let mut stmt =
         conn.prepare("SELECT id FROM checklist_items WHERE checklist_id = ?1 AND is_archived = 0 AND deleted_at IS NULL")?;
-    let items: Vec<String> = stmt.query_map([id], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?;
-    Ok(items.iter().filter(|i| !answered.iter().any(|a| &a.item_id == *i)).count() as i64)
+    let items: Vec<String> = stmt
+        .query_map([id], |r| r.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(items
+        .iter()
+        .filter(|i| !answered.iter().any(|a| &a.item_id == *i))
+        .count() as i64)
 }
 
 pub(crate) fn adherence(results: &[ChecklistAnswer], unanswered: i64) -> DailyAdherence {
@@ -581,13 +641,26 @@ pub(crate) fn adherence(results: &[ChecklistAnswer], unanswered: i64) -> DailyAd
         let p = Decimal::from(followed * 100) / Decimal::from(answered);
         canonical(p.round_dp_with_strategy(0, RoundingStrategy::MidpointAwayFromZero))
     });
-    DailyAdherence { followed, missed, not_applicable: count("not_applicable"), unanswered, answered, percent }
+    DailyAdherence {
+        followed,
+        missed,
+        not_applicable: count("not_applicable"),
+        unanswered,
+        answered,
+        percent,
+    }
 }
 
 fn events(conn: &Connection, review_id: &str) -> AppResult<Vec<ReviewEvent>> {
     let mut stmt =
         conn.prepare("SELECT kind, revision, at FROM daily_review_events WHERE daily_review_id = ?1 ORDER BY at, rowid")?;
-    let rows = stmt.query_map([review_id], |r| Ok(ReviewEvent { kind: r.get(0)?, revision: r.get(1)?, at: r.get(2)? }))?;
+    let rows = stmt.query_map([review_id], |r| {
+        Ok(ReviewEvent {
+            kind: r.get(0)?,
+            revision: r.get(1)?,
+            at: r.get(2)?,
+        })
+    })?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
@@ -603,21 +676,38 @@ fn to_review(conn: &Connection, account_id: &str, day: &str, row: Row) -> AppRes
     let answers = answers(conn, &row.id)?;
     let current: Option<(String, bool)> = match &row.checklist_id {
         Some(c) => conn
-            .query_row("SELECT name, is_archived = 1 FROM checklists WHERE id = ?1 AND deleted_at IS NULL", [c], |r| {
-                Ok((r.get(0)?, r.get(1)?))
-            })
+            .query_row(
+                "SELECT name, is_archived = 1 FROM checklists WHERE id = ?1 AND deleted_at IS NULL",
+                [c],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
             .optional()?,
         None => None,
     };
-    let checklist = row.checklist_snapshot.clone().or_else(|| current.as_ref().map(|c| c.0.clone())).map(|label| LabelRef {
-        current_label: current.as_ref().filter(|c| c.0 != label).map(|c| c.0.clone()),
-        archived: current.as_ref().is_some_and(|c| c.1),
-        id: row.checklist_id.clone(),
-        label,
-    });
+    let checklist = row
+        .checklist_snapshot
+        .clone()
+        .or_else(|| current.as_ref().map(|c| c.0.clone()))
+        .map(|label| LabelRef {
+            current_label: current
+                .as_ref()
+                .filter(|c| c.0 != label)
+                .map(|c| c.0.clone()),
+            archived: current.as_ref().is_some_and(|c| c.1),
+            id: row.checklist_id.clone(),
+            label,
+        });
     let open = unanswered(conn, row.checklist_id.as_deref(), &answers)?;
     let [focus, setups, no_trade_conditions, commitments, plan_notes] = row.plan;
-    let [market_context, went_well, mistakes, emotions, key_lesson, next_action, reflection_notes] = row.reflection;
+    let [
+        market_context,
+        went_well,
+        mistakes,
+        emotions,
+        key_lesson,
+        next_action,
+        reflection_notes,
+    ] = row.reflection;
     Ok(DailyReview {
         adherence: adherence(&answers, open),
         events: events(conn, &row.id)?,
@@ -636,11 +726,22 @@ fn to_review(conn: &Connection, account_id: &str, day: &str, row: Row) -> AppRes
             authored_at: row.plan_authored_at,
             timing: row.plan_timing,
         },
-        reflection: Reflection { market_context, went_well, mistakes, emotions, key_lesson, next_action, notes: reflection_notes },
+        reflection: Reflection {
+            market_context,
+            went_well,
+            mistakes,
+            emotions,
+            key_lesson,
+            next_action,
+            notes: reflection_notes,
+        },
         no_trade_day: row.no_trade_day,
         checklist,
         answers,
-        saved_with: SessionSettings { timezone: row.tz_snapshot, reset_time: row.reset_snapshot },
+        saved_with: SessionSettings {
+            timezone: row.tz_snapshot,
+            reset_time: row.reset_snapshot,
+        },
         completed_at: row.completed_at,
         first_completed_at: row.first_completed_at,
         edited_after_completion_at: row.edited_after_completion_at,
@@ -654,22 +755,38 @@ fn to_review(conn: &Connection, account_id: &str, day: &str, row: Row) -> AppRes
 
 /// One trading day of an account: its review (if any), the day's trades with their link status and the
 /// closed-trade outcome. Archived accounts are readable.
-pub fn get_day(conn: &Connection, account_id: &str, trading_day_text: &str) -> AppResult<DailyReviewDay> {
+pub fn get_day(
+    conn: &Connection,
+    account_id: &str,
+    trading_day_text: &str,
+) -> AppResult<DailyReviewDay> {
     get_day_at(conn, account_id, trading_day_text, Utc::now())
 }
 
-pub(crate) fn get_day_at(conn: &Connection, account_id: &str, text: &str, now: DateTime<Utc>) -> AppResult<DailyReviewDay> {
+pub(crate) fn get_day_at(
+    conn: &Connection,
+    account_id: &str,
+    text: &str,
+    now: DateTime<Utc>,
+) -> AppResult<DailyReviewDay> {
     let acct = account(conn, account_id)?;
     let day = parse_trading_day(text)?;
     let day_text = day.to_string();
     let current = trading_day(now, acct.tz, acct.reset);
     let row = stored(conn, account_id, &day_text)?;
-    let m = membership(conn, account_id, &day_text, row.as_ref().map(|r| r.id.as_str()))?;
-    let review = row.map(|r| to_review(conn, account_id, &day_text, r)).transpose()?;
+    let m = membership(
+        conn,
+        account_id,
+        &day_text,
+        row.as_ref().map(|r| r.id.as_str()),
+    )?;
+    let review = row
+        .map(|r| to_review(conn, account_id, &day_text, r))
+        .transpose()?;
     let (start, end) = session_window(day, acct.tz, acct.reset);
-    let session_settings_changed = review
-        .as_ref()
-        .is_some_and(|r| r.saved_with.timezone != acct.tz_text || r.saved_with.reset_time != acct.reset_text);
+    let session_settings_changed = review.as_ref().is_some_and(|r| {
+        r.saved_with.timezone != acct.tz_text || r.saved_with.reset_time != acct.reset_text
+    });
     let day_state = if m.outcome.trades > 0 {
         "traded"
     } else if review.as_ref().is_some_and(|r| r.no_trade_day) {
@@ -680,7 +797,10 @@ pub(crate) fn get_day_at(conn: &Connection, account_id: &str, text: &str, now: D
     Ok(DailyReviewDay {
         account_id: account_id.into(),
         trading_day: day_text,
-        session: SessionSettings { timezone: acct.tz_text, reset_time: acct.reset_text },
+        session: SessionSettings {
+            timezone: acct.tz_text,
+            reset_time: acct.reset_text,
+        },
         session_start: format_instant(start),
         session_end: format_instant(end),
         current_trading_day: current.to_string(),
@@ -701,7 +821,11 @@ pub fn list(conn: &Connection, account_id: &str) -> AppResult<DailyReviewIndex> 
     list_at(conn, account_id, Utc::now())
 }
 
-pub(crate) fn list_at(conn: &Connection, account_id: &str, now: DateTime<Utc>) -> AppResult<DailyReviewIndex> {
+pub(crate) fn list_at(
+    conn: &Connection,
+    account_id: &str,
+    now: DateTime<Utc>,
+) -> AppResult<DailyReviewIndex> {
     let acct = account(conn, account_id)?;
     let rows: Vec<(String, Row)> = {
         let mut stmt = conn.prepare(&format!(
@@ -743,19 +867,33 @@ pub(crate) fn list_at(conn: &Connection, account_id: &str, now: DateTime<Utc>) -
             "SELECT id, title, entry_at FROM journal_entries WHERE account_id = ?1 AND trade_id IS NULL
              ORDER BY entry_at DESC, id",
         )?;
-        let rows = stmt.query_map([account_id], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?)))?;
+        let rows = stmt.query_map([account_id], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+            ))
+        })?;
         rows.collect::<rusqlite::Result<Vec<_>>>()?
             .into_iter()
             .filter_map(|(id, title, entry_at)| {
                 let at = parse_instant(&entry_at)?;
-                Some(LegacyDayNote { trading_day: trading_day(at, acct.tz, acct.reset).to_string(), id, title, entry_at })
+                Some(LegacyDayNote {
+                    trading_day: trading_day(at, acct.tz, acct.reset).to_string(),
+                    id,
+                    title,
+                    entry_at,
+                })
             })
             .collect()
     };
     Ok(DailyReviewIndex {
         account_id: account_id.into(),
         current_trading_day: trading_day(now, acct.tz, acct.reset).to_string(),
-        session: SessionSettings { timezone: acct.tz_text, reset_time: acct.reset_text },
+        session: SessionSettings {
+            timezone: acct.tz_text,
+            reset_time: acct.reset_text,
+        },
         archived: acct.archived,
         reviews,
         legacy_notes,
@@ -769,11 +907,25 @@ fn row_at(r: &rusqlite::Row, o: usize) -> rusqlite::Result<Row> {
         revision: r.get(o + 2)?,
         tz_snapshot: r.get(o + 3)?,
         reset_snapshot: r.get(o + 4)?,
-        plan: [r.get(o + 5)?, r.get(o + 6)?, r.get(o + 7)?, r.get(o + 8)?, r.get(o + 9)?],
+        plan: [
+            r.get(o + 5)?,
+            r.get(o + 6)?,
+            r.get(o + 7)?,
+            r.get(o + 8)?,
+            r.get(o + 9)?,
+        ],
         max_risk: r.get(o + 10)?,
         plan_authored_at: r.get(o + 11)?,
         plan_timing: r.get(o + 12)?,
-        reflection: [r.get(o + 13)?, r.get(o + 14)?, r.get(o + 15)?, r.get(o + 16)?, r.get(o + 17)?, r.get(o + 18)?, r.get(o + 19)?],
+        reflection: [
+            r.get(o + 13)?,
+            r.get(o + 14)?,
+            r.get(o + 15)?,
+            r.get(o + 16)?,
+            r.get(o + 17)?,
+            r.get(o + 18)?,
+            r.get(o + 19)?,
+        ],
         no_trade_day: r.get(o + 20)?,
         checklist_id: r.get(o + 21)?,
         checklist_snapshot: r.get(o + 22)?,
@@ -790,8 +942,14 @@ fn row_at(r: &rusqlite::Row, o: usize) -> rusqlite::Result<Row> {
 
 fn text(issues: &mut Issues, field: &str, value: Option<String>) -> Option<String> {
     let value = value.filter(|v| !v.trim().is_empty());
-    if value.as_ref().is_some_and(|v| v.chars().count() > MAX_TEXT_CHARS) {
-        issues.add(field, format!("must be at most {MAX_TEXT_CHARS} characters"));
+    if value
+        .as_ref()
+        .is_some_and(|v| v.chars().count() > MAX_TEXT_CHARS)
+    {
+        issues.add(
+            field,
+            format!("must be at most {MAX_TEXT_CHARS} characters"),
+        );
     }
     value
 }
@@ -800,7 +958,9 @@ fn text(issues: &mut Issues, field: &str, value: Option<String>) -> Option<Strin
 fn writable(conn: &Connection, account_id: &str) -> AppResult<Account> {
     let acct = account(conn, account_id)?;
     if acct.archived {
-        return Err(AppError::Conflict { message: "this account is archived, so its daily reviews are read-only".into() });
+        return Err(AppError::Conflict {
+            message: "this account is archived, so its daily reviews are read-only".into(),
+        });
     }
     account_ctx(conn, account_id)?;
     Ok(acct)
@@ -809,12 +969,18 @@ fn writable(conn: &Connection, account_id: &str) -> AppResult<Account> {
 fn check_revision(existing: &Option<Row>, expected: Option<i64>) -> AppResult<()> {
     match (existing, expected) {
         (Some(_), None) => Err(AppError::Conflict {
-            message: "this day already has a review that you have not loaded; reload it before saving".into(),
+            message:
+                "this day already has a review that you have not loaded; reload it before saving"
+                    .into(),
         }),
         (Some(s), Some(r)) if s.revision != r => Err(AppError::Conflict {
-            message: "this review was changed after you opened it; reload it and apply your edits again".into(),
+            message:
+                "this review was changed after you opened it; reload it and apply your edits again"
+                    .into(),
         }),
-        (None, Some(_)) => Err(AppError::Conflict { message: "this review no longer exists; reload the day".into() }),
+        (None, Some(_)) => Err(AppError::Conflict {
+            message: "this review no longer exists; reload the day".into(),
+        }),
         _ => Ok(()),
     }
 }
@@ -824,7 +990,11 @@ pub fn save(conn: &mut Connection, input: DailyReviewInput) -> AppResult<DailyRe
     save_at(conn, input, Utc::now())
 }
 
-pub(crate) fn save_at(conn: &mut Connection, input: DailyReviewInput, at: DateTime<Utc>) -> AppResult<DailyReviewDay> {
+pub(crate) fn save_at(
+    conn: &mut Connection,
+    input: DailyReviewInput,
+    at: DateTime<Utc>,
+) -> AppResult<DailyReviewDay> {
     let mut issues = Issues::default();
     let complete = match input.action.as_str() {
         "save" => false,
@@ -855,7 +1025,10 @@ pub(crate) fn save_at(conn: &mut Connection, input: DailyReviewInput, at: DateTi
         Some(t) => match parse_decimal(&t).and_then(to_micros) {
             Some(m) if m > 0 => Some(m),
             Some(_) => {
-                issues.add("plan.maxRisk", "must be greater than zero (leave it empty when not set)");
+                issues.add(
+                    "plan.maxRisk",
+                    "must be greater than zero (leave it empty when not set)",
+                );
                 None
             }
             None => {
@@ -877,17 +1050,26 @@ pub(crate) fn save_at(conn: &mut Connection, input: DailyReviewInput, at: DateTi
     let checklist_id = opt_text(input.checklist_id);
     for (i, a) in input.answers.iter().enumerate() {
         if !RESULTS.contains(&a.result.as_str()) {
-            issues.add(&format!("answers.{i}.result"), "must be followed, missed or not_applicable");
+            issues.add(
+                &format!("answers.{i}.result"),
+                "must be followed, missed or not_applicable",
+            );
         }
         if input.answers[..i].iter().any(|b| b.item_id == a.item_id) {
             issues.add(&format!("answers.{i}.itemId"), "answered twice");
         }
         if opt_text(a.note.clone()).is_some_and(|n| n.chars().count() > MAX_NOTE_CHARS) {
-            issues.add(&format!("answers.{i}.note"), format!("must be at most {MAX_NOTE_CHARS} characters"));
+            issues.add(
+                &format!("answers.{i}.note"),
+                format!("must be at most {MAX_NOTE_CHARS} characters"),
+            );
         }
     }
     if checklist_id.is_none() && !input.answers.is_empty() {
-        issues.add("checklistId", "choose the checklist these answers belong to");
+        issues.add(
+            "checklistId",
+            "choose the checklist these answers belong to",
+        );
     }
     issues.into_result()?;
     let day = day.expect("validated");
@@ -897,19 +1079,36 @@ pub(crate) fn save_at(conn: &mut Connection, input: DailyReviewInput, at: DateTi
     let acct = writable(&tx, &input.account_id)?;
     let current = trading_day(at, acct.tz, acct.reset);
     let mut issues = Issues::default();
-    if day > current.checked_add_days(Days::new(MAX_DAYS_AHEAD)).unwrap_or(current) {
-        issues.add("tradingDay", format!("can be planned at most {MAX_DAYS_AHEAD} days ahead"));
+    if day
+        > current
+            .checked_add_days(Days::new(MAX_DAYS_AHEAD))
+            .unwrap_or(current)
+    {
+        issues.add(
+            "tradingDay",
+            format!("can be planned at most {MAX_DAYS_AHEAD} days ahead"),
+        );
     }
-    let has_reflection = reflection.iter().any(Option::is_some) || !input.answers.is_empty() || input.no_trade_day;
+    let has_reflection =
+        reflection.iter().any(Option::is_some) || !input.answers.is_empty() || input.no_trade_day;
     if day > current && (has_reflection || complete) {
-        issues.add("tradingDay", "this trading day hasn't started; only its plan can be written now");
+        issues.add(
+            "tradingDay",
+            "this trading day hasn't started; only its plan can be written now",
+        );
     }
-    let has_content = plan.iter().any(Option::is_some) || max_risk.is_some() || has_reflection || checklist_id.is_some();
+    let has_content = plan.iter().any(Option::is_some)
+        || max_risk.is_some()
+        || has_reflection
+        || checklist_id.is_some();
     if complete && !has_content {
         issues.add("action", "write a plan, a reflection, answer the checklist or mark a no-trade day before completing");
     }
     if input.no_trade_day && !day_trades(&tx, &input.account_id, &day_text)?.is_empty() {
-        issues.add("noTradeDay", "trades are recorded for this day; it can't be marked a no-trade day");
+        issues.add(
+            "noTradeDay",
+            "trades are recorded for this day; it can't be marked a no-trade day",
+        );
     }
     issues.into_result()?;
 
@@ -926,10 +1125,15 @@ pub(crate) fn save_at(conn: &mut Connection, input: DailyReviewInput, at: DateTi
                     Ok((r.get(0)?, r.get(1)?, r.get(2)?))
                 })
                 .optional()?;
-            let kept = existing.as_ref().filter(|s| s.checklist_id.as_ref() == Some(id));
+            let kept = existing
+                .as_ref()
+                .filter(|s| s.checklist_id.as_ref() == Some(id));
             match (row, kept) {
                 (Some((_, scope, _)), _) if scope != "daily" => {
-                    issues.add("checklistId", "a trade checklist is answered on a trade's review, not the day");
+                    issues.add(
+                        "checklistId",
+                        "a trade checklist is answered on a trade's review, not the day",
+                    );
                     None
                 }
                 (_, Some(s)) => s.checklist_snapshot.clone(),
@@ -953,7 +1157,9 @@ pub(crate) fn save_at(conn: &mut Connection, input: DailyReviewInput, at: DateTi
     // session ended or after the day's first trade opened is retrospective.
     let (plan_authored_at, plan_timing) = match (&existing, plan_has_content) {
         (_, false) => (None, None),
-        (Some(s), true) if s.plan_authored_at.is_some() => (s.plan_authored_at.clone(), s.plan_timing.clone()),
+        (Some(s), true) if s.plan_authored_at.is_some() => {
+            (s.plan_authored_at.clone(), s.plan_timing.clone())
+        }
         _ => {
             let (_, end) = session_window(day, acct.tz, acct.reset);
             let traded_before: bool = tx.query_row(
@@ -962,7 +1168,11 @@ pub(crate) fn save_at(conn: &mut Connection, input: DailyReviewInput, at: DateTi
                 params![input.account_id, day_text, now],
                 |r| r.get(0),
             )?;
-            let timing = if at < end && !traded_before { "pre_session" } else { "retrospective" };
+            let timing = if at < end && !traded_before {
+                "pre_session"
+            } else {
+                "retrospective"
+            };
             (Some(now.clone()), Some(timing.to_string()))
         }
     };
@@ -972,15 +1182,28 @@ pub(crate) fn save_at(conn: &mut Connection, input: DailyReviewInput, at: DateTi
         None => (new_id(), 1, true),
     };
     let was_completed = existing.as_ref().is_some_and(|s| s.status == "completed");
-    let status = if complete || was_completed { "completed" } else { "draft" };
+    let status = if complete || was_completed {
+        "completed"
+    } else {
+        "draft"
+    };
     let completed_at = match (&existing, complete) {
         (Some(s), false) => s.completed_at.clone(),
         (Some(s), true) if was_completed => s.completed_at.clone(),
         _ if complete => Some(now.clone()),
         _ => None,
     };
-    let first_completed_at = existing.as_ref().and_then(|s| s.first_completed_at.clone()).or_else(|| completed_at.clone());
-    let edited_after = if was_completed { Some(now.clone()) } else { existing.as_ref().and_then(|s| s.edited_after_completion_at.clone()) };
+    let first_completed_at = existing
+        .as_ref()
+        .and_then(|s| s.first_completed_at.clone())
+        .or_else(|| completed_at.clone());
+    let edited_after = if was_completed {
+        Some(now.clone())
+    } else {
+        existing
+            .as_ref()
+            .and_then(|s| s.edited_after_completion_at.clone())
+    };
     let updated_at = match &existing {
         Some(s) => super::trades::later_than(&s.updated_at),
         None => now.clone(),
@@ -1034,8 +1257,11 @@ pub(crate) fn save_at(conn: &mut Connection, input: DailyReviewInput, at: DateTi
     // Checklist answers: an item answered before keeps the label it was answered under.
     let mut issues = Issues::default();
     let current_answers: Vec<(String, String)> = {
-        let mut stmt = tx.prepare("SELECT id, checklist_item_id FROM daily_review_answers WHERE daily_review_id = ?1")?;
-        stmt.query_map([&review_id], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<rusqlite::Result<_>>()?
+        let mut stmt = tx.prepare(
+            "SELECT id, checklist_item_id FROM daily_review_answers WHERE daily_review_id = ?1",
+        )?;
+        stmt.query_map([&review_id], |r| Ok((r.get(0)?, r.get(1)?)))?
+            .collect::<rusqlite::Result<_>>()?
     };
     for (i, answer) in input.answers.iter().enumerate() {
         let item: Option<(String, String, i64, bool)> = tx
@@ -1046,11 +1272,14 @@ pub(crate) fn save_at(conn: &mut Connection, input: DailyReviewInput, at: DateTi
             )
             .optional()?;
         let note = opt_text(answer.note.clone());
-        let answered = current_answers.iter().find(|(_, item_id)| *item_id == answer.item_id);
+        let answered = current_answers
+            .iter()
+            .find(|(_, item_id)| *item_id == answer.item_id);
         match (item, answered) {
-            (Some((owner, ..)), _) if Some(&owner) != checklist_id.as_ref() => {
-                issues.add(&format!("answers.{i}.itemId"), "item is not on the chosen checklist")
-            }
+            (Some((owner, ..)), _) if Some(&owner) != checklist_id.as_ref() => issues.add(
+                &format!("answers.{i}.itemId"),
+                "item is not on the chosen checklist",
+            ),
             (Some(_), Some((answer_id, _))) => {
                 tx.execute(
                     "UPDATE daily_review_answers SET result = ?2, note = ?3,
@@ -1074,7 +1303,10 @@ pub(crate) fn save_at(conn: &mut Connection, input: DailyReviewInput, at: DateTi
     // An answer no longer given is cleared: unanswered is its own state, not a failure.
     for (answer_id, item_id) in &current_answers {
         if !input.answers.iter().any(|a| &a.item_id == item_id) {
-            tx.execute("DELETE FROM daily_review_answers WHERE id = ?1", [answer_id])?;
+            tx.execute(
+                "DELETE FROM daily_review_answers WHERE id = ?1",
+                [answer_id],
+            )?;
         }
     }
     issues.into_result()?;
@@ -1102,7 +1334,11 @@ pub fn reopen(conn: &mut Connection, input: DailyReviewRef) -> AppResult<DailyRe
     reopen_at(conn, input, Utc::now())
 }
 
-pub(crate) fn reopen_at(conn: &mut Connection, input: DailyReviewRef, at: DateTime<Utc>) -> AppResult<DailyReviewDay> {
+pub(crate) fn reopen_at(
+    conn: &mut Connection,
+    input: DailyReviewRef,
+    at: DateTime<Utc>,
+) -> AppResult<DailyReviewDay> {
     let day = parse_trading_day(&input.trading_day)?.to_string();
     let tx = conn.transaction()?;
     writable(&tx, &input.account_id)?;
@@ -1110,7 +1346,9 @@ pub(crate) fn reopen_at(conn: &mut Connection, input: DailyReviewRef, at: DateTi
     check_revision(&existing, Some(input.expected_revision))?;
     let row = existing.expect("checked");
     if row.status != "completed" {
-        return Err(AppError::Conflict { message: "this review is already a draft".into() });
+        return Err(AppError::Conflict {
+            message: "this review is already a draft".into(),
+        });
     }
     let now = format_instant(at);
     let revision = row.revision + 1;
@@ -1130,7 +1368,11 @@ pub fn relink_trades(conn: &mut Connection, input: DailyReviewRef) -> AppResult<
     relink_at(conn, input, Utc::now())
 }
 
-pub(crate) fn relink_at(conn: &mut Connection, input: DailyReviewRef, at: DateTime<Utc>) -> AppResult<DailyReviewDay> {
+pub(crate) fn relink_at(
+    conn: &mut Connection,
+    input: DailyReviewRef,
+    at: DateTime<Utc>,
+) -> AppResult<DailyReviewDay> {
     let day = parse_trading_day(&input.trading_day)?.to_string();
     let tx = conn.transaction()?;
     let acct = writable(&tx, &input.account_id)?;

@@ -71,7 +71,10 @@ pub(super) fn quote(name: &str) -> String {
 /// Whether a schema object is one of SQLite's own, which archive checks skip. Any other object whose name
 /// starts with `sqlite` (in any case) could hide from those checks, so it fails validation.
 fn internal(kind: &str, name: &str, sql_is_null: bool) -> Result<bool> {
-    if !name.get(..6).is_some_and(|p| p.eq_ignore_ascii_case("sqlite")) {
+    if !name
+        .get(..6)
+        .is_some_and(|p| p.eq_ignore_ascii_case("sqlite"))
+    {
         return Ok(false);
     }
     let allowed = match kind {
@@ -79,7 +82,11 @@ fn internal(kind: &str, name: &str, sql_is_null: bool) -> Result<bool> {
         "index" => name.starts_with("sqlite_autoindex_") && sql_is_null,
         _ => false,
     };
-    if allowed { Ok(true) } else { Err(fail(Code::Integrity)) }
+    if allowed {
+        Ok(true)
+    } else {
+        Err(fail(Code::Integrity))
+    }
 }
 /// The journal's own tables in `dump` order, each with whether it is `WITHOUT ROWID`. `dump`, `counts` and
 /// `content_hash` all enumerate through this, so the internal-object allow-list applies to each of them.
@@ -88,7 +95,13 @@ fn tables(conn: &Connection) -> Result<Vec<(String, bool)>> {
         "SELECT name,sql IS NULL,instr(upper(coalesce(sql,'')),'WITHOUT ROWID')>0 FROM sqlite_schema WHERE type='table' ORDER BY name",
     )?;
     let mut tables = Vec::new();
-    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?, r.get::<_, bool>(2)?)))? {
+    for row in stmt.query_map([], |r| {
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, bool>(1)?,
+            r.get::<_, bool>(2)?,
+        ))
+    })? {
         let (name, sql_is_null, without) = row?;
         if !internal("table", &name, sql_is_null)? {
             tables.push((name, without));
@@ -102,7 +115,9 @@ pub fn counts(conn: &Connection) -> Result<Counts> {
         .into_iter()
         .map(|(name, _)| {
             let count: i64 =
-                conn.query_row(&format!("SELECT count(*) FROM {}", quote(&name)), [], |r| r.get(0))?;
+                conn.query_row(&format!("SELECT count(*) FROM {}", quote(&name)), [], |r| {
+                    r.get(0)
+                })?;
             Ok((name, count as u64))
         })
         .collect()
@@ -123,7 +138,10 @@ pub fn content_hash(conn: &Connection) -> Result<String> {
         let (sql, skip) = if without {
             (format!("SELECT * FROM {} ORDER BY 1,2", quote(&name)), 0)
         } else {
-            (format!("SELECT rowid,* FROM {} ORDER BY rowid", quote(&name)), 1)
+            (
+                format!("SELECT rowid,* FROM {} ORDER BY rowid", quote(&name)),
+                1,
+            )
         };
         let mut stmt = conn.prepare(&sql)?;
         let width = stmt.column_count() - skip;
@@ -330,7 +348,12 @@ pub fn export(
     let data = dump(&c)?;
     let bytes = serde_json::to_vec(&data)?;
     if bytes.len() as u64 > MAX_ENTRY {
-        return Err(over_limit("data.json", bytes.len() as u64, MAX_ENTRY, "bytes"));
+        return Err(over_limit(
+            "data.json",
+            bytes.len() as u64,
+            MAX_ENTRY,
+            "bytes",
+        ));
     }
     let data_path = temp.path().join("data.json");
     write_new(&data_path, &bytes)?;
@@ -349,7 +372,12 @@ pub fn export(
         ));
     }
     if files.len() + 1 > MAX_ENTRIES {
-        return Err(over_limit("archive entries", (files.len() + 1) as u64, MAX_ENTRIES as u64, ""));
+        return Err(over_limit(
+            "archive entries",
+            (files.len() + 1) as u64,
+            MAX_ENTRIES as u64,
+            "",
+        ));
     }
     let entries = files
         .iter()
@@ -436,11 +464,21 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
     input.rewind()?;
     let size = input.metadata()?.len();
     if size > MAX_TOTAL + 2 * 1024 * 1024 {
-        return Err(over_limit("total archive", size, MAX_TOTAL + 2 * 1024 * 1024, "bytes"));
+        return Err(over_limit(
+            "total archive",
+            size,
+            MAX_TOTAL + 2 * 1024 * 1024,
+            "bytes",
+        ));
     }
     let mut zip = ZipArchive::new(input)?;
     if zip.len() > MAX_ENTRIES {
-        return Err(over_limit("archive entries", zip.len() as u64, MAX_ENTRIES as u64, ""));
+        return Err(over_limit(
+            "archive entries",
+            zip.len() as u64,
+            MAX_ENTRIES as u64,
+            "",
+        ));
     }
     if zip.len() < 4 {
         return Err(fail(Code::LimitExceeded));
@@ -474,7 +512,11 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
             .ok_or_else(|| fail(Code::LimitExceeded))?;
         if entry.size() > limit {
             // Archive entry names are not echoed: only fixed component names reach the UI.
-            let component = if name == "manifest.json" { "manifest.json" } else { "archive entry" };
+            let component = if name == "manifest.json" {
+                "manifest.json"
+            } else {
+                "archive entry"
+            };
             return Err(over_limit(component, entry.size(), limit, "bytes"));
         }
         if total > MAX_TOTAL {
@@ -569,7 +611,11 @@ fn schema(conn: &Connection) -> Result<Vec<(String, String, String)>> {
     let mut s = conn.prepare("SELECT type,name,sql FROM sqlite_schema ORDER BY type,name")?;
     let mut objects = Vec::new();
     for row in s.query_map([], |r| {
-        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, Option<String>>(2)?))
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, String>(1)?,
+            r.get::<_, Option<String>>(2)?,
+        ))
     })? {
         let (kind, name, sql) = row?;
         if internal(&kind, &name, sql.is_none())? {

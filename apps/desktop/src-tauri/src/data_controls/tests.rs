@@ -841,7 +841,15 @@ fn archived_failed_passed_attempts_reset_lineage_and_reused_numbers_survive_rest
     let target = tempfile::tempdir().unwrap();
     let rt = crate::runtime::Runtime::start(Ok(target.path().join(db::DB_FILE_NAME)));
     let preview = rt
-        .with_controls(|c, root| restore::inspect(c, root, restore::InspectRequest { source: path.to_string_lossy().into() }))
+        .with_controls(|c, root| {
+            restore::inspect(
+                c,
+                root,
+                restore::InspectRequest {
+                    source: path.to_string_lossy().into(),
+                },
+            )
+        })
         .unwrap();
     assert_eq!(preview.manifest.entities["account_attempt_links"], 2);
     assert_eq!(preview.manifest.entities["account_archive_events"], 1);
@@ -860,7 +868,14 @@ fn archived_failed_passed_attempts_reset_lineage_and_reused_numbers_survive_rest
         assert_eq!(restored, lineage);
         let states: Vec<_> = restored
             .iter()
-            .map(|a| (a.account_id.as_str(), a.status.as_str(), a.archived_at.is_some(), a.external_ref.as_deref()))
+            .map(|a| {
+                (
+                    a.account_id.as_str(),
+                    a.status.as_str(),
+                    a.archived_at.is_some(),
+                    a.external_ref.as_deref(),
+                )
+            })
             .collect();
         assert_eq!(
             states,
@@ -883,7 +898,14 @@ fn an_unreadable_staged_restore_is_abandoned_without_touching_the_original() {
     let mut c = journal(&path);
     account(&mut c, "original");
     let before = archive::dump(&c).unwrap();
-    let p = restore::inspect(&c, target.path(), restore::InspectRequest { source: archive.to_string_lossy().into() }).unwrap();
+    let p = restore::inspect(
+        &c,
+        target.path(),
+        restore::InspectRequest {
+            source: archive.to_string_lossy().into(),
+        },
+    )
+    .unwrap();
     let staged = restore::prepare(
         &c,
         target.path(),
@@ -895,10 +917,16 @@ fn an_unreadable_staged_restore_is_abandoned_without_touching_the_original() {
     )
     .unwrap();
     drop(c);
-    let op = target.path().join("data-controls").join(&staged.operation_id);
+    let op = target
+        .path()
+        .join("data-controls")
+        .join(&staged.operation_id);
     fs::write(op.join("candidate.db"), b"damaged after staging").unwrap();
     // The first start reports the abandoned restore; nothing was replaced.
-    assert_eq!(restore::recover(target.path(), &path).unwrap_err().code, Code::RecoveryRequired);
+    assert_eq!(
+        restore::recover(target.path(), &path).unwrap_err().code,
+        Code::RecoveryRequired
+    );
     assert!(!target.path().join("data-controls-pending.json").exists());
     assert!(op.join("safety.db").exists());
     // The next start opens the original journal.
@@ -918,14 +946,21 @@ fn bloated(path: &Path) -> Connection {
         .unwrap();
     }
     // A row after the gap, so a renumbered rowid would show in the dump.
-    c.execute("INSERT INTO settings(key,value_json,updated_at) VALUES('kept','1','t')", [])
+    c.execute(
+        "INSERT INTO settings(key,value_json,updated_at) VALUES('kept','1','t')",
+        [],
+    )
+    .unwrap();
+    c.execute("DELETE FROM settings WHERE key LIKE 'filler-%'", [])
         .unwrap();
-    c.execute("DELETE FROM settings WHERE key LIKE 'filler-%'", []).unwrap();
     c.execute_batch("PRAGMA wal_checkpoint(TRUNCATE)").unwrap();
     c
 }
 fn pages(c: &Connection) -> (i64, i64) {
-    let get = |name| c.pragma_query_value(None, name, |r| r.get::<_, i64>(0)).unwrap();
+    let get = |name| {
+        c.pragma_query_value(None, name, |r| r.get::<_, i64>(0))
+            .unwrap()
+    };
     (get("page_count"), get("freelist_count"))
 }
 #[test]
@@ -933,18 +968,33 @@ fn free_pages_do_not_count_toward_live_caps_and_the_live_journal_is_never_vacuum
     let target = tempfile::tempdir().unwrap();
     let live = target.path().join(db::DB_FILE_NAME);
     let c = bloated(&live);
-    let page_size: i64 = c.pragma_query_value(None, "page_size", |r| r.get(0)).unwrap();
+    let page_size: i64 = c
+        .pragma_query_value(None, "page_size", |r| r.get(0))
+        .unwrap();
     let before = pages(&c);
     assert!(before.0 * page_size > filesystem::MAX_ENTRY as i64);
-    assert!((before.0 - before.1) * page_size < 8 * 1024 * 1024, "{before:?} x {page_size}");
+    assert!(
+        (before.0 - before.1) * page_size < 8 * 1024 * 1024,
+        "{before:?} x {page_size}"
+    );
     let data = archive::dump(&c).unwrap();
-    deletion::preview(&c, target.path(), deletion::PreviewRequest { scope: deletion::Scope::Journal }).unwrap();
+    deletion::preview(
+        &c,
+        target.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Journal,
+        },
+    )
+    .unwrap();
     let out = target.path().join("bloated.zip");
     archive::export(&c, &target.path().join("attachments"), &out, true).unwrap();
     let exported = archive::inspect_to(&out, target.path()).unwrap();
     let image = exported.directory.path().join("journal.sqlite");
     assert!(fs::metadata(&image).unwrap().len() < 8 * 1024 * 1024);
-    assert_eq!(archive::dump(&archive::readonly(&image).unwrap()).unwrap(), data);
+    assert_eq!(
+        archive::dump(&archive::readonly(&image).unwrap()).unwrap(),
+        data
+    );
     assert_eq!(pages(&c), before);
     // Restoring a small archive over the bloated journal snapshots it as the safety copy.
     let source = tempfile::tempdir().unwrap();
@@ -952,8 +1002,14 @@ fn free_pages_do_not_count_toward_live_caps_and_the_live_journal_is_never_vacuum
     account(&mut s, "incoming");
     let incoming = source.path().join("incoming.zip");
     archive::export(&s, &source.path().join("attachments"), &incoming, true).unwrap();
-    let p = restore::inspect(&c, target.path(), restore::InspectRequest { source: incoming.to_string_lossy().into() })
-        .unwrap();
+    let p = restore::inspect(
+        &c,
+        target.path(),
+        restore::InspectRequest {
+            source: incoming.to_string_lossy().into(),
+        },
+    )
+    .unwrap();
     restore::prepare(
         &c,
         target.path(),
@@ -984,9 +1040,20 @@ fn a_journal_over_a_real_cap_names_the_component_and_measured_value() {
     let detail = dumped.detail.unwrap();
     assert!(detail.starts_with("database pages: "), "{detail}");
     assert!(detail.ends_with(" bytes, limit 67108864 bytes"), "{detail}");
-    let measured: u64 = detail["database pages: ".len()..].split(' ').next().unwrap().parse().unwrap();
+    let measured: u64 = detail["database pages: ".len()..]
+        .split(' ')
+        .next()
+        .unwrap()
+        .parse()
+        .unwrap();
     assert!(measured > filesystem::MAX_ENTRY);
-    let exported = archive::export(&c, &dir.path().join("attachments"), &dir.path().join("out.zip"), true).unwrap_err();
+    let exported = archive::export(
+        &c,
+        &dir.path().join("attachments"),
+        &dir.path().join("out.zip"),
+        true,
+    )
+    .unwrap_err();
     assert_eq!(exported.code, Code::LimitExceeded);
     assert!(exported.detail.unwrap().starts_with("database pages: "));
     // Errors without detail serialize exactly as before.
@@ -1011,7 +1078,10 @@ fn heavy(path: &Path) -> Connection {
     c
 }
 fn live_bytes(c: &Connection) -> u64 {
-    let get = |name| c.pragma_query_value(None, name, |r| r.get::<_, i64>(0)).unwrap() as u64;
+    let get = |name| {
+        c.pragma_query_value(None, name, |r| r.get::<_, i64>(0))
+            .unwrap() as u64
+    };
     get("page_count") * get("page_size")
 }
 #[test]
@@ -1021,11 +1091,27 @@ fn over_cap_journals_can_be_previewed_for_erase_and_restore() {
     let target = tempfile::tempdir().unwrap();
     let c = heavy(&target.path().join(db::DB_FILE_NAME));
     assert_eq!(archive::dump(&c).unwrap_err().code, Code::LimitExceeded);
-    let erase = deletion::preview(&c, target.path(), deletion::PreviewRequest { scope: deletion::Scope::Journal }).unwrap();
-    let settings: i64 = c.query_row("SELECT count(*) FROM settings", [], |r| r.get(0)).unwrap();
+    let erase = deletion::preview(
+        &c,
+        target.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Journal,
+        },
+    )
+    .unwrap();
+    let settings: i64 = c
+        .query_row("SELECT count(*) FROM settings", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(erase.affected_entities["settings"], settings as u64);
     assert_eq!(erase.affected_entities["accounts"], 1);
-    let p = restore::inspect(&c, target.path(), restore::InspectRequest { source: incoming.to_string_lossy().into() }).unwrap();
+    let p = restore::inspect(
+        &c,
+        target.path(),
+        restore::InspectRequest {
+            source: incoming.to_string_lossy().into(),
+        },
+    )
+    .unwrap();
     assert_eq!(p.replaced_entities, erase.affected_entities);
     assert_eq!(
         p.required_free_bytes,
@@ -1038,7 +1124,10 @@ fn restore_over_an_over_cap_journal_keeps_an_uncapped_safety_copy_and_rolls_back
     let incoming = backup_with_account(source.path(), "incoming");
     let incoming_data = {
         let inspected = archive::inspect_to(&incoming, source.path()).unwrap();
-        archive::dump(&archive::readonly(&inspected.directory.path().join("journal.sqlite")).unwrap()).unwrap()
+        archive::dump(
+            &archive::readonly(&inspected.directory.path().join("journal.sqlite")).unwrap(),
+        )
+        .unwrap()
     };
     for fail_install in [false, true] {
         let target = tempfile::tempdir().unwrap();
@@ -1047,10 +1136,14 @@ fn restore_over_an_over_cap_journal_keeps_an_uncapped_safety_copy_and_rolls_back
         // Guard: the archive cap still applies to export.
         let out = target.path().join("heavy.zip");
         assert_eq!(
-            archive::export(&c, &target.path().join("attachments"), &out, true).unwrap_err().code,
+            archive::export(&c, &target.path().join("attachments"), &out, true)
+                .unwrap_err()
+                .code,
             Code::LimitExceeded
         );
-        let request = || restore::InspectRequest { source: incoming.to_string_lossy().into() };
+        let request = || restore::InspectRequest {
+            source: incoming.to_string_lossy().into(),
+        };
         let p = restore::inspect(&c, target.path(), request()).unwrap();
         let token = p.preview_token.clone();
         let result = restore::prepare(
@@ -1063,14 +1156,23 @@ fn restore_over_an_over_cap_journal_keeps_an_uncapped_safety_copy_and_rolls_back
             },
         )
         .unwrap();
-        let safety = target.path().join("data-controls").join(&result.operation_id).join("safety.db");
+        let safety = target
+            .path()
+            .join("data-controls")
+            .join(&result.operation_id)
+            .join("safety.db");
         assert!(fs::metadata(&safety).unwrap().len() > filesystem::MAX_ENTRY);
         drop(c);
         if fail_install {
             assert!(restore::recover_failing(target.path(), &live).is_err());
             let restored = journal(&live);
             // Same content hash as before the restore: the same archive gives the same preview token.
-            assert_eq!(restore::inspect(&restored, target.path(), request()).unwrap().preview_token, token);
+            assert_eq!(
+                restore::inspect(&restored, target.path(), request())
+                    .unwrap()
+                    .preview_token,
+                token
+            );
         } else {
             restore::recover(target.path(), &live).unwrap();
             assert_eq!(archive::dump(&journal(&live)).unwrap(), incoming_data);
@@ -1089,7 +1191,10 @@ fn restore_space_figures_come_from_one_pure_calculation() {
             prepare_check: 81_920,
         }
     );
-    assert_eq!(restore::required(10, 4096).advertised, 1_090_519_040 + 81_920);
+    assert_eq!(
+        restore::required(10, 4096).advertised,
+        1_090_519_040 + 81_920
+    );
 }
 #[test]
 fn inspect_and_prepare_refuse_too_little_space_before_any_restore_intent() {
@@ -1097,14 +1202,21 @@ fn inspect_and_prepare_refuse_too_little_space_before_any_restore_intent() {
     let incoming = backup_with_account(source.path(), "incoming");
     let target = tempfile::tempdir().unwrap();
     let c = heavy(&target.path().join(db::DB_FILE_NAME));
-    let request = || restore::InspectRequest { source: incoming.to_string_lossy().into() };
-    let get = |name| c.pragma_query_value(None, name, |r| r.get::<_, i64>(0)).unwrap() as u64;
+    let request = || restore::InspectRequest {
+        source: incoming.to_string_lossy().into(),
+    };
+    let get = |name| {
+        c.pragma_query_value(None, name, |r| r.get::<_, i64>(0))
+            .unwrap() as u64
+    };
     let required = restore::required(get("page_count"), get("page_size"));
     assert!(required.prepare_check > 2 * filesystem::MAX_ENTRY);
     // Inspect reports, and itself enforces, the figure that includes twice the live journal.
     let short = |_: &Path| Ok(required.advertised - 1);
     assert_eq!(
-        restore::inspect_with(&c, target.path(), request(), &short).unwrap_err().code,
+        restore::inspect_with(&c, target.path(), request(), &short)
+            .unwrap_err()
+            .code,
         Code::InsufficientSpace
     );
     let exact = |_: &Path| Ok(required.advertised);
@@ -1112,7 +1224,13 @@ fn inspect_and_prepare_refuse_too_little_space_before_any_restore_intent() {
     assert_eq!(p.required_free_bytes, required.advertised);
     // Space runs out at the operation folder between preview and the safety copy.
     let operations = target.path().join("data-controls");
-    let shrinking = |dir: &Path| Ok(if dir.starts_with(&operations) { required.prepare_check } else { u64::MAX });
+    let shrinking = |dir: &Path| {
+        Ok(if dir.starts_with(&operations) {
+            required.prepare_check
+        } else {
+            u64::MAX
+        })
+    };
     let before = archive::content_hash(&c).unwrap();
     let refused = restore::prepare_with(
         &c,
@@ -1136,17 +1254,34 @@ fn inspect_and_prepare_refuse_too_little_space_before_any_restore_intent() {
 fn content_hash_framing_separates_types_cells_and_rowids() {
     let hash = |sql: &str| {
         let c = Connection::open_in_memory().unwrap();
-        c.execute_batch(&format!("CREATE TABLE t(a,b); {sql}")).unwrap();
+        c.execute_batch(&format!("CREATE TABLE t(a,b); {sql}"))
+            .unwrap();
         archive::content_hash(&c).unwrap()
     };
     let base = hash("INSERT INTO t VALUES(1,NULL);");
-    assert_ne!(base, hash("INSERT INTO t VALUES('1',NULL);"), "Integer 1 vs Text '1'");
-    assert_ne!(base, hash("INSERT INTO t VALUES(NULL,1);"), "value moved to the next cell");
-    assert_ne!(hash("INSERT INTO t VALUES('ab','c');"), hash("INSERT INTO t VALUES('a','bc');"));
-    assert_ne!(base, hash("INSERT INTO t(rowid,a,b) VALUES(7,1,NULL);"), "rowid only");
+    assert_ne!(
+        base,
+        hash("INSERT INTO t VALUES('1',NULL);"),
+        "Integer 1 vs Text '1'"
+    );
+    assert_ne!(
+        base,
+        hash("INSERT INTO t VALUES(NULL,1);"),
+        "value moved to the next cell"
+    );
+    assert_ne!(
+        hash("INSERT INTO t VALUES('ab','c');"),
+        hash("INSERT INTO t VALUES('a','bc');")
+    );
+    assert_ne!(
+        base,
+        hash("INSERT INTO t(rowid,a,b) VALUES(7,1,NULL);"),
+        "rowid only"
+    );
     assert_eq!(base, hash("INSERT INTO t VALUES(1,NULL);"));
     let c = Connection::open_in_memory().unwrap();
-    c.execute_batch("CREATE TABLE t(a); INSERT INTO t VALUES(CAST(x'ff' AS TEXT));").unwrap();
+    c.execute_batch("CREATE TABLE t(a); INSERT INTO t VALUES(CAST(x'ff' AS TEXT));")
+        .unwrap();
     assert_eq!(archive::content_hash(&c).unwrap_err().code, Code::Integrity);
     assert_eq!(archive::dump(&c).unwrap_err().code, Code::Integrity);
 }
@@ -1156,16 +1291,27 @@ fn preview_tokens_change_when_any_row_or_rowid_changes() {
     let mut c = journal(&dir.path().join(db::DB_FILE_NAME));
     account(&mut c, "a");
     let token = |c: &Connection| {
-        deletion::preview(c, dir.path(), deletion::PreviewRequest { scope: deletion::Scope::Journal })
-            .unwrap()
-            .preview_token
+        deletion::preview(
+            c,
+            dir.path(),
+            deletion::PreviewRequest {
+                scope: deletion::Scope::Journal,
+            },
+        )
+        .unwrap()
+        .preview_token
     };
     let first = token(&c);
     assert_eq!(token(&c), first);
-    c.execute("INSERT INTO settings(key,value_json,updated_at) VALUES('k','1','t')", []).unwrap();
+    c.execute(
+        "INSERT INTO settings(key,value_json,updated_at) VALUES('k','1','t')",
+        [],
+    )
+    .unwrap();
     let second = token(&c);
     assert_ne!(second, first);
-    c.execute("UPDATE settings SET rowid=rowid+100 WHERE key='k'", []).unwrap();
+    c.execute("UPDATE settings SET rowid=rowid+100 WHERE key='k'", [])
+        .unwrap();
     assert_ne!(token(&c), second, "rowid only");
 }
 fn queue(root: &Path) -> std::path::PathBuf {
@@ -1176,13 +1322,21 @@ fn quarantine(root: &Path) -> std::path::PathBuf {
 }
 fn entries(dir: &Path) -> Vec<String> {
     let mut names: Vec<String> = fs::read_dir(dir)
-        .map(|d| d.map(|e| e.unwrap().file_name().into_string().unwrap()).collect())
+        .map(|d| {
+            d.map(|e| e.unwrap().file_name().into_string().unwrap())
+                .collect()
+        })
         .unwrap_or_default();
     names.sort();
     names
 }
 /// A cleanup marker as any build writes it (camelCase `Cleanup`).
-fn marker_json(op: &str, whole: bool, attachments: &[(String, String)], copies: &[&str]) -> Vec<u8> {
+fn marker_json(
+    op: &str,
+    whole: bool,
+    attachments: &[(String, String)],
+    copies: &[&str],
+) -> Vec<u8> {
     let attachments: Vec<_> = attachments
         .iter()
         .map(|(id, key)| serde_json::json!({"id": id, "storageKey": key, "byteSize": 1, "sha256": "0".repeat(64)}))
@@ -1231,9 +1385,21 @@ fn an_erase_listing_thousands_of_attachments_completes_its_cleanup() {
         fs::write(dir.path().join("attachments").join(&key), bytes).unwrap();
     }
     tx.commit().unwrap();
-    let p = deletion::preview(&c, dir.path(), deletion::PreviewRequest { scope: deletion::Scope::Journal }).unwrap();
+    let p = deletion::preview(
+        &c,
+        dir.path(),
+        deletion::PreviewRequest {
+            scope: deletion::Scope::Journal,
+        },
+    )
+    .unwrap();
     assert_eq!(p.attachments.len(), 4500);
-    assert_eq!(deletion::execute(&mut c, dir.path(), approved(&p)).unwrap().state, "completed");
+    assert_eq!(
+        deletion::execute(&mut c, dir.path(), approved(&p))
+            .unwrap()
+            .state,
+        "completed"
+    );
     assert!(entries(&dir.path().join("attachments")).is_empty());
     assert!(entries(&queue(dir.path())).is_empty());
 }
@@ -1247,14 +1413,23 @@ fn an_unparseable_marker_is_quarantined_never_deleted_and_never_blocks() {
     assert!(entries(&queue(dir.path())).is_empty());
     let held = entries(&quarantine(dir.path()));
     assert_eq!(held.len(), 1);
-    assert_eq!(fs::read(quarantine(dir.path()).join(&held[0])).unwrap(), b"");
+    assert_eq!(
+        fs::read(quarantine(dir.path()).join(&held[0])).unwrap(),
+        b""
+    );
     // The same file name again keeps both quarantined copies.
     put_marker(dir.path(), &format!("{op}.json"), b"{\"truncated");
     deletion::recover_cleanup(&c, dir.path()).unwrap();
     let held = entries(&quarantine(dir.path()));
     assert_eq!(held.len(), 2);
-    let contents: std::collections::BTreeSet<Vec<u8>> = held.iter().map(|n| fs::read(quarantine(dir.path()).join(n)).unwrap()).collect();
-    assert_eq!(contents, std::collections::BTreeSet::from([b"".to_vec(), b"{\"truncated".to_vec()]));
+    let contents: std::collections::BTreeSet<Vec<u8>> = held
+        .iter()
+        .map(|n| fs::read(quarantine(dir.path()).join(n)).unwrap())
+        .collect();
+    assert_eq!(
+        contents,
+        std::collections::BTreeSet::from([b"".to_vec(), b"{\"truncated".to_vec()])
+    );
 }
 #[test]
 fn one_marker_that_cannot_finish_does_not_stop_the_next() {
@@ -1265,12 +1440,36 @@ fn one_marker_that_cannot_finish_does_not_stop_the_next() {
     fs::write(attachments.join("free.png"), b"unowned").unwrap();
     let stuck = format!("{}.json", "00000000-0000-4000-8000-000000000001");
     let free = format!("{}.json", "ffffffff-ffff-4fff-bfff-ffffffffffff");
-    put_marker(dir.path(), &stuck, &marker_json("00000000-0000-4000-8000-000000000001", false, &[("s".into(), "stuck.png".into())], &[]));
-    put_marker(dir.path(), &free, &marker_json("ffffffff-ffff-4fff-bfff-ffffffffffff", false, &[("f".into(), "free.png".into())], &[]));
+    put_marker(
+        dir.path(),
+        &stuck,
+        &marker_json(
+            "00000000-0000-4000-8000-000000000001",
+            false,
+            &[("s".into(), "stuck.png".into())],
+            &[],
+        ),
+    );
+    put_marker(
+        dir.path(),
+        &free,
+        &marker_json(
+            "ffffffff-ffff-4fff-bfff-ffffffffffff",
+            false,
+            &[("f".into(), "free.png".into())],
+            &[],
+        ),
+    );
     let _ = deletion::recover_cleanup(&c, dir.path());
-    assert!(!attachments.join("free.png").exists(), "the second marker was processed");
+    assert!(
+        !attachments.join("free.png").exists(),
+        "the second marker was processed"
+    );
     assert_eq!(entries(&queue(dir.path())), vec![stuck]);
-    assert!(attachments.join("stuck.png").is_dir(), "nothing deleted for the pending marker");
+    assert!(
+        attachments.join("stuck.png").is_dir(),
+        "nothing deleted for the pending marker"
+    );
 }
 #[test]
 fn whole_journal_erase_removes_the_quarantine_and_account_deletion_keeps_it() {
@@ -1279,13 +1478,30 @@ fn whole_journal_erase_removes_the_quarantine_and_account_deletion_keeps_it() {
         let mut c = journal(&dir.path().join("live.db"));
         let a = account(&mut c, "A");
         account(&mut c, "B");
-        put_marker(dir.path(), &format!("{}.json", crate::domain::new_id()), b"not json");
+        put_marker(
+            dir.path(),
+            &format!("{}.json", crate::domain::new_id()),
+            b"not json",
+        );
         deletion::recover_cleanup(&c, dir.path()).unwrap();
         assert_eq!(entries(&quarantine(dir.path())).len(), 1);
-        let scope = if whole { deletion::Scope::Journal } else { deletion::Scope::Account { account_id: a } };
+        let scope = if whole {
+            deletion::Scope::Journal
+        } else {
+            deletion::Scope::Account { account_id: a }
+        };
         let p = deletion::preview(&c, dir.path(), deletion::PreviewRequest { scope }).unwrap();
-        assert_eq!(deletion::execute(&mut c, dir.path(), approved(&p)).unwrap().state, "completed");
-        assert_eq!(quarantine(dir.path()).exists(), !whole, "whole journal: {whole}");
+        assert_eq!(
+            deletion::execute(&mut c, dir.path(), approved(&p))
+                .unwrap()
+                .state,
+            "completed"
+        );
+        assert_eq!(
+            quarantine(dir.path()).exists(),
+            !whole,
+            "whole journal: {whole}"
+        );
     }
 }
 /// The cleanup marker exactly as the 92e7980 build reads it (`deletion.rs:49-56`).
@@ -1318,7 +1534,10 @@ fn a_large_cleanup_is_split_into_markers_an_older_build_can_read() {
         operation_id: crate::domain::new_id(),
         whole_journal: true,
         attachments: attachments.clone(),
-        recovery_copies: vec!["data-controls-work".into(), "fundedflow.db.before-v14.bak".into()],
+        recovery_copies: vec![
+            "data-controls-work".into(),
+            "fundedflow.db.before-v14.bak".into(),
+        ],
     };
     assert!(serde_json::to_vec(&cleanup).unwrap().len() > deletion::MARKER_LIMIT);
     let files = deletion::marker_files(&cleanup).unwrap();
@@ -1330,14 +1549,24 @@ fn a_large_cleanup_is_split_into_markers_an_older_build_can_read() {
             serde_json::from_slice(f).unwrap()
         })
         .collect();
-    assert!(parsed.iter().all(|m| m.operation_id == cleanup.operation_id && m.whole_journal));
+    assert!(
+        parsed
+            .iter()
+            .all(|m| m.operation_id == cleanup.operation_id && m.whole_journal)
+    );
     assert_eq!(parsed[0].recovery_copies, cleanup.recovery_copies);
     assert!(parsed[1..].iter().all(|m| m.recovery_copies.is_empty()));
     let rejoined: Vec<super::Attachment> = parsed.into_iter().flat_map(|m| m.attachments).collect();
     assert_eq!(rejoined, attachments);
     // A small cleanup stays one marker, byte-identical to the unsplit serialization.
-    let small = deletion::Cleanup { attachments: attachments[..3].to_vec(), ..cleanup };
-    assert_eq!(deletion::marker_files(&small).unwrap(), vec![serde_json::to_vec(&small).unwrap()]);
+    let small = deletion::Cleanup {
+        attachments: attachments[..3].to_vec(),
+        ..cleanup
+    };
+    assert_eq!(
+        deletion::marker_files(&small).unwrap(),
+        vec![serde_json::to_vec(&small).unwrap()]
+    );
 }
 #[test]
 fn marker_temp_files_are_created_in_the_data_root_never_in_the_queue() {
@@ -1353,8 +1582,15 @@ fn marker_temp_files_are_created_in_the_data_root_never_in_the_queue() {
     .unwrap();
     // Each temp file was observed before its marker appeared; only finished markers ever sit in the queue.
     assert_eq!(seen, vec![0, 1]);
-    assert_eq!(entries(&queue(dir.path())), vec![format!("{op}-1.json"), format!("{op}-2.json")]);
-    assert!(entries(dir.path()).iter().all(|n| n == "data-controls-cleanup"));
+    assert_eq!(
+        entries(&queue(dir.path())),
+        vec![format!("{op}-1.json"), format!("{op}-2.json")]
+    );
+    assert!(
+        entries(dir.path())
+            .iter()
+            .all(|n| n == "data-controls-cleanup")
+    );
     // A name that already exists is never replaced.
     assert!(deletion::write_markers(dir.path(), &op, &files[..1], &mut |_| {}).is_ok());
     assert!(deletion::write_markers(dir.path(), &op, &files[..1], &mut |_| {}).is_err());
@@ -1367,9 +1603,20 @@ fn markers_this_build_leaves_pending_are_readable_by_the_previous_build() {
         let a = account(&mut c, "A");
         let j = journal_note(&mut c, &a);
         image(&c, dir.path(), &j, "image", "image.png");
-        fs::write(dir.path().join("fundedflow.db.before-v14.bak"), b"old backup").unwrap();
-        let scope = if whole { deletion::Scope::Journal } else { deletion::Scope::Account { account_id: a } };
-        let held = dir.path().join("data-controls").join(crate::domain::new_id());
+        fs::write(
+            dir.path().join("fundedflow.db.before-v14.bak"),
+            b"old backup",
+        )
+        .unwrap();
+        let scope = if whole {
+            deletion::Scope::Journal
+        } else {
+            deletion::Scope::Account { account_id: a }
+        };
+        let held = dir
+            .path()
+            .join("data-controls")
+            .join(crate::domain::new_id());
         fs::create_dir_all(&held).unwrap();
         fs::write(held.join("held.bin"), b"x").unwrap();
         let p = deletion::preview(&c, dir.path(), deletion::PreviewRequest { scope }).unwrap();
@@ -1378,7 +1625,11 @@ fn markers_this_build_leaves_pending_are_readable_by_the_previous_build() {
         #[cfg(windows)]
         let _lock = {
             use std::os::windows::fs::OpenOptionsExt;
-            fs::OpenOptions::new().read(true).share_mode(0).open(held.join("held.bin")).unwrap()
+            fs::OpenOptions::new()
+                .read(true)
+                .share_mode(0)
+                .open(held.join("held.bin"))
+                .unwrap()
         };
         #[cfg(unix)]
         {
@@ -1390,17 +1641,33 @@ fn markers_this_build_leaves_pending_are_readable_by_the_previous_build() {
             fs::remove_file(&file).unwrap();
             fs::create_dir(&file).unwrap();
         }
-        assert_eq!(deletion::execute(&mut c, dir.path(), approved(&p)).unwrap().state, "cleanup_pending");
+        assert_eq!(
+            deletion::execute(&mut c, dir.path(), approved(&p))
+                .unwrap()
+                .state,
+            "cleanup_pending"
+        );
         let names = entries(&queue(dir.path()));
         assert_eq!(names.len(), 1);
-        let old: OldCleanup = serde_json::from_slice(&fs::read(queue(dir.path()).join(&names[0])).unwrap()).unwrap();
+        let old: OldCleanup =
+            serde_json::from_slice(&fs::read(queue(dir.path()).join(&names[0])).unwrap()).unwrap();
         assert_eq!(old.whole_journal, whole);
         assert_eq!(old.attachments.len(), 1);
-        assert!(old.recovery_copies.iter().all(|k| old_build_accepts(k)), "{:?}", old.recovery_copies);
+        assert!(
+            old.recovery_copies.iter().all(|k| old_build_accepts(k)),
+            "{:?}",
+            old.recovery_copies
+        );
         assert_eq!(old.recovery_copies.is_empty(), !whole);
         // A new erase or restore is refused while it is pending.
-        assert_eq!(deletion::recover_cleanup(&c, dir.path()).unwrap(), deletion::CleanupOutcome::Pending);
-        assert_eq!(deletion::cleanup_state(dir.path()), deletion::CleanupOutcome::Pending);
+        assert_eq!(
+            deletion::recover_cleanup(&c, dir.path()).unwrap(),
+            deletion::CleanupOutcome::Pending
+        );
+        assert_eq!(
+            deletion::cleanup_state(dir.path()),
+            deletion::CleanupOutcome::Pending
+        );
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -1414,15 +1681,31 @@ fn a_marker_whose_metadata_cannot_be_read_is_left_pending_never_quarantined() {
     fs::create_dir_all(queue(dir.path())).unwrap();
     // Metadata that cannot be read (here: the entry is gone) says nothing about the bytes: leave it in place.
     let missing = queue(dir.path()).join(format!("{}.json", crate::domain::new_id()));
-    assert!(matches!(deletion::read_marker(&missing), deletion::Marker::Unavailable));
+    assert!(matches!(
+        deletion::read_marker(&missing),
+        deletion::Marker::Unavailable
+    ));
     // Only an entry confirmed not to be a regular file, or bytes that are not a marker, count as unparseable.
     let folder = queue(dir.path()).join("folder.json");
     fs::create_dir(&folder).unwrap();
-    assert!(matches!(deletion::read_marker(&folder), deletion::Marker::Unparseable));
+    assert!(matches!(
+        deletion::read_marker(&folder),
+        deletion::Marker::Unparseable
+    ));
     let garbage = queue(dir.path()).join("garbage.json");
     fs::write(&garbage, b"not json").unwrap();
-    assert!(matches!(deletion::read_marker(&garbage), deletion::Marker::Unparseable));
+    assert!(matches!(
+        deletion::read_marker(&garbage),
+        deletion::Marker::Unparseable
+    ));
     let valid = queue(dir.path()).join("valid.json");
-    fs::write(&valid, marker_json(&crate::domain::new_id(), false, &[], &[])).unwrap();
-    assert!(matches!(deletion::read_marker(&valid), deletion::Marker::Parsed(_)));
+    fs::write(
+        &valid,
+        marker_json(&crate::domain::new_id(), false, &[], &[]),
+    )
+    .unwrap();
+    assert!(matches!(
+        deletion::read_marker(&valid),
+        deletion::Marker::Parsed(_)
+    ));
 }

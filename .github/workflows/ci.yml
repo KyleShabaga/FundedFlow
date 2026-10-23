@@ -57,11 +57,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
-          components: clippy
+          components: clippy, rustfmt
 
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: apps/desktop/src-tauri
+
+      # TASK-040: formatting is checked before the slower Rust steps so drift fails fast. Default rustfmt style for
+      # the crate's edition (no rustfmt.toml); fix locally with `cargo fmt` in apps/desktop/src-tauri.
+      - name: cargo fmt --check
+        working-directory: apps/desktop/src-tauri
+        run: cargo fmt --check
 
       # Includes src/parity.rs, which checks packages/domain/test/fixtures against the Rust code.
       - name: cargo test

@@ -29,7 +29,7 @@
 
 use std::collections::HashMap;
 
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, params};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
@@ -38,7 +38,10 @@ use super::parse::RawRow;
 use crate::error::AppResult;
 
 pub fn sha256_hex(bytes: &[u8]) -> String {
-    Sha256::digest(bytes).iter().map(|b| format!("{b:02x}")).collect()
+    Sha256::digest(bytes)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 /// The key a new trade is stored under (current identity version).
@@ -67,7 +70,8 @@ fn basis(identity: &Identity) -> String {
         Identity::FillPair { buy, sell } => format!("buy/sell fill IDs ({buy} / {sell})"),
         Identity::TradeId(id) => format!("trade ID ({id})"),
         Identity::Composite(_) => {
-            "symbol, side, quantity, prices, timestamps and P&L (no IDs to tell them apart)".to_string()
+            "symbol, side, quantity, prices, timestamps and P&L (no IDs to tell them apart)"
+                .to_string()
         }
     }
 }
@@ -116,16 +120,25 @@ type Saved = (String, String, Option<String>, Option<String>);
 
 /// The account's trade with this identity: its current key, else (fill pairs) a legacy key whose
 /// stored pair is exactly this one. `Err` carries a legacy trade whose stored pair is unreadable.
-fn find_saved(conn: &Connection, account_id: &str, key: &str, identity: &Identity) -> AppResult<Result<Option<Saved>, Saved>> {
+fn find_saved(
+    conn: &Connection,
+    account_id: &str,
+    key: &str,
+    identity: &Identity,
+) -> AppResult<Result<Option<Saved>, Saved>> {
     let mut current = conn.prepare_cached(
         "SELECT t.id, t.created_at, t.deleted_at, b.file_name
          FROM trades t LEFT JOIN import_batches b ON b.id = t.import_batch_id
          WHERE t.account_id = ?1 AND t.dedup_key = ?2",
     )?;
     let saved = current
-        .query_row(params![account_id, key], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+        .query_row(params![account_id, key], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+        })
         .optional()?;
-    let Identity::FillPair { buy, sell } = identity else { return Ok(Ok(saved)) };
+    let Identity::FillPair { buy, sell } = identity else {
+        return Ok(Ok(saved));
+    };
     if saved.is_some() || legacy_writer() {
         return Ok(Ok(saved));
     }
@@ -138,7 +151,12 @@ fn find_saved(conn: &Connection, account_id: &str, key: &str, identity: &Identit
     let found = legacy
         .query_row(params![account_id, legacy_fill_pair_key(buy, sell)], |r| {
             Ok((
-                (r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, Option<String>>(2)?, r.get::<_, Option<String>>(3)?),
+                (
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, Option<String>>(2)?,
+                    r.get::<_, Option<String>>(3)?,
+                ),
                 r.get::<_, bool>(4)?,
                 r.get::<_, Option<String>>(5)?,
                 r.get::<_, Option<String>>(6)?,
@@ -157,11 +175,16 @@ fn day(at: &str) -> String {
 }
 
 fn origin(file: Option<String>) -> String {
-    file.map(|f| format!("'{f}'")).unwrap_or_else(|| "manual entry".into())
+    file.map(|f| format!("'{f}'"))
+        .unwrap_or_else(|| "manual entry".into())
 }
 
 /// Classify each row against the file and the account's trades.
-pub fn classify(conn: &Connection, account_id: &str, rows: &[(&RawRow, &Outcome)]) -> AppResult<Vec<Match>> {
+pub fn classify(
+    conn: &Connection,
+    account_id: &str,
+    rows: &[(&RawRow, &Outcome)],
+) -> AppResult<Vec<Match>> {
     // Retain an existing trade's identity when later rows duplicate the first
     // occurrence. Commit can then persist every duplicate's provenance link.
     let mut first_seen: HashMap<String, (u64, Option<String>)> = HashMap::new();
@@ -200,7 +223,10 @@ pub fn classify(conn: &Connection, account_id: &str, rows: &[(&RawRow, &Outcome)
                 continue;
             }
         };
-        first_seen.insert(key.clone(), (raw.line_number, saved.as_ref().map(|(id, ..)| id.clone())));
+        first_seen.insert(
+            key.clone(),
+            (raw.line_number, saved.as_ref().map(|(id, ..)| id.clone())),
+        );
         out.push(match saved {
             None => Match::New,
             Some((id, created, deleted, file)) => {
