@@ -7,7 +7,15 @@ Coordinator: the Claude Code board-review session. Kyle's standing permissions f
 
 Kyle approves; Claude never records an approval.
 
-## Remaining plan (as of 2026-10-23 09:10 MDT)
+## Remaining plan (as of 2026-10-23 12:45 MDT; save point before Kyle restarts the PC)
+000. Merged: #133 (smoke checklist B3, f2f9c33) and #134 TASK-018 (eeda9a1; cards updated; the manual junction check moves to TASK-030). 30 PRs merged in total.
+   - TASK-045 PR #135: the review fixes were pushed at f289149. Kyle confirmed the 8 KiB bound applies from the 2nd calculation on (comment on the approval card). After the restart, check whether the re-review of 9fac5f9..f289149 finished; if not, run it again. Then wait for CI and merge.
+   - TASK-011: (a) and (c) are recorded (`execution/task-011-windows-baseline-results.md`). TASK-023 is Not Needed. The backup limit is a V1 known gap, tracked on the Development Board card 4021bd4b6bde81249483d1071c21c6e6.
+   - TASK-011(b) in Windows Sandbox: Kyle is enabling Sandbox on THIS PC and then restarting it.
+     - Scripts are in `scratchpad/sandbox/` (`run-cases.ps1`, `ff-old.wsb`, `ff-new.wsb`; output goes to `out\`).
+     - The old installer is at `kit/old`. The new one comes from release-installer run 39991525917 (eeda9a1) and goes into `kit/new` once the run finishes.
+     - Run `WindowsSandbox.exe ff-old.wsb`, wait for `out\old\done.txt`, close the sandbox, then do the same for new.
+   - Kyle wants every question asked in this coordinator session, because he is remote.
 00. #131 TASK-028 MERGED (aebd450), #132 TASK-042 MERGED (97deff5; review fix 0f41b2c; Triage cards 4021bd4b6bde8123… and 4021bd4b6bde8198… filed). 28 PRs merged. TASK-045 (migration 0023) running as a worktree agent on `feat/task-045-calc-snapshot-dedup`. TASK-011 kit for Kyle: artifact https://claude.ai/artifact/3DKXuyuHS4C1bzn1b7rge2 (CI installer run 39971011229, FundedFlow_0.1.1_x64-setup.exe, sha256 18ebc9ae…, source 819f967). Usage: 5-hour 27%, weekly 84%.
 0b. #130 TASK-026 MERGED (819f967); 25 PRs merged in total. TASK-028 is running as a worktree agent (it uses the TASK-011-unmeasured branches).
 0a. Merged (2026-10-23): #129 TASK-044 (00ddb23) and #128 TASK-043 (4144cb6, marked Verified). 24 PRs merged in total. Running: TASK-026 (worktree agent) and TASK-042 (worktree agent; migration 0022, Kyle's 4 rules). Next: TASK-045 after 042 merges, then TASK-028 after 026. Usage: 5-hour 15%, weekly 83%.
