@@ -17,6 +17,13 @@ it.each(failureCategories)("accepts the backend's %s failure contract", category
   expect(runtimeStatusSchema.parse(failed(category))).toEqual(failed(category));
 });
 
+it("accepts a non-retryable data_folder_link failure at the data-folder stage (TASK-018)", () => {
+  const status = { ...failed("data_folder_link"), schemaVersion: null };
+  expect(status.stage).toBe("data_directory");
+  expect(status.failure?.retryable).toBe(false);
+  expect(runtimeStatusSchema.parse(status)).toEqual(status);
+});
+
 it.each([
   null, {}, { ...ready, state: "unknown" }, { ...ready, stage: "unknown" },
   { ...ready, schemaVersion: -1 }, { ...ready, schemaVersion: null },
