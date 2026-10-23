@@ -52,10 +52,14 @@ const CODE_COPY: Record<DataControlError["code"], string> = {
   recovery_required: "An earlier restore or deletion needs to finish first. Use Retry in the app's recovery banner.",
 };
 
-/** A failed native data control, kept with its stable code. Nothing in it is a path or a row. */
+/** A failed native data control, kept with its stable code and native limit detail. Nothing in it is a path or a row. */
 export class DataControlProblem extends Error {
-  constructor(readonly code: DataControlError["code"] | "dialog" | "unexpected") {
-    super(code === "dialog" ? "The file chooser couldn't open." : code === "unexpected" ? "The operation couldn't be completed." : CODE_COPY[code]);
+  constructor(
+    readonly code: DataControlError["code"] | "dialog" | "unexpected",
+    readonly detail?: string,
+  ) {
+    const copy = code === "dialog" ? "The file chooser couldn't open." : code === "unexpected" ? "The operation couldn't be completed." : CODE_COPY[code];
+    super(detail ? `${copy} Over the limit: ${detail}.` : copy);
     this.name = "DataControlProblem";
   }
 }
@@ -68,7 +72,7 @@ async function native<T>(task: () => Promise<T>): Promise<T> {
   try {
     return await task();
   } catch (error) {
-    if (error instanceof DataControlFailure) throw new DataControlProblem(error.error.code);
+    if (error instanceof DataControlFailure) throw new DataControlProblem(error.error.code, error.error.detail);
     throw new DataControlProblem("unexpected");
   }
 }

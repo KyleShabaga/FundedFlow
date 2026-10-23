@@ -192,6 +192,21 @@ describe("data information and export", () => {
     expect(screen.queryByText("native text")).toBeNull();
   });
 
+  it("says which limit was exceeded and by how much", async () => {
+    const user = userEvent.setup();
+    controls.exportArchive.mockRejectedValue(new DataControlFailure({
+      code: "limit_exceeded",
+      message: "native text",
+      detail: "database pages: 70254592 bytes, limit 67108864 bytes",
+    }));
+    renderPage();
+    await user.click(screen.getByRole("checkbox", { name: /not encrypted/ }));
+    await user.click(screen.getByRole("button", { name: "Choose location and export…" }));
+    expect(await screen.findByText(
+      "This is larger than the supported archive limits. Over the limit: database pages: 70254592 bytes, limit 67108864 bytes.",
+    )).toBeTruthy();
+  });
+
   it("disables every data action while an export runs and rejects a second press", async () => {
     const user = userEvent.setup();
     let finish!: (value: unknown) => void;

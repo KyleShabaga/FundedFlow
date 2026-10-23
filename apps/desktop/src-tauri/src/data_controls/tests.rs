@@ -905,3 +905,93 @@ fn an_unreadable_staged_restore_is_abandoned_without_touching_the_original() {
     restore::recover(target.path(), &path).unwrap();
     assert_eq!(archive::dump(&journal(&path)).unwrap(), before);
 }
+/// A journal whose file is mostly free pages: over 64 MiB on disk, a few KiB of live data.
+fn bloated(path: &Path) -> Connection {
+    let mut c = journal(path);
+    account(&mut c, "bloated");
+    let filler = format!("\"{}\"", "x".repeat(1024 * 1024));
+    for i in 0..72 {
+        c.execute(
+            "INSERT INTO settings(key,value_json,updated_at) VALUES(?1,?2,'t')",
+            rusqlite::params![format!("filler-{i}"), filler],
+        )
+        .unwrap();
+    }
+    // A row after the gap, so a renumbered rowid would show in the dump.
+    c.execute("INSERT INTO settings(key,value_json,updated_at) VALUES('kept','1','t')", [])
+        .unwrap();
+    c.execute("DELETE FROM settings WHERE key LIKE 'filler-%'", []).unwrap();
+    c.execute_batch("PRAGMA wal_checkpoint(TRUNCATE)").unwrap();
+    c
+}
+fn pages(c: &Connection) -> (i64, i64) {
+    let get = |name| c.pragma_query_value(None, name, |r| r.get::<_, i64>(0)).unwrap();
+    (get("page_count"), get("freelist_count"))
+}
+#[test]
+fn free_pages_do_not_count_toward_live_caps_and_the_live_journal_is_never_vacuumed() {
+    let target = tempfile::tempdir().unwrap();
+    let live = target.path().join(db::DB_FILE_NAME);
+    let c = bloated(&live);
+    let page_size: i64 = c.pragma_query_value(None, "page_size", |r| r.get(0)).unwrap();
+    let before = pages(&c);
+    assert!(before.0 * page_size > filesystem::MAX_ENTRY as i64);
+    assert!((before.0 - before.1) * page_size < 8 * 1024 * 1024, "{before:?} x {page_size}");
+    let data = archive::dump(&c).unwrap();
+    deletion::preview(&c, target.path(), deletion::PreviewRequest { scope: deletion::Scope::Journal }).unwrap();
+    let out = target.path().join("bloated.zip");
+    archive::export(&c, &target.path().join("attachments"), &out, true).unwrap();
+    let exported = archive::inspect_to(&out, target.path()).unwrap();
+    let image = exported.directory.path().join("journal.sqlite");
+    assert!(fs::metadata(&image).unwrap().len() < 8 * 1024 * 1024);
+    assert_eq!(archive::dump(&archive::readonly(&image).unwrap()).unwrap(), data);
+    assert_eq!(pages(&c), before);
+    // Restoring a small archive over the bloated journal snapshots it as the safety copy.
+    let source = tempfile::tempdir().unwrap();
+    let mut s = journal(&source.path().join("source.db"));
+    account(&mut s, "incoming");
+    let incoming = source.path().join("incoming.zip");
+    archive::export(&s, &source.path().join("attachments"), &incoming, true).unwrap();
+    let p = restore::inspect(&c, target.path(), restore::InspectRequest { source: incoming.to_string_lossy().into() })
+        .unwrap();
+    restore::prepare(
+        &c,
+        target.path(),
+        restore::RestoreRequest {
+            source: incoming.to_string_lossy().into(),
+            preview_token: p.preview_token,
+            confirmation: "REPLACE ENTIRE JOURNAL".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(pages(&c), before);
+    assert_eq!(archive::dump(&c).unwrap(), data);
+}
+#[test]
+fn a_journal_over_a_real_cap_names_the_component_and_measured_value() {
+    let dir = tempfile::tempdir().unwrap();
+    let c = journal(&dir.path().join("live.db"));
+    let filler = format!("\"{}\"", "x".repeat(1024 * 1024));
+    for i in 0..66 {
+        c.execute(
+            "INSERT INTO settings(key,value_json,updated_at) VALUES(?1,?2,'t')",
+            rusqlite::params![format!("filler-{i}"), filler],
+        )
+        .unwrap();
+    }
+    let dumped = archive::dump(&c).unwrap_err();
+    assert_eq!(dumped.code, Code::LimitExceeded);
+    let detail = dumped.detail.unwrap();
+    assert!(detail.starts_with("database pages: "), "{detail}");
+    assert!(detail.ends_with(" bytes, limit 67108864 bytes"), "{detail}");
+    let measured: u64 = detail["database pages: ".len()..].split(' ').next().unwrap().parse().unwrap();
+    assert!(measured > filesystem::MAX_ENTRY);
+    let exported = archive::export(&c, &dir.path().join("attachments"), &dir.path().join("out.zip"), true).unwrap_err();
+    assert_eq!(exported.code, Code::LimitExceeded);
+    assert!(exported.detail.unwrap().starts_with("database pages: "));
+    // Errors without detail serialize exactly as before.
+    assert_eq!(
+        serde_json::to_value(fail(Code::Busy)).unwrap(),
+        serde_json::json!({"code": "busy", "message": "Another FundedFlow process owns this journal."})
+    );
+}

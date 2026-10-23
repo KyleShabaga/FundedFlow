@@ -83,6 +83,7 @@ fn native_data_control_outputs_match_portable_wire_fixture() {
         {"command":"inspect_journal_archive","output":preview}, {"command":"restore_journal_archive","output":restored},
         {"command":"preview_permanent_deletion","output":deletion}, {"command":"permanently_delete_data","output":deleted},
         {"command":"retry_data_cleanup","output":null}, {"command":"error","output":super::fail(Code::StalePreview)},
+        {"command":"error","output":super::over_limit("database pages", 70_254_592, filesystem::MAX_ENTRY, "bytes")},
     ]);
     normalize(&mut result);
     let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
