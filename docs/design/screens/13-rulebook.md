@@ -60,7 +60,8 @@ Tabs: **Edit rules** (draft) / **Rules** (published), **Compare**, **Preview**, 
 - **Save** sends the revision the editor loaded. If the draft changed elsewhere: error notice, edits kept, "Load
   the saved draft (drops your edits)". Sticky save bar: "Unsaved changes / All changes saved", Undo changes,
   Save draft. The edit tab stays mounted (`TabPanel keepMounted`) so compare/preview never drop edits.
-- **Unsaved edits**: in-app links ask "Leave without saving?"; closing the window asks (`beforeunload`); edits are
+- **Unsaved edits**: in-app links ask "Leave without saving?"; closing the window (X, Alt+F4) asks with the same
+  dialog, which then says that closing discards the edits (`onCloseRequested`, TASK-023); edits are
   also kept in session storage against their revision, and reopening the draft offers "Restore them / Discard
   them" (or says they were set aside because the draft changed since).
 - **Compare** (C): one real table per section (caption, column and row headers), Field · version in use · this

@@ -3,18 +3,22 @@
 // that navigate in code (Manage accounts, Quick Import, a trades-table row) ask first. These run under the app's
 // real HashRouter, because the guard has to get ahead of the router's own popstate listener; the editor must stay the
 // same mounted element while the dialog is open. The repository is the in-memory journal store (test-store.ts).
+// Listener order is Chromium's (test/chromium-popstate-order.ts): window's popstate listeners run in the order they
+// were added, as in WebView2, and the guard's listener is installed before the router mounts, as main.tsx does.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HashRouter, type NavigateFunction, Route, Routes, useNavigate } from "react-router-dom";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PageHeader } from "../../app/AppShell";
 import type { RuntimeState } from "../../app/RuntimeProvider";
 import { ToastProvider } from "../../design-system";
+import { emulateChromiumPopstateOrder } from "../../test/chromium-popstate-order";
 import { warmUp } from "../../test/warm-up";
 import { makeAccount } from "../accounts/test-store";
 import { createJournalStore, trade } from "../journal/test-store";
+import { installLeaveGuardHistory } from "../shared/hooks/use-leave-guard";
 import { DailyReviewPage } from "./components/DailyReviewPage";
 
 const runtime = vi.hoisted(() => ({ state: { kind: "ready" } as unknown as RuntimeState, check: vi.fn() }));
@@ -72,7 +76,10 @@ beforeEach(() => {
   // Every test starts on a router-owned "/earlier" entry; the router writes its index on mount.
   window.history.pushState(null, "", "#/earlier");
 });
+let restoreOrder: () => void;
 beforeAll(async () => {
+  restoreOrder = emulateChromiumPopstateOrder();
+  installLeaveGuardHistory();
   fresh();
   window.location.hash = day;
   await warmUp(renderApp, () => screen.findByRole("form", { name: "Daily review" }));
@@ -83,6 +90,7 @@ afterEach(() => {
   client.clear();
   vi.restoreAllMocks();
 });
+afterAll(() => restoreOrder());
 
 const idx = () => (window.history.state as { idx?: number } | null)?.idx;
 const here = () => window.location.hash.slice(1);
@@ -126,6 +134,28 @@ describe("history navigation with unsaved daily review edits (TASK-022)", () => 
     await traverse(-1);
     expect(await screen.findByRole("alertdialog", { name: "Leave without saving the review?" })).toBeTruthy();
     expect(focus()).toBe(editor);
+  });
+
+  it("Chromium order: the guard's listener, added before the router's, keeps the blocked Back from the router", async () => {
+    const user = userEvent.setup();
+    // A non-capture listener added before the router mounts and after the guard's install, as the router's is:
+    // it must only ever see the return to the editor's entry (delta 0), never the blocked "/earlier".
+    const seen: string[] = [];
+    const spy = () => seen.push(here());
+    window.addEventListener("popstate", spy);
+    try {
+      renderApp();
+      const editor = await dirtyDay(user);
+      await traverse(-1);
+      expect(await screen.findByRole("alertdialog", { name: "Leave without saving the review?" })).toBeTruthy();
+      await waitFor(() => expect(seen.length).toBeGreaterThan(0));
+      expect(seen.every(hash => hash === day)).toBe(true);
+      expect(screen.queryByText("Earlier page")).toBeNull();
+      expect(focus()).toBe(editor);
+      expect(editor.value).toBe("draft text");
+    } finally {
+      window.removeEventListener("popstate", spy);
+    }
   });
 
   it("asks on Forward, and Stay leaves the history unchanged", async () => {

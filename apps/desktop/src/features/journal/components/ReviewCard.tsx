@@ -38,7 +38,7 @@ import {
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import { useLibrary } from "../../library/hooks/library";
 import { useSaveTradeReview, useTradeReview } from "../../reviews/hooks/reviews";
-import { useLeave, useLeaveGuard } from "../../shared/hooks/use-leave-guard";
+import { isWindowClose, useLeave, useLeaveGuard } from "../../shared/hooks/use-leave-guard";
 import { fieldErrors, retryRead, toMutationState } from "../../shared/presentation";
 import { UncertainOutcomeReview, type UncertainWrite } from "../../shared/UncertainOutcomeReview";
 import { shownNetPnl, type TradeViewModel } from "../../trades/view-models/trade";
@@ -410,7 +410,9 @@ function ReviewForm({ account, trade, review, library, libraryFailed, reload }: 
       </form>
       <ConfirmDialog open={leaving !== null} onOpenChange={o => !o && setLeaving(null)} tone="neutral" title="Leave without saving the review?" confirmLabel="Leave"
         onConfirm={async () => { const href = leaving; setLeaving(null); if (href) leave(href); }}>
-        <p>Your edits stay available to restore in this window when you come back to this trade.</p>
+        <p>{isWindowClose(leaving)
+          ? "Closing the window discards your edits; they can't be restored later."
+          : "Your edits stay available to restore in this window when you come back to this trade."}</p>
       </ConfirmDialog>
     </>
   );

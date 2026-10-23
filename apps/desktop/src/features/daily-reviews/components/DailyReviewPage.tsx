@@ -43,7 +43,7 @@ import { switchFailure, useActiveAccount } from "../../accounts/active-account";
 import type { AccountViewModel } from "../../accounts/view-models/account";
 import { clock, longDay, STATUS_NOTE, tradePath, zoneLabel } from "../../journal/components/presentation";
 import { useLibrary } from "../../library/hooks/library";
-import { useGuardedNavigate, useLeave, useLeaveGuard } from "../../shared/hooks/use-leave-guard";
+import { isWindowClose, useGuardedNavigate, useLeave, useLeaveGuard } from "../../shared/hooks/use-leave-guard";
 import { fieldErrors, retryRead, toMutationState } from "../../shared/presentation";
 import { useDailyReviewDay, useRelinkDailyReviewTrades, useReopenDailyReview, useSaveDailyReview } from "../hooks/daily-reviews";
 import {
@@ -178,7 +178,9 @@ function DayReview({ account, day, selectedId, onSelect }: {
 
       <ConfirmDialog open={leaving !== null} onOpenChange={o => !o && setLeaving(null)} tone="neutral" title="Leave without saving the review?" confirmLabel="Leave"
         onConfirm={async () => { const href = leaving; setLeaving(null); setDirty(false); if (href) leave(href); }}>
-        <p>Your edits stay available to restore in this window when you come back to this day.</p>
+        <p>{isWindowClose(leaving)
+          ? "Closing the window discards your edits; they can't be restored later."
+          : "Your edits stay available to restore in this window when you come back to this day."}</p>
       </ConfirmDialog>
     </div>
   );

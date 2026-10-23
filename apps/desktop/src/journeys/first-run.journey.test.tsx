@@ -10,7 +10,8 @@ vi.mock("@tauri-apps/api/core", async () => (await import("../test/boundaries"))
 vi.mock("../lib/data/api", async () => (await import("../test/boundaries")).apiMock);
 vi.mock("@tauri-apps/plugin-dialog", async () => (await import("../test/boundaries")).dialogPluginMock);
 const close = vi.hoisted(() => vi.fn<() => Promise<void>>());
-vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => ({ close }) }));
+const onCloseRequested = vi.hoisted(() => vi.fn());
+vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => ({ close, onCloseRequested }) }));
 
 import { CURRENT_LEGAL_DOCUMENTS, currentAcceptance, LICENSE_TEXT, THIRD_PARTY_SUMMARY } from "../legal";
 import { formatDocumentDate } from "../features/legal/components/LegalDocuments";
@@ -26,6 +27,7 @@ beforeAll(installBrowserShims);
 beforeAll(warmUpApp);
 beforeEach(() => {
   close.mockReset().mockResolvedValue(undefined);
+  onCloseRequested.mockReset();
   primeLegalAcceptance(null); // First launch unless a test says otherwise.
 });
 afterEach(resetHarness);
@@ -94,6 +96,9 @@ describe("first launch", () => {
     const { user } = renderApp("/", store);
     await user.click(screen.getByRole("button", { name: "Close" }));
     expect(close).toHaveBeenCalledTimes(1);
+    // Nothing listens for the close request (TASK-023's guard listens only while an editor is dirty), so Tauri
+    // closes the window natively.
+    expect(onCloseRequested).not.toHaveBeenCalled();
     expect(boundary.legal.record).toBeNull();
     expect(boundary.invocations).not.toContain("record_legal_acceptance");
     expect(listAccounts).not.toHaveBeenCalled();

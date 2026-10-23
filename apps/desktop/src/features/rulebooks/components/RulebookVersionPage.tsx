@@ -11,7 +11,7 @@ import {
   StatList, TabPanel, Tabs, Textarea, TextField, UnavailableState, useToast, ValidationSummary,
 } from "../../../design-system";
 import { useRulebookVersion } from "../../references/hooks/references";
-import { useLeave } from "../../shared/hooks/use-leave-guard";
+import { isWindowClose, useLeave } from "../../shared/hooks/use-leave-guard";
 import { retryRead, toAsyncState, toMutationState } from "../../shared/presentation";
 import { useDiscardRulebookDraft, usePublishIssues, usePublishRulebookVersion, useSaveRulebookDraft } from "../hooks/rulebooks";
 import { compareVersions, type ComparableVersion } from "../view-models/compare";
@@ -361,7 +361,9 @@ function VersionView({ d, ctx }: { d: RulebookVersionDetail; ctx: AccountRuleboo
       </Tabs>
       <ConfirmDialog open={leaveTo !== null} onOpenChange={o => !o && setLeaveTo(null)} tone="neutral" title="Leave without saving?"
         confirmLabel="Leave" onConfirm={async () => { const to = leaveTo!; setDirty(false); setLeaveTo(null); leave(to); }}>
-        Your edits aren't saved. They are kept in this window and offered back when you reopen this draft.
+        {isWindowClose(leaveTo)
+          ? "Your edits aren't saved. Closing the window discards them; they can't be restored later."
+          : "Your edits aren't saved. They are kept in this window and offered back when you reopen this draft."}
       </ConfirmDialog>
       {starting && <StartDraftDialog open onOpenChange={setStarting} account={account} source={d} privateRulebook={ctx.privateRulebook}
         onCreated={draft => { setStarting(false); navigate(`/accounts/${encodeURIComponent(account.id)}/rulebook/versions/${encodeURIComponent(draft.version.id)}`); }} />}

@@ -60,7 +60,7 @@ trades**, account not available, not a trading day, selection differs.
 - Explicit saves, no autosave. A save names the revision it started from; a stale revision is a conflict and writes
   nothing.
 - While the form is dirty, in-app links and day navigation ask "Leave without saving the review?" and closing the
-  window asks too (`useLeaveGuard`). Edits are kept per account and day in session storage and offered back
+  window (X, Alt+F4) asks too, saying that closing discards the edits (`useLeaveGuard`, TASK-023). Edits are kept per account and day in session storage and offered back
   ("Restore them" / "Discard") when the day is opened again in the window.
 - A failed save never clears the form; the text stays until a save is confirmed.
 
