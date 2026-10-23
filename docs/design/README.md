@@ -56,8 +56,9 @@ live and supports the Windows contrast themes, with no in-app setting (Build 26.
    examples and are not consistent between screens.
 3. No fabricated values: placeholders and empty states never show example balances, P&L or risk (Build 12/13).
    Unknown is shown as Unknown, never zero or Safe.
-4. Money is decimal text (`format.ts`), trading days run Monday to Friday in the account's zone, and Rust stays
-   authoritative for stored calculations.
+4. Money is decimal text (`format.ts`), trading days run Monday to Friday in the account's zone, and stored
+   calculations follow the authority split in `CLAUDE.md`: Rust for inputs, trade economics, trading days and
+   persistence; the TypeScript risk engine for risk verdicts.
 5. Track progress on the Notion card (status and an "Implementation reconciliation" note), not in this file.
 
 ## Mockups

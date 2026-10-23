@@ -20,9 +20,11 @@ widening scope. P2 and Web V2 items are not V1 work.
   never copy their markup or `ff-app.css` into the app.
 - Money is decimal text: format and sum with `format.ts` (bigint micro-units), never `number`. Unknown is `—`,
   never zero. Trading days run Monday to Friday; show times in the account's time zone.
-- Rust is authoritative for stored calculations. A new calculation in TypeScript needs parity fixtures
-  (packages.md). If a screen needs data no command provides, add the command or note the gap in the spec; do not
-  fake it in the UI.
+- Authority for stored calculations (TASK-003, Option A): Rust is authoritative for inputs, trade economics,
+  trading days and persistence; the TypeScript risk engine (`packages/domain/src/engine`, Build 16) is
+  authoritative for risk verdicts, which Rust checks for consistency and unchanged sources but does not recompute.
+  Any other new calculation in TypeScript needs parity fixtures (packages.md). If a screen needs data no command
+  provides, add the command or note the gap in the spec; do not fake it in the UI.
 - When a spec and its card disagree, follow the card and fix the spec in the same pull request.
 
 ## Checks
