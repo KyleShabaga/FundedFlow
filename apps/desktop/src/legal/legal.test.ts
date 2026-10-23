@@ -1,11 +1,41 @@
 import { describe, expect, it } from "vitest";
 
-import { coversCurrent, CURRENT_LEGAL_DOCUMENTS, currentAcceptance, documentText, sha256Hex } from ".";
+import { coversCurrent, CURRENT_LEGAL_DOCUMENTS, currentAcceptance, documentText, LICENSE_SUMMARY, PRIVACY_SUMMARY, sha256Hex } from ".";
+import { privacyNotice } from "./privacy-notice";
+import { userAgreement } from "./user-agreement";
 
 describe("bundled legal documents", () => {
   it.each(CURRENT_LEGAL_DOCUMENTS.map(doc => [doc.id, doc] as const))("%s carries the digest of its text", async (_, doc) => {
-    // On a text change, copy the digest from this failure into the document and bump its version.
+    // Self-consistency only. A text change needs Kyle's approval of the new text and digest, recorded in
+    // docs/privacy-product-verification.md, before the pinned digests below change; never copy the printed digest
+    // without that record.
     expect(doc.digest, `${doc.id}: set digest to ${await sha256Hex(documentText(doc))}`).toBe(await sha256Hex(documentText(doc)));
+  });
+
+  // The approved documents (owner content approval, docs/privacy-product-verification.md). These literals change
+  // only after Kyle approves a new text, version and digest there (TASK-025).
+  it("are exactly the approved documents: privacy notice and License and product information, both 0.2.1-draft", () => {
+    expect(privacyNotice.digest).toBe("8b83157f3e1075a64fb631e39616c37e5b70cc3c70e54f473c05ec9d0db1c392");
+    expect(privacyNotice.version).toBe("0.2.1-draft");
+    expect(userAgreement.digest).toBe("96894603aff89db92b60b307f85693756d0e540f03851c2d39568a441c68911a");
+    expect(userAgreement.version).toBe("0.2.1-draft");
+  });
+
+  // The first-run and Settings summaries as merged with these documents (PR #107). They are not part of the documents
+  // or their digests, so a change here is reviewed on its own.
+  it("show the summaries as merged", () => {
+    expect(PRIVACY_SUMMARY).toEqual([
+      "Your desktop journal is local and unencrypted. The app has no sign-in, telemetry or update checker; the installer may download WebView2 from Microsoft.",
+      "Settings provides exports, restore and deletion controls. Recovery copies, external backups and WebView storage have different deletion limits; read the notice before erasing data.",
+    ]);
+    expect(LICENSE_SUMMARY).toEqual({
+      notice: "Copyright (c) 2026 Kyle Shabaga",
+      terms: [
+        "FundedFlow is open source under the MIT License. You may use, copy, modify, distribute, sublicense and sell copies, provided you include the copyright and permission notice in all copies or substantial portions of the software.",
+        "It is provided as is, without warranty, as a record-keeping tool that doesn't give financial, trading or investment advice.",
+        "Third-party components (libraries, crates, npm packages and fonts) are licensed by their own authors under their own terms.",
+      ],
+    });
   });
 
   it("are versioned, dated and, until owner content and release approval, marked as drafts everywhere they appear", () => {

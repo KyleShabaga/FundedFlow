@@ -60,9 +60,11 @@ anything, and would have prompted again after every erase or restore.
 ## Documents
 
 `apps/desktop/src/legal/index.ts` exports `CURRENT_LEGAL_DOCUMENTS`, the one place final text swaps in. Each document
-has `id`, `version`, `effectiveDate`, `draft` and `digest` (SHA-256 of `documentText(doc)`); `legal.test.ts` fails
-with the new digest when the text changes. To ship final text: replace the sections, set `draft: false`, bump
-`version`, update `effectiveDate`, and paste the digest the test prints.
+has `id`, `version`, `effectiveDate`, `draft` and `digest` (SHA-256 of `documentText(doc)`); `legal.test.ts` checks
+each digest against its text and pins the approved digests and versions. A text change needs Kyle's approval of the
+exact new text, version and digest, recorded in `docs/privacy-product-verification.md`, before the document and the
+pinned literals change: then replace the sections, set `draft` and `version`, update `effectiveDate`, and set `digest`
+to the recorded value. Never paste a digest a failing test prints without that record.
 
 ## Licence and third-party notices
 
