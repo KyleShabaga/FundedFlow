@@ -40,6 +40,9 @@ pub enum Code {
 pub struct ControlError {
     pub code: Code,
     pub message: String,
+    /// Which limit was exceeded and the measured value. Never a path or row content.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
 }
 pub type Result<T> = std::result::Result<T, ControlError>;
 pub(crate) fn fail(code: Code) -> ControlError {
@@ -75,6 +78,15 @@ pub(crate) fn fail(code: Code) -> ControlError {
     ControlError {
         code,
         message: message.into(),
+        detail: None,
+    }
+}
+/// `LimitExceeded` naming the component over its limit, for example `database pages: 70254592 bytes, limit 67108864 bytes`.
+pub(crate) fn over_limit(component: &str, measured: u64, limit: u64, unit: &str) -> ControlError {
+    let unit = if unit.is_empty() { String::new() } else { format!(" {unit}") };
+    ControlError {
+        detail: Some(format!("{component}: {measured}{unit}, limit {limit}{unit}")),
+        ..fail(Code::LimitExceeded)
     }
 }
 impl From<std::io::Error> for ControlError {

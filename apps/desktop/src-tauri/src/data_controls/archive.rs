@@ -1,4 +1,4 @@
-use super::{Attachment, Code, Counts, Result, fail, filesystem::*};
+use super::{Attachment, Code, Counts, Result, fail, filesystem::*, over_limit};
 use crate::db;
 use rusqlite::{Connection, OpenFlags, types::ValueRef};
 use serde::{Deserialize, Serialize};
@@ -83,9 +83,12 @@ fn internal(kind: &str, name: &str, sql_is_null: bool) -> Result<bool> {
 }
 pub fn dump(conn: &Connection) -> Result<Data> {
     let pages: i64 = conn.pragma_query_value(None, "page_count", |r| r.get(0))?;
+    let free: i64 = conn.pragma_query_value(None, "freelist_count", |r| r.get(0))?;
     let page_size: i64 = conn.pragma_query_value(None, "page_size", |r| r.get(0))?;
-    if pages.saturating_mul(page_size) > MAX_ENTRY as i64 {
-        return Err(fail(Code::LimitExceeded));
+    // Free pages hold no data (archive snapshots are vacuumed), so only pages in use count.
+    let used = pages.saturating_sub(free).saturating_mul(page_size).max(0) as u64;
+    if used > MAX_ENTRY {
+        return Err(over_limit("database pages", used, MAX_ENTRY, "bytes"));
     }
     let mut stmt = conn.prepare("SELECT name,sql IS NULL FROM sqlite_schema WHERE type='table' ORDER BY name")?;
     let mut tables = Vec::new();
@@ -104,7 +107,7 @@ pub fn dump(conn: &Connection) -> Result<Data> {
             })?;
         total += count as u64;
         if total > 500_000 {
-            return Err(fail(Code::LimitExceeded));
+            return Err(over_limit("rows", total, 500_000, ""));
         }
         let without: bool = conn.query_row(
             "SELECT instr(upper(sql),'WITHOUT ROWID')>0 FROM sqlite_schema WHERE name=?1",
@@ -199,6 +202,8 @@ pub fn snapshot(conn: &Connection, destination: &Path) -> Result<()> {
     }
     drop(backup);
     target.pragma_update(None, "journal_mode", "DELETE")?;
+    // The backup copies free pages too. Compact the copy, never the live journal.
+    target.execute_batch("VACUUM")?;
     drop(target);
     #[cfg(unix)]
     {
@@ -210,8 +215,9 @@ pub fn snapshot(conn: &Connection, destination: &Path) -> Result<()> {
         .write(true)
         .open(destination)?
         .sync_all()?;
-    if fs::metadata(destination)?.len() > MAX_ENTRY {
-        return Err(fail(Code::LimitExceeded));
+    let bytes = fs::metadata(destination)?.len();
+    if bytes > MAX_ENTRY {
+        return Err(over_limit("database pages", bytes, MAX_ENTRY, "bytes"));
     }
     Ok(())
 }
@@ -254,7 +260,7 @@ pub fn export(
     let data = dump(&c)?;
     let bytes = serde_json::to_vec(&data)?;
     if bytes.len() as u64 > MAX_ENTRY {
-        return Err(fail(Code::LimitExceeded));
+        return Err(over_limit("data.json", bytes.len() as u64, MAX_ENTRY, "bytes"));
     }
     let data_path = temp.path().join("data.json");
     write_new(&data_path, &bytes)?;
@@ -273,7 +279,7 @@ pub fn export(
         ));
     }
     if files.len() + 1 > MAX_ENTRIES {
-        return Err(fail(Code::LimitExceeded));
+        return Err(over_limit("archive entries", (files.len() + 1) as u64, MAX_ENTRIES as u64, ""));
     }
     let entries = files
         .iter()
@@ -285,8 +291,9 @@ pub fn export(
             })
         })
         .collect::<Result<Vec<_>>>()?;
-    if entries.iter().map(|e| e.bytes).sum::<u64>() > MAX_TOTAL {
-        return Err(fail(Code::LimitExceeded));
+    let total: u64 = entries.iter().map(|e| e.bytes).sum();
+    if total > MAX_TOTAL {
+        return Err(over_limit("total archive", total, MAX_TOTAL, "bytes"));
     }
     let manifest = ArchiveManifest {
         format: FORMAT.into(),
@@ -357,11 +364,15 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
     }
     use std::io::Seek;
     input.rewind()?;
-    if input.metadata()?.len() > MAX_TOTAL + 2 * 1024 * 1024 {
-        return Err(fail(Code::LimitExceeded));
+    let size = input.metadata()?.len();
+    if size > MAX_TOTAL + 2 * 1024 * 1024 {
+        return Err(over_limit("total archive", size, MAX_TOTAL + 2 * 1024 * 1024, "bytes"));
     }
     let mut zip = ZipArchive::new(input)?;
-    if zip.len() > MAX_ENTRIES || zip.len() < 4 {
+    if zip.len() > MAX_ENTRIES {
+        return Err(over_limit("archive entries", zip.len() as u64, MAX_ENTRIES as u64, ""));
+    }
+    if zip.len() < 4 {
         return Err(fail(Code::LimitExceeded));
     }
     let dir = tempfile::tempdir_in(workspace)?;
@@ -391,8 +402,13 @@ pub fn inspect_to(source: &Path, workspace: &Path) -> Result<Inspected> {
         total = total
             .checked_add(entry.size())
             .ok_or_else(|| fail(Code::LimitExceeded))?;
-        if entry.size() > limit || total > MAX_TOTAL {
-            return Err(fail(Code::LimitExceeded));
+        if entry.size() > limit {
+            // Archive entry names are not echoed: only fixed component names reach the UI.
+            let component = if name == "manifest.json" { "manifest.json" } else { "archive entry" };
+            return Err(over_limit(component, entry.size(), limit, "bytes"));
+        }
+        if total > MAX_TOTAL {
+            return Err(over_limit("total archive", total, MAX_TOTAL, "bytes"));
         }
         // Never extract symlink/link metadata. Only explicit fresh regular files are written.
         let mut bytes = Vec::new();
@@ -629,8 +645,9 @@ pub fn export_csv(
             );
         }
         writer.write_record(cells).map_err(|_| fail(Code::Io))?;
-        if writer.get_ref().metadata()?.len() > MAX_ENTRY {
-            return Err(fail(Code::LimitExceeded));
+        let bytes = writer.get_ref().metadata()?.len();
+        if bytes > MAX_ENTRY {
+            return Err(over_limit("trades.csv", bytes, MAX_ENTRY, "bytes"));
         }
     }
     writer.flush()?;
