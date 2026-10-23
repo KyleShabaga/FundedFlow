@@ -11,6 +11,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import type { RuntimeState } from "../../app/RuntimeProvider";
 import { ToastProvider } from "../../design-system";
 import { boundary, freshnessRow, resetBoundaries } from "../../test/boundaries";
+import { tauriWindow } from "../../test/tauri-window";
 import { warmUp } from "../../test/warm-up";
 import { makeAccount } from "../accounts/test-store";
 import { RulebookPage } from "./components/RulebookPage";
@@ -21,6 +22,7 @@ const runtime = vi.hoisted(() => ({ state: { kind: "ready" } as unknown as Runti
 const holder = vi.hoisted(() => ({ store: null as unknown as ReturnType<typeof createRulebookStore> }));
 vi.mock("../../app/RuntimeProvider", () => ({ useRuntime: () => runtime }));
 vi.mock("../../lib/data/api", () => ({ get repository() { return holder.store.repository; } }));
+vi.mock("@tauri-apps/api/window", async () => (await import("../../test/tauri-window")).tauriWindowMock);
 // TASK-021: today's trading day comes from Rust (`list_account_freshness`), answered here from fixed rows.
 vi.mock("../../lib/data/freshness", async importOriginal => ({ ...(await importOriginal<object>()), freshnessGateway: (await import("../../test/boundaries")).freshnessGatewayMock }));
 
@@ -362,6 +364,26 @@ describe("draft, compare, preview, publish and assign", () => {
     expect((screen.getByRole("textbox", { name: "Target" }) as HTMLInputElement).value).toBe("3000");
     await user.click(screen.getByRole("button", { name: "Restore them" }));
     expect((screen.getByRole("textbox", { name: "Target" }) as HTMLInputElement).value).toBe("2222");
+  });
+
+  it("asks before the window closes with unsaved edits (TASK-023): Stay keeps them, Leave destroys the window", async () => {
+    tauriWindow.reset();
+    const user = userEvent.setup();
+    await openOwnDraft();
+    await pasteInto(user, screen.getByRole("textbox", { name: "Target" }), "2222");
+    await waitFor(() => expect(tauriWindow.listeners()).toBe(1));
+    expect(await act(() => tauriWindow.requestClose())).toBe("prevented");
+    let ask = await screen.findByRole("alertdialog", { name: "Leave without saving?" });
+    expect(within(ask).getByText(/Closing the window discards them; they can't be restored later\./)).toBeTruthy();
+    expect(tauriWindow.destroy).not.toHaveBeenCalled();
+    await user.click(within(ask).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog", { name: "Leave without saving?" })).toBeNull());
+    expect((screen.getByRole("textbox", { name: "Target" }) as HTMLInputElement).value).toBe("2222");
+    expect(tauriWindow.destroy).not.toHaveBeenCalled();
+    await act(() => tauriWindow.requestClose());
+    ask = await screen.findByRole("alertdialog", { name: "Leave without saving?" });
+    await user.click(within(ask).getByRole("button", { name: "Leave" }));
+    await waitFor(() => expect(tauriWindow.destroy).toHaveBeenCalledTimes(1));
   });
 
   it("refuses to publish a draft whose base was superseded meanwhile", async () => {

@@ -11,6 +11,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import type { RuntimeState } from "../../app/RuntimeProvider";
 import { ToastProvider } from "../../design-system";
+import { tauriWindow } from "../../test/tauri-window";
 import { makeAccount } from "../accounts/test-store";
 import { JournalPage } from "./components/JournalPage";
 import { TradeDetailPage } from "./components/TradeDetailPage";
@@ -20,6 +21,7 @@ const runtime = vi.hoisted(() => ({ state: { kind: "ready" } as unknown as Runti
 const holder = vi.hoisted(() => ({ store: null as unknown as ReturnType<typeof createJournalStore> }));
 vi.mock("../../app/RuntimeProvider", () => ({ useRuntime: () => runtime }));
 vi.mock("../../lib/data/api", () => ({ get repository() { return holder.store.repository; } }));
+vi.mock("@tauri-apps/api/window", async () => (await import("../../test/tauri-window")).tauriWindowMock);
 
 beforeAll(() => {
   Element.prototype.scrollIntoView ??= () => {};
@@ -275,6 +277,28 @@ describe("Review save guard (B03)", () => {
     expect(field(c, entry).value).toBe("100.5");
     await user.click(within(c).getByRole("button", { name: "Restore them" }));
     expect(field(c, reflection).value).toBe("saved on t1 draft");
+  });
+
+  it("asks before the window closes with unsaved edits (TASK-023): Stay keeps them, Leave destroys the window", async () => {
+    tauriWindow.reset();
+    const user = userEvent.setup();
+    renderAt("/journal/trades/t1");
+    const c = await card();
+    await user.type(await within(c).findByLabelText(reflection), "unsaved note");
+    await waitFor(() => expect(tauriWindow.listeners()).toBe(1));
+    expect(await act(() => tauriWindow.requestClose())).toBe("prevented");
+    let ask = await screen.findByRole("alertdialog", { name: "Leave without saving the review?" });
+    expect(within(ask).getByText("Closing the window discards your edits; they can't be restored later.")).toBeTruthy();
+    expect(tauriWindow.destroy).not.toHaveBeenCalled();
+    await user.click(within(ask).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(leavePrompt()).toBeNull());
+    expect(field(c, reflection).value).toBe("unsaved note");
+    expect(location).toBe("/journal/trades/t1");
+    await act(() => tauriWindow.requestClose());
+    ask = await screen.findByRole("alertdialog", { name: "Leave without saving the review?" });
+    await user.click(within(ask).getByRole("button", { name: "Leave" }));
+    await waitFor(() => expect(tauriWindow.destroy).toHaveBeenCalledTimes(1));
+    expect(location).toBe("/journal/trades/t1");
   });
 
   it("shows the saved, canonical values when the trade is opened again", async () => {

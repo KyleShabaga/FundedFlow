@@ -1,6 +1,6 @@
 // Unsaved-edit protection for the draft editor (Build 19). The app uses a HashRouter, which has no
 // navigation blocker, so: in-app links are intercepted while the form is dirty (the page asks
-// first), closing the window asks through `beforeunload`, and the edits are kept in session storage
+// first), closing the window asks (see use-leave-guard.ts), and the edits are kept in session storage
 // against the revision they started from, so a navigation the page cannot intercept (a header
 // button) loses nothing: reopening the draft offers them back. Storage is a per-window convenience:
 // every access is guarded and the editor works without it.

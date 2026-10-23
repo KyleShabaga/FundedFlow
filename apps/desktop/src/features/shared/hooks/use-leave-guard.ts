@@ -1,14 +1,25 @@
 // Unsaved-edit protection shared by editors (rulebook drafts in Build 19, trade and review forms in Build 20).
 // The app uses a HashRouter, which has no navigation blocker, so: in-app links are intercepted while the form is
-// dirty (the page asks first, through `onLeaveRequest`), and closing the window asks through `beforeunload`.
+// dirty (the page asks first, through `onLeaveRequest`), and a page reload asks through `beforeunload`.
 // Buttons that navigate in code (Previous/Next trade, Manage accounts, Quick Import) use `useGuardedNavigate`, which
 // asks the same guard, and the page's Leave button completes the navigation with `useLeave`.
-// Back/Forward (TASK-022): popstate can't be cancelled, so one capture-phase popstate listener on window runs before
-// the router's bubble-phase one, stops the event from reaching the router, returns to the editor's entry with
-// `history.go(-delta)` (the editor stays mounted) and asks the guard. Leave then repeats the traversal once.
+// Back/Forward (TASK-022): popstate can't be cancelled, so one popstate listener on window stops the event from
+// reaching the router, returns to the editor's entry with `history.go(-delta)` (the editor stays mounted) and asks
+// the guard. Leave then repeats the traversal once.
+// Listener order matters. When window is the event's target, Chromium (WebView2) runs window's popstate listeners
+// in the order they were added, whatever their capture flag, and HashRouter adds its own when it mounts. A capture
+// listener added later, when a form became dirty, ran after the router had navigated and unmounted the editor, so
+// mouse back and Alt+← left without asking. `installLeaveGuardHistory` therefore adds the one listener from main.tsx
+// before the first render, and the listener does nothing while no guard is active. The router then sees only the
+// return to the editor's entry (delta 0). jsdom runs capture listeners first whatever the order, which hid this.
 // Known gap: an entry without the router's `history.state.idx` gives no delta, so that popstate goes through unasked.
+// Window close (TASK-023): on the title-bar X and Alt+F4, Tauri closes the window natively and the page gets no
+// `beforeunload`, unless the page listens for the close request. So while a guard is active the page listens through
+// `onCloseRequested`, prevents the close and asks the guard with `WINDOW_CLOSE`; Leave then destroys the window.
+// With no dirty form there is no listener, so a clean window (and the first-run Decline) closes at once.
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { type CloseRequestedEvent, getCurrentWindow } from "@tauri-apps/api/window";
 
 interface Guard { request: { current: (href: string) => void }; idx: number | null }
 const active = new Set<Guard>();
@@ -16,6 +27,10 @@ const active = new Set<Guard>();
 let pending: { href: string; delta: number; to: number } | null = null;
 /** The index Leave is traversing to: that one popstate goes to the router unasked. */
 let bypass: number | null = null;
+
+/** What a guarded editor's leave request carries when the window is being closed rather than navigated. */
+export const WINDOW_CLOSE = "window:close";
+export const isWindowClose = (href: string | null | undefined) => href === WINDOW_CLOSE;
 
 const historyIdx = () => {
   const idx = (window.history.state as { idx?: unknown } | null)?.idx;
@@ -28,6 +43,7 @@ function ask(guard: Guard, href: string) {
 }
 
 function onPopState(event: PopStateEvent) {
+  if (active.size === 0) return;
   const idx = historyIdx();
   const skip = bypass;
   bypass = null;
@@ -45,6 +61,50 @@ function onPopState(event: PopStateEvent) {
   guard.request.current(href);
 }
 
+let installed = false;
+/** Adds the history listener ahead of the router's own. Call once before the first render (see the header). */
+export function installLeaveGuardHistory() {
+  if (installed) return;
+  installed = true;
+  window.addEventListener("popstate", onPopState, { capture: true });
+}
+
+function onCloseRequested(event: CloseRequestedEvent) {
+  const guard = [...active].pop();
+  if (!guard) return;
+  // Synchronously: the API destroys the window after this handler unless the close was prevented.
+  event.preventDefault();
+  ask(guard, WINDOW_CLOSE);
+}
+
+async function listenForClose(): Promise<(() => void) | null> {
+  try {
+    return await getCurrentWindow().onCloseRequested(onCloseRequested);
+  } catch {
+    return null; // Outside Tauri there is no window to guard.
+  }
+}
+
+/** The close listener exists only while a guard is active, so a clean window closes natively. */
+let closeListener: Promise<(() => void) | null> | null = null;
+function syncCloseListener() {
+  if (active.size > 0 && !closeListener) {
+    closeListener = listenForClose();
+  } else if (active.size === 0 && closeListener) {
+    const listener = closeListener;
+    closeListener = null;
+    void listener.then(unlisten => unlisten?.());
+  }
+}
+
+function destroyWindow() {
+  try {
+    void getCurrentWindow().destroy().catch(() => undefined);
+  } catch {
+    // Outside Tauri there is no window to close.
+  }
+}
+
 /** Navigates, unless a dirty form is on the page: then that form asks first, as for a link. */
 export function useGuardedNavigate() {
   const navigate = useNavigate();
@@ -55,13 +115,15 @@ export function useGuardedNavigate() {
   };
 }
 
-/** For the Leave button of a guarded editor: completes the navigation it was asked about. */
+/** For the Leave button of a guarded editor: completes the navigation, or the window close, it was asked about. */
 export function useLeave() {
   const navigate = useNavigate();
   return (href: string) => {
     const traversal = pending;
     pending = null;
-    if (traversal && traversal.href === href) {
+    if (isWindowClose(href)) {
+      destroyWindow();
+    } else if (traversal && traversal.href === href) {
       bypass = traversal.to;
       window.history.go(traversal.delta);
     } else {
@@ -82,6 +144,7 @@ export function useLeaveGuard(dirty: boolean, onLeaveRequest: (href: string) => 
     const current = guard.current;
     current.idx = historyIdx();
     active.add(current);
+    syncCloseListener();
     const onClick = (event: MouseEvent) => {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       const link = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
@@ -98,13 +161,12 @@ export function useLeaveGuard(dirty: boolean, onLeaveRequest: (href: string) => 
     };
     document.addEventListener("click", onClick, true);
     window.addEventListener("beforeunload", onUnload);
-    if (active.size === 1) window.addEventListener("popstate", onPopState, { capture: true });
     return () => {
       active.delete(current);
+      syncCloseListener();
       document.removeEventListener("click", onClick, true);
       window.removeEventListener("beforeunload", onUnload);
       if (active.size > 0) return;
-      window.removeEventListener("popstate", onPopState, { capture: true });
       pending = null;
       bypass = null;
     };
