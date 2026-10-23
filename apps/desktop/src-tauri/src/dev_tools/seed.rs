@@ -528,7 +528,8 @@ fn write_scenario(conn: &mut Connection, lib: &Library, p: &ScenarioPlan, preset
         rulebooks::assign_with(conn, AssignmentInput {
             account_id: id.clone(),
             rulebook_version_id: version.version.id,
-            effective_from: p.first_day.to_string(),
+            // Assignments start on a trading day; the window may open on a weekend.
+            effective_from: plan_weekdays(p.first_day, anchor).first().copied().unwrap_or(p.first_day).to_string(),
             programme_phase_id: None,
             phase_path_id: None,
             account_phase_event_id: None,
