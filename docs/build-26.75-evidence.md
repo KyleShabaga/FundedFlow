@@ -167,8 +167,8 @@ State at this revision: TASK-011 recorded parts (a), (b) and (c) on 2026-10-23, 
 `eeda9a1`) replaced the earlier (a) and (c) results (`code-review/execution/task-011-windows-baseline-results.md`).
 TASK-018 (`eeda9a1`) and TASK-023 (PR #138, `1d13c43`) are merged. The rerun showed no prompt on title-bar X or Alt+F4
 before TASK-023, so TASK-023 was reopened; PR #138 vetoes the close through Tauri `onCloseRequested` and also fixed
-TASK-022's back navigation. B1, B2 and B3 expected results are measured or implemented, and no case is left
-unmeasured. Any journal data loss is a Fail in every case.
+TASK-022's back navigation. B1, B3 and B8 expected results are measured or implemented. B2's junctioned-folder export is
+measured; its OneDrive part was not (Windows Sandbox has no OneDrive), so it is checked here for the first time. Any journal data loss is a Fail in every case.
 
 | # | Step | Expected result | Evidence fields | Mandatory | Pass/Fail | Tester / date |
 |---|---|---|---|---|---|---|
