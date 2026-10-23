@@ -9,7 +9,6 @@
 //
 // Only facts the backend returns are used. Nothing is inferred from a firm's name.
 import type { AccountRulebookAssignment, RulebookVersionDetail } from "@fundedflow/domain";
-import { zonedDay } from "../../design-system/format";
 import type { AccountViewModel } from "./view-models/account";
 
 /** Account types that belong to a prop firm, so a firm and rulebook are expected. */
@@ -24,13 +23,13 @@ export interface SetupItem {
 
 export type RulebookStatus =
   | { kind: "loading" }
-  | { kind: "unknown" } // could not be read
+  | { kind: "unknown"; detail?: string } // could not be read
   | { kind: "none" }
   | { kind: "assigned"; assignment: AccountRulebookAssignment };
 
-/** The assignment in force today in the account's zone, if any. */
-export function currentAssignment(assignments: readonly AccountRulebookAssignment[], timeZone: string, now = new Date()): AccountRulebookAssignment | null {
-  const today = zonedDay(now.toISOString(), timeZone);
+/** The assignment in force on a trading day (Rust's, never the calendar day), if any. */
+export function currentAssignment(assignments: readonly AccountRulebookAssignment[], tradingDay: string): AccountRulebookAssignment | null {
+  const today = tradingDay;
   const inForce = assignments.filter(a => a.effectiveFrom <= today && (a.effectiveTo === null || a.effectiveTo > today));
   return inForce.sort((a, b) => (a.effectiveFrom < b.effectiveFrom ? 1 : -1))[0] ?? null;
 }

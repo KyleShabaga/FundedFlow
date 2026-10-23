@@ -47,10 +47,14 @@ function CurrentRulebook({ ctx, onStart, onAssign }: { ctx: AccountRulebookConte
       ) }}>
       {() => {
         const a = ctx.current;
+        if (!a && ctx.tradingDay.kind === "loading") return <p className="ds-faint" role="status">Checking today's trading day…</p>;
+        if (!a && ctx.tradingDay.kind === "unknown") {
+          return <StatusIndicator status="unknown" label="In force today: Unknown" detail="Today's trading day couldn't be read, so the version in force isn't shown" />;
+        }
         if (!a) {
           return (
             <InlineNotice tone="info" live="off" title="No rulebook in force today" actions={archived ? undefined : <Button size="sm" onClick={onAssign}>Assign a version…</Button>}>
-              This account has assignments, but none covers today ({tz}). See the assignment history below.
+              This account has assignments, but none covers today ({ctx.tradingDay.kind === "known" ? `${ctx.tradingDay.day}, ` : ""}{tz}). See the assignment history below.
             </InlineNotice>
           );
         }

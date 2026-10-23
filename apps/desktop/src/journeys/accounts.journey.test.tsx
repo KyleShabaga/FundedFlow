@@ -12,6 +12,7 @@ vi.mock("@tauri-apps/plugin-dialog", async () => (await import("../test/boundari
 
 import { ACTIVE_ACCOUNT_SETTING } from "../features/accounts/active-account";
 import { createAppStore, makeAccount, makeTrade } from "../test/app-store";
+import { boundary, freshnessRow } from "../test/boundaries";
 import { currentPath, installBrowserShims, renderApp, resetHarness, warmUpApp } from "../test/harness";
 
 beforeAll(installBrowserShims);
@@ -60,6 +61,8 @@ describe("first run to a configured account", () => {
   });
 
   it("assigns a verified rulebook version to the new account; Today names it but stays Unknown until a calculation", async () => {
+    // The version in force follows Rust's trading day (TASK-021): a fixed row, Wednesday 2026-10-21.
+    boundary.freshness.table = [{ from: "2000-01-01T00:00:00.000Z", answer: [freshnessRow("acct-1", "2026-10-21", "2026-10-21T21:00:00.000Z")] }];
     const { store, user } = renderApp("/accounts/acct-1/rulebook", { accounts: [makeAccount({ id: "acct-1", name: "Eval 50K" })] });
     await screen.findByText("No rulebook assigned");
     await screen.findByRole("table", { name: "Versions of Example 50K" });
