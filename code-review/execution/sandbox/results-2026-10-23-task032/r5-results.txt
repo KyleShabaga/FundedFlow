@@ -1,0 +1,32 @@
+20:32:28.312 launched
+20:32:29.699 clicked 'Acknowledge and continue'
+20:33:10.869 clicked 'Settings'
+20:33:33.167 launched
+20:33:43.596 app stopped (Stop-Process)
+t=0.5s | import=20:32:33.386 clicked 'Accounts' Imported 5 trades into Base | before relaunch: pending=False data-controls= work=5 top=fundedflow.db(4096),fundedflow.db-shm(32768),fundedflow.db-wal(1726312),fundedflow.lock(0),legal-acceptance.json(383) | after relaunch screen: Text|Local data is available.| | accounts: Base:5
+
+--done 2026-10-23T20:33:43.6916408-06:00
+20:34:29.275 launched
+20:34:30.340 clicked 'Acknowledge and continue'
+20:35:11.495 clicked 'Settings'
+20:35:34.250 launched
+20:35:44.711 app stopped (Stop-Process)
+t=1s | import=20:34:34.026 clicked 'Accounts' Imported 5 trades into Base | before relaunch: pending=False data-controls= work=5 top=fundedflow.db(4096),fundedflow.db-shm(32768),fundedflow.db-wal(1726312),fundedflow.lock(0),legal-acceptance.json(383) | after relaunch screen: Text|Local data is available.| | accounts: Base:5
+
+--done 2026-10-23T20:35:44.8070978-06:00
+20:36:29.916 launched
+20:36:31.666 clicked 'Acknowledge and continue'
+20:37:12.744 clicked 'Settings'
+20:37:36.575 launched
+20:37:47.034 app stopped (Stop-Process)
+t=2s | import=20:36:35.336 clicked 'Accounts' Imported 5 trades into Base | before relaunch: pending=False data-controls= work=5 top=fundedflow.db(4096),fundedflow.db-shm(32768),fundedflow.db-wal(1726312),fundedflow.lock(0),legal-acceptance.json(383) | after relaunch screen: Text|Local data is available.| | accounts: Base:5
+
+--done 2026-10-23T20:37:47.1289012-06:00
+20:38:32.437 launched
+20:38:34.189 clicked 'Acknowledge and continue'
+20:39:15.346 clicked 'Settings'
+20:39:41.145 launched
+20:39:51.612 app stopped (Stop-Process)
+t=4s | import=20:38:37.870 clicked 'Accounts' Imported 5 trades into Base | before relaunch: pending=False data-controls=01a16bc7-1c63-749a-809b-b817bea9477c work=0 top=fundedflow.db(43958272),fundedflow.db-shm(32768),fundedflow.db-wal(0),fundedflow.lock(0),legal-acceptance.json(383) | after relaunch screen: Text|Local data is available.| | accounts: Big archive:40000
+
+--done 2026-10-23T20:39:51.7065309-06:00

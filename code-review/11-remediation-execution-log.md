@@ -136,3 +136,13 @@ Observations:
 - Screenshot attachments were not exercised.
 
 Report: `execution/sandbox/results-2026-10-23-task031/report.md`.
+
+## TASK-032 on the candidate (2026-10-23, Claude Code in Windows Sandbox)
+
+**PASSED.** R0–R8 all pass with no data loss: export/erase/restore, locked journal, corrupt header, failed migration rollback, newer-schema refusal, interrupted restore (pre-restore or fully restored, never a mix), malformed cleanup markers, stray and missing screenshots, and the large journal (vacuumed snapshot export; over-cap refusal).
+
+R9 and R10 are Not Run. Triage needed for R10.
+
+Notes: the corrupt-journal message uses the lock-oriented text; an unrecognised file in the attachments root blocks restore by design; an interrupted restore leaves files in data-controls-work.
+
+Report: `execution/sandbox/results-2026-10-23-task032/report.md`.
