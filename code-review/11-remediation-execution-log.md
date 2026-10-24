@@ -121,3 +121,18 @@ Gate state: **Blocked**, pending R1, B6 and B7.
 Note: the app shows 293 third-party components while the file lists 290 (232 + 58); a low-priority triage item.
 
 Report: `execution/sandbox/results-2026-10-23-task030/report.md`.
+
+## TASK-031 on the candidate (2026-10-23, Claude Code in Windows Sandbox)
+
+**PASSED.** All three pass rules hold:
+- (a) Data is intact after the 0.1.0 → 0.1.1 upgrade (schema 23, `before-v23.bak` written, acknowledgment shown) and after a same-version reinstall.
+- (b) The unticked uninstall keeps the journal and its recovery copies.
+- (c) The ticked uninstall removes exactly the TASK-026 list; the exported archive is unchanged.
+
+Step 4 (downgrade): 0.1.0 refuses with "This journal needs a newer FundedFlow… Your data has not been changed", with no Retry. 4-back restores everything. 4a is Not Run (owner decision).
+
+Observations:
+- 0.1.0 checkpoints the WAL into the main db file before refusing it, so the bytes change while the data does not (low-priority triage item).
+- Screenshot attachments were not exercised.
+
+Report: `execution/sandbox/results-2026-10-23-task031/report.md`.
