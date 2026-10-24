@@ -16,9 +16,11 @@ Kyle approves; Claude never records an approval.
      - 4 PASS (Before you start, Draft documents, both docs at 0.2.1-draft), L1 PASS.
      - 4a: files PASS. The file lists Rust 232 + npm 58; the in-app view says "293 components"; check the npm count in the app.
      - 5 PASS, 6 PASS (5 trades after reopen), 7 PASS (no dev items; F12 and Ctrl+Shift+I do nothing; the `#/settings/developer` URL is not testable without an address bar).
-   - Remaining in S1: L2, B5, B2-j, 8, 9, 10, R1 (Kyle). Then S2 (B1), S3 (B4) and S4 (B7b; Not Run here because the sandbox always has the host's WebView2). B7a is also Not Run here.
+   - **UPDATE 20:08:** TASK-030 is done (Blocked only on R1, B6 and B7). TASK-031 PASSED. TASK-032 P1 (R0, R6, R7) all PASS; notes are in `execution/sandbox/results-2026-10-23-task032/p1-notes.md`. Next: TASK-032 P2 (R1, R2), P3 (R3, R4; needs sqlite3 from sqlite.org), P4 (R5), P5 (R8). Start sandboxes with `wsb start --config` and then `wsb connect --id` (double-clicking a .wsb hangs after a forced close).
+   - Remaining in S1 (old): L2, B5, B2-j, 8, 9, 10, R1 (Kyle). Then S2 (B1), S3 (B4) and S4 (B7b; Not Run here because the sandbox always has the host's WebView2). B7a is also Not Run here.
    - Then TASK-031, TASK-032, and the sandbox-capable rows of TASK-033. TASK-034 is Kyle's.
-   - Save the reports to `C:\FFGate\<nn-task>eport.md` and copy them to `execution/sandbox/results-*` on this branch.
+   - Save the reports to `C:\FFGate\<nn-task>
+eport.md` and copy them to `execution/sandbox/results-*` on this branch.
 
 ## Plan as of 2026-10-23 14:30 MDT, after the candidate (weekly usage 91%)
 00000. **Candidate recorded.** TASK-029 has Gate State Passed: 0.1.1 at `1d13c43`, run 40014761941, EXE SHA-256 60091daf…, stored in `FundedFlow-release-artifacts\0.1.1-1d13c43`. 35 PRs merged; the latest are #138 (TASK-023 close veto plus the TASK-022 back-navigation fix, `1d13c43`) and #139 (smoke checklist, `cbc47aa`).

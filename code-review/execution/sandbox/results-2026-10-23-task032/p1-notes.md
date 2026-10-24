@@ -1,0 +1,8 @@
+# TASK-032 P1 (R0, R6, R7): 2026-10-23, Claude Code, Windows Sandbox 26100.9711, candidate 0.1.1 1d13c43
+Baseline: account Base, 5 synthetic trades, a PNG screenshot on 2 trades.
+- R0 PASS. Export r0.ffj.zip, 1,159,628 B, SHA-256 8590BB1765DD1C420F00C6916BEFCE58FF38AC62809462DAEEE01FFAE0116307 (on-screen "Saved r0.ffj.zip"). Erase (phrase "ERASE ENTIRE JOURNAL") leaves "No accounts". On restore (phrase "REPLACE ENTIRE JOURNAL"), "Journal restored" appeared about 1.4 s after confirm, while the runtime showed "Local data is available." The 5 trades are back, each with 1 screenshot.
+- R6a PASS. A 0-byte marker and a directory named *.json in data-controls-cleanup: the app started normally and both were moved to data-controls-quarantine.
+- R6b PASS. The same two entries created while the app was running: restore prepare and restore succeeded, and both entries were quarantined.
+- R7a PASS (managed-style stray). attachments\screenshots\<uuid>.png that no record uses was preserved at data-controls\<uuid>\safety-attachments\screenshots\<name>.png.
+  - Note: an unrecognised name at the attachments root (stray-r7.png) makes restore refuse with "A file in FundedFlow's attachments folder wasn't created by FundedFlow and belongs to no record, so nothing was changed. Move it out of that folder, then try again." That is safe, and the behaviour is TASK-016's by design.
+- R7b PASS. Restoring with a referenced screenshot deleted succeeded and the file came back from the archive. The erase dialog showed "Some screenshots are already missing or changed / Their files were already gone from disk … erased with the journal" and the erase completed.
