@@ -7,7 +7,20 @@ Coordinator: the Claude Code board-review session. Kyle's standing permissions f
 
 Kyle approves; Claude never records an approval.
 
-## Remaining plan (as of 2026-10-23 14:30 MDT, after the candidate; weekly usage 91%)
+## Remaining plan (as of 2026-10-23 19:10 MDT; Kyle raised the usage limit to 99%)
+000000. **Gate tests in progress, driven by Claude in Windows Sandbox on THIS PC.**
+   - Final test 1 PASSED 14/14. TASK-022 and TASK-023 are Verified.
+   - TASK-030 run S1 is in progress. Output goes to `C:\FFSandbox\out030s1`. The driver is `C:\FFSandbox\kitfdriver.ps1` plus `helpers.ps1`/`cases.ps1`; the host queues steps with `hoststep2.ps1` (`$env:FFOUT=out030s1`). The WebView2 workaround (`WEBVIEW2_BROWSER_EXECUTABLE_FOLDER`) is built into `cases.ps1`.
+   - S1 results so far:
+     - 1 PASS (hash), 2 PASS (no UAC or SmartScreen, `%LOCALAPPDATA%\FundedFlow`, HKCU entry, Publisher Kyle Shabaga, 0.1.1), 3 PASS (offline).
+     - 4 PASS (Before you start, Draft documents, both docs at 0.2.1-draft), L1 PASS.
+     - 4a: files PASS. The file lists Rust 232 + npm 58; the in-app view says "293 components"; check the npm count in the app.
+     - 5 PASS, 6 PASS (5 trades after reopen), 7 PASS (no dev items; F12 and Ctrl+Shift+I do nothing; the `#/settings/developer` URL is not testable without an address bar).
+   - Remaining in S1: L2, B5, B2-j, 8, 9, 10, R1 (Kyle). Then S2 (B1), S3 (B4) and S4 (B7b; Not Run here because the sandbox always has the host's WebView2). B7a is also Not Run here.
+   - Then TASK-031, TASK-032, and the sandbox-capable rows of TASK-033. TASK-034 is Kyle's.
+   - Save the reports to `C:\FFGate\<nn-task>eport.md` and copy them to `execution/sandbox/results-*` on this branch.
+
+## Plan as of 2026-10-23 14:30 MDT, after the candidate (weekly usage 91%)
 00000. **Candidate recorded.** TASK-029 has Gate State Passed: 0.1.1 at `1d13c43`, run 40014761941, EXE SHA-256 60091daf…, stored in `FundedFlow-release-artifacts\0.1.1-1d13c43`. 35 PRs merged; the latest are #138 (TASK-023 close veto plus the TASK-022 back-navigation fix, `1d13c43`) and #139 (smoke checklist, `cbc47aa`).
    - **TASK-022 and TASK-023:** Implemented. Their Windows recheck is §1 on the Notion page "Final manual tests" (4021bd4b6bde8095871ec9c99a69b300), with the candidate details filled in.
    - **Gate prompts for TASK-030 to TASK-034:** `execution/gate-test-prompts-030-034.md`. An agent is putting them on that Notion page as child pages.
