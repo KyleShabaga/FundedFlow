@@ -146,3 +146,14 @@ R9 and R10 are Not Run. Triage needed for R10.
 Notes: the corrupt-journal message uses the lock-oriented text; an unrecognised file in the attachments root blocks restore by design; an interrupted restore leaves files in data-controls-work.
 
 Report: `execution/sandbox/results-2026-10-23-task032/report.md`.
+
+## TASK-033 partial (2026-10-23, sandbox)
+Objective rows only:
+- §9-chooser: focus return PASS.
+- D10: daily-review part PASS.
+- W12: follows the Windows app mode, PASS (partial).
+- D1/D6/W1: no sideways scroll at 1280×800, 1024×640 and 800×480, PASS.
+- D11: the Tab order differs from the spec's wording; Kyle to judge.
+Everything visual, plus NVDA, scaling and hardware, is still Kyle's. Gate Not Run.
+
+Report: `execution/sandbox/results-2026-10-23-task033/report.md`.

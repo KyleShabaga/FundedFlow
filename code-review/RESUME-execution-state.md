@@ -7,7 +7,20 @@ Coordinator: the Claude Code board-review session. Kyle's standing permissions f
 
 Kyle approves; Claude never records an approval.
 
-## Remaining plan (as of 2026-10-23 19:10 MDT; Kyle raised the usage limit to 99%)
+## Remaining plan (as of 2026-10-23 20:47 MDT; weekly usage ~93%, Kyle's limit is 99%)
+0000000. **Gate results on the candidate (all driven by Claude in Windows Sandbox on this PC; reports in `execution/sandbox/results-2026-10-23-*`):**
+   - **Final test 1 (guards):** PASS 14/14. TASK-022 and TASK-023 Verified.
+   - **TASK-030:** all sandbox-runnable steps PASS. Gate Blocked until Kyle does R1 (real export) and B6 (scaling), plus B7 (needs a PC without WebView2).
+   - **TASK-031:** PASSED.
+   - **TASK-032:** PASSED (R0–R8). R10 needs a triage card.
+   - **TASK-033:** partial. §9-chooser, D10 (daily), W12 and no-sideways-scroll PASS. D11 Tab order is for Kyle to judge. All visual, NVDA, scaling and hardware rows are Kyle's.
+   - **TASK-034:** Kyle's (real journal copy).
+   - **Next:**
+     - create the triage cards from the reports: R10, the corrupt-journal wording, the 293 vs 290 notice count, the WAL checkpoint by 0.1.0, data-controls-work leftovers, the B6 export message (already filed), and the D11 order;
+     - TASK-035: evidence register and release notes;
+     - TASK-036: go/no-go with Kyle.
+
+## Plan as of 2026-10-23 19:10 MDT
 000000. **Gate tests in progress, driven by Claude in Windows Sandbox on THIS PC.**
    - Final test 1 PASSED 14/14. TASK-022 and TASK-023 are Verified.
    - TASK-030 run S1 is in progress. Output goes to `C:\FFSandbox\out030s1`. The driver is `C:\FFSandbox\kitfdriver.ps1` plus `helpers.ps1`/`cases.ps1`; the host queues steps with `hoststep2.ps1` (`$env:FFOUT=out030s1`). The WebView2 workaround (`WEBVIEW2_BROWSER_EXECUTABLE_FOLDER`) is built into `cases.ps1`.
