@@ -42,6 +42,9 @@ open PR #139 (B1–B3 measured, new B8); candidate source `1d13c43` for the UI w
 
 ## Shared driving notes (from the TASK-011 / TASK-022 sandbox runs)
 
+- **WebView2 in Windows Sandbox (the coordinator PC, build 26100):** a fresh sandbox there has a stale registry entry (WebView2 `pv` .60, but only the .62 runtime folder present). FundedFlow then shows "Could not find the WebView2 Runtime", and the installer and the Microsoft WebView2 installer don't fix it. Before every launch inside the sandbox, set `$env:WEBVIEW2_BROWSER_EXECUTABLE_FOLDER` to the newest folder under `C:\Program Files (x86)\Microsoft\EdgeWebView\Application\` (start fundedflow.exe from that same PowerShell). Record the workaround in the report. This is a sandbox quirk, not a FundedFlow defect (Final manual test 1, 2026-10-23).
+- **Typing into fields:** call ScrollItemPattern.ScrollIntoView and SetFocus before SendKeys, and confirm the value with ValuePattern before sending any close or back action. An off-screen field silently drops the text.
+
 These notes are repeated in short form in every prompt. They are here so Kyle knows where they came from.
 
 - Layout on the host: `C:\FFGate\kit` (installers, CSVs and tools, mapped **read-only** as `C:\kit`) and
