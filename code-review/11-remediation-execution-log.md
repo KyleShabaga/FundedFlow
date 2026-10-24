@@ -106,3 +106,18 @@ PASS, 14 of 14 (G1–G10, C1–C4), on candidate 0.1.1 at `1d13c43` (EXE 60091da
 - TASK-023 close veto: the dialog showed on X and Alt+F4 for the rulebook draft, the trade review and the daily review. Cancel kept the text, Leave closed the window, clean windows closed at once, and first-run Close closed the app.
 - TASK-022 back navigation: X1 and Alt+Left on dirty editors showed the dialog. Stay kept the text, and Leave went back exactly once.
 - Sandbox note: this host's sandbox has a stale WebView2 pv (.60, runtime folder .62), so startup failed until `WEBVIEW2_BROWSER_EXECUTABLE_FOLDER` was set inside the sandbox. This is not a FundedFlow defect; a low-priority triage item is proposed.
+
+## TASK-030 on the candidate (2026-10-23, Claude Code in Windows Sandbox on the coordinator PC)
+
+Every sandbox-runnable mandatory step passes: 1–10, 4a, L1 (TASK-025), L2 (TASK-044), B1 (TASK-018 recheck), B2 junction, B3/B8 (from Final test 1), B4 and B5.
+
+Open items:
+- R1: Kyle's real broker export.
+- B7: this host's sandbox always has WebView2, so it can't be set up here. B7a was observed on the other PC's sandbox with build eeda9a1.
+- B6: scaling, on Kyle's real PC.
+
+Gate state: **Blocked**, pending R1, B6 and B7.
+
+Note: the app shows 293 third-party components while the file lists 290 (232 + 58); a low-priority triage item.
+
+Report: `execution/sandbox/results-2026-10-23-task030/report.md`.
