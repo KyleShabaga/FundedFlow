@@ -99,3 +99,10 @@ The earlier 0.1.1 builds (`819f967`, `eeda9a1`) were throwaway TASK-011 builds, 
 6. When the app data folder is itself a junction, "Acknowledge and continue" writes `legal-acceptance.json` through the junction before the folder is refused (Triage card 4021bd4b6bde818f8b81cacaf66ff026).
 7. TASK-022: a history entry without `history.state.idx` is not guarded (by design; covered by a test).
 8. While an editor is dirty, a hung page makes X and Alt+F4 do nothing; the fallback is Task Manager (Triage card 4021bd4b6bde81808ce7ff147801d4e7).
+
+## Final manual test 1: unsaved-edit guards on the candidate (2026-10-23)
+
+PASS, 14 of 14 (G1–G10, C1–C4), on candidate 0.1.1 at `1d13c43` (EXE 60091daf…). Run in Windows Sandbox on the coordinator PC (sandbox build 26100.9711, WebView2 155.0.4283.62), driven by Claude Code. The report and key screenshots are in `execution/sandbox/results-2026-10-23-guards/`.
+- TASK-023 close veto: the dialog showed on X and Alt+F4 for the rulebook draft, the trade review and the daily review. Cancel kept the text, Leave closed the window, clean windows closed at once, and first-run Close closed the app.
+- TASK-022 back navigation: X1 and Alt+Left on dirty editors showed the dialog. Stay kept the text, and Leave went back exactly once.
+- Sandbox note: this host's sandbox has a stale WebView2 pv (.60, runtime folder .62), so startup failed until `WEBVIEW2_BROWSER_EXECUTABLE_FOLDER` was set inside the sandbox. This is not a FundedFlow defect; a low-priority triage item is proposed.
